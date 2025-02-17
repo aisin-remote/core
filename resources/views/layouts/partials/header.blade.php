@@ -29,8 +29,8 @@
 
             <!--begin::Menu wrapper-->
             <div class="
-        app-header-menu 
-        app-header-mobile-drawer 
+        app-header-menu
+        app-header-mobile-drawer
         align-items-stretch
     "
                 data-kt-drawer="true" data-kt-drawer-name="app-header-menu"
@@ -41,13 +41,13 @@
                 data-kt-swapper-parent="{default: '#kt_app_body', lg: '#kt_app_header_wrapper'}">
                 <!--begin::Menu-->
                 <div class="
-            menu 
-            menu-rounded  
-            menu-column 
-            menu-lg-row 
-            my-5 
-            my-lg-0 
-            align-items-stretch 
+            menu
+            menu-rounded
+            menu-column
+            menu-lg-row
+            my-5
+            my-lg-0
+            align-items-stretch
             fw-semibold
             px-2 px-lg-0
         "
@@ -4556,7 +4556,8 @@
                     <div class="cursor-pointer symbol symbol-35px"
                         data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
                         data-kt-menu-placement="bottom-end">
-                        <img src="assets/media/avatars/300-3.jpg" class="rounded-3" alt="user" />
+                        <img src="{{ asset('assets/media/avatars/300-3.jpg') }}" class="rounded-3" alt="user" />
+
                     </div>
 
                     <!--begin::User account menu-->

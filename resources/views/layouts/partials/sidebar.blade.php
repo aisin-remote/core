@@ -1,29 +1,26 @@
-<div id="kt_app_sidebar" class="app-sidebar  flex-column " data-kt-drawer="true" data-kt-drawer-name="app-sidebar"
+<div id="kt_app_sidebar" class="app-sidebar flex-column" data-kt-drawer="true" data-kt-drawer-name="app-sidebar"
     data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="225px"
     data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
-
 
     <!--begin::Logo-->
     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
         <!--begin::Logo image-->
         <a href="index.html">
-            <img alt="Logo" src="assets/media/logos/default.svg" class="h-25px app-sidebar-logo-default" />
-
-            <img alt="Logo" src="assets/media/logos/default-small.svg" class="h-20px app-sidebar-logo-minimize" />
+            <!-- Gantilah dengan asset() untuk mendapatkan path yang benar -->
+            <img alt="Logo" src="{{ asset('assets/media/logos/default.svg') }}" class="h-25px app-sidebar-logo-default" />
+            <img alt="Logo" src="{{ asset('assets/media/logos/default-small.svg') }}" class="h-20px app-sidebar-logo-minimize" />
         </a>
         <!--end::Logo image-->
 
         <div id="kt_app_sidebar_toggle"
-            class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary h-30px w-30px position-absolute top-50 start-100 translate-middle rotate "
-            data-kt-toggle="true" data-kt-toggle-state="active" data-kt-toggle-target="body"
-            data-kt-toggle-name="app-sidebar-minimize">
-
-            <i class="ki-duotone ki-black-left-line fs-3 rotate-180"><span class="path1"></span><span
-                    class="path2"></span></i>
+            class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary h-30px w-30px position-absolute top-50 start-100 translate-middle rotate"
+            data-kt-toggle="true" data-kt-toggle-state="active" data-kt-toggle-target="body" data-kt-toggle-name="app-sidebar-minimize">
+            <i class="ki-duotone ki-black-left-line fs-3 rotate-180"><span class="path1"></span><span class="path2"></span></i>
         </div>
         <!--end::Sidebar toggle-->
     </div>
     <!--end::Logo-->
+
     <!--begin::sidebar menu-->
     <div class="app-sidebar-menu overflow-hidden flex-column-fluid">
         <!--begin::Menu wrapper-->
@@ -38,17 +35,39 @@
                 <div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6" id="#kt_app_sidebar_menu"
                     data-kt-menu="true" data-kt-menu-expand="false">
                     <!--begin:Menu item-->
-                    <div class="menu-item pt-5"><!--begin:Menu content-->
+                    <div class="menu-item pt-5">
+                        <!--begin:Menu content-->
                         <div class="menu-content"><span
                                 class="menu-heading fw-bold text-uppercase fs-7">Dashboard</span>
-                        </div><!--end:Menu content-->
-                    </div><!--end:Menu item--><!--begin:Menu item-->
+                        </div>
+                        <!--end:Menu content-->
+                    </div>
+                    <!--end:Menu item-->
+                    <!--begin:Menu item-->
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
+                            <span class="menu-icon"><i class="ki-duotone ki-abstract-25 fs-2x"><span
+                                        class="path1"></span><span class="path2"></span></i></span>
+                            <span class="menu-title ps-2">Employee</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('assessment') ? 'active' : '' }}" href="/assessment">
+                            <span class="menu-icon"><i class="ki-duotone ki-abstract-39 fs-2x"><span
+                                        class="path1"></span><span class="path2"></span></i></span>
+                            <span class="menu-title ps-1">Assesment</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
                     <div class="menu-item">
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('hav') ? 'active' : '' }}" href="/hav">
                             <span class="menu-icon"><i class="ki-duotone ki-abstract-26 fs-2"><span
                                         class="path1"></span><span class="path2"></span></i></span>
-                            <span class="menu-title ps-2">HAV Quadran</span>
+                            <span class="menu-title ps-1">HAV Quadran</span>
                         </a>
                         <!--end:Menu link-->
                     </div>
@@ -57,10 +76,10 @@
                     <!--begin:Menu item-->
                     <div class="menu-item">
                         <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
-                            <span class="menu-icon"><i class="ki-duotone ki-abstract-25 fs-2x"><span
-                                        class="path1"></span><span class="path2"></span></i></span>
-                            <span class="menu-title ps-2">Employee</span>
+                        <a class="menu-link {{ request()->is('idp') ? 'active' : '' }}" href="/idp">
+                            <i class="ki-duotone ki-bank fs-2x"><span class="path1"></span><span
+                                    class="path2"></span></i>
+                            <span class="menu-title ps-1">IDP</span>
                         </a>
                         <!--end:Menu link-->
                     </div>
@@ -79,29 +98,6 @@
                         <!--end:Menu link-->
                     </div>
 
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('idp') ? 'active' : '' }}" href="/idp">
-                            <i class="ki-duotone ki-bank fs-2x"><span class="path1"></span><span
-                                    class="path2"></span></i>
-                            <span class="menu-title ps-2">IDP</span>
-                        </a>
-                        <!--end:Menu link-->
-                    </div>
-                    <!--end:Menu item-->
-
-                    <!--begin:Menu item-->
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('assesment') ? 'active' : '' }}" href="/assessment">
-                            <span class="menu-icon"><i class="ki-duotone ki-abstract-39 fs-2x"><span
-                                        class="path1"></span><span class="path2"></span></i></span>
-                            <span class="menu-title ps-1">Assesment</span>
-                        </a>
-                        <!--end:Menu link-->
-                    </div>
-                    <!--end:Menu item-->
-
                     <!--end:Menu item-->
                 </div>
                 <!--end::Menu-->
@@ -111,6 +107,7 @@
         <!--end::Menu wrapper-->
     </div>
     <!--end::sidebar menu-->
+
     <!--begin::Footer-->
     <div class="app-sidebar-footer flex-column-auto pt-2 pb-6 px-6" id="kt_app_sidebar_footer">
         <a href="https://preview.keenthemes.com/html/metronic/docs"
@@ -128,3 +125,6 @@
     <!--end::Footer-->
 </div>
 <!--end::Sidebar-->
+
+<!-- Contoh untuk gambar lainnya --
+

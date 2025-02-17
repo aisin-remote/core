@@ -2,9 +2,11 @@
 <html lang="en">
 <!--begin::Head-->
 <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
+<meta name="csrf-token" content="{{ csrf_token() }}">
+
 
 <head>
-    <title>Metronic - The World's #1 Selling Tailwind CSS & Bootstrap Admin Template by KeenThemes</title>
+    <title>HR</title>
     <meta charset="utf-8" />
     <meta name="description"
         content="
@@ -27,26 +29,22 @@
     <meta property="og:url" content="https://keenthemes.com/metronic" />
     <meta property="og:site_name" content="Metronic by Keenthemes" />
     <link rel="canonical" href="index.html" />
-    <link rel="shortcut icon" href="assets/media/logos/favicon.ico" />
+    <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <!--begin::Fonts(mandatory for all pages)-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" /> <!--end::Fonts-->
 
     <!--begin::Vendor Stylesheets(used for this page only)-->
-    <link href="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.css') }}" rel="stylesheet"
-        type="text/css" />
-    <link href="{{ asset('assets/plugins/custom/datatables/datatables.bundle.css') }}" rel="stylesheet"
-        type="text/css" />
+    <link href="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/plugins/custom/datatables/datatables.bundle.css') }}" rel="stylesheet" type="text/css" />
     <!--end::Vendor Stylesheets-->
-
 
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
     <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" type="text/css" />
     <!-- KeenIcons CSS -->
-    <link href="https://preview.keenthemes.com/html/metronic/theme/html/dist/assets/plugins/global/plugins.bundle.css"
-        rel="stylesheet" type="text/css" />
-
+    <link href="{{ asset('assets/plugins/global/plugins.bundle.css') }}" rel="stylesheet" type="text/css" />
     <!--end::Global Stylesheets Bundle-->
 
     <!-- Google tag (gtag.js) -->
@@ -101,39 +99,31 @@
     </script>
     <!--end::Theme mode setup on page load-->
 
-
     <!--begin::App-->
     <div class="d-flex flex-column flex-root app-root" id="kt_app_root">
         <!--begin::Page-->
-        <div class="app-page  flex-column flex-column-fluid " id="kt_app_page">
+        <div class="app-page flex-column flex-column-fluid" id="kt_app_page">
 
             <!--begin::Header-->
-            @include('layouts.partials.header')
+            {{-- @include('layouts.partials.header') --}}
 
             <!--begin::Wrapper-->
-            <div class="app-wrapper  flex-column flex-row-fluid " id="kt_app_wrapper">
+            <div class="app-wrapper flex-column flex-row-fluid" id="kt_app_wrapper">
 
-                <!--end::Header-->
-
-                <!--begin::Sidebar-->
 
                 @include('layouts.partials.sidebar')
 
-                <!--end::Sidebar-->
-
                 <!--begin::Main-->
-                <div class="app-main flex-column flex-row-fluid " id="kt_app_main">
+                <div class="app-main flex-column flex-row-fluid" id="kt_app_main">
                     <!--begin::Content wrapper-->
-
                     @yield('main')
                     <!--end::Content wrapper-->
 
                     <!--begin::Footer-->
-                    @include('layouts.partials.footer')
-
+                    {{-- @include('layouts.partials.footer') --}}
                     <!--end::Footer-->
                 </div>
-                <!--end:::Main-->
+                <!--end::Main-->
             </div>
             <!--end::Wrapper-->
         </div>
@@ -141,17 +131,20 @@
     </div>
     <!--end::App-->
 
-
     <!--begin::App layout builder-->
 
     <!--begin::Javascript-->
     <script>
-        var hostUrl = "assets/index.html";
+        var hostUrl = "{{ asset('assets/index.html') }}";
     </script>
 
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
+
+
+
     <!--end::Global Javascript Bundle-->
 
     <!--begin::Vendors Javascript(used for this page only)-->
@@ -168,14 +161,11 @@
     <script src="{{ asset('assets/js/custom/utilities/modals/new-target.js') }}"></script>
     <script src="{{ asset('assets/js/custom/utilities/modals/users-search.js') }}"></script>
     <!-- KeenIcons JS -->
-    <script src="https://preview.keenthemes.com/html/metronic/theme/html/dist/assets/plugins/global/plugins.bundle.js">
-    </script>
+    <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
 
     <!--end::Custom Javascript-->
     <!--end::Javascript-->
 </body>
 <!--end::Body-->
-
-<!-- Mirrored from preview.keenthemes.com/metronic8/demo1/index.html by HTTrack Website Copier/3.x [XR&CO'2014], Sat, 08 Feb 2025 01:17:45 GMT -->
 
 </html>
