@@ -29,8 +29,9 @@
         <div class="py-20">
 
             <!--begin::Form-->
-            <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form"
-                data-kt-redirect-url="/metronic8/demo1/index.html" action="#">
+            <form class="form w-100" novalidate="novalidate" id="kt_sign_in_form" action="{{ route('login.authenticate') }}"
+                method="POST">
+                @csrf
                 <!--begin::Body-->
                 <div class="card-body">
                     <!--begin::Heading-->
@@ -60,7 +61,7 @@
                     <!--end::Input group--->
                     <div class="fv-row mb-7">
                         <!--begin::Password-->
-                        <input type="text" placeholder="Password" name="password" autocomplete="off"
+                        <input type="password" placeholder="Password" name="password" autocomplete="off"
                             data-kt-translate="sign-in-input-password" class="form-control form-control-solid" />
                         <!--end::Password-->
                     </div>
@@ -81,7 +82,7 @@
                     <!--begin::Actions-->
                     <div class="d-flex flex-stack">
                         <!--begin::Submit-->
-                        <button id="kt_sign_in_submit" class="btn btn-primary me-2 flex-shrink-0">
+                        <button type="submit" class="btn btn-primary me-2 flex-shrink-0">
                             <!--begin::Indicator label-->
                             <span class="indicator-label" data-kt-translate="sign-in-submit">
                                 Sign In

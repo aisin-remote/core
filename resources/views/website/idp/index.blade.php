@@ -8,6 +8,22 @@
     {{ $title ?? 'IDP' }}
 @endsection
 
+<style>
+    .table-responsive {
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+
+    /* Make the Employee Name column sticky */
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 2;
+        box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.1);
+    }
+</style>
+
 @section('main')
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
@@ -30,34 +46,61 @@
             <div class="card-body">
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
-                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Company</th>
-                            <th>Position</th>
-                            <th>Function Group</th>
-                            <th>Function</th>
-                            <th>Grade</th>
-                            <th>Age</th>
-                            <th class="text-center">Actions</th>
+                        <tr class="text-start text-muted fw-bold fs-7 gs-0">
+                            <th style="width: 20px">No</th>
+                            <th class="sticky-col" style="width: 80px">Employee Name</th>
+                            <th class="text-center" style="width: 50px">Vision & Business Sense</th>
+                            <th class="text-center" style="width: 50px">Customer Focus</th>
+                            <th class="text-center" style="width: 50px">Interpersonal Skill</th>
+                            <th class="text-center" style="width: 50px">Analysis & Judgment</th>
+                            <th class="text-center" style="width: 50px">Planning & Driving Action</th>
+                            <th class="text-center" style="width: 50px">Leading & Motivating</th>
+                            <th class="text-center" style="width: 50px">Teamwork</th>
+                            <th class="text-center" style="width: 50px">Drive & Courage</th>
+                            <th class="text-center sticky-col">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($employees as $index => $employee)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
-                                <td>{{ $employee->npk }}</td>
                                 <td>{{ $employee->name }}</td>
-                                <td>{{ $employee->company_name }}</td>
-                                <td>{{ $employee->position_name }}</td>
-                                <td>{{ $employee->company_group }}</td>
-                                <td>{{ $employee->function }}</td>
-                                <td>{{ $employee->grade }}</td>
-                                <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-warning my-1" data-bs-toggle="modal"
-                                        data-bs-target="#kt_modal_update_role">Edit IDP</button>
+                                <td class="text-center" style="width: 50px">
+                                    <span class="badge badge-lg badge-success">4.5 - Good</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+
+                                    <span class="badge badge-lg badge-danger" data-bs-toggle="modal"
+                                        data-bs-target="#kt_modal_update_role" style="cursor: pointer">2.3 - Weak</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+
+                                    <span class="badge badge-lg badge-warning">3 - OK</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+
+                                    <span class="badge badge-lg badge-success">4.1 - Good</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+
+                                    <span class="badge badge-lg badge-danger" data-bs-toggle="modal"
+                                        data-bs-target="#kt_modal_update_role" style="cursor: pointer">2 - Weak</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+                                    <span class="badge badge-lg badge-success">4.8 - Good</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+                                    <span class="badge badge-lg badge-success">4.3 - Good</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+                                    <span class="badge badge-lg badge-danger" data-bs-toggle="modal"
+                                        data-bs-target="#kt_modal_update_role" style="cursor: pointer">2.9 - Weak</span>
+                                </td>
+                                <td class="text-center" style="width: 50px">
+                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#notes">
+                                        notes
+                                    </button>
                                 </td>
                             </tr>
                         @empty
@@ -71,8 +114,8 @@
         </div>
     </div>
 
+    {{-- modal --}}
     @foreach ($employees as $index => $employee)
-        {{-- modal --}}
         <div class="modal fade" id="kt_modal_update_role" tabindex="-1" style="display: none;" aria-modal="true"
             role="dialog">
             <!--begin::Modal dialog-->
@@ -92,19 +135,17 @@
                     <!--end::Modal header-->
 
                     <!--begin::Modal body-->
-                    <div class="modal-body scroll-y mx-5 my-7">
+                    <div class="modal-body scroll-y mx-2 mt-5">
                         <!--begin::Form-->
                         <form id="kt_modal_update_role_form" class="form fv-plugins-bootstrap5 fv-plugins-framework"
                             action="#">
                             <!--begin::Scroll-->
                             <div class="d-flex flex-column scroll-y me-n7 pe-7" id="kt_modal_update_role_scroll"
                                 data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}"
-                                data-kt-scroll-max-height="auto" data-kt-scroll-dependencies="#kt_modal_update_role_header"
+                                data-kt-scroll-max-height="auto"
+                                data-kt-scroll-dependencies="#kt_modal_update_role_header"
                                 data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px"
                                 style="">
-                                <div class="row mb-10">
-                                    <div id="stackedGroupedChart" style="width: 100%; height: 300px;"></div>
-                                </div>
                                 <!--begin::Input group-->
                                 <div class="fv-row mb-10 fv-plugins-icon-container">
                                     <!--begin::Label-->
@@ -123,340 +164,33 @@
                                 </div>
                                 <!--end::Input group-->
 
+                                <div class="col-lg-12 mb-10">
+                                    <label class="fs-5 fw-bold form-label mb-2">
+                                        <span class="required">Development Program</span>
+                                    </label>
+                                    <select name="idp" aria-label="Select a Country" data-control="select2"
+                                        data-placeholder="Select Programs..."
+                                        class="form-select form-select-solid form-select-lg fw-semibold" multiple>
+                                        <option value="">Select Development Program</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Feedback</option>
+                                        <option data-kt-flag="flags/aland-islands.svg" value="AX">Shadowing</option>
+                                        <option data-kt-flag="flags/albania.svg" value="AL">On Job Development
+                                        </option>
+                                        <option data-kt-flag="flags/algeria.svg" value="DZ">Mentoring</option>
+                                        <option data-kt-flag="flags/american-samoa.svg" value="AS">Training</option>
+                                    </select>
+                                </div>
+
                                 <!--begin::Permissions-->
-                                <div class="fv-row">
-                                    <!--begin::Table wrapper-->
-                                    <div class="table-responsive">
-                                        <!--begin::Table-->
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5">
-                                            <!--begin::Table body-->
-                                            <tbody class="text-gray-600 fw-semibold">
-                                                <thead>
-                                                    <tr>
-                                                        <td>
-                                                            <h6>
-                                                                Individual Development Plan Item
-                                                            </h6>
-                                                        </td>
-                                                        <td>
-                                                            <h6>Current Score</h6>
-                                                        </td>
-                                                        <td>
-                                                            <h6>Need IDP</h6>
-                                                        </td>
-                                                    </tr>
-                                                </thead>
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Vision & Business Sense
-                                                    </td>
-                                                    <!--end::Label-->
+                                <div class="col-lg-12 fv-row mb-10">
+                                    <label for="" class="fs-5 fw-bold form-label mb-2">Development Target</label>
+                                    <textarea class="form-control" data-kt-autosize="true"></textarea>
+                                </div>
 
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-success">4.5</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="user_management_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Customer Focus
-                                                    </td>
-                                                    <!--end::Label-->
-
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-warning">3.5</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="content_management_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Interpersonal Skill
-                                                    </td>
-                                                    <!--end::Label-->
-
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-danger">2.1</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="financial_management_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Analysis & Judgment
-                                                    </td>
-                                                    <!--end::Label-->
-
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-success">4.5</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="reporting_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Planning & Driving Action
-                                                    </td>
-                                                    <!--end::Label-->
-
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-warning">3.4</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="payroll_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Leading & Motivating
-                                                    </td>
-                                                    <!--end::Label-->
-
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-danger">2.5</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="disputes_management_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Teamwork
-                                                    </td>
-                                                    <!--end::Label-->
-
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-warning">3.9</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="api_controls_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-                                                <!--begin::Table row-->
-                                                <tr>
-                                                    <!--begin::Label-->
-                                                    <td class="text-gray-800">
-                                                        Drive & Courage
-                                                    </td>
-                                                    <!--end::Label-->
-
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <span class="badge badge-lg badge-warning">3.2</span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--begin::Input group-->
-                                                    <td>
-                                                        <!--begin::Wrapper-->
-                                                        <div class="d-flex">
-                                                            <!--begin::Checkbox-->
-                                                            <label class="form-check form-check-custom form-check-solid">
-                                                                <input class="form-check-input" type="checkbox"
-                                                                    value="" name="database_management_create">
-                                                                <span class="form-check-label">
-                                                                    Yes
-                                                                </span>
-                                                            </label>
-                                                            <!--end::Checkbox-->
-                                                        </div>
-                                                        <!--end::Wrapper-->
-                                                    </td>
-                                                    <!--end::Input group-->
-                                                </tr>
-                                                <!--end::Table row-->
-                                            </tbody>
-                                            <!--end::Table body-->
-                                        </table>
-                                        <!--end::Table-->
-                                    </div>
-                                    <!--end::Table wrapper-->
+                                <div class="col-lg-12 fv-row mb-5">
+                                    <label for="" class="fs-5 fw-bold form-label mb-2">Due Date</label>
+                                    <input class="form-control form-control-solid" placeholder="Pick date & time"
+                                        id="kt_datepicker_7" />
                                 </div>
                                 <!--end::Permissions-->
                             </div>
@@ -489,8 +223,60 @@
             </div>
             <!--end::Modal dialog-->
         </div>
-        {{-- end of modal --}}
     @endforeach
+    {{-- end of modal --}}
+
+    {{-- modal --}}
+    <div class="modal fade" id="notes" tabindex="-1" style="display: none;" aria-modal="true" role="dialog">
+        <!--begin::Modal dialog-->
+        <div class="modal-dialog modal-dialog-centered mw-750px">
+            <!--begin::Modal content-->
+            <div class="modal-content">
+                <!--begin::Modal header-->
+                <div class="modal-header">
+                    <!--begin::Modal title-->
+                    <h2 class="fw-bold">Strength & Weakness</h2>
+                    <!--end::Modal title-->
+
+                    <!--begin::Close-->
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <!--end::Close-->
+                </div>
+                <!--end::Modal header-->
+
+                <!--begin::Modal body-->
+                <div class="modal-body scroll-y mx-2 mt-5">
+                    <!--begin::Form-->
+                    <form id="kt_modal_update_role_form" class="form fv-plugins-bootstrap5 fv-plugins-framework"
+                        action="#">
+                        <!--begin::Scroll-->
+                        <div class="d-flex flex-column scroll-y me-n7 pe-7" id="kt_modal_update_role_scroll"
+                            data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}"
+                            data-kt-scroll-max-height="auto" data-kt-scroll-dependencies="#kt_modal_update_role_header"
+                            data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px"
+                            style="">
+
+                            <div class="col-lg-12 fv-row mb-10">
+                                <label for="" class="fs-5 fw-bold form-label mb-2">Strength</label>
+                                <textarea class="form-control" data-kt-autosize="true"></textarea>
+                            </div>
+
+                            <div class="col-lg-12 fv-row mb-10">
+                                <label for="" class="fs-5 fw-bold form-label mb-2">Weakness</label>
+                                <textarea class="form-control" data-kt-autosize="true"></textarea>
+                            </div>
+                        </div>
+                        <!--end::Scroll-->
+                    </form>
+                    <!--end::Form-->
+                </div>
+                <!--end::Modal body-->
+            </div>
+            <!--end::Modal content-->
+        </div>
+        <!--end::Modal dialog-->
+    </div>
+    {{-- end of modal --}}
 
     <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -548,6 +334,17 @@
                         }
                     });
                 });
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('kt_datepicker_7');
+
+            flatpickr(dateInput, {
+                altInput: true,
+                altFormat: "F j, Y",
+                dateFormat: "Y-m-d",
+                mode: "range"
             });
         });
     </script>
