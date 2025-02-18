@@ -32,7 +32,7 @@ class AssessmentController extends Controller
         $request->validate([
             'employee_npk' => 'required|exists:employees,npk',
             'date' => 'required|date',
-            'vision_&_business_sense' => 'required|string|max:2',
+            'vision_business_sense' => 'required|string|max:2',
             'customer_focus' => 'required|string|max:2',
             'interpersonal_skil' => 'required|string|max:2',
             'analysis_judgment' => 'required|string|max:2',
