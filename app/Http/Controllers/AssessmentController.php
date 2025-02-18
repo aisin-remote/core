@@ -1,8 +1,8 @@
 <?php
 namespace App\Http\Controllers;
 
-use App\Models\Assessment;
 use App\Models\Employee;
+use App\Models\Assessment;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -13,6 +13,7 @@ class AssessmentController extends Controller
      */
     public function index()
     {
+        $title = 'Assessment';
         $assessments = DB::table('assessments')
         ->leftJoin('employees', 'assessments.employee_npk', '=', 'employees.npk')
         ->select('assessments.*', 'employees.name', 'employees.position', 'employees.npk', 'employees.birthday_date')
@@ -20,7 +21,7 @@ class AssessmentController extends Controller
 
         $employees = Employee::all(); // Pastikan ini menggunakan 'employees', bukan 'employee'
 
-        return view('website.assessment.index', compact('assessments', 'employees')); // Gunakan 'employees' bukan 'employee'
+        return view('website.assessment.index', compact('assessments', 'employees', 'title')); // Gunakan 'employees' bukan 'employee'
     }
 
 

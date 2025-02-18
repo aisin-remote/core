@@ -1,5 +1,13 @@
 @extends('layouts.root.main')
 
+@section('title')
+    {{ $title ?? 'RTC' }}
+@endsection
+
+@section('breadcrumbs')
+    {{ $title ?? 'RTC' }}
+@endsection
+
 @section('main')
     <div class="d-flex flex-column flex-column-fluid">
 

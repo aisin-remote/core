@@ -36,8 +36,10 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" /> <!--end::Fonts-->
 
     <!--begin::Vendor Stylesheets(used for this page only)-->
-    <link href="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.css') }}" rel="stylesheet" type="text/css" />
-    <link href="{{ asset('assets/plugins/custom/datatables/datatables.bundle.css') }}" rel="stylesheet" type="text/css" />
+    <link href="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.css') }}" rel="stylesheet"
+        type="text/css" />
+    <link href="{{ asset('assets/plugins/custom/datatables/datatables.bundle.css') }}" rel="stylesheet"
+        type="text/css" />
     <!--end::Vendor Stylesheets-->
 
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
@@ -116,18 +118,73 @@
                 <!--begin::Main-->
                 <div class="app-main flex-column flex-row-fluid" id="kt_app_main">
                     <!--begin::Content wrapper-->
-                    @yield('main')
-                    <!--end::Content wrapper-->
+                    <div class="d-flex flex-column flex-column-fluid">
 
-                    <!--begin::Footer-->
-                    {{-- @include('layouts.partials.footer') --}}
-                    <!--end::Footer-->
+                        <!--begin::Toolbar-->
+                        <div id="kt_app_toolbar" class="app-toolbar  py-3 py-lg-6 ">
+
+                            <!--begin::Toolbar container-->
+                            <div id="kt_app_toolbar_container"
+                                class="app-container  container-fluid d-flex flex-stack ">
+
+
+
+                                <!--begin::Page title-->
+                                <div class="page-title d-flex flex-column justify-content-center flex-wrap me-3 ">
+                                    <!--begin::Title-->
+                                    <h1
+                                        class="page-heading d-flex text-gray-900 fw-bold fs-3 flex-column justify-content-center my-0">
+                                        @yield('title')
+                                    </h1>
+                                    <!--end::Title-->
+
+
+                                    <!--begin::Breadcrumb-->
+                                    <ul class="breadcrumb breadcrumb-separatorless fw-semibold fs-7 my-0 pt-1">
+                                        <!--begin::Item-->
+                                        <li class="breadcrumb-item text-muted">
+                                            <a href="index.html" class="text-muted text-hover-primary">
+                                                Home </a>
+                                        </li>
+                                        <!--end::Item-->
+                                        <!--begin::Item-->
+                                        <li class="breadcrumb-item">
+                                            <span class="bullet bg-gray-500 w-5px h-2px"></span>
+                                        </li>
+                                        <!--end::Item-->
+
+                                        <!--begin::Item-->
+                                        <li class="breadcrumb-item text-muted">
+                                            @yield('breadcrumbs')
+                                        </li>
+                                        <!--end::Item-->
+
+                                    </ul>
+                                    <!--end::Breadcrumb-->
+                                </div>
+                                <!--end::Page title-->
+                            </div>
+                            <!--end::Toolbar container-->
+                        </div>
+                        <!--end::Toolbar-->
+
+                        <!--begin::Content-->
+                        <div id="kt_app_content" class="app-content  flex-column-fluid ">
+                            @yield('main')
+                        </div>
+                        <!--end::Content wrapper-->
+
+                    </div>
                 </div>
-                <!--end::Main-->
+                <!--begin::Footer-->
+                {{-- @include('layouts.partials.footer') --}}
+                <!--end::Footer-->
             </div>
-            <!--end::Wrapper-->
+            <!--end::Main-->
         </div>
-        <!--end::Page-->
+        <!--end::Wrapper-->
+    </div>
+    <!--end::Page-->
     </div>
     <!--end::App-->
 
@@ -146,6 +203,10 @@
 
 
     <!--end::Global Javascript Bundle-->
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/export-data.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
 
     <!--begin::Vendors Javascript(used for this page only)-->
     <script src="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.js') }}"></script>
