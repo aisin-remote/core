@@ -1,8 +1,9 @@
 <?php
 
-use App\Http\Controllers\AssessmentController;
-use App\Http\Controllers\EmployeeController;
+use App\Models\Employee;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\AssessmentController;
 
 
 
@@ -18,7 +19,9 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('website.dashboard.index');
+    $title = 'Employee';
+    $employee = Employee::all(); // Ambil semua data karyawan
+    return view('website.employee.index', compact('employee', 'title'));
 });
 
 Route::get('/login', function(){
@@ -32,13 +35,19 @@ Route::prefix('hav')->group(function () {
     Route::get('/', function (){
         return view('website.hav.index');
     });
-});Route::prefix('employee')->group(function () {
+});
+
+Route::prefix('employee')->group(function () {
     Route::get('/', [EmployeeController::class, 'index'])->name('employee.index');
     Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
     Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
     Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
     Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
     Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
+
+    Route::prefix('profile')->group(function(){
+        Route::get('/', [EmployeeController::class, 'profile'])->name('employee.profile'); 
+    });
 });
 
 
@@ -52,5 +61,13 @@ Route::prefix('assessment')->group(function () {
 Route::prefix('rtc')->group(function () {
     Route::get('/', function (){
         return view('website.rtc.index');
+    });
+});
+Route::prefix('idp')->group(function () {
+    Route::get('/', function (){
+        $employee = Employee::all(); // Ambil semua data karyawan
+        return view('website.idp.index', [
+            'employees' => $employee
+        ]);
     });
 });

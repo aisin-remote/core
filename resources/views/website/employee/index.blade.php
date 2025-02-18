@@ -1,68 +1,78 @@
 @extends('layouts.root.main')
 
+@section('title')
+    {{ $title ?? 'Employee' }}
+@endsection
+
+@section('breadcrumbs')
+    {{ $title ?? 'Employee' }}
+@endsection
+
 @section('main')
-    <div class="d-flex flex-column flex-column-fluid">
-        <div class="app-content container-fluid">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Employee List</h3>
-                    <div class="d-flex align-items-center">
-                        <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..." style="width: 200px;">
-                        <button type="button" class="btn btn-primary me-3" id="searchButton">
-                            <i class="ki-duotone ki-search fs-2"></i> Search
-                        </button>
-                        <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                            data-kt-menu-placement="bottom-end">
-                            <i class="ki-duotone ki-filter fs-2"><span class="path1"></span><span class="path2"></span></i>
-                            Filter
-                        </button>
-                        <a href="{{ route('employee.create') }}" class="btn btn-primary">Add</a>
-                    </div>
+    <div id="kt_app_content_container" class="app-container  container-fluid ">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">Employee List</h3>
+                <div class="d-flex align-items-center">
+                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
+                        style="width: 200px;">
+                    <button type="button" class="btn btn-primary me-3" id="searchButton">
+                        <i class="ki-duotone ki-search fs-2"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
+                        data-kt-menu-placement="bottom-end">
+                        <i class="ki-duotone ki-filter fs-2"><span class="path1"></span><span class="path2"></span></i>
+                        Filter
+                    </button>
+                    <a href="{{ route('employee.create') }}" class="btn btn-primary">Add</a>
                 </div>
+            </div>
 
-                <div class="card-body">
-                    <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                        <thead>
-                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                                <th>No</th>
-                                <th>NPK</th>
-                                <th>Employee Name</th>
-                                <th>Company</th>
-                                <th>Position</th>
-                                <th>Function Group</th>
-                                <th>Function</th>
-                                <th>Grade</th>
-                                <th>Age</th>
-                                <th class="text-end">Actions</th>
+            <div class="card-body">
+                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>No</th>
+                            <th>NPK</th>
+                            <th>Employee Name</th>
+                            <th>Company</th>
+                            <th>Position</th>
+                            <th>Function Group</th>
+                            <th>Function</th>
+                            <th>Grade</th>
+                            <th>Age</th>
+                            <th class="text-end">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse ($employee as $index => $employee)
+                            <tr>
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $employee->npk }}</td>
+                                <td>{{ $employee->name }}</td>
+                                <td>{{ $employee->company_name }}</td>
+                                <td>{{ $employee->position_name }}</td>
+                                <td>{{ $employee->company_group }}</td>
+                                <td>{{ $employee->function }}</td>
+                                <td>{{ $employee->grade }}</td>
+                                <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
+                                <td class="text-end">
+                                    <a href="{{ route('employee.profile') }}" class="btn btn-primary btn-sm">Detail</a>
+                                    <a href="{{ route('employee.edit', $employee->npk) }}"
+                                        class="btn btn-warning btn-sm">Update</a>
+
+                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                        data-id="{{ $employee->npk }}">Delete</button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            @forelse ($employee as $index => $employee)
-                                <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $employee->npk }}</td>
-                                    <td>{{ $employee->name }}</td>
-                                    <td>{{ $employee->company_name }}</td>
-                                    <td>{{ $employee->position_name }}</td>
-                                    <td>{{ $employee->company_group }}</td>
-                                    <td>{{ $employee->function }}</td>
-                                    <td>{{ $employee->grade }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
-                                    <td class="text-end">
-                                        <a href="{{ route('employee.edit', $employee->npk) }}" class="btn btn-warning btn-sm">Update</a>
-
-                                        <button type="button" class="btn btn-danger btn-sm delete-btn" data-id="{{ $employee->npk }}">Delete</button>
-                                    </td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="9" class="text-center text-muted">No employees found</td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                    </div>
-                </div>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">No employees found</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -70,7 +80,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        document.addEventListener("DOMContentLoaded", function () {
+        document.addEventListener("DOMContentLoaded", function() {
             // Fungsi pencarian
             document.getElementById("searchButton").addEventListener("click", function() {
                 var searchValue = document.getElementById("searchInput").value.toLowerCase();
@@ -88,7 +98,7 @@
 
             // SweetAlert untuk tombol delete
             document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', function () {
+                button.addEventListener('click', function() {
                     let employeeId = this.getAttribute('data-id');
 
                     Swal.fire({

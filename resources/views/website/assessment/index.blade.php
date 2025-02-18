@@ -1,7 +1,15 @@
 @extends('layouts.root.main')
 
+@section('title')
+    {{ $title ?? 'Assesment' }}
+@endsection
+
+@section('breadcrumbs')
+    {{ $title ?? 'Assesment' }}
+@endsection
+
 @section('main')
-    <div class="d-flex flex-column flex-column-fluid">
+    <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="app-content  container-fluid">
             <div class="card">
                 <div class="card-header d-flex justify-content-between align-items-center">

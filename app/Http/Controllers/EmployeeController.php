@@ -13,8 +13,9 @@ class EmployeeController extends Controller
      */
     public function index()
     {
+        $title = 'Employee';
         $employee = Employee::all(); // Ambil semua data karyawan
-        return view('website.employee.index', compact('employee'));
+        return view('website.employee.index', compact('employee', 'title'));
     }
 
     /**
@@ -120,6 +121,11 @@ class EmployeeController extends Controller
         $employee->delete();
 
         return redirect()->route('employee.index')->with('success', 'Karyawan berhasil dihapus!');
+    }
+
+    public function profile()
+    {
+        return view('website.employee.profile.index');
     }
 
 }
