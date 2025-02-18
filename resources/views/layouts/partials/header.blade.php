@@ -4857,9 +4857,14 @@
 
                         <!--begin::Menu item-->
                         <div class="menu-item px-5">
-                            <a href="authentication/layouts/corporate/sign-in.html" class="menu-link px-5">
-                                Sign Out
-                            </a>
+                            <form action="{{ route('logout.auth') }}" method="post">
+                                @csrf
+                                @method('POST')
+                                <div class="d-grid py-4 px-7 pt-8">
+                                    <button type="submit" class="btn btn-outline-primary" id="logout">Sign
+                                        Out</button>
+                                </div>
+                            </form>
                         </div>
                         <!--end::Menu item-->
                     </div>

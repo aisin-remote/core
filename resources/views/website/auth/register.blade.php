@@ -32,8 +32,9 @@
         <div class="py-20">
 
             <!--begin::Form-->
-            <form class="form w-100" novalidate="novalidate" id="kt_sign_up_form"
-                data-kt-redirect-url="/metronic8/demo1/authentication/layouts/fancy/sign-in.html" action="#">
+            <form class="form w-100" novalidate="novalidate" id="kt_sign_up_form" action="{{ route('register.store') }}"
+                method="POST">
+                @csrf
                 <!--begin::Heading-->
                 <div class="text-start mb-10">
                     <!--begin::Title-->
@@ -53,18 +54,9 @@
                 <!--begin::Input group-->
                 <div class="row fv-row mb-7">
                     <!--begin::Col-->
-                    <div class="col-xl-6">
-                        <input class="form-control form-control-lg form-control-solid" type="text"
-                            placeholder="First Name" name="first-name" autocomplete="off"
-                            data-kt-translate="sign-up-input-first-name" />
-                    </div>
-                    <!--end::Col-->
-
-                    <!--begin::Col-->
-                    <div class="col-xl-6">
-                        <input class="form-control form-control-lg form-control-solid" type="text"
-                            placeholder="Last Name" name="last-name" autocomplete="off"
-                            data-kt-translate="sign-up-input-last-name" />
+                    <div class="col-xl-12">
+                        <input class="form-control form-control-lg form-control-solid" type="text" placeholder="Fullname"
+                            name="name" autocomplete="off" data-kt-translate="sign-up-input-first-name" />
                     </div>
                     <!--end::Col-->
                 </div>
@@ -116,7 +108,7 @@
                 <!--begin::Input group-->
                 <div class="fv-row mb-10">
                     <input class="form-control form-control-lg form-control-solid" type="password"
-                        placeholder="Confirm Password" name="confirm-password" autocomplete="off"
+                        placeholder="Confirm Password" name="password_confirmation" autocomplete="off"
                         data-kt-translate="sign-up-input-confirm-password" />
                 </div>
                 <!--end::Input group-->
@@ -124,8 +116,7 @@
                 <!--begin::Actions-->
                 <div class="d-flex flex-stack">
                     <!--begin::Submit-->
-                    <button id="kt_sign_up_submit" class="btn btn-primary" data-kt-translate="sign-up-submit">
-
+                    <button type="submit" class="btn btn-primary" data-kt-translate="sign-up-submit">
                         <!--begin::Indicator label-->
                         <span class="indicator-label">
                             Submit</span>
@@ -135,7 +126,8 @@
                         <span class="indicator-progress">
                             Please wait... <span class="spinner-border spinner-border-sm align-middle ms-2"></span>
                         </span>
-                        <!--end::Indicator progress--> </button>
+                        <!--end::Indicator progress-->
+                    </button>
                     <!--end::Submit-->
                 </div>
                 <!--end::Actions-->
