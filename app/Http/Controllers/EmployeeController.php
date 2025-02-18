@@ -67,9 +67,10 @@ class EmployeeController extends Controller
      */
     public function show($npk)
     {
-        $employee = Employee::where('npk', $npk)->firstOrFail(); // Cari berdasarkan npk
+        $employee = Employee::where('npk', $npk)->firstOrFail();
         return view('website.employee.show', compact('employee'));
     }
+
 
     public function edit($npk)
     {

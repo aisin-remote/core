@@ -67,6 +67,61 @@ class AssessmentController extends Controller
 
         return response()->json(['message' => 'Assessment berhasil ditambahkan!'], 200);
     }
+    public function edit($id)
+    {
+        $assessment = Assessment::where('id', $id)->firstOrFail(); // Cari berdasarkan npk
+        return view('website.assessment.update', compact('assessment'));
+    }
+    /**
+ * Perbarui data assessment yang sudah ada.
+ */
+public function update(Request $request, $id)
+{
+    $request->validate([
+        'employee_npk' => 'required|exists:employees,npk',
+        'date' => 'required|date',
+        'vision_business_sense' => 'required|string|max:2',
+        'customer_focus' => 'required|string|max:2',
+        'interpersonal_skil' => 'required|string|max:2',
+        'analysis_judgment' => 'required|string|max:2',
+        'planning_driving_action' => 'required|string|max:2',
+        'leading_motivating' => 'required|string|max:2',
+        'teamwork' => 'required|string|max:2',
+        'drive_courage' => 'required|string|max:2',
+        'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
+    ]);
+
+    $assessment = Assessment::findOrFail($id);
+
+    // Proses file upload jika ada perubahan file
+    if ($request->hasFile('upload')) {
+        // Hapus file lama jika ada
+        if ($assessment->upload) {
+            \Storage::disk('public')->delete($assessment->upload);
+        }
+
+        // Simpan file baru
+        $uploadPath = $request->file('upload')->store('uploads/assessments', 'public');
+        $assessment->upload = $uploadPath;
+    }
+
+    // Update data assessment
+    $assessment->update([
+        'employee_npk' => $request->employee_npk,
+        'date' => $request->date,
+        'vision_business_sense' => $request->vision_business_sense,
+        'customer_focus' => $request->customer_focus,
+        'interpersonal_skil' => $request->interpersonal_skil,
+        'analysis_judgment' => $request->analysis_judgment,
+        'planning_driving_action' => $request->planning_driving_action,
+        'leading_motivating' => $request->leading_motivating,
+        'teamwork' => $request->teamwork,
+        'drive_courage' => $request->drive_courage,
+    ]);
+
+    return response()->json(['message' => 'Assessment berhasil diperbarui!'], 200);
+}
+
 
 
     /**
