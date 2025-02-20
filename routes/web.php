@@ -34,38 +34,13 @@ Route::middleware('guest')->group(function(){
         Route::get('/', [RegisterController::class, 'index'])->name('register.index');
         Route::post('/store', [RegisterController::class, 'store'])->name('register.store');
     });
-    
+
     Route::prefix('login')->group(function () {
-        Route::get('/', [LoginController::class, 'index'])->name('login.index');
+        Route::get('/', [LoginController::class, 'index'])->name('login');
         Route::post('/authenticate', [LoginController::class, 'authenticate'])->name('login.authenticate');
         Route::post('/authenticate', [LoginController::class, 'authenticate'])->name('login.authenticate');
     });
 });
-<<<<<<< HEAD
-Route::prefix('employee')->group(function () {
-    Route::get('/', [EmployeeController::class, 'index'])->name('employee.index');
-    Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
-    Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
-    Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
-    Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
-    Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
-    Route::get('/employee/{id}', [EmployeeController::class, 'show'])->name('employee.show');
-});
-
-
-
-
-Route::prefix('assessment')->group(function () {
-    Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
-    Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
-    Route::put('/{id}', [AssessmentController::class, 'update'])->name('assessments.update'); // Route update
-    Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
-});
-
-Route::prefix('rtc')->group(function () {
-    Route::get('/', function (){
-        return view('website.rtc.index');
-=======
 
 Route::middleware('auth')->group(function(){
     Route::prefix('hav')->group(function () {
@@ -73,7 +48,7 @@ Route::middleware('auth')->group(function(){
             return view('website.hav.index');
         });
     });
-    
+
     Route::prefix('employee')->group(function () {
         Route::get('/', [EmployeeController::class, 'index'])->name('employee.index');
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
@@ -81,20 +56,22 @@ Route::middleware('auth')->group(function(){
         Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
         Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
         Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
-    
+        Route::get('/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
+
+
         Route::prefix('profile')->group(function(){
-            Route::get('/', [EmployeeController::class, 'profile'])->name('employee.profile'); 
+            Route::get('/', [EmployeeController::class, 'profile'])->name('employee.profile');
         });
->>>>>>> 95dcd7f94d1cd9d97298ed950089dc1d5c2827e1
     });
-    
-    
-    
+
+
+
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
-    
+        Route::put('/assessments/{id}', [AssessmentController::class, 'update'])->name('assessments.update');
+
     });
     Route::prefix('rtc')->group(function () {
         Route::get('/', function (){
