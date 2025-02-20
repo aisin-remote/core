@@ -17,14 +17,16 @@
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                         style="width: 200px;">
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="ki-duotone ki-search fs-2"></i> Search
+                        <i class="fas fa-search"></i> Search
                     </button>
                     <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
                         data-kt-menu-placement="bottom-end">
-                        <i class="ki-duotone ki-filter fs-2"><span class="path1"></span><span class="path2"></span></i>
-                        Filter
+                        <i class="fas fa-filter"></i> Filter
                     </button>
-                    <a href="{{ route('employee.create') }}" class="btn btn-primary">Add</a>
+                    <a href="{{ route('employee.create') }}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Add
+                    </a>
                 </div>
             </div>
 

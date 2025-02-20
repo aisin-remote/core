@@ -7,15 +7,18 @@
         <!--begin::Logo image-->
         <a href="index.html">
             <!-- Gantilah dengan asset() untuk mendapatkan path yang benar -->
-            <img alt="Logo" src="{{ asset('assets/media/logos/default.svg') }}" class="h-25px app-sidebar-logo-default" />
-            <img alt="Logo" src="{{ asset('assets/media/logos/default-small.svg') }}" class="h-20px app-sidebar-logo-minimize" />
+            <img alt="Logo" src="{{ asset('assets/media/logos/default-dark.svg') }}"
+                class="h-25px app-sidebar-logo-default" />
+            <img alt="Logo" src="{{ asset('assets/media/logos/default-small.svg') }}"
+                class="h-20px app-sidebar-logo-minimize" />
         </a>
         <!--end::Logo image-->
 
         <div id="kt_app_sidebar_toggle"
             class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary h-30px w-30px position-absolute top-50 start-100 translate-middle rotate"
-            data-kt-toggle="true" data-kt-toggle-state="active" data-kt-toggle-target="body" data-kt-toggle-name="app-sidebar-minimize">
-            <i class="ki-duotone ki-black-left-line fs-3 rotate-180"><span class="path1"></span><span class="path2"></span></i>
+            data-kt-toggle="true" data-kt-toggle-state="active" data-kt-toggle-target="body"
+            data-kt-toggle-name="app-sidebar-minimize">
+            <i id="sidebarToggleIcon" class="fas fa-arrow-left fs-4"></i>
         </div>
         <!--end::Sidebar toggle-->
     </div>
@@ -47,26 +50,29 @@
                     <div class="menu-item">
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
-                            <span class="menu-icon"><i class="ki-duotone ki-abstract-25 fs-2x"><span
-                                        class="path1"></span><span class="path2"></span></i></span>
-                            <span class="menu-title ps-2">Employee</span>
+                            <span class="menu-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </span>
+                            <span class="menu-title ps-1">Employee</span>
                         </a>
                         <!--end:Menu link-->
                     </div>
                     <div class="menu-item">
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('assessment') ? 'active' : '' }}" href="/assessment">
-                            <span class="menu-icon"><i class="ki-duotone ki-abstract-39 fs-2x"><span
-                                        class="path1"></span><span class="path2"></span></i></span>
-                            <span class="menu-title ps-1">Assesment</span>
+                            <span class="menu-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </span>
+                            <span class="menu-title ps-1">Assessment</span>
                         </a>
                         <!--end:Menu link-->
                     </div>
                     <div class="menu-item">
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('hav') ? 'active' : '' }}" href="/hav">
-                            <span class="menu-icon"><i class="ki-duotone ki-abstract-26 fs-2"><span
-                                        class="path1"></span><span class="path2"></span></i></span>
+                            <span class="menu-icon">
+                                <i class="fas fa-th-large fs-2"></i>
+                            </span>
                             <span class="menu-title ps-1">HAV Quadran</span>
                         </a>
                         <!--end:Menu link-->
@@ -77,8 +83,9 @@
                     <div class="menu-item">
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('idp') ? 'active' : '' }}" href="/idp">
-                            <i class="ki-duotone ki-bank fs-2x"><span class="path1"></span><span
-                                    class="path2"></span></i>
+                            <span class="menu-icon">
+                                <i class="fas fa-code-branch"></i>
+                            </span>
                             <span class="menu-title ps-1">IDP</span>
                         </a>
                         <!--end:Menu link-->
@@ -88,12 +95,9 @@
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('rtc') ? 'active' : '' }}" href="/rtc">
                             <span class="menu-icon">
-                                <i class="ki-duotone ki-chart fs-2">
-                                    <span class="path1"></span>
-                                    <span class="path2"></span>
-                                </i>
+                                <i class="fas fa-database"></i>
                             </span>
-                            <span class="menu-title">RTC</span>
+                            <span class="menu-title ps-1">RTC</span>
                         </a>
                         <!--end:Menu link-->
                     </div>
@@ -107,24 +111,28 @@
         <!--end::Menu wrapper-->
     </div>
     <!--end::sidebar menu-->
-
-    <!--begin::Footer-->
-    <div class="app-sidebar-footer flex-column-auto pt-2 pb-6 px-6" id="kt_app_sidebar_footer">
-        <a href="https://preview.keenthemes.com/html/metronic/docs"
-            class="btn btn-flex flex-center btn-custom btn-primary overflow-hidden text-nowrap px-0 h-40px w-100"
-            data-bs-toggle="tooltip" data-bs-trigger="hover" data-bs-dismiss-="click"
-            title="200+ in-house components and 3rd-party plugins">
-
-            <span class="btn-label">
-                Docs & Components
-            </span>
-
-            <i class="ki-duotone ki-document btn-icon fs-2 m-0"><span class="path1"></span><span
-                    class="path2"></span></i> </a>
-    </div>
-    <!--end::Footer-->
 </div>
 <!--end::Sidebar-->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const toggleButton = document.getElementById("kt_app_sidebar_toggle");
+        const icon = document.getElementById("sidebarToggleIcon");
 
-<!-- Contoh untuk gambar lainnya --
+        toggleButton.addEventListener("click", function() {
+            // Toggle class on body
+            document.body.classList.toggle("app-sidebar-minimize");
 
+            // Update icon based on sidebar state
+            if (document.body.classList.contains("app-sidebar-minimize")) {
+                icon.classList.replace("fa-arrow-left", "fa-arrow-right");
+            } else {
+                icon.classList.replace("fa-arrow-right", "fa-arrow-left");
+            }
+        });
+
+        // Ensure icon updates correctly on page load
+        if (document.body.classList.contains("app-sidebar-minimize")) {
+            icon.classList.replace("fa-arrow-left", "fa-arrow-right");
+        }
+    });
+</script>
