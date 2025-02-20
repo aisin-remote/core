@@ -95,11 +95,49 @@
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('rtc') ? 'active' : '' }}" href="/rtc">
                             <span class="menu-icon">
-                                <i class="fas fa-database"></i>
+                                <i class="fas fa-server"></i>
                             </span>
                             <span class="menu-title ps-1">RTC</span>
                         </a>
                         <!--end:Menu link-->
+                    </div>
+
+                    <div class="menu-item pt-5">
+                        <!--begin:Menu content-->
+                        <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Master</span>
+                        </div>
+                        <!--end:Menu content-->
+                    </div>
+
+                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion"><!--begin:Menu link-->
+                        <span class="menu-link">
+                            <span class="menu-icon">
+                                <i class="fas fa-database"></i> <!-- Change as needed -->
+                            </span>
+                            <span class="menu-title ps-1">Database</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+                        <div class="menu-sub menu-sub-accordion" kt-hidden-height="84"
+                            style="display: none; overflow: hidden;"><!--begin:Menu item-->
+                            <div class="menu-item"><!--begin:Menu link-->
+                                <a class="menu-link {{ request()->is('master/employee') ? 'active' : '' }}"
+                                    href="/master/employee"><span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">
+                                        Employee
+                                    </span>
+                                </a><!--end:Menu link-->
+                            </div>
+                            <!--end:Menu item--><!--begin:Menu item-->
+                            <div class="menu-item"><!--begin:Menu link-->
+                                <a class="menu-link {{ request()->is('master/assesment') ? 'active' : '' }}"
+                                    href="/master/assesment"><span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span></span><span class="menu-title">
+                                        Assesment
+                                    </span>
+                                </a><!--end:Menu link-->
+                            </div><!--end:Menu item-->
+                        </div><!--end:Menu sub-->
                     </div>
 
                     <!--end:Menu item-->
