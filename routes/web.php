@@ -4,6 +4,7 @@ use App\Models\Employee;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
@@ -70,14 +71,14 @@ Route::middleware('auth')->group(function(){
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
-        Route::put('/assessments/{id}', [AssessmentController::class, 'update'])->name('assessments.update');
-
     });
+
     Route::prefix('rtc')->group(function () {
         Route::get('/', function (){
             return view('website.rtc.index');
         });
     });
+
     Route::prefix('idp')->group(function () {
         Route::get('/', function (){
             $employee = Employee::all(); // Ambil semua data karyawan
@@ -85,6 +86,11 @@ Route::middleware('auth')->group(function(){
                 'employees' => $employee
             ]);
         });
+    });
+
+    Route::prefix('master')->group(function () {
+        Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');
+        Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
