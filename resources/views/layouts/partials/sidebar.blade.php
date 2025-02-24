@@ -5,13 +5,11 @@
     <!--begin::Logo-->
     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
         <!--begin::Logo image-->
-        <a href="index.html">
-            <!-- Gantilah dengan asset() untuk mendapatkan path yang benar -->
-            <img alt="Logo" src="{{ asset('assets/media/logos/default-dark.svg') }}"
-                class="h-25px app-sidebar-logo-default" />
-            <img alt="Logo" src="{{ asset('assets/media/logos/default-small.svg') }}"
-                class="h-20px app-sidebar-logo-minimize" />
-        </a>
+        <div class="d-flex align-items-center">
+            <h3 class="text-white fw-bold mb-0">
+                HR SYSTEM
+            </h3>
+        </div>
         <!--end::Logo image-->
 
         <div id="kt_app_sidebar_toggle"

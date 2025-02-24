@@ -20,16 +20,6 @@ use App\Http\Controllers\AssessmentController;
 |
 */
 
-Route::get('/', function () {
-    $title = 'Employee';
-    $employee = Employee::all(); // Ambil semua data karyawan
-    return view('website.employee.index', compact('employee', 'title'));
-});
-
-Route::get('/login', function(){
-    return view('website.auth.login');
-});
-
 Route::middleware('guest')->group(function(){
     Route::prefix('register')->group(function () {
         Route::get('/', [RegisterController::class, 'index'])->name('register.index');
@@ -38,7 +28,6 @@ Route::middleware('guest')->group(function(){
     
     Route::prefix('login')->group(function () {
         Route::get('/', [LoginController::class, 'index'])->name('login.index');
-        Route::post('/authenticate', [LoginController::class, 'authenticate'])->name('login.authenticate');
         Route::post('/authenticate', [LoginController::class, 'authenticate'])->name('login.authenticate');
     });
 });
