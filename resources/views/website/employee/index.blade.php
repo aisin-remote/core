@@ -59,12 +59,15 @@
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-end">
-                                    <a href="{{ route('employee.profile') }}" class="btn btn-primary btn-sm">Detail</a>
                                     <a href="{{ route('employee.edit', $employee->npk) }}"
                                         class="btn btn-warning btn-sm">Update</a>
 
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $employee->npk }}">Delete</button>
+                                    <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+
                                 </td>
                             </tr>
                         @empty

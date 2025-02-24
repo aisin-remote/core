@@ -2,12 +2,14 @@
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addAssessmentModalLabel">Tambah Assessment</h5>
+                <h5 class="modal-title" id="addAssessmentModalLabel">Create Assessment</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="assessmentForm">
+                <form id="assessmentForm" enctype="multipart/form-data">
                     @csrf
+                    <input type="hidden" id="assessment_id" name="assessment_id">
+
                     <div class="mb-4">
                         <label for="employee_npk" class="form-label">Employee</label>
                         <select class="form-control" id="employee_npk" name="employee_npk" required>
@@ -17,123 +19,107 @@
                             @endforeach
                         </select>
                     </div>
+
                     <div class="mb-4">
                         <label for="date" class="form-label">Date</label>
                         <input type="date" class="form-control" id="date" name="date" required>
                     </div>
 
-                    <!-- Vision & Business Sense -->
                     <div class="mb-4">
-                        <label class="form-label">Vision & Business Sense</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="vision_business_sense" id="vision_business_sense" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="vision_business_sense">{{ $i }}</label>
+                        <label class="form-label">Assessment Scores</label>
+                        @foreach ($alcs as $alc)
+                            <div class="card p-3 mb-3">
+                                <h6>{{ $alc->name }}</h6>
+                                <input type="hidden" name="alc_ids[]" value="{{ $alc->id }}">
+                                <div class="mb-2">
+                                    <div class="d-flex gap-2">
+                                        @for ($i = 1; $i <= 5; $i++)
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio"
+                                                    name="scores[{{ $alc->id }}]"
+                                                    id="score_{{ $alc->id }}_{{ $i }}"
+                                                    value="{{ $i }}" required>
+                                                <label class="form-check-label"
+                                                    for="score_{{ $alc->id }}_{{ $i }}">{{ $i }}</label>
+                                            </div>
+                                        @endfor
+                                    </div>
                                 </div>
-                            @endfor
-                        </div>
+                            </div>
+                        @endforeach
                     </div>
 
+                    <!-- Container untuk menampung cards -->
+                    <div id="assessment-container">
+                        <div class="assessment-card card p-3 mb-3">
+                            <h6>Assessment</h6>
 
-                    <!-- Customer Focus -->
-                    <div class="mb-4">
-                        <label class="form-label">Customer Focus</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="customer_focus" id="customer_focus_{{ $i }}" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="customer_focus">{{ $i }}</label>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
+                            <!-- Dropdown ALC -->
+                            <div class="mb-3">
+                                <select class="form-control alc-dropdown" name="alc_ids[]" required>
+                                    <option value="">Pilih ALC</option>
+                                    @foreach ($alcs as $alc)
+                                        <option value="{{ $alc->id }}">{{ $alc->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
 
-                    <!-- Interpersonal Skill -->
-                    <div class="mb-4">
-                        <label class="form-label">Interpersonal Skill</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="interpersonal_skil" id="interpersonal_skil" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="interpersonal_skil">{{ $i }}</label>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
+                            <!-- Deskripsi -->
+                            <div class="mb-3">
+                                <label>Description</label>
+                                <textarea class="form-control" name="descriptions[]" rows="2"></textarea>
+                            </div>
 
-                    <!-- Analysis & Judgment -->
-                    <div class="mb-4">
-                        <label class="form-label">Analysis & Judgment</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="analysis_judgment" id="analysis_judgment" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="analysis_judgment">{{ $i }}</label>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
-
-                    <!-- Planning & Driving Action -->
-                    <div class="mb-4">
-                        <label class="form-label">Planning & Driving Action</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="planning_driving_action" id="planning_driving_action" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="planning_driving_action">{{ $i }}</label>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
-
-                    <!-- Leading & Motivating -->
-                    <div class="mb-4">
-                        <label class="form-label">Leading & Motivating</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="leading_motivating" id="leading_motivating" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="leading_motivating">{{ $i }}</label>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
-
-                    <!-- Teamwork -->
-                    <div class="mb-4">
-                        <label class="form-label">Teamwork</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="teamwork" id="teamwork" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="teamwork">{{ $i }}</label>
-                                </div>
-                            @endfor
-                        </div>
-                    </div>
-
-                    <!-- Drive & Courage -->
-                    <div class="mb-4">
-                        <label class="form-label">Drive & Courage</label>
-                        <div class="d-flex justify-content-between">
-                            @for ($i = 1; $i <= 5; $i++)
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="drive_courage" id="drive_courage" value="{{ $i }}" required>
-                                    <label class="form-check-label" for="drive_courage">{{ $i }}</label>
-                                </div>
-                            @endfor
+                            <!-- Tombol Hapus & Tambah -->
+                            <div class="d-flex justify-content-end">
+                                <button type="button" class="btn btn-success btn-sm add-assessment">Tambah</button>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mb-4">
-                        <label for="upload" class="form-label">Upload File</label>
-                        <input type="file" class="form-control" id="upload" name="upload">
+                        <label for="upload" class="form-label">Upload File (PDF, JPG, PNG)</label>
+                        <input type="file" class="form-control" id="upload" name="upload" accept=".pdf,.jpg,.png">
                     </div>
-                    <button type="submit" class="btn btn-primary">Simpan</button>
+
+                    <button type="submit" class="btn btn-primary" id="btnSubmit">Simpan</button>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let container = document.getElementById('assessment-container');
+
+        // Fungsi untuk menambahkan card baru
+        function addAssessmentCard() {
+            let newCard = document.querySelector('.assessment-card').cloneNode(true);
+
+            // Reset dropdown dan textarea
+            newCard.querySelector('.alc-dropdown').value = '';
+            newCard.querySelector('textarea').value = '';
+
+            // Perbarui tombol pada card baru
+            let buttonContainer = newCard.querySelector('.d-flex');
+            buttonContainer.innerHTML = `
+                <button type="button" class="btn btn-danger btn-sm remove-card me-2">Hapus</button>
+                <button type="button" class="btn btn-success btn-sm add-assessment">Tambah</button>
+            `;
+
+            // Tambahkan event listener untuk tombol hapus
+            newCard.querySelector('.remove-card').addEventListener('click', function () {
+                newCard.remove();
+            });
+
+            // Tambahkan event listener untuk tombol tambah pada card baru
+            newCard.querySelector('.add-assessment').addEventListener('click', addAssessmentCard);
+
+            container.appendChild(newCard);
+        }
+
+        // Tambahkan event listener untuk tombol tambah pertama
+        document.querySelector('.add-assessment').addEventListener('click', addAssessmentCard);
+    });
+</script>

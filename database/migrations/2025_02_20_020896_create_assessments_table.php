@@ -15,17 +15,13 @@ return new class extends Migration
     {
         Schema::create('assessments', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('employee_npk');
-            $table->foreign('employee_npk')->references('npk')->on('employees')->onDelete('cascade');
+            $table->string('employee_id');
+            $table->foreign('employee_id')->references('npk')->on('employees')->onDelete('cascade');
+            $table->integer('alc_id');
+            $table->foreign('alc_id')->references('id')->on('alc')->onDelete('cascade');
+            $table->string('score', 2);
+            $table->string('description', 2000);
             $table->date('date');
-            $table->string('vision_business_sense', 2);
-            $table->string('customer_focus', 2);
-            $table->string('interpersonal_skil', 2);
-            $table->string('analysis_judgment', 2);
-            $table->string('planning_driving_action', 2);
-            $table->string('leading_motivating', 2);
-            $table->string('teamwork', 2);
-            $table->string('drive_courage', 2);
             $table->string('upload', 200);
             $table->timestamps();
         });
