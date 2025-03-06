@@ -2,100 +2,93 @@
 
 @section('main')
     <div class="container mt-4">
-        <div class="card shadow-sm">
-            <!-- Header Card -->
-            <div class="card-header bg-primary text-white text-center py-3">
-                <h4 class="mb-0">
-                    <i class="bi bi-person-circle me-2"></i> Employee Detail
-                </h4>
+        <div class="card shadow-sm p-4">
+            <h4 class="fw-bold mb-4">Employee Profile</h4>
+            <div class="row">
+                <!-- Kiri: Foto Profil -->
+                <div class="col-md-3 text-center">
+                    <p class="fw-bold">Profile Picture</p>
+                    <img src="{{ asset('storage/' . $employee->photo) }}" alt="Employee Photo"A
+                    class="shadow img-fluid" width="500">
+                </div>
+
+                <!-- Kanan: Detail Profil -->
+                <div class="col-md-9">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="fw-bold">Employee Name</label>
+                            <input type="text" class="form-control" value="{{ $employee->name }}" readonly>
+
+                            <label class="fw-bold mt-2">Identity No</label>
+                            <input type="text" class="form-control" value="{{ $employee->identity_number }}" readonly>
+
+                            <label class="fw-bold mt-2">No. KTP</label>
+                            <input type="text" class="form-control" value="{{ $employee->npk }}" readonly>
+
+                            <label class="fw-bold mt-2">Gender</label>
+                            <div>
+                                <input type="radio" {{ $employee->gender == 'Male' ? 'checked' : '' }}> Male
+                                <input type="radio" {{ $employee->gender == 'Female' ? 'checked' : '' }}> Female
+                            </div>
+
+                            <label class="fw-bold mt-2">Birth Date</label>
+                            <input type="text" class="form-control" value="{{ $employee->birthday_date }}" readonly>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="fw-bold">Aisin Entry Date</label>
+                            <input type="text" class="form-control" value="{{ $employee->aisin_entry_date }}" readonly>
+
+                            <label class="fw-bold mt-2">Working Period</label>
+                            <div class="d-flex">
+                                <input type="text" class="form-control" value="{{ $employee->working_period }}" readonly>
+                                <span class="ms-2 align-self-center">Years</span>
+                            </div>
+
+                            <label class="fw-bold mt-2">Company Group</label>
+                            <input type="text" class="form-control" value="{{ $employee->company_group }}" readonly>
+
+                            <label class="fw-bold mt-2">Function Group</label>
+                            <input type="text" class="form-control" value="{{ $employee->function }}" readonly>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <div class="card-body">
-                <div class="row">
-                    <!-- Kolom Kiri -->
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-card-list me-2"></i>NPK</label>
-                            <p class="form-control-plaintext">{{ $employee->npk }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-person me-2"></i>Name</label>
-                            <p class="form-control-plaintext">{{ $employee->name }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-credit-card-2-front me-2"></i>Identity Number</label>
-                            <p class="form-control-plaintext">{{ $employee->identity_number }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-calendar me-2"></i>Birthday Date</label>
-                            <p class="form-control-plaintext">{{ $employee->birthday_date }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-gender-ambiguous me-2"></i>Gender</label>
-                            <p class="form-control-plaintext">{{ $employee->gender }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-building me-2"></i>Company Name</label>
-                            <p class="form-control-plaintext">{{ $employee->company_name }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-briefcase me-2"></i>Function</label>
-                            <p class="form-control-plaintext">{{ $employee->function }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-award me-2"></i>Position Name</label>
-                            <p class="form-control-plaintext">{{ $employee->position_name }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Kolom Kanan -->
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-door-open me-2"></i>Aisin Entry Date</label>
-                            <p class="form-control-plaintext">{{ $employee->aisin_entry_date }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-clock-history me-2"></i>Working Period</label>
-                            <p class="form-control-plaintext">{{ $employee->working_period }} years</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-diagram-3 me-2"></i>Company Group</label>
-                            <p class="form-control-plaintext">{{ $employee->company_group }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-globe2 me-2"></i>Foundation Group</label>
-                            <p class="form-control-plaintext">{{ $employee->foundation_group }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-person-badge me-2"></i>Position</label>
-                            <p class="form-control-plaintext">{{ $employee->position }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-stars me-2"></i>Grade</label>
-                            <p class="form-control-plaintext">{{ $employee->grade }}</p>
-                        </div>
-                        <div class="mb-3">
-                            <label class="fw-bold"><i class="bi bi-calendar-check me-2"></i>Last Promote Date</label>
-                            <p class="form-control-plaintext">{{ $employee->last_promote_date }}</p>
-                        </div>
-                        @if ($employee->photo)
-                        <div class="mb-3">
-                            <h5><i class="bi bi-image"></i> Employee Photo</h5>
-                            <img src="{{ asset('storage/' . $employee->photo) }}" alt="Employee Photo" class="img-thumbnail shadow" width="200">
-                        </div>
-                    @endif
-
-                    </div>
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label class="fw-bold">Company Name</label>
+                    <input type="text" class="form-control" value="{{ $employee->company_name }}" readonly>
                 </div>
-
-                <!-- Foto -->
-
-                <!-- Tombol Back -->
-                <div class="text-end mt-4">
-                    <a href="{{ route('employee.index') }}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left-circle"></i> Back
-                    </a>
+                <div class="col-md-6">
+                    <label class="fw-bold">Position</label>
+                    <input type="text" class="form-control" value="{{ $employee->position }}" readonly>
                 </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label class="fw-bold">Position Name</label>
+                    <input type="text" class="form-control" value="{{ $employee->position_name }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="fw-bold">Grade</label>
+                    <input type="text" class="form-control" value="{{ $employee->grade }}" readonly>
+                </div>
+            </div>
+
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <label class="fw-bold">Last Promote Date</label>
+                    <input type="text" class="form-control" value="{{ $employee->last_promote_date }}" readonly>
+                </div>
+            </div>
+
+            <!-- Tombol Back -->
+            <div class="text-end mt-4">
+                <a href="{{ route('employee.index') }}" class="btn btn-secondary">
+                    <i class="bi bi-arrow-left-circle"></i> Back
+                </a>
             </div>
         </div>
     </div>

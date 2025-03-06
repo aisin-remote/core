@@ -11,12 +11,24 @@ class EmployeeController extends Controller
     /**
      * Tampilkan daftar karyawan
      */
-    public function index()
+    public function index(Request $request)
     {
         $title = 'Employee';
-        $employee = Employee::all(); // Ambil semua data karyawan
-        return view('website.employee.index', compact('employee', 'title'));
+        $query = Employee::query();
+
+        // Filter berdasarkan perusahaan jika ada parameter 'company'
+        if ($request->has('company')) {
+            $query->where('company_name', $request->company);
+        }
+
+        $employees = $query->get();
+
+        // Cek apakah halaman adalah '/master/employee' atau '/master/employee?company=...'
+        $isMasterPage = $request->path() === 'master/employee' && !$request->has('company');
+
+        return view('website.employee.index', compact('employees', 'title', 'isMasterPage'));
     }
+
 
     /**
      * Form tambah karyawan

@@ -45,16 +45,35 @@
                     </div>
                     <!--end:Menu item-->
                     <!--begin:Menu item-->
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
+                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
+                        <span class="menu-link">
                             <span class="menu-icon">
                                 <i class="fas fa-user-tie"></i>
                             </span>
-                            <span class="menu-title ps-1">Employee</span>
-                        </a>
-                        <!--end:Menu link-->
+                            <span class="menu-title ps-1">Employee Profile</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+
+                        <div class="menu-sub menu-sub-accordion">
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->get('company') == 'Aisin Indonesia' ? 'active' : '' }}"
+                                   href="{{ route('employee.index', ['company' => 'Aisin Indonesia']) }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">Aisin Indonesia</span>
+                                </a>
+                            </div>
+
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->get('company') == 'Aisin Indonesia Automotive' ? 'active' : '' }}"
+                                   href="{{ route('employee.index', ['company' => 'Aisin Indonesia Automotive']) }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">Aisin Indonesia Automotive</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
+
+
                     <div class="menu-item">
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('assessment') ? 'active' : '' }}" href="/assessment">

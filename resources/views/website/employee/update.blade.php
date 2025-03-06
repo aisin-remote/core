@@ -48,9 +48,20 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Company Name</label>
-                        <input type="text" name="company_name" class="form-control" value="{{ old('company_name', $employee->company_name) }}">
+                        <select name="company_name" class="form-control">
+                            <option value="">-- Select Company --</option>
+                            <option value="Aisin Indonesia"
+                                {{ old('company_name', $employee->company_name) == 'Aisin Indonesia' ? 'selected' : '' }}>
+                                Aisin Indonesia
+                            </option>
+                            <option value="Aisin Indonesia Automotive"
+                                {{ old('company_name', $employee->company_name) == 'Aisin Indonesia Automotive' ? 'selected' : '' }}>
+                                Aisin Indonesia Automotive
+                            </option>
+                        </select>
                         @error('company_name') <div class="text-danger">{{ $message }}</div> @enderror
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Function</label>
                         <input type="text" name="function" class="form-control" value="{{ old('function', $employee->function) }}">
