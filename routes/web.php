@@ -66,12 +66,16 @@ Route::middleware('auth')->group(function(){
     });
 
 
-
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
+        Route::get('/{employee_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate');
+
+        Route::get('/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ditaruh di bawah agar tidak bentrok
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
     });
+
+
 
     Route::prefix('rtc')->group(function () {
         Route::get('/', function (){

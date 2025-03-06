@@ -11,13 +11,14 @@
                     <input type="hidden" id="assessment_id" name="assessment_id">
 
                     <div class="mb-4">
-                        <label for="employee_npk" class="form-label">Employee</label>
-                        <select class="form-control" id="employee_npk" name="employee_npk" required>
+                        <label for="employee_id" class="form-label">Employee</label>
+                        <select class="form-control" id="employee_id" name="employee_id" required>
                             <option value="">Pilih Employee</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->npk }}">{{ $employee->name }}</option>
                             @endforeach
                         </select>
+
                     </div>
 
                     <div class="mb-4">
@@ -67,7 +68,8 @@
                             <!-- Deskripsi -->
                             <div class="mb-3">
                                 <label>Description</label>
-                                <textarea class="form-control" name="descriptions[]" rows="2"></textarea>
+                                <textarea class="form-control" name="descriptions[{{ $alc->id }}]" rows="2"></textarea>
+
                             </div>
 
                             <!-- Tombol Hapus & Tambah -->
@@ -78,7 +80,7 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="upload" class="form-label">Upload File (PDF, JPG, PNG)</label>
+                        <label for="upload" class="form-label">Upload File Assessment(PDF, JPG, PNG)</label>
                         <input type="file" class="form-control" id="upload" name="upload" accept=".pdf,.jpg,.png">
                     </div>
 
@@ -89,37 +91,67 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        let container = document.getElementById('assessment-container');
+<script>document.addEventListener('DOMContentLoaded', function () {
+    let container = document.getElementById('assessment-container');
 
-        // Fungsi untuk menambahkan card baru
-        function addAssessmentCard() {
-            let newCard = document.querySelector('.assessment-card').cloneNode(true);
+    function updateDescriptionName(selectElement) {
+        let card = selectElement.closest('.assessment-card');
+        let description = card.querySelector('textarea');
+        let alcId = selectElement.value;
 
-            // Reset dropdown dan textarea
-            newCard.querySelector('.alc-dropdown').value = '';
-            newCard.querySelector('textarea').value = '';
-
-            // Perbarui tombol pada card baru
-            let buttonContainer = newCard.querySelector('.d-flex');
-            buttonContainer.innerHTML = `
-                <button type="button" class="btn btn-danger btn-sm remove-card me-2">Hapus</button>
-                <button type="button" class="btn btn-success btn-sm add-assessment">Tambah</button>
-            `;
-
-            // Tambahkan event listener untuk tombol hapus
-            newCard.querySelector('.remove-card').addEventListener('click', function () {
-                newCard.remove();
-            });
-
-            // Tambahkan event listener untuk tombol tambah pada card baru
-            newCard.querySelector('.add-assessment').addEventListener('click', addAssessmentCard);
-
-            container.appendChild(newCard);
+        if (alcId) {
+            description.setAttribute('name', `descriptions[${alcId}]`);
+        } else {
+            description.removeAttribute('name'); // Jika tidak dipilih, hapus name untuk mencegah pengiriman data kosong
         }
+    }
 
-        // Tambahkan event listener untuk tombol tambah pertama
-        document.querySelector('.add-assessment').addEventListener('click', addAssessmentCard);
+    // Fungsi untuk menambahkan card baru
+    function addAssessmentCard() {
+        let templateCard = document.querySelector('.assessment-card'); // Ambil card pertama sebagai template
+        let newCard = templateCard.cloneNode(true);
+
+        // Reset nilai dalam card baru
+        let newDropdown = newCard.querySelector('.alc-dropdown');
+        let newDescription = newCard.querySelector('textarea');
+
+        newDropdown.value = '';
+        newDescription.value = '';
+        newDescription.removeAttribute('name'); // Pastikan textarea tidak memiliki name sebelum ALC ID dipilih
+
+        // Event listener untuk update name sesuai ALC ID
+        newDropdown.addEventListener('change', function () {
+            updateDescriptionName(newDropdown);
+        });
+
+        // Perbarui tombol dalam card baru
+        let buttonContainer = newCard.querySelector('.d-flex');
+        buttonContainer.innerHTML = `
+            <button type="button" class="btn btn-danger btn-sm remove-card me-2">Hapus</button>
+            <button type="button" class="btn btn-success btn-sm add-assessment">Tambah</button>
+        `;
+
+        // Tambahkan event listener untuk tombol hapus
+        newCard.querySelector('.remove-card').addEventListener('click', function () {
+            newCard.remove();
+        });
+
+        // Tambahkan event listener untuk tombol tambah
+        newCard.querySelector('.add-assessment').addEventListener('click', addAssessmentCard);
+
+        container.appendChild(newCard);
+    }
+
+    // Tambahkan event listener ke dropdown pertama jika ada
+    document.querySelectorAll('.alc-dropdown').forEach(dropdown => {
+        dropdown.addEventListener('change', function () {
+            updateDescriptionName(this);
+        });
     });
+
+    // Tambahkan event listener untuk tombol tambah pertama
+    document.querySelector('.add-assessment').addEventListener('click', addAssessmentCard);
+});
+
+
 </script>

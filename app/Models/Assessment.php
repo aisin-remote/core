@@ -10,7 +10,7 @@ class Assessment extends Model
     use HasFactory;
 
     protected $fillable = [
-        'employee_id',   // Menggunakan employee_id sesuai dengan database
+        'employee_id',   // Menggunakan  sesuai dengan database
         'alc_id',        // Relasi ke tabel alc
         'score',         // Nilai yang diberikan untuk setiap alc_id
         'description',   // Deskripsi untuk setiap alc_id

@@ -33,31 +33,25 @@
                         <tbody>
                             @foreach ($assessments as $index => $assessment)
                                 <tr>
-                                    <td>{{ $index + 1 }}</td>
-                                    <td>{{ $assessment->name ?? '-' }}</td>
-                                    <td>{{ $assessment->position ?? '-' }}</td>
-                                    <td>{{ $assessment->npk ?? '-' }}</td>
-                                    <td>{{ \Carbon\Carbon::parse($assessment->birthday_date)->age ?? '-' }}</td>
+                                    <td>{{ $assessments->firstItem() + $index }}</td>
+                                    <td>{{ $assessment->employee->name ?? '-' }}</td>
+                                    <td>{{ $assessment->employee->position_name ?? '-' }}</td>
+                                    <td>{{ $assessment->employee->npk ?? '-' }}</td>
+                                    <td>{{ \Carbon\Carbon::parse($assessment->employee->birthday_date)->age ?? '-' }}</td>
                                     <td class="text-end">
-                                        <button class="btn btn-warning btn-sm editAssessment" data-bs-toggle="modal"
-                                            data-bs-target="#addAssessmentModal" data-id="{{ $assessment->id }}"
-                                            data-employee_npk="{{ $assessment->npk }}" data-date="{{ $assessment->date }}"
-                                            data-vision_business_sense="{{ $assessment->vision_business_sense }}"
-                                            data-customer_focus="{{ $assessment->customer_focus }}"
-                                            data-interpersonal_skil="{{ $assessment->interpersonal_skil }}"
-                                            data-analysis_judgment="{{ $assessment->analysis_judgment }}"
-                                            data-planning_driving_action="{{ $assessment->planning_driving_action }}"
-                                            data-leading_motivating="{{ $assessment->leading_motivating }}"
-                                            data-teamwork="{{ $assessment->teamwork }}"
-                                            data-drive_courage="{{ $assessment->drive_courage }}">
-                                            Edit
-                                        </button>
-
+                                        <a href="{{ route('assessments.show', $assessment->employee->npk) }}" class="btn btn-info btn-sm">
+                                            Detail
+                                        </a>
                                     </td>
                                 </tr>
                             @endforeach
                         </tbody>
+
                     </table>
+                    <div class="d-flex justify-content-between">
+                        <span>Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of {{ $assessments->total() }} entries</span>
+                        {{ $assessments->links('pagination::bootstrap-5') }}
+                    </div>
                 </div>
             </div>
         </div>
@@ -81,7 +75,7 @@
                 $('#btnSubmit').text('Update'); // Ubah teks tombol
                 $('#assessment_id').val(assessment_id); // Set ID di form
 
-                $('#employee_npk').val(button.data('employee_npk'));
+                $('#employee_id').val(button.data('employee_id'));
                 $('#date').val(button.data('date'));
 
                 // Isi nilai radio button sesuai data

@@ -17,4 +17,8 @@ class Employee extends Model
         'company_name', 'function', 'position_name', 'aisin_entry_date', 'working_period',
         'company_group', 'foundation_group', 'position', 'grade', 'last_promote_date'
     ];
+    public function assessments()
+    {
+        return $this->hasMany(Assessment::class, 'employee_id', 'npk');
+    }
 }
