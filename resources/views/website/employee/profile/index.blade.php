@@ -54,66 +54,6 @@
                                 <!--end::User-->
                             </div>
                             <!--end::Title-->
-
-                            <!--begin::Stats-->
-                            <div class="d-flex flex-wrap flex-stack">
-                                <!--begin::Wrapper-->
-                                <div class="d-flex flex-column flex-grow-1 pe-8">
-                                    <!--begin::Stats-->
-                                    <div class="d-flex flex-wrap">
-                                        <!--begin::Stat-->
-                                        <div
-                                            class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                            <!--begin::Number-->
-                                            <div class="d-flex align-items-center">
-                                                <div class="fs-2 fw-bold" data-kt-countup="true"
-                                                    data-kt-countup-value="178">0</div>
-                                            </div>
-                                            <!--end::Number-->
-
-                                            <!--begin::Label-->
-                                            <div class="fw-semibold fs-6 text-gray-500">Projects</div>
-                                            <!--end::Label-->
-                                        </div>
-                                        <!--end::Stat-->
-
-                                        <!--begin::Stat-->
-                                        <div
-                                            class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                            <!--begin::Number-->
-                                            <div class="d-flex align-items-center">
-                                                <div class="fs-2 fw-bold" data-kt-countup="true" data-kt-countup-value="89">
-                                                    0</div>
-                                            </div>
-                                            <!--end::Number-->
-
-                                            <!--begin::Label-->
-                                            <div class="fw-semibold fs-6 text-gray-500">Improvements</div>
-                                            <!--end::Label-->
-                                        </div>
-                                        <!--end::Stat-->
-
-                                        <!--begin::Stat-->
-                                        <div
-                                            class="border border-gray-300 border-dashed rounded min-w-125px py-3 px-4 me-6 mb-3">
-                                            <!--begin::Number-->
-                                            <div class="d-flex align-items-center">
-                                                <div class="fs-2 fw-bold" data-kt-countup="true" data-kt-countup-value="98"
-                                                    data-kt-countup-prefix="%">0</div>
-                                            </div>
-                                            <!--end::Number-->
-
-                                            <!--begin::Label-->
-                                            <div class="fw-semibold fs-6 text-gray-500">Success Rate</div>
-                                            <!--end::Label-->
-                                        </div>
-                                        <!--end::Stat-->
-                                    </div>
-                                    <!--end::Stats-->
-                                </div>
-                                <!--end::Wrapper-->
-                            </div>
-                            <!--end::Stats-->
                         </div>
                         <!--end::Info-->
                     </div>

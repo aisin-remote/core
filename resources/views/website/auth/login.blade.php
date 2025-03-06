@@ -179,6 +179,5 @@
             <!--end::Menu-->
         </div>
         <!--end::Footer-->
-
     </div>
 @endsection
