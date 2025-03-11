@@ -4,7 +4,7 @@
 <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
 
 <head>
-    <title>Metronic - The World's #1 Selling Tailwind CSS & Bootstrap Admin Template by KeenThemes</title>
+    <title>HR System</title>
     <meta charset="utf-8" />
     <meta name="description"
         content="
@@ -111,7 +111,7 @@
 
             <!--begin::Body-->
             <div class="d-none d-lg-flex flex-lg-row-fluid w-50 bgi-size-cover bgi-position-y-center bgi-position-x-start bgi-no-repeat"
-                style="background-image: url(../../../assets/media/auth/bg6.jpg)">
+                style="background-image: url(../../../assets/media/auth/satu-aisin.png)">
             </div>
             <!--begin::Body-->
         </div>

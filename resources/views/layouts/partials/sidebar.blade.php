@@ -1,16 +1,25 @@
 <div id="kt_app_sidebar" class="app-sidebar flex-column" data-kt-drawer="true" data-kt-drawer-name="app-sidebar"
     data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="225px"
     data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
+    <style>
+        .logo-img {
+            width: 150px;
+            /* Sesuaikan ukuran */
+            height: auto;
+            /* Menjaga proporsi */
+            display: block;
+        }
 
-    <!--begin::Logo-->
+        .app-sidebar-minimize .app-sidebar-logo img {
+            display: none;
+        }
+    </style>
+
+
     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
-        <!--begin::Logo image-->
         <div class="d-flex align-items-center">
-            <h3 class="text-white fw-bold mb-0">
-                HR SYSTEM
-            </h3>
+            <img src="{{ asset('assets/media/logos/satu-aisin-final.png') }}" alt="Logo" class="logo-img">
         </div>
-        <!--end::Logo image-->
 
         <div id="kt_app_sidebar_toggle"
             class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary h-30px w-30px position-absolute top-50 start-100 translate-middle rotate"
@@ -61,10 +70,30 @@
                             <span class="menu-icon">
                                 <i class="fas fa-user-tie"></i>
                             </span>
-                            <span class="menu-title ps-1">Employee</span>
-                        </a>
-                        <!--end:Menu link-->
+                            <span class="menu-title ps-1">Employee Profile</span>
+                            <span class="menu-arrow"></span>
+                            </span>
+
+                            <div class="menu-sub menu-sub-accordion">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->get('company') == 'Aisin Indonesia' ? 'active' : '' }}"
+                                        href="{{ route('employee.index', ['company' => 'Aisin Indonesia']) }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">Aisin Indonesia</span>
+                                    </a>
+                                </div>
+
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->get('company') == 'Aisin Indonesia Automotive' ? 'active' : '' }}"
+                                        href="{{ route('employee.index', ['company' => 'Aisin Indonesia Automotive']) }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">Aisin Indonesia Automotive</span>
+                                    </a>
+                                </div>
+                            </div>
                     </div>
+
+
                     <div class="menu-item">
                         <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('assessment') ? 'active' : '' }}" href="/assessment">

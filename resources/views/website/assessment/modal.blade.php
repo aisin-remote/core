@@ -22,7 +22,7 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="date" class="form-label">Date</label>
+                        <label for="date" class="form-label">Date Assessment</label>
                         <input type="date" class="form-control" id="date" name="date" required>
                     </div>
 
@@ -51,9 +51,9 @@
                     </div>
 
                     <!-- Container untuk menampung cards -->
-                    <div id="assessment-container">
+                    {{-- <div id="assessment-container">
                         <div class="assessment-card card p-3 mb-3">
-                            <h6>Assessment</h6>
+                            <h6>Strenght</h6>
 
                             <!-- Dropdown ALC -->
                             <div class="mb-3">
@@ -64,20 +64,22 @@
                                     @endforeach
                                 </select>
                             </div>
-
+                            
                             <!-- Deskripsi -->
-                            <div class="mb-3">
-                                <label>Description</label>
-                                <textarea class="form-control" name="descriptions[{{ $alc->id }}]" rows="2"></textarea>
+                            @foreach ($alcs as $alc)
+                           <div class="mb-3">
+                               <label>Description</label>
+                               <textarea class="form-control" name="descriptions[{{ $alc->id }}]" rows="2"></textarea>
+                           </div>
+                           @endforeach
 
-                            </div>
 
                             <!-- Tombol Hapus & Tambah -->
                             <div class="d-flex justify-content-end">
                                 <button type="button" class="btn btn-success btn-sm add-assessment">Tambah</button>
                             </div>
                         </div>
-                    </div>
+                    </div> --}}
 
                     <div class="mb-4">
                         <label for="upload" class="form-label">Upload File Assessment(PDF, JPG, PNG)</label>

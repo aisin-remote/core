@@ -41,6 +41,7 @@ class EmployeeController extends Controller
         return view('website.employee.index', compact('employees', 'title'));
     }
 
+
     /**
      * Form tambah karyawan
      */
@@ -205,9 +206,10 @@ class EmployeeController extends Controller
         return redirect()->route('employee.index')->with('success', 'Karyawan berhasil dihapus!');
     }
 
-    public function profile()
+    public function profile($npk)
     {
-        return view('website.employee.profile.index');
+        $employee = Employee::where('npk', $npk)->firstOrFail();
+        return view('website.employee.profile.index', compact('employee'));
     }
 
 }

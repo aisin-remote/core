@@ -208,6 +208,7 @@
                                         class="form-select form-select-solid form-select-lg fw-semibold">
                                         <option value="">Select Development Program</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="AF">Feedback</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Self Development</option>
                                         <option data-kt-flag="flags/aland-islands.svg" value="AX">Shadowing</option>
                                         <option data-kt-flag="flags/albania.svg" value="AL">On Job Development
                                         </option>
@@ -225,6 +226,7 @@
                                         class="form-select form-select-solid form-select-lg fw-semibold" multiple>
                                         <option value="">Select Category</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="AF">Feedback</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Self Development</option>
                                         <option data-kt-flag="flags/aland-islands.svg" value="AX">Shadowing</option>
                                         <option data-kt-flag="flags/albania.svg" value="AL">On Job Development
                                         </option>
@@ -359,13 +361,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with JavaScript </div>
                                                                     <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
@@ -375,14 +371,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Good time-management skills </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -391,14 +380,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with React </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -407,14 +389,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with HTML / CSS </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -423,14 +398,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with REST API </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -439,14 +407,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 ">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Git knowledge is a plus </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -491,14 +452,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with JavaScript </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -507,14 +461,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Good time-management skills </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -523,14 +470,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with React </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -539,14 +479,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with HTML / CSS </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -555,14 +488,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with REST API </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -571,14 +497,7 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 ">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Git knowledge is a plus </div>
-                                                                    <!--end::Label-->
                                                                 </div>
                                                                 <!--end::Item-->
                                                             </div>
@@ -650,96 +569,43 @@
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with JavaScript </div>
-                                                                    <!--end::Label-->
-                                                                </div>
-                                                                <!--end::Item-->
                                                             </div>
                                                             <!--end::Item-->
                                                             <!--begin::Item-->
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Good time-management skills </div>
-                                                                    <!--end::Label-->
-                                                                </div>
-                                                                <!--end::Item-->
                                                             </div>
                                                             <!--end::Item-->
                                                             <!--begin::Item-->
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with React </div>
-                                                                    <!--end::Label-->
-                                                                </div>
-                                                                <!--end::Item-->
                                                             </div>
                                                             <!--end::Item-->
                                                             <!--begin::Item-->
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with HTML / CSS </div>
-                                                                    <!--end::Label-->
-                                                                </div>
                                                                 <!--end::Item-->
                                                             </div>
                                                             <!--end::Item-->
                                                             <!--begin::Item-->
                                                             <div class="mb-4">
-                                                                <!--begin::Item-->
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Experience with REST API </div>
-                                                                    <!--end::Label-->
-                                                                </div>
-                                                                <!--end::Item-->
+                                                            </div>
+                                                            </div>
                                                             </div>
                                                             <!--end::Item-->
                                                             <!--begin::Item-->
                                                             <div class="mb-4">
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 ">
-                                                                    <!--begin::Bullet-->
-                                                                    <span class="bullet me-3"></span>
-                                                                    <!--end::Bullet-->
 
-                                                                    <!--begin::Label-->
-                                                                    <div class="text-gray-600 fw-semibold fs-6">
-                                                                        Git knowledge is a plus </div>
-                                                                    <!--end::Label-->
-                                                                </div>
-                                                                <!--end::Item-->
                                                             </div>
                                                             <!--end::Item-->
                                                         </div>
@@ -759,10 +625,13 @@
                                     </div>
                                 </div>
                             </div>
+
+                                            </div>
+                                        </div>
                             <div class="row mt-8">
                                 <div class="card">
                                     <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">II. Development Program</h3>
+                                        <h3 class="card-title">II. Individual Development Program</h3>
                                         <div class="d-flex align-items-center">
                                             <input type="text" id="searchInput" class="form-control me-2"
                                                 placeholder="Search..." style="width: 200px;">
@@ -816,7 +685,7 @@
                             <div class="row mt-8">
                                 <div class="card">
                                     <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">III. Mid Year Riview</h3>
+                                        <h3 class="card-title">III. Mid Year Review</h3>
                                         <div class="d-flex align-items-center">
                                             <input type="text" id="searchInput" class="form-control me-2"
                                                 placeholder="Search..." style="width: 200px;">

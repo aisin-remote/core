@@ -1,12 +1,9 @@
 @extends('layouts.root.main')
 
 @section('title')
-    {{ $title ?? 'Employee' }}
+    {{ $title ?? 'Employee Profile' }}
 @endsection
 
-@section('breadcrumbs')
-    {{ $title ?? 'Employee' }}
-@endsection
 
 @section('main')
     <div id="kt_app_content_container" class="app-container  container-fluid ">
@@ -23,10 +20,14 @@
                         data-kt-menu-placement="bottom-end">
                         <i class="fas fa-filter"></i> Filter
                     </button>
-                    <a href="{{ route('employee.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i>
-                        Add
-                    </a>
+
+                    @if ($isMasterPage)
+                        <a href="{{ route('employee.create') }}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i>
+                            Add
+                        </a>
+                    @endif
+
                 </div>
             </div>
 
@@ -59,15 +60,17 @@
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-end">
-                                    <a href="{{ route('employee.edit', $employee->npk) }}"
-                                        class="btn btn-warning btn-sm">Update</a>
+                                    @if ($isMasterPage)
+                                        <a href="{{ route('employee.edit', $employee->npk) }}" class="btn btn-warning btn-sm">Update</a>
 
-                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $employee->npk }}">Delete</button>
+                                        <button type="button" class="btn btn-danger btn-sm delete-btn" data-id="{{ $employee->npk }}">
+                                            Delete
+                                        </button>
+                                    @endif
+
                                     <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
-                                        <i class="bi bi-eye"></i> View
+                                        <i class="bi bi-eye"></i> Detail
                                     </a>
-
                                 </td>
                             </tr>
                         @empty
@@ -76,6 +79,7 @@
                             </tr>
                         @endforelse
                     </tbody>
+
                 </table>
             </div>
         </div>
@@ -100,6 +104,7 @@
                     }
                 }
             });
+
 
             // SweetAlert untuk tombol delete
             document.querySelectorAll('.delete-btn').forEach(button => {

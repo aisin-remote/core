@@ -32,9 +32,12 @@ class LoginController extends Controller
     {
         Auth::logout();
 
+        // Hapus semua session
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return view('website.auth.login');
+        // Redirect ke halaman login sesuai prefix route
+        return redirect()->route('login')->with('success', 'You have been logged out.');
     }
+
 }

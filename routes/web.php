@@ -54,7 +54,7 @@ Route::middleware('auth')->group(function(){
 
 
         Route::prefix('profile')->group(function(){
-            Route::get('/', [EmployeeController::class, 'profile'])->name('employee.profile');
+            Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
         });
     });
 
