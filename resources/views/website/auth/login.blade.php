@@ -49,9 +49,6 @@
                             <a href="/register" class="link-primary" data-kt-translate="sign-in-head-link">
                                 Sign Up
                             </a>
-                            <a href="reset-password.html" class="link-primary" data-kt-translate="sign-in-forgot-password">
-                                Forgot Password?
-                            </a>
                         </div>
                     </div>
 
