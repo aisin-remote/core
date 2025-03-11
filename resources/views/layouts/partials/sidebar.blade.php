@@ -1,16 +1,30 @@
 <div id="kt_app_sidebar" class="app-sidebar flex-column" data-kt-drawer="true" data-kt-drawer-name="app-sidebar"
     data-kt-drawer-activate="{default: true, lg: false}" data-kt-drawer-overlay="true" data-kt-drawer-width="225px"
     data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
+    <style>
+        .logo-img {
+    width: 150px; /* Sesuaikan ukuran */
+    height: auto; /* Menjaga proporsi */
+    display: block;
+}
 
-    <!--begin::Logo-->
-    <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
-        <!--begin::Logo image-->
-        <div class="d-flex align-items-center">
-            <h3 class="text-white fw-bold mb-0">
-                HR SYSTEM
-            </h3>
-        </div>
-        <!--end::Logo image-->
+.app-sidebar-minimize .app-sidebar-logo img {
+    display: none;
+}
+
+#kt_app_sidebar {
+    background-color: #c0c0cf; /* Ganti dengan warna yang diinginkan */
+    color: #ffffff; /* Ubah warna teks jika perlu */
+}
+
+
+</style>
+
+
+<div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
+    <div class="d-flex align-items-center">
+        <img src="{{ asset('assets/media/logos/satu-aisin-final.png') }}" alt="Logo" class="logo-img">
+    </div>
 
         <div id="kt_app_sidebar_toggle"
             class="app-sidebar-toggle btn btn-icon btn-shadow btn-sm btn-color-muted btn-active-color-primary h-30px w-30px position-absolute top-50 start-100 translate-middle rotate"

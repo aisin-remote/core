@@ -14,10 +14,16 @@ return new class extends Migration
     public function up()
 {
     Schema::table('assessments', function (Blueprint $table) {
-        $table->string('strength_weakness', 255)->after('upload'); // Tambah kolom strength_weakness
-        $table->text('description')->nullable()->after('strength_weakness'); // Tambah kolom description
+        if (!Schema::hasColumn('assessments', 'strength_weakness')) {
+            $table->string('strength_weakness')->after('upload');
+        }
+
+        if (!Schema::hasColumn('assessments', 'description')) {
+            $table->text('description')->nullable()->after('strength_weakness');
+        }
     });
 }
+
 
 
     /**

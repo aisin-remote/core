@@ -43,10 +43,6 @@
                     </h1>
                     <!--end::Title-->
 
-                    <!--begin::Text-->
-                    <div class="text-gray-500 fw-semibold fs-6" data-kt-translate="general-desc">
-                        Get unlimited access & earn money
-                    </div>
                     <!--end::Link-->
                 </div>
                 <!--end::Heading-->

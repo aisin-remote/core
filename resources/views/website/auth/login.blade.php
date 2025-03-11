@@ -22,12 +22,6 @@
                             Sign In
                         </h1>
                         <!--end::Title-->
-
-                        <!--begin::Text-->
-                        <div class="text-gray-500 fw-semibold fs-6" data-kt-translate="general-desc">
-                            Skill up your employee
-                        </div>
-                        <!--end::Link-->
                     </div>
                     <!--begin::Heading-->
 
@@ -54,9 +48,6 @@
                         <div class="d-flex gap-3">
                             <a href="/register" class="link-primary" data-kt-translate="sign-in-head-link">
                                 Sign Up
-                            </a>
-                            <a href="reset-password.html" class="link-primary" data-kt-translate="sign-in-forgot-password">
-                                Forgot Password?
                             </a>
                         </div>
                     </div>
