@@ -22,12 +22,6 @@
                             Sign In
                         </h1>
                         <!--end::Title-->
-
-                        <!--begin::Text-->
-                        <div class="text-gray-500 fw-semibold fs-6" data-kt-translate="general-desc">
-                            Skill up your employee
-                        </div>
-                        <!--end::Link-->
                     </div>
                     <!--begin::Heading-->
 

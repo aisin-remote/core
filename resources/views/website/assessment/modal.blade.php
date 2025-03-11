@@ -64,13 +64,15 @@
                                     @endforeach
                                 </select>
                             </div>
-
+                            
                             <!-- Deskripsi -->
-                            <div class="mb-3">
-                                <label>Description</label>
-                                <textarea class="form-control" name="descriptions[{{ $alc->id }}]" rows="2"></textarea>
+                            @foreach ($alcs as $alc)
+                           <div class="mb-3">
+                               <label>Description</label>
+                               <textarea class="form-control" name="descriptions[{{ $alc->id }}]" rows="2"></textarea>
+                           </div>
+                           @endforeach
 
-                            </div>
 
                             <!-- Tombol Hapus & Tambah -->
                             <div class="d-flex justify-content-end">

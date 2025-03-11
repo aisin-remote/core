@@ -59,198 +59,216 @@
                     </div>
                     <!--end::Details-->
 
-                    <!--begin::Navs-->
                     <ul class="nav nav-stretch nav-line-tabs nav-line-tabs-2x border-transparent fs-5 fw-bold">
-                        <!--begin::Nav item-->
                         <li class="nav-item mt-2">
                             <a class="nav-link text-active-primary ms-0 me-10 py-5 active" href="settings.html">
                                 Profile Details </a>
                         </li>
-                        <!--end::Nav item-->
                     </ul>
-                    <!--begin::Navs-->
                 </div>
             </div>
-            <!--end::Navbar-->
-            <!--begin::Basic info-->
+
             <div class="card mb-5 mb-xl-10">
-                <!--begin::Card header-->
                 <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                     data-bs-target="#kt_account_profile_details" aria-expanded="true"
                     aria-controls="kt_account_profile_details">
-                    <!--begin::Card title-->
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Profile Details</h3>
                     </div>
-                    <!--end::Card title-->
                 </div>
-                <!--begin::Card header-->
 
-                <!--begin::Content-->
+
                 <div id="kt_account_settings_profile_details" class="collapse show">
-                    <!--begin::Form-->
                     <form id="kt_account_profile_details_form" class="form">
-                        <!--begin::Card body-->
                         <div class="card-body border-top p-9">
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
-                                <label class="col-lg-4 col-form-label fw-semibold fs-6">Avatar</label>
-                                <!--end::Label-->
+                                <label class="col-lg-4 col-form-label fw-semibold fs-6">Profile Picture</label>
 
-                                <!--begin::Col-->
+
                                 <div class="col-lg-8">
-                                    <!--begin::Image input-->
                                     <div class="image-input image-input-outline" data-kt-image-input="true"
                                         style="background-image: url('../assets/media/svg/avatars/blank.svg')">
-                                        <!--begin::Preview existing avatar-->
                                         <div class="image-input-wrapper w-125px h-125px"
                                             style="background-image: url(../assets/media/avatars/300-1.jpg)"></div>
-                                        <!--end::Preview existing avatar-->
 
-                                        <!--begin::Label-->
-                                        <label
-                                            class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
+
+                                        <label class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                             data-kt-image-input-action="change" data-bs-toggle="tooltip"
                                             title="Change avatar">
                                             <i class="ki-duotone ki-pencil fs-7"><span class="path1"></span><span
                                                     class="path2"></span></i>
-                                            <!--begin::Inputs-->
                                             <input type="file" name="avatar" accept=".png, .jpg, .jpeg" />
                                             <input type="hidden" name="avatar_remove" />
-                                            <!--end::Inputs-->
                                         </label>
-                                        <!--end::Label-->
 
-                                        <!--begin::Cancel-->
+
                                         <span
                                             class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                             data-kt-image-input-action="cancel" data-bs-toggle="tooltip"
                                             title="Cancel avatar">
                                             <i class="ki-duotone ki-cross fs-2"><span class="path1"></span><span
                                                     class="path2"></span></i> </span>
-                                        <!--end::Cancel-->
 
-                                        <!--begin::Remove-->
                                         <span
                                             class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                             data-kt-image-input-action="remove" data-bs-toggle="tooltip"
                                             title="Remove avatar">
                                             <i class="ki-duotone ki-cross fs-2"><span class="path1"></span><span
                                                     class="path2"></span></i> </span>
-                                        <!--end::Remove-->
                                     </div>
-                                    <!--end::Image input-->
 
-                                    <!--begin::Hint-->
+
+
                                     <div class="form-text">Allowed file types: png, jpg, jpeg.</div>
-                                    <!--end::Hint-->
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
 
-                            <!--begin::Input group-->
+
                             <div class="row mb-6">
-                                <!--begin::Label-->
                                 <label class="col-lg-4 col-form-label required fw-semibold fs-6">Full Name</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8">
-                                    <!--begin::Row-->
                                     <div class="row">
-                                        <!--begin::Col-->
                                         <div class="col-lg-6 fv-row">
-                                            <input type="text" name="fname"
-                                                class="form-control form-control-lg form-control-solid mb-3 mb-lg-0"
-                                                placeholder="First name" value="Max" />
+                                            <input type="text" class="form-control form-control-lg form-control-solid" value="{{ $employee->name }}" readonly>
                                         </div>
-                                        <!--end::Col-->
-
-                                        <!--begin::Col-->
-                                        <div class="col-lg-6 fv-row">
-                                            <input type="text" name="lname"
-                                                class="form-control form-control-lg form-control-solid"
-                                                placeholder="Last name" value="Smith" />
-                                        </div>
-                                        <!--end::Col-->
                                     </div>
-                                    <!--end::Row-->
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
 
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
-                                <label class="col-lg-4 col-form-label required fw-semibold fs-6">Company</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
+                                <label class="col-lg-4 col-form-label required fw-semibold fs-6">Identity No</label>
                                 <div class="col-lg-8 fv-row">
-                                    <input type="text" name="company"
-                                        class="form-control form-control-lg form-control-solid" placeholder="Company name"
-                                        value="Keenthemes" />
-                                </div>
-                                <!--end::Col-->
-                            </div>
-                            <!--end::Input group-->
+                                            <input type="text"  class="form-control form-control-lg form-control-solid" value="{{ $employee->identity_number }}" >
+                                        </div>
+                                    </div>
 
-                            <!--begin::Input group-->
+                                    <div class="row mb-6">
+                                        <label class="col-lg-4 col-form-label required fw-semibold fs-6">Gender</label>
+                                        <div class="col-lg-8 fv-row">
+                                            <input type="radio" {{ $employee->gender == 'Male' ? 'checked' : '' }}> Male
+                                            <input type="radio" {{ $employee->gender == 'Female' ? 'checked' : '' }}> Female
+                                        </div>
+                                    </div>
+
+                                <div class="row mb-6">
+                                        <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                            <span class="required">Birth Date</span></label>
+                                     <div class="col-lg-8 fv-row">
+                                        <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->birthday_date }}" readonly>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-6">
+                                    <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                        <span class="required">Aisin Entry Date</span></label>
+                                 <div class="col-lg-8 fv-row">
+                                    <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->aisin_entry_date }}" readonly>
+                                </div>
+                            </div>
+
                             <div class="row mb-6">
-                                <!--begin::Label-->
+                                <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                    <span class="required">Working Period</span></label>
+                             <div class="col-lg-8 fv-row">
+                                <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->working_period }}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="row mb-6">
+                            <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                <span class="required">Company Group</span></label>
+                         <div class="col-lg-8 fv-row">
+                            <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->company_group }}" readonly>
+                        </div>
+                    </div>
+
+
+                        <div class="row mb-6">
+                             <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                  <span class="required">Function Group</span></label>
+                        <div class="col-lg-8 fv-row">
+                           <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->function }}" readonly>
+                       </div>
+                    </div>
+
+
+                            <div class="row mb-6">
+                                <label class="col-lg-4 col-form-label required fw-semibold fs-6">Company Name</label>
+                                <div class="col-lg-8 fv-row">
+                                    <input type="text" class="form-control form-control-lg form-control-solid" value="{{ $employee->company_name }}" readonly>
+                                </div>
+                            </div>
+
+                            <div class="row mb-6">
+                                <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                    <span class="required">Position</span></label>
+                             <div class="col-lg-8 fv-row">
+                                <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->position }}" readonly>
+                            </div>
+                        </div>
+
+                        <div class="row mb-6">
+                            <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                <span class="required">Position Name</span></label>
+                         <div class="col-lg-8 fv-row">
+                            <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->position_name }}" readonly>
+                        </div>
+                    </div>
+
+                        <div class="row mb-6">
+                            <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                 <span class="required">Grade</span></label>
+                        <div class="col-lg-8 fv-row">
+                           <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->grade }}" readonly>
+                        </div>
+                    </div>
+
+
+                      <div class="row mb-6">
+                           <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                <span class="required">Last Promote Date</span></label>
+                      <div class="col-lg-8 fv-row">
+                           <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->last_promote_date }}" readonly>
+                      </div>
+                    </div>
+
+
+                            <div class="row mb-6">
+                                <label class="col-lg-4 col-form-label fw-semibold fs-6">
+                                    <span class="required">Company Group</span></label>
+                                <div class="col-lg-8 fv-row">
+                                    <input type="text" name="group" class="form-control form-control-lg form-control-solid" value="{{ $employee->company_group }}" readonly>
+                                </div>
+                            </div>
+
+                            <div class="row mb-6">
                                 <label class="col-lg-4 col-form-label fw-semibold fs-6">
                                     <span class="required">Contact Phone</span>
-
-
                                     <span class="ms-1" data-bs-toggle="tooltip" title="Phone number must be active">
                                         <i class="ki-duotone ki-information-5 text-gray-500 fs-6"><span
                                                 class="path1"></span><span class="path2"></span><span
                                                 class="path3"></span></i></span> </label>
-                                <!--end::Label-->
 
-                                <!--begin::Col-->
+
                                 <div class="col-lg-8 fv-row">
                                     <input type="tel" name="phone"
                                         class="form-control form-control-lg form-control-solid" placeholder="Phone number"
-                                        value="044 3276 454 935" />
+                                        value="" />
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
 
-                            <!--begin::Input group-->
+
+
                             <div class="row mb-6">
-                                <!--begin::Label-->
-                                <label class="col-lg-4 col-form-label fw-semibold fs-6">Company Site</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
-                                <div class="col-lg-8 fv-row">
-                                    <input type="text" name="website"
-                                        class="form-control form-control-lg form-control-solid"
-                                        placeholder="Company website" value="keenthemes.com" />
-                                </div>
-                                <!--end::Col-->
-                            </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
-                            <div class="row mb-6">
-                                <!--begin::Label-->
                                 <label class="col-lg-4 col-form-label fw-semibold fs-6">
                                     <span class="required">Country</span>
-
-
                                     <span class="ms-1" data-bs-toggle="tooltip" title="Country of origination">
                                         <i class="ki-duotone ki-information-5 text-gray-500 fs-6"><span
                                                 class="path1"></span><span class="path2"></span><span
                                                 class="path3"></span></i></span> </label>
-                                <!--end::Label-->
 
-                                <!--begin::Col-->
+
+
                                 <div class="col-lg-8 fv-row">
                                     <select name="country" aria-label="Select a Country" data-control="select2"
                                         data-placeholder="Select a country..."
@@ -613,25 +631,16 @@
                                         <option data-kt-flag="flags/taiwan.svg" value="zh-tw">繁體中文 - Traditional Chinese
                                         </option>
                                     </select>
-                                    <!--end::Input-->
 
-                                    <!--begin::Hint-->
+
+
                                     <div class="form-text">
                                         Please select a preferred language, including date, time, and number formatting.
                                     </div>
-                                    <!--end::Hint-->
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
                                 <label class="col-lg-4 col-form-label required fw-semibold fs-6">Time Zone</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8 fv-row">
                                     <select name="timezone" aria-label="Select a Timezone" data-control="select2"
                                         data-placeholder="Select a timezone.."
@@ -813,21 +822,13 @@
                                         </option>
                                     </select>
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
 
-                            <!--begin::Input group-->
+
                             <div class="row mb-6">
-                                <!--begin::Label-->
                                 <label class="col-lg-4 col-form-label required fw-semibold fs-6">Communication</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8 fv-row">
-                                    <!--begin::Options-->
                                     <div class="d-flex align-items-center mt-3">
-                                        <!--begin::Option-->
                                         <label
                                             class="form-check form-check-custom form-check-inline form-check-solid me-5">
                                             <input class="form-check-input" name="communication[]" type="checkbox"
@@ -836,9 +837,8 @@
                                                 Email
                                             </span>
                                         </label>
-                                        <!--end::Option-->
 
-                                        <!--begin::Option-->
+
                                         <label class="form-check form-check-custom form-check-inline form-check-solid">
                                             <input class="form-check-input" name="communication[]" type="checkbox"
                                                 value="2" />
@@ -846,67 +846,47 @@
                                                 Phone
                                             </span>
                                         </label>
-                                        <!--end::Option-->
                                     </div>
-                                    <!--end::Options-->
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
                         </div>
-                        <!--end::Card body-->
 
-                        <!--begin::Actions-->
+
                         <div class="card-footer d-flex justify-content-end py-6 px-9">
                             <button type="reset" class="btn btn-light btn-active-light-primary me-2">Discard</button>
                             <button type="submit" class="btn btn-primary" id="kt_account_profile_details_submit">Save
                                 Changes</button>
                         </div>
-                        <!--end::Actions-->
                     </form>
-                    <!--end::Form-->
                 </div>
-                <!--end::Content-->
             </div>
-            <!--end::Basic info-->
 
-            <!--begin::Education-->
+
             <div class="card  mb-5 mb-xl-10">
-                <!--begin::Card header-->
                 <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                     data-bs-target="#kt_account_signin_method">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Educational Background</h3>
                     </div>
                 </div>
-                <!--end::Card header-->
 
-                <!--begin::Content-->
                 <div id="kt_account_settings_signin_method" class="collapse show">
-                    <!--begin::Card body-->
                     <div class="card-body border-top p-9">
-                        <!--begin::Email Address-->
                         <div class="d-flex flex-wrap align-items-center">
-                            <!--begin::Label-->
                             <div id="kt_signin_email">
                                 <div class="fs-6 fw-bold mb-1">S1 - Teknik Industri</div>
-                                <div class="fw-semibold text-gray-600">Universiteas Indonesia</div>
+                                <div class="fw-semibold text-gray-600">Universitas Indonesia</div>
                             </div>
-                            <!--end::Label-->
 
-                            <!--begin::Action-->
+
                             <div id="kt_signin_email_button" class="ms-auto">
                                 <button class="btn btn-light btn-active-light-primary">2019 - 2022</button>
                             </div>
-                            <!--end::Action-->
                         </div>
-                        <!--end::Email Address-->
 
-                        <!--begin::Separator-->
+
                         <div class="separator separator-dashed my-6"></div>
-                        <!--end::Separator-->
 
-                        <!--begin::Password-->
                         <div class="d-flex flex-wrap align-items-center mb-10">
                             <!--begin::Label-->
                             <div id="kt_signin_password">

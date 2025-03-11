@@ -17,7 +17,7 @@ return new class extends Migration
             $table->bigIncrements('id');
             $table->string('employee_id');
             $table->foreign('employee_id')->references('npk')->on('employees')->onDelete('cascade');
-            $table->integer('alc_id');
+            $table->unsignedBigInteger('alc_id');
             $table->foreign('alc_id')->references('id')->on('alc')->onDelete('cascade');
             $table->string('score', 2);
             $table->string('description', 2000);
