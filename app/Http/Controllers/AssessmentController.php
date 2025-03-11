@@ -77,61 +77,61 @@ public function showByDate($employee_id, $date)
 
         return view('assessments.create', compact('employees', 'alcs'));
     }
-
     public function store(Request $request)
-{
-    $request->validate([
-        'employee_id' => 'required|exists:employees,npk',
-        'date' => 'required|date',
-        'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
-        'alc_ids' => 'required|array',
-        'alc_ids.*' => 'exists:alc,id',
-        'scores' => 'nullable|array',
-        'scores.*' => 'nullable|string|max:2',
-        'descriptions' => 'nullable|array',
-    ]);
+    {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,npk',
+            'date' => 'required|date',
+            'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
+            'alc_ids' => 'required|array',
+            'alc_ids.*' => 'exists:alc,id',
+            'scores' => 'nullable|array',
+            'scores.*' => 'nullable|string|max:2',
+            'descriptions' => 'nullable|array',
+        ]);
 
-    $mergedData = [];
-    foreach ($request->alc_ids as $index => $alc_id) {
-        if (!isset($mergedData[$alc_id])) {
-            $mergedData[$alc_id] = [
-                'score' => isset($request->scores[$alc_id]) ? $request->scores[$alc_id] : "0",
-                'description' => $request->descriptions[$alc_id] ?? "",
-            ];
-        } else {
-            // Hindari duplikasi deskripsi
-            $existingDescriptions = explode(" ", $mergedData[$alc_id]['description']);
-            $newDescription = $request->descriptions[$alc_id] ?? "";
+        // Simpan file terlebih dahulu jika ada
+        $filePath = null;
+        if ($request->hasFile('upload')) {
+            $filePath = 'uploads/assessments/' . $request->file('upload')->hashName();
+            $request->file('upload')->storeAs('public', $filePath);
+        }
 
-            if (!in_array($newDescription, $existingDescriptions)) {
-                $mergedData[$alc_id]['description'] .= " " . $newDescription;
+
+        $mergedData = [];
+        foreach ($request->alc_ids as $index => $alc_id) {
+            if (!isset($mergedData[$alc_id])) {
+                $mergedData[$alc_id] = [
+                    'score' => isset($request->scores[$alc_id]) ? $request->scores[$alc_id] : "0",
+                    'description' => $request->descriptions[$alc_id] ?? "",
+                ];
+            } else {
+                $existingDescriptions = explode(" ", $mergedData[$alc_id]['description']);
+                $newDescription = $request->descriptions[$alc_id] ?? "";
+
+                if (!in_array($newDescription, $existingDescriptions)) {
+                    $mergedData[$alc_id]['description'] .= " " . $newDescription;
+                }
             }
         }
-    }
 
+        $assessments = [];
+        foreach ($mergedData as $alc_id => $data) {
+            $assessments[] = Assessment::create([
+                'employee_id' => $request->employee_id,
+                'alc_id' => $alc_id,
+                'score' => $data['score'],
+                'description' => trim($data['description']),
+                'date' => $request->date,
+                'upload' => $filePath, // Pastikan path file tersimpan dengan benar
+            ]);
+        }
 
-
-
-
-    $assessments = [];
-    foreach ($mergedData as $alc_id => $data) {
-        $assessments[] = Assessment::create([
-            'employee_id' => $request->employee_id,
-            'alc_id' => $alc_id,
-            'score' => $data['score'],
-            'description' => trim($data['description']), // Hilangkan spasi berlebih
-            'date' => $request->date,
-            'upload' => $request->upload,
+        return response()->json([
+            'success' => true,
+            'message' => 'Data assessment berhasil disimpan.',
+            'assessments' => $assessments,
         ]);
     }
-
-    return response()->json([
-        'success' => true,
-        'message' => 'Data assessment berhasil disimpan.',
-        'assessments' => $assessments,
-    ]);
-}
-
-
 
 }

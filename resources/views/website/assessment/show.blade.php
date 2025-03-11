@@ -38,13 +38,18 @@
 
                                     <td class="text-center">
 
-                                        <a href="{{ route('assessments.showByDate', ['employee_id' => $assessment->employee_id, 'date' => $assessment->date]) }}">
+                                        <a class="btn btn-info btn-sm"
+                                            href="{{ route('assessments.showByDate', ['employee_id' => $assessment->employee_id, 'date' => $assessment->date]) }}">
                                             Detail
                                         </a>
-                                        {{-- <a href="{{ route('assessments.edit', ['employee_id' => $assessment->employee_id, 'date' => $assessment->date]) }}"
-                                            class="btn btn-warning btn-sm">
-                                            Edit
-                                        </a> --}}
+
+                                        <a class="btn btn-primary btn-sm" target="_blank"
+                                            href="{{ asset('storage/' . $assessment->upload) }}">
+                                            View PDF
+                                        </a>
+
+
+
 
 
                                     </td>
