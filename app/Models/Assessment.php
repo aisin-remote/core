@@ -2,28 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Assessment extends Model
 {
     use HasFactory;
 
-    protected $fillable = [
-        'employee_id',   // Menggunakan  sesuai dengan database
-        'alc_id',        // Relasi ke tabel alc
-        'score',         // Nilai yang diberikan untuk setiap alc_id
-        'description',   // Deskripsi untuk setiap alc_id
-        'date',
-        'upload',
-    ];
+    protected $guarded = ['id'];
 
     /**
      * Relasi ke model Employee
      */
     public function employee()
     {
-        return $this->belongsTo(Employee::class, 'employee_id', 'npk');
+        return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
 
     /**

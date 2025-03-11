@@ -69,6 +69,34 @@
                 </div>
                 <!--end::Input group-->
 
+                <div class="col-lg-12 mb-10">
+                    <select name="position" aria-label="Select a Country" data-control="select2"
+                        data-placeholder="Select Position..."
+                        class="form-select form-select-solid form-select-lg fw-semibold">
+                        <option value="">Select
+                            Position</option>
+                        <option data-kt-flag="flags/aland-islands.svg" value="GM">General Manager</option>
+                        <option data-kt-flag="flags/albania.svg" value="Manager">Manager</option>
+                        <option data-kt-flag="flags/albania.svg" value="Coordinator">Coordinator</option>
+                        <option data-kt-flag="flags/albania.svg" value="Section Head">Section Head</option>
+                        <option data-kt-flag="flags/albania.svg" value="Supervisor">Supervisor</option>
+                    </select>
+                </div>
+
+                <div class="col-lg-12 mb-10">
+                    <select name="departments[]" aria-label="Select a Country" data-control="select2"
+                        data-placeholder="Select Department..."
+                        class="form-select form-select-solid form-select-lg fw-semibold" multiple>
+                        <option value="">Select
+                            Position</option>
+                        @foreach ($departments as $department)
+                            <option data-kt-flag="flags/aland-islands.svg" value="{{ $department->id }}">
+                                {{ $department->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+
                 <!--begin::Input group-->
                 <div class="fv-row mb-10" data-kt-password-meter="true">
                     <!--begin::Wrapper-->

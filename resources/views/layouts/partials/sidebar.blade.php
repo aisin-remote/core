@@ -47,6 +47,16 @@
                     <!--begin:Menu item-->
                     <div class="menu-item">
                         <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
+                            <span class="menu-icon">
+                                <i class="fas fa-dashboard"></i>
+                            </span>
+                            <span class="menu-title ps-1">Dashboard</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
                             <span class="menu-icon">
                                 <i class="fas fa-user-tie"></i>
@@ -126,7 +136,7 @@
                                     </span>
                                 </a><!--end:Menu link-->
                             </div>
-                            <!--end:Menu item--><!--begin:Menu item-->
+                            {{-- <!--end:Menu item--><!--begin:Menu item-->
                             <div class="menu-item"><!--begin:Menu link-->
                                 <a class="menu-link {{ request()->is('master/assesment') ? 'active' : '' }}"
                                     href="/master/assesment"><span class="menu-bullet">
@@ -134,7 +144,7 @@
                                         Assesment
                                     </span>
                                 </a><!--end:Menu link-->
-                            </div><!--end:Menu item-->
+                            </div><!--end:Menu item--> --}}
                         </div><!--end:Menu sub-->
                     </div>
 

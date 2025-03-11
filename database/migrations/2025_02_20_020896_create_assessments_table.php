@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -15,14 +15,15 @@ return new class extends Migration
     {
         Schema::create('assessments', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('employee_id');
-            $table->foreign('employee_id')->references('npk')->on('employees')->onDelete('cascade');
-            $table->integer('alc_id');
+            $table->bigInteger('employee_id')->unsigned();
+            $table->bigInteger('alc_id')->unsigned();
+            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
             $table->foreign('alc_id')->references('id')->on('alc')->onDelete('cascade');
             $table->string('score', 2);
-            $table->string('description', 2000);
             $table->date('date');
             $table->string('upload', 200);
+            $table->string('strength_weakness', 255); // Tambah kolom strength_weakness
+            $table->text('description')->nullable(); // Tambah kolom description
             $table->timestamps();
         });
     }

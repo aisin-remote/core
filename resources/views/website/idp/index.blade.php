@@ -90,7 +90,7 @@
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    <span class="badge badge-lg badge-warning score d-block w-100">3</span>
+                                    <span class="badge badge-lg badge-success score d-block w-100">3</span>
                                 </td>
                                 <td class="text-center">
                                     <span class="badge badge-lg badge-success score d-block w-100">4.1</span>
@@ -116,10 +116,16 @@
                                     </span>
                                 </td>
                                 <td class="text-center" style="width: 50px">
-                                    <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                        data-bs-target="#notes">
-                                        Summary
-                                    </button>
+                                    <div class="d-flex gap-2 justify-content-center">
+                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#notes">
+                                            Summary
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#notes">
+                                            Export
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -133,10 +139,6 @@
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
                         <span class="ms-2 text-muted">Below Standard</span>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <span class="legend-circle bg-warning"></span>
-                        <span class="ms-2 text-muted">Standard</span>
                     </div>
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-success"></span>

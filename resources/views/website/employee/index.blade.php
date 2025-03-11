@@ -43,17 +43,17 @@
                             <th>Function</th>
                             <th>Grade</th>
                             <th>Age</th>
-                            <th class="text-end">Actions</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($employee as $index => $employee)
+                        @forelse ($employees as $index => $employee)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $employee->npk }}</td>
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
-                                <td>{{ $employee->position_name }}</td>
+                                <td>{{ $employee->position }}</td>
                                 <td>{{ $employee->company_group }}</td>
                                 <td>{{ $employee->function }}</td>
                                 <td>{{ $employee->grade }}</td>

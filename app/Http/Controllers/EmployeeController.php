@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class EmployeeController extends Controller
@@ -11,11 +12,33 @@ class EmployeeController extends Controller
     /**
      * Tampilkan daftar karyawan
      */
+
+    public function getSubordinates($employeeId)
+    {
+        $employees = Employee::where('supervisor_id', $employeeId)->get();
+        $subordinates = collect($employees);
+
+        foreach ($employees as $employee) {
+            $subordinates = $subordinates->merge($this->getSubordinates($employee->id));
+        }
+
+        return $subordinates;
+    }
+    
     public function index()
     {
         $title = 'Employee';
-        $employee = Employee::all(); // Ambil semua data karyawan
-        return view('website.employee.index', compact('employee', 'title'));
+        $user = auth()->user();
+        
+        $employee = Employee::where('user_id', $user->id)->first();
+        
+        if (!$employee) {
+            $employees = collect();
+        } else {
+            $employees = $this->getSubordinates($employee->id);
+        }
+
+        return view('website.employee.index', compact('employees', 'title'));
     }
 
     /**
@@ -23,7 +46,8 @@ class EmployeeController extends Controller
      */
     public function create()
     {
-        return view('website.employee.create');
+        $title = 'Add Employee';
+        return view('website.employee.create', compact('title'));
     }
 
     /**
@@ -31,35 +55,92 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
-        // Validasi data input dari user
-        $validatedData = $request->validate([
-            'npk' => 'required|string|max:255',
-            'name' => 'required|string|max:255',
-            'identity_number' => 'required|string|unique:employees',
-            'birthday_date' => 'required|date',
-            'gender' => 'required|in:Male,Female',
-            'company_name' => 'required|string',
-            'function' => 'required|string',
-            'position_name' => 'required|string',
-            'aisin_entry_date' => 'required|date',
-            'working_period' => 'nullable|integer',
-            'company_group' => 'required|string',
-            'foundation_group' => 'required|string',
-            'position' => 'required|string',
-            'grade' => 'required|string',
-            'last_promote_date' => 'nullable|date',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
-        ]);
+        DB::beginTransaction();
 
-        // Simpan file foto jika ada
-        if ($request->hasFile('photo')) {
-            $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
+        try {
+            // Validasi data input
+            $validatedData = $request->validate([
+                'npk' => 'required|string|max:255',
+                'name' => 'required|string|max:255',
+                'identity_number' => 'required|string|unique:employees',
+                'birthday_date' => 'required|date',
+                'gender' => 'required|in:Male,Female',
+                'company_name' => 'required|string',
+                'function' => 'required|string',
+                'aisin_entry_date' => 'required|date',
+                'working_period' => 'nullable|integer',
+                'company_group' => 'required|string',
+                'foundation_group' => 'required|string',
+                'position' => 'required|string',
+                'grade' => 'required|string',
+                'last_promote_date' => 'nullable|date',
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+            ]);
+
+            // Simpan file foto jika ada
+            if ($request->hasFile('photo')) {
+                $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
+            }
+
+            // Ambil user yang sedang login
+            $loggedInUser = auth()->user();
+            $loggedInEmployee = Employee::where('user_id', $loggedInUser->id)->first();
+
+            // Cari atasan langsung berdasarkan posisi
+            $supervisor = $this->findSupervisor($validatedData['position']);
+
+            // Jika atasan langsung tidak ditemukan, gunakan user yang login sebagai atasan
+            if (!$supervisor && $loggedInEmployee) {
+                $supervisor = $loggedInEmployee;
+            }
+
+            // Tambahkan supervisor_id ke data yang disimpan
+            $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
+
+            // Simpan data employee ke database
+            $employee = Employee::create($validatedData);
+
+            // Jika ada supervisor, ambil department dari supervisor atau user yang login
+            if ($supervisor) {
+                $departments = DB::table('employee_departments')
+                    ->where('employee_id', $supervisor->id)
+                    ->pluck('department_id');
+
+                foreach ($departments as $deptId) {
+                    DB::table('employee_departments')->insert([
+                        'employee_id' => $employee->id,
+                        'department_id' => $deptId
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            return redirect()->route('employee.index')->with('success', 'Karyawan berhasil ditambahkan!');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
+
+
+    private function findSupervisor($position)
+    {
+        $hierarchy = [
+            'GM' => null,
+            'Manager' => 'GM',
+            'Coordinator' => 'Manager',
+            'Section Head' => 'Coordinator',
+            'Supervisor' => 'Section Head'
+        ];
+
+        $supervisorPosition = $hierarchy[$position] ?? null;
+
+        if (!$supervisorPosition) {
+            return null;
         }
 
-        // Simpan data ke database
-        Employee::create($validatedData);
-
-        return redirect()->route('employee.index')->with('success', 'Karyawan berhasil ditambahkan!');
+        return Employee::where('position', $supervisorPosition)->first();
     }
 
     /**

@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
 {
@@ -14,11 +16,18 @@ class DatabaseSeeder extends Seeder
      */
     public function run()
     {
-        // \App\Models\User::factory(10)->create();
+        // Disable foreign key checks to avoid conflicts
+        $data = [
+            ['id' => 1, 'name' => 'Vision & Business Sense', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 2, 'name' => 'Customer Focus', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 3, 'name' => 'Interpersonal Skill', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 4, 'name' => 'Analysis & Judgment', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 5, 'name' => 'Planning & Driving Action', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 6, 'name' => 'Leading & Motivating', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 7, 'name' => 'Teamwork', 'created_at' => now(), 'updated_at' => now()],
+            ['id' => 8, 'name' => 'Drive & Courage', 'created_at' => now(), 'updated_at' => now()],
+        ];
 
-        // \App\Models\User::factory()->create([
-        //     'name' => 'Test User',
-        //     'email' => 'test@example.com',
-        // ]);
+        DB::table('alc')->insert($data);
     }
 }
