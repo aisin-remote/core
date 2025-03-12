@@ -71,7 +71,6 @@
                                 <i class="fas fa-user-tie"></i>
                             </span>
                             <span class="menu-title ps-1">Employee Profile</span>
-                            <span class="menu-arrow"></span>
                             </span>
 
                             <div class="menu-sub menu-sub-accordion">
