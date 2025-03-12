@@ -24,21 +24,23 @@ class EmployeeController extends Controller
 
         return $subordinates;
     }
-    
-    public function index()
+
+    public function index(Request $request)
     {
         $title = 'Employee';
-        $user = auth()->user();
-        
-        $employee = Employee::where('user_id', $user->id)->first();
-        
-        if (!$employee) {
-            $employees = collect();
-        } else {
-            $employees = $this->getSubordinates($employee->id);
+        $query = Employee::query();
+
+        // Filter berdasarkan perusahaan jika ada parameter 'company'
+        if ($request->has('company')) {
+            $query->where('company_name', $request->company);
         }
 
-        return view('website.employee.index', compact('employees', 'title'));
+        $employees = $query->get();
+
+        // Cek apakah halaman adalah '/master/employee' atau '/master/employee?company=...'
+        $isMasterPage = $request->path() === 'master/employee' && !$request->has('company');
+
+        return view('website.employee.index', compact('employees', 'title', 'isMasterPage'));
     }
 
 
@@ -143,6 +145,9 @@ class EmployeeController extends Controller
 
         return Employee::where('position', $supervisorPosition)->first();
     }
+
+
+
 
     /**
      * Tampilkan detail karyawan
