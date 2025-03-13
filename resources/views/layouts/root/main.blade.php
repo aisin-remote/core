@@ -141,11 +141,6 @@
 
     <!--begin::App layout builder-->
 
-    <!--begin::Javascript-->
-    <script>
-        var hostUrl = "{{ asset('assets/index.html') }}";
-    </script>
-
     @stack('custom-scripts')
 
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->
