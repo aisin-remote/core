@@ -87,7 +87,8 @@ public function showByDate($employee_id, $date)
             'alc_ids.*' => 'exists:alc,id',
             'scores' => 'nullable|array',
             'scores.*' => 'nullable|string|max:2',
-            'descriptions' => 'nullable|array',
+            'strenght' => 'nullable|array',
+            'weakness' => 'nullable|array',
         ]);
 
         // Simpan file terlebih dahulu jika ada
