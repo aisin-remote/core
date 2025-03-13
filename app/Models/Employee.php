@@ -12,7 +12,7 @@ class Employee extends Model
     protected $guarded = ['id'];
 
     protected $fillable = ['name', 'email', 'position', 'aisin_entry_date'];
-    public function assessments()
+    public function assessment()
     {
         return $this->hasMany(Assessment::class, 'employee_id', 'id');
     }

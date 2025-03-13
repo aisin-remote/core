@@ -9,7 +9,7 @@
 @endsection
 
 @section('main')
-    <div id="kt_app_content_container" class="app-container  container-fluid ">
+    <div id="kt_app_content_container" class="app-container container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
@@ -23,6 +23,10 @@
                         data-kt-menu-placement="bottom-end">
                         <i class="fas fa-filter"></i> Filter
                     </button>
+                    <button type="button" class="btn btn-success me-3" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-file-excel"></i> Import
+                    </button>
+
                     <a href="{{ route('employee.create') }}" class="btn btn-primary">
                         <i class="fas fa-plus"></i>
                         Add
@@ -61,7 +65,6 @@
                                         class="btn btn-primary btn-sm">Detail</a>
                                     <a href="{{ route('employee.edit', $employee->npk) }}"
                                         class="btn btn-warning btn-sm">Update</a>
-
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $employee->npk }}">Delete</button>
                                 </td>
@@ -76,12 +79,15 @@
             </div>
         </div>
     </div>
+    @include('website.master.employee.import')
+    <!-- Form Hidden untuk Upload -->
 
     <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+
             console.log("✅ Script Loaded!");
 
             var searchInput = document.getElementById("searchInput");
@@ -183,5 +189,5 @@
                 });
             });
         });
-</script>
+    </script>
 @endsection

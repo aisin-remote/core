@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class DetailAssessment extends Model
 {
     use HasFactory;
-
+    protected $table = 'detail_assessment';
     protected $guarded = ['id'];
 
     protected $fillable = ['assessment_id', 'alc_id', 'score', 'strength', 'weakness'];

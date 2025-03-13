@@ -167,13 +167,13 @@
                                             <div class="col-md-6">
                                                 <div class="mb-3">
                                                     <label class="form-label">Job Title</label>
-                                                    <input type="text" name="job_title[]" class="form-control" placeholder="e.g., Human Resource Manager" required>
+                                                    <input type="text" name="job_title[]" class="form-control" placeholder="e.g., Human Resource Manager" >
                                                 </div>
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="mb-3">
                                                     <label class="form-label">Year</label>
-                                                    <input type="text" name="work_period[]" class="form-control" placeholder="e.g., 2024 - Present" required>
+                                                    <input type="text" name="work_period[]" class="form-control" placeholder="e.g., 2024 - Present" >
                                                 </div>
                                             </div>
                                         </div>

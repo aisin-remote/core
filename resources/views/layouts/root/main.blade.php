@@ -172,7 +172,7 @@
         var hostUrl = "{{ asset('assets/index.html') }}";
     </script>
 
-    @stack('custom-scripts')
+@stack('scripts') 
 
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>

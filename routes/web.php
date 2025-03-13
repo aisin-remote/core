@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function(){
         Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
         Route::get('/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
 
+        Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
 
         Route::prefix('profile')->group(function(){
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
@@ -61,12 +62,15 @@ Route::middleware('auth')->group(function(){
 
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
-        Route::get('/{employee_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate');
-
-        Route::get('/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ditaruh di bawah agar tidak bentrok
+        
+        Route::get('/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ditaruh di atas agar tidak bentrok
+        
+        Route::get('/{assessment_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate'); // Pindahkan ke bawah
+        
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
     });
+    
 
 
 
