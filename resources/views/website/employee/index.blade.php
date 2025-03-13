@@ -39,8 +39,7 @@
                             <th>Employee Name</th>
                             <th>Company</th>
                             <th>Position</th>
-                            <th>Function Group</th>
-                            <th>Function</th>
+                            <th>Department</th>
                             <th>Grade</th>
                             <th>Age</th>
                             <th class="text-center">Actions</th>
@@ -54,18 +53,12 @@
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
                                 <td>{{ $employee->position }}</td>
-                                <td>{{ $employee->company_group }}</td>
-                                <td>{{ $employee->function }}</td>
+                                <td>{{ $employee->departments->first()->name }}</td>
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
-                                <td class="text-end">
-                                    <a href="{{ route('employee.edit', $employee->npk) }}"
-                                        class="btn btn-warning btn-sm">Update</a>
-
-                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $employee->npk }}">Delete</button>
+                                <td class="text-center">
                                     <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
-                                        <i class="bi bi-eye"></i> View
+                                        <i class="bi bi-eye"></i> Summary
                                     </a>
 
                                 </td>

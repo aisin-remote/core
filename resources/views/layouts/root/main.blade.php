@@ -134,9 +134,6 @@
                             <!--begin::Toolbar container-->
                             <div id="kt_app_toolbar_container"
                                 class="app-container  container-fluid d-flex flex-stack ">
-
-
-
                                 <!--begin::Page title-->
 
                                 <!--end::Page title-->

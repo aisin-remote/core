@@ -25,19 +25,24 @@ class EmployeeController extends Controller
         return $subordinates;
     }
     
-    public function index()
+    public function index($company = null)
     {
         $title = 'Employee';
         $user = auth()->user();
-        
-        $employee = Employee::where('user_id', $user->id)->first();
-        
-        if (!$employee) {
-            $employees = collect();
-        } else {
-            $employees = $this->getSubordinates($employee->id);
-        }
 
+        // Jika HRD, bisa melihat semua karyawan
+        if ($user->role === 'HRD') {
+            $employees = Employee::with('departments')->when($company, fn($query) => $query->where('company_name', $company))->get();
+        } else {
+            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
+            $employee = Employee::with('departments')->where('user_id', $user->id)->first();
+            if (!$employee) {
+                $employees = collect();
+            } else {
+                $employees = $this->getSubordinates($employee->id)
+                    ->where('company_name', $employee->company_name);
+            }
+        }
         return view('website.employee.index', compact('employees', 'title'));
     }
 

@@ -55,7 +55,8 @@
                     <!--begin:Menu item-->
                     <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
                         class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
-                        <!--begin:Menu link--><span class="menu-link"><span class="menu-title">Dashboards</span><span
+                        <!--begin:Menu link--><span class="menu-link"><span
+                                class="menu-title">{{ ucfirst(request()->path()) }}</span><span
                                 class="menu-arrow d-lg-none"></span></span><!--end:Menu link--><!--begin:Menu sub-->
                     </div><!--end:Menu item--><!--begin:Menu item-->
                 </div>
@@ -1209,7 +1210,7 @@
                     </div>
 
                     <!--begin::User account menu-->
-                    <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-275px"
+                    <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-300px"
                         data-kt-menu="true">
                         <!--begin::Menu item-->
                         <div class="menu-item px-3">
@@ -1228,7 +1229,7 @@
                                     </div>
 
                                     <a href="#" class="fw-semibold text-muted text-hover-primary fs-7">
-                                        ferry@aiia.co.id </a>
+                                        {{ auth()->user()->email }} </a>
                                 </div>
                                 <!--end::Username-->
                             </div>
@@ -1241,7 +1242,7 @@
 
                         <!--begin::Menu item-->
                         <div class="menu-item px-5">
-                            <a href="account/overview.html" class="menu-link px-5">
+                            <a href="/employee/detail/{{ auth()->user()->employee->npk }}" class="menu-link px-5">
                                 My Profile
                             </a>
                         </div>

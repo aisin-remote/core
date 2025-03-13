@@ -64,34 +64,56 @@
                         </a>
                         <!--end:Menu link-->
                     </div>
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
-                            <span class="menu-icon">
-                                <i class="fas fa-user-tie"></i>
+                    @if (auth()->user()->role == 'User')
+                        <div class="menu-item">
+                            <!--begin:Menu link-->
+                            <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
+                                <span class="menu-icon">
+                                    <i class="fas fa-user-tie"></i>
+                                </span>
+                                <span class="menu-title ps-1">Employee Profile</span>
+                            </a>
+                            <!--end:Menu link-->
+                        </div>
+                    @else
+                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
+                            <!-- Begin: Menu Link -->
+                            <span class="menu-link">
+                                <span class="menu-icon">
+                                    <i class="fas fa-user-tie"></i>
+                                </span>
+                                <span class="menu-title ps-1">Employee Profile</span>
+                                <span class="menu-arrow"></span>
                             </span>
-                            <span class="menu-title ps-1">Employee Profile</span>
-                            </span>
+                            <!-- End: Menu Link -->
 
-                            <div class="menu-sub menu-sub-accordion">
+
+                            <!-- Begin: Menu Sub -->
+                            <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
+                                style="display: none; overflow: hidden;">
+                                <!-- Menu Item: FAQ Classic -->
                                 <div class="menu-item">
-                                    <a class="menu-link {{ request()->get('company') == 'Aisin Indonesia' ? 'active' : '' }}"
-                                        href="{{ route('employee.index', ['company' => 'Aisin Indonesia']) }}">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <a class="menu-link" href="/employee/aii">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
                                         <span class="menu-title">Aisin Indonesia</span>
                                     </a>
                                 </div>
 
+                                <!-- Menu Item: FAQ Extended -->
                                 <div class="menu-item">
-                                    <a class="menu-link {{ request()->get('company') == 'Aisin Indonesia Automotive' ? 'active' : '' }}"
-                                        href="{{ route('employee.index', ['company' => 'Aisin Indonesia Automotive']) }}">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <a class="menu-link" href="/employee/aiia">
+                                        <span class="menu-bullet">
+                                            <span class="bullet bullet-dot"></span>
+                                        </span>
                                         <span class="menu-title">Aisin Indonesia Automotive</span>
                                     </a>
                                 </div>
                             </div>
-                    </div>
-
+                            <!-- End: Menu Sub -->
+                        </div>
+                    @endif
 
                     <div class="menu-item">
                         <!--begin:Menu link-->
