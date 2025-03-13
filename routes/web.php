@@ -8,6 +8,7 @@ use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\IdpController;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,7 +37,7 @@ Route::middleware('auth')->group(function(){
     Route::get('/dashboard', function (){
         return view('website.dashboard.index');
     });
-    
+
     Route::prefix('hav')->group(function () {
         Route::get('/', function (){
             return view('website.hav.index');
@@ -88,6 +89,9 @@ Route::middleware('auth')->group(function(){
             ]);
         });
     });
+
+    Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
+    ->name('idp.exportTemplate');
 
     Route::prefix('master')->group(function () {
         Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');

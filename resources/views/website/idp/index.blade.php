@@ -121,10 +121,10 @@
                                             data-bs-target="#notes">
                                             Summary
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                            data-bs-target="#notes">
-                                            Export
-                                        </button>
+                                        <button type="button" class="btn btn-sm btn-info"
+                                        onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $employee->id]) }}'">
+                                        Export
+                                    </button>
                                     </div>
                                 </td>
                             </tr>
@@ -153,69 +153,24 @@
     @foreach ($employees as $index => $employee)
         <div class="modal fade" id="kt_modal_update_role" tabindex="-1" style="display: none;" aria-modal="true"
             role="dialog">
-            <!--begin::Modal dialog-->
             <div class="modal-dialog modal-dialog-centered mw-750px">
-                <!--begin::Modal content-->
                 <div class="modal-content">
-                    <!--begin::Modal header-->
                     <div class="modal-header">
-                        <!--begin::Modal title-->
                         <h2 class="fw-bold">Update IDP</h2>
-                        <!--end::Modal title-->
 
-                        <!--begin::Close-->
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        <!--end::Close-->
                     </div>
-                    <!--end::Modal header-->
 
-                    <!--begin::Modal body-->
                     <div class="modal-body scroll-y mx-2 mt-5">
-                        <!--begin::Form-->
                         <form id="kt_modal_update_role_form" class="form fv-plugins-bootstrap5 fv-plugins-framework"
                             action="#">
-                            <!--begin::Scroll-->
                             <div class="d-flex flex-column scroll-y me-n7 pe-7" id="kt_modal_update_role_scroll"
                                 data-kt-scroll="true" data-kt-scroll-activate="{default: false, lg: true}"
                                 data-kt-scroll-max-height="auto"
                                 data-kt-scroll-dependencies="#kt_modal_update_role_header"
                                 data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px"
                                 style="">
-                                <!--begin::Input group-->
-                                <div class="fv-row mb-10 fv-plugins-icon-container">
-                                    <!--begin::Label-->
-                                    <label class="fs-5 fw-bold form-label mb-2">
-                                        <span class="required">Employee Name</span>
-                                    </label>
-                                    <!--end::Label-->
 
-                                    <!--begin::Input-->
-                                    <input class="form-control form-control-solid" placeholder="Enter a role name"
-                                        name="role_name" value="{{ $employee->name }}">
-                                    <!--end::Input-->
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                                <!--end::Input group-->
-
-                                <div class="col-lg-12 mb-10">
-                                    <label class="fs-5 fw-bold form-label mb-2">
-                                        <span class="required">Development Program</span>
-                                    </label>
-                                    <select name="idp" aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Programs..."
-                                        class="form-select form-select-solid form-select-lg fw-semibold">
-                                        <option value="">Select Development Program</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Feedback</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Self Development</option>
-                                        <option data-kt-flag="flags/aland-islands.svg" value="AX">Shadowing</option>
-                                        <option data-kt-flag="flags/albania.svg" value="AL">On Job Development
-                                        </option>
-                                        <option data-kt-flag="flags/algeria.svg" value="DZ">Mentoring</option>
-                                        <option data-kt-flag="flags/american-samoa.svg" value="AS">Training</option>
-                                    </select>
-                                </div>
 
                                 <div class="col-lg-12 mb-10">
                                     <label class="fs-5 fw-bold form-label mb-2">
@@ -234,6 +189,26 @@
                                         <option data-kt-flag="flags/american-samoa.svg" value="AS">Training</option>
                                     </select>
                                 </div>
+
+                                <div class="col-lg-12 mb-10">
+                                    <label class="fs-5 fw-bold form-label mb-2">
+                                        <span class="required">Development Program</span>
+                                    </label>
+                                    <select name="idp" aria-label="Select a Country" data-control="select2"
+                                        data-placeholder="Select Programs..."
+                                        class="form-select form-select-solid form-select-lg fw-semibold" multiple>
+                                        <option value="">Select Development Program</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Superior (DGM & GM) + DIC PUR + BOD Members</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Book Reading/ Journal Business and BEST PRACTICES (Asia Pacific Region)</option>
+                                        <option data-kt-flag="flags/aland-islands.svg" value="AX">To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team --> Sharing Success Tips</option>
+                                        <option data-kt-flag="flags/albania.svg" value="AL">Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project (CAPACITY UP) & (AIIA) EV  Project</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="DZ">SR Project (Structural Reform --> DM & SCM)</option>
+                                        <option data-kt-flag="flags/american-samoa.svg" value="AS">PEOPLE Development Program of Team members (ICT, IDP)</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">(Leadership) --> Courageously & Situational Leadership</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">(Developing Sub Ordinate) --> Coaching Skill/ Developing Talents</option>
+                                    </select>
+                                </div>
+
 
                                 <!--begin::Permissions-->
                                 <div class="col-lg-12 fv-row mb-10">
