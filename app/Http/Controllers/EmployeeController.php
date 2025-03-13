@@ -4,7 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use App\Imports\EmployeeImport;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
 
 class EmployeeController extends Controller
@@ -208,7 +210,7 @@ class EmployeeController extends Controller
 
         $employee->delete();
 
-        return redirect()->route('employee.index')->with('success', 'Karyawan berhasil dihapus!');
+        return redirect()->back()->with('success', 'Karyawan berhasil dihapus!');
     }
 
     public function profile($npk)
@@ -217,4 +219,20 @@ class EmployeeController extends Controller
         return view('website.employee.profile.index', compact('employee'));
     }
 
+
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,csv'
+        ]);
+
+        try {
+            Excel::import(new EmployeeImport, $request->file('file'));
+            session()->flash('success', 'Data karyawan berhasil diimport!');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+
+        return redirect()->back();
+    }
 }

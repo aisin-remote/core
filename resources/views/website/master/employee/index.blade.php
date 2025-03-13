@@ -9,6 +9,18 @@
 @endsection
 
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -23,10 +35,14 @@
                         data-kt-menu-placement="bottom-end">
                         <i class="fas fa-filter"></i> Filter
                     </button>
-                    <a href="{{ route('employee.create') }}" class="btn btn-primary">
+                    <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
                         <i class="fas fa-plus"></i>
                         Add
                     </a>
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-uploadgit git"></i>
+                        Import
+                    </button>
                 </div>
             </div>
 
@@ -39,11 +55,10 @@
                             <th>Employee Name</th>
                             <th>Company</th>
                             <th>Position</th>
-                            <th>Function Group</th>
-                            <th>Function</th>
+                            <th>Departement</th>
                             <th>Grade</th>
                             <th>Age</th>
-                            <th class="text-end">Actions</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -53,13 +68,13 @@
                                 <td>{{ $employee->npk }}</td>
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
-                                <td>{{ $employee->position_name }}</td>
-                                <td>{{ $employee->company_group }}</td>
-                                <td>{{ $employee->function }}</td>
+                                <td>{{ $employee->position }}</td>
+                                <td>{{ $employee->departments->first()->name }}</td>
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
-                                <td class="text-end">
-                                    <a href="{{ route('employee.profile',$employee->npk) }}" class="btn btn-primary btn-sm">Detail</a>
+                                <td class="text-center">
+                                    <a href="{{ route('employee.profile', $employee->npk) }}"
+                                        class="btn btn-primary btn-sm">Detail</a>
                                     <a href="{{ route('employee.edit', $employee->npk) }}"
                                         class="btn btn-warning btn-sm">Update</a>
 
@@ -78,27 +93,101 @@
         </div>
     </div>
 
+    <!-- Import Employee Modal -->
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">Import Employee Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ route('employee.import') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select Excel File</label>
+                            <input type="file" name="file" id="file" class="form-control" required>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-info">Import</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
     <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Fungsi pencarian
-            document.getElementById("searchButton").addEventListener("click", function() {
-                var searchValue = document.getElementById("searchInput").value.toLowerCase();
-                var table = document.getElementById("kt_table_users").getElementsByTagName("tbody")[0];
-                var rows = table.getElementsByTagName("tr");
+            console.log("✅ Script Loaded!");
+
+            var searchInput = document.getElementById("searchInput");
+            var filterItems = document.querySelectorAll(".filter-department");
+            var table = document.getElementById("kt_table_users");
+
+            if (!searchInput || !table) {
+                console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
+                return;
+            }
+
+            var tbody = table.getElementsByTagName("tbody")[0];
+            var rows = tbody.getElementsByTagName("tr");
+
+            function filterTable(selectedDepartment = "") {
+                var searchValue = searchInput.value.toLowerCase();
 
                 for (var i = 0; i < rows.length; i++) {
-                    var nameCell = rows[i].getElementsByTagName("td")[1];
-                    if (nameCell) {
-                        var nameText = nameCell.textContent || nameCell.innerText;
-                        rows[i].style.display = nameText.toLowerCase().includes(searchValue) ? "" : "none";
+                    var cells = rows[i].getElementsByTagName("td");
+                    var match = false;
+
+                    if (cells.length >= 7) {
+                        var npk = cells[1].textContent.toLowerCase();
+                        var name = cells[2].textContent.toLowerCase();
+                        var company = cells[3].textContent.toLowerCase();
+                        var position = cells[4].textContent.toLowerCase();
+                        var functionName = cells[5].textContent.toLowerCase();
+                        var grade = cells[6].textContent.toLowerCase();
+                        var age = cells[7].textContent.toLowerCase();
+
+                        var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
+                            company.includes(searchValue) || position.includes(searchValue) ||
+                            functionName.includes(searchValue) || grade.includes(searchValue) ||
+                            age.includes(searchValue);
+
+                        var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
+
+                        if (searchMatch && departmentMatch) {
+                            match = true;
+                        }
                     }
+
+                    rows[i].style.display = match ? "" : "none";
                 }
+            }
+
+            // Event Pencarian
+            searchInput.addEventListener("keyup", function() {
+                filterTable();
             });
 
-            // SweetAlert untuk tombol delete
+            // Event Filter Dropdown
+            filterItems.forEach(item => {
+                item.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    var selectedDepartment = this.getAttribute("data-department").toLowerCase();
+                    console.log("🔍 Filter dipilih: ", selectedDepartment);
+                    filterTable(selectedDepartment);
+                });
+            });
+
+            console.log("✅ Event Listeners Added Successfully");
+
+            // SweetAlert untuk Delete Button
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     let employeeId = this.getAttribute('data-id');

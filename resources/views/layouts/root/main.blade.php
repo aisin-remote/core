@@ -26,8 +26,6 @@
     <meta property="og:type" content="article" />
     <meta property="og:title"
         content="Metronic - The World's #1 Selling Tailwind CSS & Bootstrap Admin Template by KeenThemes" />
-    <meta property="og:url" content="https://keenthemes.com/metronic" />
-    <meta property="og:site_name" content="Metronic by Keenthemes" />
     <link rel="canonical" href="index.html" />
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -50,26 +48,6 @@
     <!--end::Global Stylesheets Bundle-->
 
     @stack('custom-css')
-
-    <!-- Google tag (gtag.js) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-52YZ3XGZJ6"></script>
-    <script>
-        window.dataLayer = window.dataLayer || [];
-
-        function gtag() {
-            dataLayer.push(arguments);
-        }
-        gtag('js', new Date());
-
-        gtag('config', 'G-52YZ3XGZJ6');
-    </script>
-    <script>
-        // Frame-busting to prevent site from being loaded within a frame without permission (click-jacking)
-        if (window.top != window.self) {
-            window.top.location.replace(window.self.location.href);
-        }
-    </script>
-
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
@@ -151,7 +129,7 @@
                     </div>
                 </div>
                 <!--begin::Footer-->
-                {{-- @include('layouts.partials.footer') --}}
+                @include('layouts.partials.footer')
                 <!--end::Footer-->
             </div>
             <!--end::Main-->

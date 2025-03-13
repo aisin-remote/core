@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-use App\Models\Assessment;
-use App\Models\Employee;
 use App\Models\Alc;
+use App\Models\Employee;
+use App\Models\Assessment;
+use Illuminate\Http\Request;
 
 class AssessmentController extends Controller
 {
@@ -87,7 +87,8 @@ public function showByDate($employee_id, $date)
             'alc_ids.*' => 'exists:alc,id',
             'scores' => 'nullable|array',
             'scores.*' => 'nullable|string|max:2',
-            'descriptions' => 'nullable|array',
+            'strenght' => 'nullable|array',
+            'weakness' => 'nullable|array',
         ]);
 
         // Simpan file terlebih dahulu jika ada

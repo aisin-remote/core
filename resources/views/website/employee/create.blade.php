@@ -12,7 +12,6 @@
     <div id="kt_app_content" class="app-content  flex-column-fluid ">
         <!--begin::Content container-->
         <div id="kt_app_content_container" class="app-container  container-fluid ">
-
             <form action="{{ route('employee.store') }}" method="POST" enctype="multipart/form-data">
                 @csrf
                 <div class="row">
@@ -29,14 +28,6 @@
                             <label class="form-label">Name</label>
                             <input type="text" name="name" class="form-control" value="{{ old('name') }}">
                             @error('name')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Identity Number</label>
-                            <input type="text" name="identity_number" class="form-control"
-                                value="{{ old('identity_number') }}">
-                            @error('identity_number')
                                 <div class="text-danger">{{ $message }}</div>
                             @enderror
                         </div>
@@ -85,7 +76,7 @@
                     <!-- Kolom Kanan -->
                     <div class="col-md-6">
                         <div class="mb-3">
-                            <label class="form-label">Aisin Entry Date</label>
+                            <label class="form-label">Join Date</label>
                             <input type="date" name="aisin_entry_date" class="form-control"
                                 value="{{ old('aisin_entry_date') }}">
                             @error('aisin_entry_date')
@@ -105,14 +96,6 @@
                             <input type="text" name="company_group" class="form-control"
                                 value="{{ old('company_group') }}">
                             @error('company_group')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Foundation Group</label>
-                            <input type="text" name="foundation_group" class="form-control"
-                                value="{{ old('foundation_group') }}">
-                            @error('foundation_group')
                                 <div class="text-danger">{{ $message }}</div>
                             @enderror
                         </div>
@@ -164,3 +147,6 @@
         </div>
     </div>
 @endsection
+
+<!-- Tambahkan SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

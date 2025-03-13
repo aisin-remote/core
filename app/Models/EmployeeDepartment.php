@@ -12,4 +12,8 @@ class EmployeeDepartment extends Pivot
 
     protected $table = 'employee_departments';
 
+    public function departments()
+    {
+        return $this->belongsTo(Department::class, 'department_id'); // Sesuaikan dengan foreign key
+    }
 }

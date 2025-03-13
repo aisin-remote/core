@@ -79,11 +79,6 @@
                         <div class="d-flex flex-stack flex-wrap gap-3 fs-base fw-semibold mb-8">
                             <div></div>
 
-                            <!--begin::Link-->
-                            <a href="reset-password.html" class="link-primary">
-                                Forgot Password ?
-                            </a>
-                            <!--end::Link-->
                         </div>
                         <!--end::Wrapper-->
 
@@ -108,8 +103,8 @@
                         <div class="text-gray-500 text-center fw-semibold fs-6">
                             Not have account yet?
 
-                            <a href="sign-up.html" class="link-primary">
-                                contact ITD
+                            <a href="https://wa.me/6282328591267" class="link-primary">
+                                contact HRD
                             </a>
                         </div>
                         <!--end::Sign up-->
