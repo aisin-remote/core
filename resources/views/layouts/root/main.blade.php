@@ -149,7 +149,7 @@
     @stack('custom-scripts')
 
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->
-    <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
+    {{-- <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script> --}}
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
 
