@@ -154,7 +154,7 @@ class EmployeeController extends Controller
      */
     public function show($npk)
     {
-        $employee = Employee::where('npk', $npk)->firstOrFail();
+        $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         return view('website.employee.show', compact('employee'));
     }
 

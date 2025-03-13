@@ -40,7 +40,7 @@
 </style>
 
 @section('main')
-    <div id="kt_app_content_container" class="app-container  container-fluid ">
+    <div id="kt_app_content_container" class="app-container  container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
@@ -208,7 +208,8 @@
                                         class="form-select form-select-solid form-select-lg fw-semibold">
                                         <option value="">Select Development Program</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="AF">Feedback</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Self Development</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Self Development
+                                        </option>
                                         <option data-kt-flag="flags/aland-islands.svg" value="AX">Shadowing</option>
                                         <option data-kt-flag="flags/albania.svg" value="AL">On Job Development
                                         </option>
@@ -226,7 +227,8 @@
                                         class="form-select form-select-solid form-select-lg fw-semibold" multiple>
                                         <option value="">Select Category</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="AF">Feedback</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Self Development</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AF">Self Development
+                                        </option>
                                         <option data-kt-flag="flags/aland-islands.svg" value="AX">Shadowing</option>
                                         <option data-kt-flag="flags/albania.svg" value="AL">On Job Development
                                         </option>
@@ -570,223 +572,224 @@
                                                                 <!--begin::Item-->
                                                                 <div class="d-flex align-items-center ps-10 mb-n1">
 
-                                                            </div>
-                                                            <!--end::Item-->
-                                                            <!--begin::Item-->
-                                                            <div class="mb-4">
-                                                                <!--begin::Item-->
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-
-                                                            </div>
-                                                            <!--end::Item-->
-                                                            <!--begin::Item-->
-                                                            <div class="mb-4">
-                                                                <!--begin::Item-->
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-
-                                                            </div>
-                                                            <!--end::Item-->
-                                                            <!--begin::Item-->
-                                                            <div class="mb-4">
-                                                                <!--begin::Item-->
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-
+                                                                </div>
                                                                 <!--end::Item-->
-                                                            </div>
-                                                            <!--end::Item-->
-                                                            <!--begin::Item-->
-                                                            <div class="mb-4">
-
-                                                            </div>
-                                                            </div>
-                                                            </div>
-                                                            <!--end::Item-->
-                                                            <!--begin::Item-->
-                                                            <div class="mb-4">
                                                                 <!--begin::Item-->
-                                                                <div class="d-flex align-items-center ps-10 ">
+                                                                <div class="mb-4">
+                                                                    <!--begin::Item-->
+                                                                    <div class="d-flex align-items-center ps-10 mb-n1">
 
+                                                                    </div>
+                                                                    <!--end::Item-->
+                                                                    <!--begin::Item-->
+                                                                    <div class="mb-4">
+                                                                        <!--begin::Item-->
+                                                                        <div class="d-flex align-items-center ps-10 mb-n1">
+
+                                                                        </div>
+                                                                        <!--end::Item-->
+                                                                        <!--begin::Item-->
+                                                                        <div class="mb-4">
+                                                                            <!--begin::Item-->
+                                                                            <div
+                                                                                class="d-flex align-items-center ps-10 mb-n1">
+
+                                                                                <!--end::Item-->
+                                                                            </div>
+                                                                            <!--end::Item-->
+                                                                            <!--begin::Item-->
+                                                                            <div class="mb-4">
+
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <!--end::Item-->
+                                                                    <!--begin::Item-->
+                                                                    <div class="mb-4">
+                                                                        <!--begin::Item-->
+                                                                        <div class="d-flex align-items-center ps-10 ">
+
+                                                                        </div>
+                                                                        <!--end::Item-->
+                                                                    </div>
+                                                                    <!--end::Content-->
+
+
+                                                                    <!--begin::Separator-->
+                                                                    <div class="separator separator-dashed"></div>
+                                                                    <!--end::Separator-->
+                                                                </div>
+                                                                <!--end::Section-->
                                                             </div>
-                                                            <!--end::Item-->
                                                         </div>
-                                                        <!--end::Content-->
-
-
-                                                        <!--begin::Separator-->
-                                                        <div class="separator separator-dashed"></div>
-                                                        <!--end::Separator-->
+                                                        <!--end::Top-->
                                                     </div>
-                                                    <!--end::Section-->
+                                                    <!--end::Body-->
                                                 </div>
                                             </div>
-                                            <!--end::Top-->
                                         </div>
-                                        <!--end::Body-->
+
                                     </div>
                                 </div>
-                            </div>
-
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h3 class="card-title">II. Individual Development Program</h3>
+                                            <div class="d-flex align-items-center">
+                                                <input type="text" id="searchInput" class="form-control me-2"
+                                                    placeholder="Search..." style="width: 200px;">
+                                                <button type="button" class="btn btn-primary me-3" id="searchButton">
+                                                    <i class="fas fa-search"></i> Search
+                                                </button>
                                             </div>
                                         </div>
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">II. Individual Development Program</h3>
-                                        <div class="d-flex align-items-center">
-                                            <input type="text" id="searchInput" class="form-control me-2"
-                                                placeholder="Search..." style="width: 200px;">
-                                            <button type="button" class="btn btn-primary me-3" id="searchButton">
-                                                <i class="fas fa-search"></i> Search
-                                            </button>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
+                                                id="kt_table_users">
+                                                <thead>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-center" style="width: 100px">
+                                                            Development Area
+                                                        </th>
+                                                        <th class="text-center" style="width: 50px">
+                                                            Development Program
+                                                        </th>
+                                                        <th class="text-center" style="width: 50px">
+                                                            Development Target
+                                                        </th>
+                                                        <th class="text-center" style="width: 50px">Due Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($employees as $index => $employee)
+                                                        <tr class=" fs-8 ">
+                                                            <td class="text-center">VISION & BUSINESS SENSE </td>
+                                                            <td class="text-center">
+                                                                Superior (DGM & GM) + DIC PUR + BOD Members
+                                                            </td>
+                                                            <td class="text-center">
+                                                                Level Up of CONFIDENCE Level as MANAGER
+                                                            </td>
+                                                            <td class="text-center">
+                                                                2nd SEM Year 2024 (July-Dec)
+                                                            </td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr>
+                                                            <td colspan="9" class="text-center text-muted">No employees
+                                                                found</td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 100px">
-                                                        Development Area
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Target
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">Due Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse ($employees as $index => $employee)
-                                                    <tr class=" fs-8 ">
-                                                        <td class="text-center">VISION & BUSINESS SENSE </td>
-                                                        <td class="text-center">
-                                                            Superior (DGM & GM) + DIC PUR + BOD Members
-                                                        </td>
-                                                        <td class="text-center">
-                                                            Level Up of CONFIDENCE Level as MANAGER
-                                                        </td>
-                                                        <td class="text-center">
-                                                            2nd SEM Year 2024 (July-Dec)
-                                                        </td>
+                                </div>
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h3 class="card-title">III. Mid Year Review</h3>
+                                            <div class="d-flex align-items-center">
+                                                <input type="text" id="searchInput" class="form-control me-2"
+                                                    placeholder="Search..." style="width: 200px;">
+                                                <button type="button" class="btn btn-primary me-3" id="searchButton">
+                                                    <i class="fas fa-search"></i> Search
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
+                                                id="kt_table_users">
+                                                <thead>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-center" style="width: 50px">
+                                                            Development Program
+                                                        </th>
+                                                        <th class="text-center" style="width: 100px">
+                                                            Development Achievement
+                                                        </th>
+                                                        <th class="text-center" style="width: 50px">
+                                                            Next Action
+                                                        </th>
                                                     </tr>
-                                                @empty
-                                                    <tr>
-                                                        <td colspan="9" class="text-center text-muted">No employees
-                                                            found</td>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($employees as $index => $employee)
+                                                        <tr>
+                                                            <td colspan="9" class="text-center text-muted">Data Not
+                                                                Available</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr class=" fs-8 ">
+                                                            <td class="text-center">VISION & BUSINESS SENSE </td>
+                                                            <td class="text-center">
+                                                                Superior (DGM & GM) + DIC PUR + BOD Members
+                                                            </td>
+                                                            <td class="text-center">
+                                                                Level Up of CONFIDENCE Level as MANAGER
+                                                            </td>
+                                                            <td class="text-center">
+                                                                2nd SEM Year 2024 (July-Dec)
+                                                            </td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h3 class="card-title">IV. One Year Riview</h3>
+                                            <div class="d-flex align-items-center">
+                                                <input type="text" id="searchInput" class="form-control me-2"
+                                                    placeholder="Search..." style="width: 200px;">
+                                                <button type="button" class="btn btn-primary me-3" id="searchButton">
+                                                    <i class="fas fa-search"></i> Search
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
+                                                id="kt_table_users">
+                                                <thead>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-center" style="width: 50px">
+                                                            Development Program
+                                                        </th>
+                                                        <th class="text-center" style="width: 100px">
+                                                            Evaluation Result
+                                                        </th>
                                                     </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
+                                                </thead>
+                                                <tbody>
+                                                    @forelse ($employees as $index => $employee)
+                                                        <tr>
+                                                            <td colspan="9" class="text-center text-muted">Data Not
+                                                                Available</td>
+                                                        </tr>
+                                                    @empty
+                                                        <tr class=" fs-8 ">
+                                                            <td class="text-center">VISION & BUSINESS SENSE </td>
+                                                            <td class="text-center">
+                                                                Superior (DGM & GM) + DIC PUR + BOD Members
+                                                            </td>
+                                                            <td class="text-center">
+                                                                Level Up of CONFIDENCE Level as MANAGER
+                                                            </td>
+                                                            <td class="text-center">
+                                                                2nd SEM Year 2024 (July-Dec)
+                                                            </td>
+                                                        </tr>
+                                                    @endforelse
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">III. Mid Year Review</h3>
-                                        <div class="d-flex align-items-center">
-                                            <input type="text" id="searchInput" class="form-control me-2"
-                                                placeholder="Search..." style="width: 200px;">
-                                            <button type="button" class="btn btn-primary me-3" id="searchButton">
-                                                <i class="fas fa-search"></i> Search
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-center" style="width: 100px">
-                                                        Development Achievement
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Next Action
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse ($employees as $index => $employee)
-                                                    <tr>
-                                                        <td colspan="9" class="text-center text-muted">Data Not
-                                                            Available</td>
-                                                    </tr>
-                                                @empty
-                                                    <tr class=" fs-8 ">
-                                                        <td class="text-center">VISION & BUSINESS SENSE </td>
-                                                        <td class="text-center">
-                                                            Superior (DGM & GM) + DIC PUR + BOD Members
-                                                        </td>
-                                                        <td class="text-center">
-                                                            Level Up of CONFIDENCE Level as MANAGER
-                                                        </td>
-                                                        <td class="text-center">
-                                                            2nd SEM Year 2024 (July-Dec)
-                                                        </td>
-                                                    </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">IV. One Year Riview</h3>
-                                        <div class="d-flex align-items-center">
-                                            <input type="text" id="searchInput" class="form-control me-2"
-                                                placeholder="Search..." style="width: 200px;">
-                                            <button type="button" class="btn btn-primary me-3" id="searchButton">
-                                                <i class="fas fa-search"></i> Search
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-center" style="width: 100px">
-                                                        Evaluation Result
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @forelse ($employees as $index => $employee)
-                                                    <tr>
-                                                        <td colspan="9" class="text-center text-muted">Data Not
-                                                            Available</td>
-                                                    </tr>
-                                                @empty
-                                                    <tr class=" fs-8 ">
-                                                        <td class="text-center">VISION & BUSINESS SENSE </td>
-                                                        <td class="text-center">
-                                                            Superior (DGM & GM) + DIC PUR + BOD Members
-                                                        </td>
-                                                        <td class="text-center">
-                                                            Level Up of CONFIDENCE Level as MANAGER
-                                                        </td>
-                                                        <td class="text-center">
-                                                            2nd SEM Year 2024 (July-Dec)
-                                                        </td>
-                                                    </tr>
-                                                @endforelse
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <!--end::Scroll-->
+                            <!--end::Scroll-->
                     </form>
                     <!--end::Form-->
                 </div>

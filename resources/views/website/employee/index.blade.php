@@ -23,10 +23,6 @@
                         data-kt-menu-placement="bottom-end">
                         <i class="fas fa-filter"></i> Filter
                     </button>
-                    <a href="{{ route('employee.create') }}" class="btn btn-primary">
-                        <i class="fas fa-plus"></i>
-                        Add
-                    </a>
                 </div>
             </div>
 
@@ -79,22 +75,70 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Fungsi pencarian
-            document.getElementById("searchButton").addEventListener("click", function() {
-                var searchValue = document.getElementById("searchInput").value.toLowerCase();
-                var table = document.getElementById("kt_table_users").getElementsByTagName("tbody")[0];
-                var rows = table.getElementsByTagName("tr");
+            console.log("✅ Script Loaded!");
+
+            var searchInput = document.getElementById("searchInput");
+            var filterItems = document.querySelectorAll(".filter-department");
+            var table = document.getElementById("kt_table_users");
+
+            if (!searchInput || !table) {
+                console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
+                return;
+            }
+
+            var tbody = table.getElementsByTagName("tbody")[0];
+            var rows = tbody.getElementsByTagName("tr");
+
+            function filterTable(selectedDepartment = "") {
+                var searchValue = searchInput.value.toLowerCase();
 
                 for (var i = 0; i < rows.length; i++) {
-                    var nameCell = rows[i].getElementsByTagName("td")[1];
-                    if (nameCell) {
-                        var nameText = nameCell.textContent || nameCell.innerText;
-                        rows[i].style.display = nameText.toLowerCase().includes(searchValue) ? "" : "none";
+                    var cells = rows[i].getElementsByTagName("td");
+                    var match = false;
+
+                    if (cells.length >= 7) {
+                        var npk = cells[1].textContent.toLowerCase();
+                        var name = cells[2].textContent.toLowerCase();
+                        var company = cells[3].textContent.toLowerCase();
+                        var position = cells[4].textContent.toLowerCase();
+                        var functionName = cells[5].textContent.toLowerCase();
+                        var grade = cells[6].textContent.toLowerCase();
+                        var age = cells[7].textContent.toLowerCase();
+
+                        var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
+                            company.includes(searchValue) || position.includes(searchValue) ||
+                            functionName.includes(searchValue) || grade.includes(searchValue) ||
+                            age.includes(searchValue);
+
+                        var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
+
+                        if (searchMatch && departmentMatch) {
+                            match = true;
+                        }
                     }
+
+                    rows[i].style.display = match ? "" : "none";
                 }
+            }
+
+            // Event Pencarian
+            searchInput.addEventListener("keyup", function() {
+                filterTable();
             });
 
-            // SweetAlert untuk tombol delete
+            // Event Filter Dropdown
+            filterItems.forEach(item => {
+                item.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    var selectedDepartment = this.getAttribute("data-department").toLowerCase();
+                    console.log("🔍 Filter dipilih: ", selectedDepartment);
+                    filterTable(selectedDepartment);
+                });
+            });
+
+            console.log("✅ Event Listeners Added Successfully");
+
+            // SweetAlert untuk Delete Button
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', function() {
                     let employeeId = this.getAttribute('data-id');
