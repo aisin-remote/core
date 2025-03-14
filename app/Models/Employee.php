@@ -1,9 +1,9 @@
 <?php
 namespace App\Models;
 
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Carbon\Carbon;
 
 class Employee extends Model
 {
@@ -12,7 +12,7 @@ class Employee extends Model
     protected $guarded = ['id'];
 
     protected $fillable = ['name', 'email', 'position', 'aisin_entry_date'];
-    public function assessment()
+    public function assessments()
     {
         return $this->hasMany(Assessment::class, 'employee_id', 'id');
     }

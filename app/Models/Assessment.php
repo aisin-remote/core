@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Assessment extends Model
 {
     use HasFactory;
-    protected $table = 'assessment';
+    protected $table = 'assessments';
     protected $guarded = ['id'];
 
     /**

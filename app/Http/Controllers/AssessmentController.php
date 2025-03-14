@@ -19,7 +19,7 @@ class AssessmentController extends Controller
     {
         // Ambil semua employee untuk dropdown
         $employees = Employee::all();
-        $employeesWithAssessments = Employee::whereHas('assessment')->get();
+        $employeesWithAssessments = Employee::whereHas('assessments')->get();
         $alcs = Alc::all();
 
         // Ambil assessment terbaru per employee
@@ -33,7 +33,7 @@ class AssessmentController extends Controller
             })
             ->whereIn('id', function ($query) {
                 $query->selectRaw('MAX(id)')
-                    ->from('assessment')
+                    ->from('assessments')
                     ->groupBy('employee_id');
             })
             ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
@@ -44,7 +44,7 @@ class AssessmentController extends Controller
     public function show($employee_id)
     {
         // Ambil data karyawan berdasarkan ID
-        $employee = Employee::with('assessment')->findOrFail($employee_id);
+        $employee = Employee::with('assessments')->findOrFail($employee_id);
     
         // Ambil assessment dan sertakan kolom `upload`
         $assessments = Assessment::where('employee_id', $employee_id)
@@ -89,11 +89,6 @@ class AssessmentController extends Controller
     }
 
 
-
-
-
-
-
     public function create()
     {
         $employees = Employee::all(); // Ambil semua employee
@@ -129,7 +124,7 @@ class AssessmentController extends Controller
             'upload' => $filePath,
         ]);
 
-
+dd($request);
         // Simpan data detail ke tabel assessment_details
         $assessmentDetails = [];
         foreach ($request->alc_ids as $index => $alc_id) {
@@ -149,12 +144,7 @@ class AssessmentController extends Controller
         }
 
 
-
-
-
         // Simpan batch data ke database
-
-
         return response()->json([
             'success' => true,
             'message' => 'Data assessment berhasil disimpan.',
