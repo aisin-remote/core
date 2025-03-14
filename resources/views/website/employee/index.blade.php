@@ -74,108 +74,106 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-        console.log("✅ Script Loaded!");
+            console.log("✅ Script Loaded!");
 
-        var searchInput = document.getElementById("searchInput");
-        var filterItems = document.querySelectorAll(".filter-department");
-        var table = document.getElementById("kt_table_users");
+            var searchInput = document.getElementById("searchInput");
+            var filterItems = document.querySelectorAll(".filter-department");
+            var table = document.getElementById("kt_table_users");
 
-        if (!searchInput || !table) {
-        console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
-        return;
-        }
+            if (!searchInput || !table) {
+                console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
+                return;
+            }
 
-        var tbody = table.getElementsByTagName("tbody")[0];
-        var rows = tbody.getElementsByTagName("tr");
+            var tbody = table.getElementsByTagName("tbody")[0];
+            var rows = tbody.getElementsByTagName("tr");
 
-        function filterTable(selectedDepartment = "") {
-        var searchValue = searchInput.value.toLowerCase();
+            function filterTable(selectedDepartment = "") {
+                var searchValue = searchInput.value.toLowerCase();
 
-        for (var i = 0; i < rows.length; i++) {
-            var cells = rows[i].getElementsByTagName("td");
-            var match = false;
+                for (var i = 0; i < rows.length; i++) {
+                    var cells = rows[i].getElementsByTagName("td");
+                    var match = false;
 
-            if (cells.length >= 7) {
-                var npk = cells[1].textContent.toLowerCase();
-                var name = cells[2].textContent.toLowerCase();
-                var company = cells[3].textContent.toLowerCase();
-                var position = cells[4].textContent.toLowerCase();
-                var functionName = cells[5].textContent.toLowerCase();
-                var grade = cells[6].textContent.toLowerCase();
-                var age = cells[7].textContent.toLowerCase();
+                    if (cells.length >= 7) {
+                        var npk = cells[1].textContent.toLowerCase();
+                        var name = cells[2].textContent.toLowerCase();
+                        var company = cells[3].textContent.toLowerCase();
+                        var position = cells[4].textContent.toLowerCase();
+                        var functionName = cells[5].textContent.toLowerCase();
+                        var grade = cells[6].textContent.toLowerCase();
+                        var age = cells[7].textContent.toLowerCase();
 
-                var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
-                    company.includes(searchValue) || position.includes(searchValue) ||
-                    functionName.includes(searchValue) || grade.includes(searchValue) ||
-                    age.includes(searchValue);
+                        var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
+                            company.includes(searchValue) || position.includes(searchValue) ||
+                            functionName.includes(searchValue) || grade.includes(searchValue) ||
+                            age.includes(searchValue);
 
-                var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
+                        var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
 
-                if (searchMatch && departmentMatch) {
-                    match = true;
+                        if (searchMatch && departmentMatch) {
+                            match = true;
+                        }
+                    }
+
+                    rows[i].style.display = match ? "" : "none";
                 }
             }
 
-            rows[i].style.display = match ? "" : "none";
-        }
-        }
-
-        // Event Pencarian
-        searchInput.addEventListener("keyup", function() {
-        filterTable();
-        });
-
-        // Event Filter Dropdown
-        filterItems.forEach(item => {
-        item.addEventListener("click", function(event) {
-            event.preventDefault();
-            var selectedDepartment = this.getAttribute("data-department").toLowerCase();
-            console.log("🔍 Filter dipilih: ", selectedDepartment);
-            filterTable(selectedDepartment);
-        });
-        });
-
-        console.log("✅ Event Listeners Added Successfully");
-
-        // SweetAlert untuk Delete Button
-        document.querySelectorAll('.delete-btn').forEach(button => {
-        button.addEventListener('click', function() {
-            let employeeId = this.getAttribute('data-id');
-
-            Swal.fire({
-                title: "Are you sure?",
-                text: "You won't be able to revert this!",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#d33",
-                cancelButtonColor: "#3085d6",
-                confirmButtonText: "Yes, delete it!"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    let form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = `/employee/${employeeId}`;
-
-                    let csrfToken = document.createElement('input');
-                    csrfToken.type = 'hidden';
-                    csrfToken.name = '_token';
-                    csrfToken.value = '{{ csrf_token() }}';
-
-                    let methodField = document.createElement('input');
-                    methodField.type = 'hidden';
-                    methodField.name = '_method';
-                    methodField.value = 'DELETE';
-
-                    form.appendChild(csrfToken);
-                    form.appendChild(methodField);
-                    document.body.appendChild(form);
-                    form.submit();
-                }
+            // Event Pencarian
+            searchInput.addEventListener("keyup", function() {
+                filterTable();
             });
-        });
-        });
-        });
-        });
+
+            // Event Filter Dropdown
+            filterItems.forEach(item => {
+                item.addEventListener("click", function(event) {
+                    event.preventDefault();
+                    var selectedDepartment = this.getAttribute("data-department").toLowerCase();
+                    console.log("🔍 Filter dipilih: ", selectedDepartment);
+                    filterTable(selectedDepartment);
+                });
+            });
+
+            console.log("✅ Event Listeners Added Successfully");
+
+            // SweetAlert untuk Delete Button
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    let employeeId = this.getAttribute('data-id');
+
+                    Swal.fire({
+                        title: "Are you sure?",
+                        text: "You won't be able to revert this!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#3085d6",
+                        confirmButtonText: "Yes, delete it!"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            let form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = `/employee/${employeeId}`;
+
+                            let csrfToken = document.createElement('input');
+                            csrfToken.type = 'hidden';
+                            csrfToken.name = '_token';
+                            csrfToken.value = '{{ csrf_token() }}';
+
+                            let methodField = document.createElement('input');
+                            methodField.type = 'hidden';
+                            methodField.name = '_method';
+                            methodField.value = 'DELETE';
+
+                            form.appendChild(csrfToken);
+                            form.appendChild(methodField);
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    });
+                });
+            });
         });
     </script>
 @endsection

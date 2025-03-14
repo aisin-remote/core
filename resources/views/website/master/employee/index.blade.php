@@ -21,6 +21,18 @@
             });
         </script>
     @endif
+    @if (session()->has('error'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Error!",
+                    text: "{{ session('error') }}",
+                    icon: "error",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -73,7 +85,7 @@
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('employee.profile', $employee->npk) }}"
+                                    <a href="{{ route('employee.show', $employee->npk) }}"
                                         class="btn btn-primary btn-sm">Detail</a>
                                     <a href="{{ route('employee.edit', $employee->npk) }}"
                                         class="btn btn-warning btn-sm">Update</a>
@@ -91,8 +103,6 @@
             </div>
         </div>
     </div>
-    @include('website.master.employee.import')
-    <!-- Form Hidden untuk Upload -->
 
     <!-- Import Employee Modal -->
     <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">

@@ -11,7 +11,6 @@ class Employee extends Model
 
     protected $guarded = ['id'];
 
-    protected $fillable = ['name', 'email', 'position', 'aisin_entry_date'];
     public function assessments()
     {
         return $this->hasMany(Assessment::class, 'employee_id', 'id');
@@ -30,6 +29,23 @@ class Employee extends Model
     public function user()
     {
         return $this->hasOne(User::class, 'employee_id', 'id');
+    }
+
+    public function promotionHistory()
+    {
+        return $this->hasMany(PromotionHistory::class, 'employee_id', 'id');
+    }
+    public function education()
+    {
+        return $this->hasMany(EducationalBackground::class, 'employee_id', 'id');
+    }
+    public function work()
+    {
+        return $this->hasMany(WorkingExperience::class, 'employee_id', 'id');
+    }
+    public function appraisal()
+    {
+        return $this->hasMany(PerformanceAppraisalHistory::class, 'employee_id', 'id');
     }
 
     public function getWorkingPeriodAttribute()
