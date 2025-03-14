@@ -7,6 +7,7 @@ use App\Models\Employee;
 use App\Models\Assessment;
 use Illuminate\Http\Request;
 use App\Models\DetailAssessment;
+use Illuminate\Support\Facades\DB;
 
 class AssessmentController extends Controller
 {
@@ -124,11 +125,10 @@ class AssessmentController extends Controller
             'upload' => $filePath,
         ]);
 
-
         // Simpan data detail ke tabel assessment_details
         $assessmentDetails = [];
         foreach ($request->alc_ids as $index => $alc_id) {
-            \DB::table('detail_assessments')
+            DB::table('detail_assessments')
                 ->updateOrInsert(
                     [
                         'assessment_id' => $assessment->id,
@@ -152,6 +152,4 @@ class AssessmentController extends Controller
             'assessment_details' => $assessmentDetails,
         ]);
     }
-
-
 }
