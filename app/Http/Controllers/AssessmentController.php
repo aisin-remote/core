@@ -45,17 +45,17 @@ class AssessmentController extends Controller
     {
         // Ambil data karyawan berdasarkan ID
         $employee = Employee::with('assessments')->findOrFail($employee_id);
-    
+
         // Ambil assessment dan sertakan kolom `upload`
         $assessments = Assessment::where('employee_id', $employee_id)
             ->selectRaw('date, MAX(id) as id, employee_id, MAX(upload) as upload') // Tambahkan `upload`
             ->groupBy('date', 'employee_id') // Grouping harus mencakup employee_id
             ->orderBy('date', 'desc')
             ->get();
-    
+
         return view('website.assessment.show', compact('employee', 'assessments'));
     }
-    
+
     public function showByDate($assessment_id, $date)
     {
         // Ambil assessment berdasarkan ID
@@ -124,11 +124,11 @@ class AssessmentController extends Controller
             'upload' => $filePath,
         ]);
 
-dd($request);
+
         // Simpan data detail ke tabel assessment_details
         $assessmentDetails = [];
         foreach ($request->alc_ids as $index => $alc_id) {
-            \DB::table('detail_assessment')
+            \DB::table('detail_assessments')
                 ->updateOrInsert(
                     [
                         'assessment_id' => $assessment->id,

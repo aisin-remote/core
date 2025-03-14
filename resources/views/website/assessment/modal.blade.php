@@ -92,7 +92,7 @@
                     <div class="section-title">Weakness</div>
                     <div id="weakness-container">
                         <div class="assessment-card weakness-card card p-3 mb-3">
-                            < <div class="mb-3">
+                            <div class="mb-3">
                                 <select class="form-control alc-dropdown" name="alc_ids[]" required>
                                     <option value="">Pilih ALC</option>
                                     @foreach ($alcs as $alc)
@@ -194,7 +194,7 @@
                 textarea.removeAttribute('name');
             }
         }
-        
+
 
         // Tambahkan event listener untuk tombol tambah pertama
         document.querySelectorAll('.add-assessment').forEach(button => {
