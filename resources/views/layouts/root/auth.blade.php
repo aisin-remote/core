@@ -105,11 +105,10 @@
 
                     <!--begin::Text-->
                     <div class="text-gray-600 fs-base text-center fw-semibold">
-                        A Human Resource Management (HRM) Application is a digital solution that streamlines employee
+                        A Human Resource System (HR System) is a digital solution that focuses on people development by facilitating employee growth,
                         <br>
-                        management, payroll, attendance, performance tracking, and compliance to enhance workforce
-                        <br>
-                        efficiency and organizational productivity.
+                        skill enhancement, performance tracking, and career progression to maximize workforce potential and organizational success.
+                        
                     </div>
                     <!--end::Text-->
                 </div>
