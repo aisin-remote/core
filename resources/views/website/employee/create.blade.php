@@ -113,40 +113,194 @@
                                     <option data-kt-flag="flags/albania.svg" value="Supervisor">Supervisor</option>
                                 </select>
                             </div>
-                            @error('position')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label">Grade</label>
-                            <input type="text" name="grade" class="form-control" value="{{ old('grade') }}">
-                            @error('grade')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Last Promote Date</label>
-                            <input type="date" name="last_promote_date" class="form-control"
-                                value="{{ old('last_promote_date') }}">
-                            @error('last_promote_date')
-                                <div class="text-danger">{{ $message }}</div>
-                            @enderror
+
+                        <!-- Educational Background -->
+                        <div class="col-md-6">
+                            <div class="card p-4 shadow-sm rounded-3">
+                                <h4 class="fw-bold mb-4 text-center">Educational Background</h4>
+                                <div id="education-container">
+                                    <div class="education-entry">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Degree</label>
+                                                    <input type="text" name="degree[]" class="form-control"
+                                                        placeholder="e.g., S1 - Teknik Industri">
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label class="form-label">University</label>
+                                                    <input type="text" name="university[]" class="form-control"
+                                                        placeholder="e.g., Universitas Indonesia">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Year</label>
+                                                    <input type="text" name="year[]" class="form-control"
+                                                        placeholder="e.g., 2019 - 2022">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Button Add More -->
+                                <div class="text-center mt-3">
+                                    <button type="button" class="btn btn-primary" onclick="addEducation()">Add
+                                        More</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div class="text-end mt-3">
-                    <a href="{{ route('employee.index') }}" class="btn btn-secondary">
-                        <i class="bi bi-arrow-left-circle"></i> Back
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="bi bi-save"></i> Save
-                    </button>
-                </div>
+                    <div class="row mt-4">
+                        <!-- Card: Working Experience -->
+                        <div class="col-md-6">
+                            <div class="card p-4 shadow-sm rounded-3">
+                                <h4 class="fw-bold mb-4 text-center">Working Experience</h4>
+                                <div id="work-experience-container">
+                                    <!-- Form Working Experience 1 -->
+                                    <div class="work-entry">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Job Title</label>
+                                                    <input type="text" name="job_title[]" class="form-control"
+                                                        placeholder="e.g., Human Resource Manager">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Year</label>
+                                                    <input type="text" name="work_period[]" class="form-control"
+                                                        placeholder="e.g., 2024 - Present">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Button Add More -->
+                                <div class="text-center mt-3">
+                                    <button type="button" class="btn btn-primary" onclick="addWorkExperience()">Add
+                                        More</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <div class="text-end mt-3">
+                        <a href="{{ route('employee.master.index') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left-circle"></i> Back
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Save
+                        </button>
+                    </div>
             </form>
         </div>
     </div>
+
+
+    <script>
+        function addEducation() {
+            let container = document.getElementById("education-container");
+            let newEntry = document.createElement("div");
+            newEntry.classList.add("education-entry", "mt-3");
+            newEntry.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Degree</label>
+                            <input type="text" name="degree[]" class="form-control" placeholder="e.g., S1 - Teknik Industri">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">University</label>
+                            <input type="text" name="university[]" class="form-control" placeholder="e.g., Universitas Indonesia">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Year</label>
+                            <input type="text" name="year[]" class="form-control" placeholder="e.g., 2019 - 2022">
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeEntry(this)">Remove</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(newEntry);
+        }
+
+        function addWorkExperience() {
+            let container = document.getElementById("work-experience-container");
+            let newEntry = document.createElement("div");
+            newEntry.classList.add("work-entry", "mt-3");
+            newEntry.innerHTML = `
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Job Title</label>
+                        <input type="text" name="job_title[]" class="form-control" placeholder="e.g., Human Resource Manager" required>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label class="form-label">Year</label>
+                        <input type="text" name="work_period[]" class="form-control" placeholder="e.g., 2024 - Present" required>
+                    </div>
+                </div>
+            </div>
+            <div class="text-end">
+                <button type="button" class="btn btn-danger btn-sm " onclick="removeWorkExperience(this)">Remove</button>
+            </div>
+        `;
+            container.appendChild(newEntry);
+        }
+
+        function removeWorkExperience(button) {
+            button.closest('.work-entry').remove();
+        }
+
+        function addPromotion() {
+            let container = document.getElementById("promotion-container");
+            let newEntry = document.createElement("div");
+            newEntry.classList.add("promotion-entry", "mt-3");
+            newEntry.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Previous Position</label>
+                            <input type="text" name="previous_position[]" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Current Position</label>
+                            <input type="text" name="current_position[]" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label">Last Promotion Date</label>
+                            <input type="date" name="last_promotion_date[]" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button type="button" class="btn btn-danger btn-sm" onclick="removeEntry(this)">Remove</button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(newEntry);
+        }
+
+        function removeEntry(button) {
+            button.closest('.promotion-entry, .education-entry').remove();
+        }
+    </script>
 @endsection
 
-<!-- Tambahkan SweetAlert2 -->
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<<<<<<< HEAD <!-- Tambahkan SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    =======
+    >>>>>>> origin/master

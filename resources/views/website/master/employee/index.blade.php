@@ -77,7 +77,6 @@
                                         class="btn btn-primary btn-sm">Detail</a>
                                     <a href="{{ route('employee.edit', $employee->npk) }}"
                                         class="btn btn-warning btn-sm">Update</a>
-
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $employee->npk }}">Delete</button>
                                 </td>
@@ -92,6 +91,8 @@
             </div>
         </div>
     </div>
+    @include('website.master.employee.import')
+    <!-- Form Hidden untuk Upload -->
 
     <!-- Import Employee Modal -->
     <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">

@@ -14,7 +14,7 @@
                             <p class="fs-4 fw-bold"><strong>Nama:</strong> {{ $employee->name }}</p>
                         </div>
                         <div class="col-md-4">
-                            <p class="fs-4 fw-bold"><strong>Position:</strong> {{ $employee->position_name }}</p>
+                            <p class="fs-4 fw-bold"><strong>Departement:</strong> {{ $employee-> function}}</p>
                         </div>
                         <div class="col-md-4">
                             <p class="fs-4 fw-bold"><strong>Date:</strong> {{ $date }}</p>
@@ -39,9 +39,10 @@
                         </thead>
                         <tbody>
                             @php
-                                $strengths = $assessments->where('score', '>=', 3)->values(); // Reset indeks
-                                $weaknesses = $assessments->where('score', '<', 3)->values(); // Reset indeks
-                                $maxRows = max($strengths->count(), $weaknesses->count());
+                                // Ambil hanya yang memiliki strength atau weakness
+                                $strengths = $details->filter(fn($item) => !empty($item->strength))->values();
+                                $weaknesses = $details->filter(fn($item) => !empty($item->weakness))->values();
+                                $maxRows = max($strengths->count(), $weaknesses->count()); // Menyesuaikan jumlah baris maksimum
                             @endphp
 
                             @for ($i = 0; $i < $maxRows; $i++)
@@ -49,18 +50,19 @@
                                     <td class="text-center">{{ $i + 1 }}</td>
                                     <td>
                                         @if (isset($strengths[$i]))
-                                            <strong>{{ $strengths[$i]->alc->name }}</strong>
-                                            {{ $strengths[$i]->description }}
+                                            <strong>{{ $strengths[$i]->alc_name }}</strong> - {{ $strengths[$i]->strength }}
                                         @endif
                                     </td>
+            
                                     <td>
                                         @if (isset($weaknesses[$i]))
-                                            <strong>{{ $weaknesses[$i]->alc->name }}</strong>
-                                            {{ $weaknesses[$i]->description }}
+                                            <strong>{{ $weaknesses[$i]->alc_name }}</strong> - {{ $weaknesses[$i]->weakness }}
                                         @endif
                                     </td>
                                 </tr>
                             @endfor
+
+
                         </tbody>
                     </table>
                 </div>
@@ -72,44 +74,39 @@
         </div>
     </div>
 @endsection
+@push('scripts')
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var ctx = document.getElementById('assessmentChart').getContext('2d');
-
-        if (!ctx) {
-            console.error("Canvas dengan ID 'assessmentChart' tidak ditemukan.");
+    document.addEventListener("DOMContentLoaded", function () {
+        var canvas = document.getElementById('assessmentChart');
+        if (!canvas) {
+            console.error("Canvas 'assessmentChart' tidak ditemukan.");
             return;
         }
+        var ctx = canvas.getContext('2d');
 
-        // Ambil nama ALC dan skor dari backend
+        // Ambil data dari backend
         var labels = @json($assessments->pluck('alc.name'));
         var scores = @json($assessments->pluck('score'));
 
-        console.log("Labels (ALC Name):", labels);
+        console.log("Labels:", labels);
         console.log("Scores:", scores);
 
-        if (labels.length === 0 || scores.length === 0) {
-            console.warn("Data chart kosong, grafik tidak dapat ditampilkan.");
+        if (!labels.length || !scores.length) {
+            console.warn("Data kosong, tidak menampilkan grafik.");
             return;
         }
 
-        // Tentukan warna berdasarkan kondisi skor
-        var backgroundColors = scores.map(score => score < 3 ? 'rgba(255, 99, 132, 0.6)' :
-            'rgba(75, 192, 192, 0.6)');
-        var borderColors = scores.map(score => score < 3 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)');
-
-        // Registrasi plugin datalabels
         Chart.register(ChartDataLabels);
 
-        var assessmentChart = new Chart(ctx, {
+        new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
                     label: 'Scores ALC',
                     data: scores,
-                    backgroundColor: backgroundColors,
-                    borderColor: borderColors,
+                    backgroundColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 0.6)' : 'rgba(75, 192, 192, 0.6)'),
+                    borderColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'),
                     borderWidth: 1
                 }]
             },
@@ -117,30 +114,20 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        display: false // Menyembunyikan legend
-                    },
+                    legend: { display: false },
                     datalabels: {
-                        anchor: 'center', // Posisikan angka di atas batang
-                        align: 'top', // Letakkan angka di bagian atas dalam batang
-                        offset: 15, // Geser sedikit ke atas agar terlihat lebih baik
+                        anchor: 'center',
+                        align: 'top',
                         color: 'black',
-                        font: {
-                            weight: 'bold',
-                            size: 14
-                        },
-                        formatter: function(value) {
-                            return value; // Menampilkan angka sesuai score
-                        }
+                        font: { weight: 'bold', size: 14 },
+                        formatter: value => value
                     }
                 },
                 scales: {
                     y: {
                         beginAtZero: true,
                         suggestedMax: 5,
-                        ticks: {
-                            stepSize: 1
-                        }
+                        ticks: { stepSize: 1 }
                     }
                 }
             }

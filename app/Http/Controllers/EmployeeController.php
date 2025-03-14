@@ -14,7 +14,16 @@ class EmployeeController extends Controller
     /**
      * Tampilkan daftar karyawan
      */
-
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls|max:2048'
+        ]);
+    
+        Excel::import(new EmployeeImport, $request->file('file'));
+    
+        return redirect()->route('employee.index')->with('success', 'Employee data imported successfully!');
+    }
     public function getSubordinates($employeeId)
     {
         $employees = Employee::where('supervisor_id', $employeeId)->get();
@@ -150,6 +159,9 @@ class EmployeeController extends Controller
 
         return Employee::where('position', $supervisorPosition)->first();
     }
+
+
+
 
     /**
      * Tampilkan detail karyawan

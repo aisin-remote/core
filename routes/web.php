@@ -3,6 +3,7 @@
 use App\Models\Employee;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\IdpController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
@@ -39,8 +40,8 @@ Route::middleware('guest')->group(function(){
 Route::middleware('auth')->group(function(){
     Route::get('/dashboard', function (){
         return view('website.dashboard.index');
-    })->name('dashboard.index');
-    
+    });
+
     Route::prefix('hav')->group(function () {
         Route::get('/', function (){
             return view('website.hav.index');
@@ -56,7 +57,7 @@ Route::middleware('auth')->group(function(){
         Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
         Route::get('/detail/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
 
-        Route::post('/import', [EmployeeController::class, 'import'])->name('employee.import');
+        Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
 
         Route::prefix('profile')->group(function(){
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
@@ -66,12 +67,15 @@ Route::middleware('auth')->group(function(){
 
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
-        Route::get('/{employee_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate');
-
-        Route::get('/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ditaruh di bawah agar tidak bentrok
+        
+        Route::get('/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ditaruh di atas agar tidak bentrok
+        
+        Route::get('/{assessment_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate'); // Pindahkan ke bawah
+        
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
     });
+    
 
 
 
@@ -89,6 +93,9 @@ Route::middleware('auth')->group(function(){
             ]);
         });
     });
+
+    Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
+    ->name('idp.exportTemplate');
 
     Route::prefix('master')->group(function () {
         Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');
