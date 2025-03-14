@@ -75,13 +75,13 @@ class AssessmentController extends Controller
         }
 
         // Ambil detail menggunakan join untuk mendapatkan alc_name dan score dari detail_assessment
-        $details = \DB::table('detail_assessment')
-            ->join('alc', 'detail_assessment.alc_id', '=', 'alc.id')
-            ->where('detail_assessment.assessment_id', $assessment_id)
+        $details = \DB::table('detail_assessments')
+            ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
+            ->where('detail_assessments.assessment_id', $assessment_id)
             ->select(
-                'detail_assessment.*',
+                'detail_assessments.*',
                 'alc.name as alc_name', // Ambil nama ALC dari tabel alc
-                'detail_assessment.score' // Ambil score dari detail_assessment
+                'detail_assessments.score' // Ambil score dari detail_assessment
             )
             ->get();
 
