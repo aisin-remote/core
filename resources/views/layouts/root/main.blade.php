@@ -48,7 +48,8 @@
     <!--end::Global Stylesheets Bundle-->
 
     @stack('custom-css')
-
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -147,7 +148,7 @@
         var hostUrl = "{{ asset('assets/index.html') }}";
     </script>
 
-@stack('scripts') 
+@stack('scripts')
 
     <!--begin::Global Javascript Bundle(mandatory for all pages)-->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
