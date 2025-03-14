@@ -6,8 +6,6 @@ use \DB;
 use App\Models\Alc;
 use App\Models\Assessment;
 use App\Models\DetailAssessment;
-use App\Models\Employee;
-use Illuminate\Http\Request;
 
 class AssessmentController extends Controller
 {
@@ -125,7 +123,6 @@ class AssessmentController extends Controller
             'upload' => $filePath,
         ]);
 
-
         // Simpan data detail ke tabel assessment_details
         $assessmentDetails = [];
         foreach ($request->alc_ids as $index => $alc_id) {
@@ -153,38 +150,4 @@ class AssessmentController extends Controller
             'assessment_details' => $assessmentDetails,
         ]);
     }
-    public function getAssessmentDetail($employee_id)
-    {
-        // 🔹 Cari assessment terbaru dari employee
-        $assessment = Assessment::where('employee_id', $employee_id)
-            ->orderBy('created_at', 'desc') // Ambil yang paling baru diinput
-            ->first();
-
-        if (!$assessment) {
-            return response()->json(['error' => 'Data assessment tidak ditemukan'], 404);
-        }
-
-        // 🔹 Ambil data employee terbaru
-        $employee = Employee::findOrFail($employee_id);
-
-        // 🔹 Ambil detail assessment dengan ALC
-        $details = DetailAssessment::with('alc')
-            ->where('assessment_id', $assessment->id)
-            ->get();
-
-        // 🔹 Pisahkan Strength dan Weakness yang memiliki nilai
-        $strengths = $details->filter(fn($d) => !empty($d->strength))->values();
-        $weaknesses = $details->filter(fn($d) => !empty($d->weakness))->values();
-
-        return response()->json([
-            'employee' => $employee,
-            'assessment' => $assessment,
-            'date' => $assessment->date,
-            'details' => $details,
-            'strengths' => $strengths,
-            'weaknesses' => $weaknesses,
-        ]);
-    }
-
-
 }

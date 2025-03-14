@@ -3,11 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Models\Employee;
+use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Imports\EmployeeImport;
+use App\Models\PromotionHistory;
+use App\Models\WorkingExperience;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\EducationalBackground;
 use Illuminate\Support\Facades\Storage;
+use App\Models\PerformanceAppraisalHistory;
 
 class EmployeeController extends Controller
 {
@@ -147,57 +152,117 @@ class EmployeeController extends Controller
 
         return Employee::where('position', $supervisorPosition)->first();
     }
-
-
-
-
     /**
      * Tampilkan detail karyawan
      */
     public function show($npk)
     {
+        $promotionHistories = PromotionHistory::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })->get();
+        $educations = EducationalBackground::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })->get();
+        $workExperiences = WorkingExperience::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })
+                                ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+                                ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
+                                ->get();
+        $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })
+                                ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+                                ->get();
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
-        return view('website.employee.show', compact('employee'));
+        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals'));
     }
-
 
     public function edit($npk)
     {
+        $departments = Department::all();
         $employee = Employee::where('npk', $npk)->firstOrFail(); // Cari berdasarkan npk
-        return view('website.employee.update', compact('employee'));
+        return view('website.employee.update', compact('employee', 'departments'));
     }
 
     public function update(Request $request, $npk)
     {
-        $employee = Employee::where('npk', $npk)->firstOrFail();
+        try {
+            $employee = Employee::where('npk', $npk)->firstOrFail();
 
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'birthday_date' => 'required|date',
-            'gender' => 'required|in:Male,Female',
-            'company_name' => 'required|string',
-            'function' => 'required|string',
-            'position_name' => 'required|string',
-            'aisin_entry_date' => 'required|date',
-            'working_period' => 'nullable|integer',
-            'company_group' => 'required|string',
-            'foundation_group' => 'required|string',
-            'position' => 'required|string',
-            'grade' => 'required|string',
-            'last_promote_date' => 'nullable|date',
-            'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
-        ]);
+            // Simpan data sebelum update untuk perbandingan
+            $oldGrade = $employee->grade;
+            $oldPosition = $employee->position;
 
-        if ($request->hasFile('photo')) {
-            if ($employee->photo) {
-                Storage::delete('public/' . $employee->photo);
+            try {
+                $validatedData = $request->validate([
+                    'npk' => 'required|string|max:255|unique:employees,npk,' . $employee->id,
+                    'name' => 'required|string|max:255',
+                    'birthday_date' => 'required|date',
+                    'gender' => 'required|in:Male,Female',
+                    'company_name' => 'required|string',
+                    'aisin_entry_date' => 'required|date',
+                    'working_period' => 'required',
+                    'company_group' => 'required|string',
+                    'position' => 'required|string',
+                    'grade' => 'required|string',
+                    'department_id' => 'required|exists:departments,id',
+                    'last_promote_date' => 'nullable|date',
+                    'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
+                ]);
+            } catch (\Illuminate\Validation\ValidationException $e) {
+                return redirect()->route('employee.master.index')->with('error', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
             }
-            $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
+
+            DB::transaction(function () use ($validatedData, $employee, $request, $oldGrade, $oldPosition) {
+                // Update data employee kecuali `photo`
+                $employee->update(collect($validatedData)->except(['photo', 'department_id'])->toArray());
+
+                // Update department di tabel pivot `employee_departments`
+                $employee->departments()->sync([$validatedData['department_id']]);
+
+                // Cari Supervisor berdasarkan department yang sama
+                $supervisor = Employee::whereHas('departments', function ($query) use ($validatedData) {
+                    $query->where('departments.id', $validatedData['department_id']);
+                })->where('position', 'Supervisor')->first();
+
+                // Update `supervisor_id`
+                $employee->update(['supervisor_id' => $supervisor ? $supervisor->id : null]);
+
+                // Jika ada file foto baru, hapus yang lama lalu simpan yang baru
+                if ($request->hasFile('photo')) {
+                    if ($employee->photo) {
+                        Storage::delete('public/' . $employee->photo);
+                    }
+                    $newPhotoPath = $request->file('photo')->store('employee_photos', 'public');
+                    $employee->update(['photo' => $newPhotoPath]);
+                }
+
+                // Cek apakah ada perubahan pada grade atau position
+                if ($oldGrade !== $validatedData['grade'] || $oldPosition !== $validatedData['position']) {
+                    PromotionHistory::create([
+                        'employee_id' => $employee->id,
+                        'previous_grade' => $oldGrade,
+                        'previous_position' => $oldPosition,
+                        'current_grade' => $validatedData['grade'],
+                        'current_position' => $validatedData['position'],
+                        'last_promotion_date' => now(),
+                    ]);
+                }
+            });
+
+            return redirect()->route('employee.master.index')->with('success', 'Data karyawan berhasil diperbarui!');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return redirect()->route('employee.master.index')->with('error', 'Karyawan tidak ditemukan.');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->validator)->withInput();
+        } catch (\Exception $e) {
+            return redirect()->route('employee.master.index')->with('error', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
         }
-
-        $employee->update($validatedData);
-
-        return redirect()->route('employee.index')->with('success', 'Data karyawan berhasil diperbarui!');
     }
 
     public function destroy($npk)

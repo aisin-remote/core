@@ -21,7 +21,7 @@ use App\Http\Controllers\AssessmentController;
 |
 */
 
-Route::middleware('guest')->group(function(){
+Route::middleware('guest')->group(function () {
     Route::prefix('register')->group(function () {
         Route::get('/', [RegisterController::class, 'index'])->name('register.index');
         Route::post('/store', [RegisterController::class, 'store'])->name('register.store');
@@ -37,13 +37,13 @@ Route::middleware('guest')->group(function(){
     });
 });
 
-Route::middleware('auth')->group(function(){
-    Route::get('/dashboard', function (){
+Route::middleware('auth')->group(function () {
+    Route::get('/dashboard', function () {
         return view('website.dashboard.index');
     });
 
     Route::prefix('hav')->group(function () {
-        Route::get('/', function (){
+        Route::get('/', function () {
             return view('website.hav.index');
         })->name('dashboard.index');
     });
@@ -59,7 +59,7 @@ Route::middleware('auth')->group(function(){
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
 
-        Route::prefix('profile')->group(function(){
+        Route::prefix('profile')->group(function () {
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
         });
     });
@@ -82,13 +82,13 @@ Route::middleware('auth')->group(function(){
 
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/', function (){
+        Route::get('/', function () {
             return view('website.rtc.index');
         });
     });
 
     Route::prefix('idp')->group(function () {
-        Route::get('/', function (){
+        Route::get('/', function () {
             $employee = Employee::all(); // Ambil semua data karyawan
             return view('website.idp.index', [
                 'employees' => $employee
@@ -97,7 +97,7 @@ Route::middleware('auth')->group(function(){
     });
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
-    ->name('idp.exportTemplate');
+        ->name('idp.exportTemplate');
 
     Route::prefix('master')->group(function () {
         Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');

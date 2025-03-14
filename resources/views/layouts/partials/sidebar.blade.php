@@ -3,7 +3,7 @@
     data-kt-drawer-direction="start" data-kt-drawer-toggle="#kt_app_sidebar_mobile_toggle">
     <style>
         .logo-img {
-            width: 150px;
+            width: 190px;
             /* Sesuaikan ukuran */
             height: auto;
             /* Menjaga proporsi */
@@ -18,7 +18,8 @@
 
     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
         <div class="d-flex align-items-center">
-            <img src="{{ asset('assets/media/logos/satu-aisin-final.png') }}" alt="Logo" class="logo-img">
+            <img src="{{ asset('assets/media/logos/logo-putih.png') }}" alt="Logo" class="logo-img">
+            <img alt="Logo" src="{{ asset('assets/media/logos/logo-putih-kecil.png') }}" class="h-20px app-sidebar-logo-minimize">
         </div>
 
         <div id="kt_app_sidebar_toggle"

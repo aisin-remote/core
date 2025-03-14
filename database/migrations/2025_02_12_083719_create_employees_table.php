@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Database\Migrations\Migration;
@@ -10,6 +11,7 @@ return new class extends Migration {
             $table->bigIncrements('id');
             $table->string('npk')->unique()->nullable();
             $table->string('name')->nullable();
+            $table->string('phone_number')->nullable();
             $table->string('identity_number')->unique()->nullable();
             $table->date('birthday_date')->nullable();
             $table->string('photo')->nullable();
