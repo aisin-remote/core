@@ -19,7 +19,8 @@
     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
         <div class="d-flex align-items-center">
             <img src="{{ asset('assets/media/logos/logo-putih.png') }}" alt="Logo" class="logo-img">
-            <img alt="Logo" src="{{ asset('assets/media/logos/logo-putih-kecil.png') }}" class="h-20px app-sidebar-logo-minimize">
+            <img alt="Logo" src="{{ asset('assets/media/logos/logo-putih-kecil.png') }}"
+                class="h-20px app-sidebar-logo-minimize">
         </div>
 
         <div id="kt_app_sidebar_toggle"
@@ -187,15 +188,14 @@
                                     </span>
                                 </a><!--end:Menu link-->
                             </div>
-                            {{-- <!--end:Menu item--><!--begin:Menu item-->
+                            <!--end:Menu item--><!--begin:Menu item-->
                             <div class="menu-item"><!--begin:Menu link-->
-                                <a class="menu-link {{ request()->is('master/assesment') ? 'active' : '' }}"
-                                    href="/master/assesment"><span class="menu-bullet">
+                                <a class="menu-link" href="/master/department"><span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span></span><span class="menu-title">
-                                        Assesment
+                                        Department
                                     </span>
                                 </a><!--end:Menu link-->
-                            </div><!--end:Menu item--> --}}
+                            </div><!--end:Menu item-->
                         </div><!--end:Menu sub-->
                     </div>
 
