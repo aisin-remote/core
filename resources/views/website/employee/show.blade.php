@@ -877,7 +877,7 @@
                             <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                                 data-bs-target="#kt_account_signin_method">
                                 <div class="card-title m-0">
-                                    <h3 class="fw-bold m-0">Strength & Weakness</h3>
+                                    <h3 class="fw-bold m-0">Strength</h3>
                                 </div>
                             </div>
 
@@ -886,7 +886,6 @@
                                     <thead>
                                         <tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
                                             <th>Strength</th>
-                                            <th>Weakness</th>
                                         </tr>
                                     </thead>
                                     <tbody>

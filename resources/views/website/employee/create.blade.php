@@ -90,28 +90,44 @@
                                 @enderror
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Foundation Group</label>
-                                <input type="text" name="foundation_group" class="form-control"
-                                    value="{{ old('foundation_group') }}">
-                                @error('foundation_group')
-                                    <div class="text-danger">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="mb-3">
-                                <label class="form-label">Company Name</label>
-                                <input type="text" name="company_name" class="form-control"
-                                    value="{{ old('company_name') }}">
+                                <div class="col-lg-12 mb-3">
+                                    <label class="fs-5 fw-bold form-label mb-2">
+                                        <label class="form-label">Company</label>
+                                    </label>
+                                    <select name="company_name" aria-label="Select a Country" data-control="select2"
+                                        data-placeholder="Select Company..." class="form-select form-select-lg fw-semibold">
+                                        <option value="">Select Company</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AIIA">
+                                            Aisin Indonesia Automotive
+                                        </option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="AII">
+                                            Aisin Indonesia
+                                        </option>
+                                    </select>
+                                </div>
                                 @error('company_name')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label">Function</label>
-                                <input type="text" name="function" class="form-control" value="{{ old('function') }}">
-                                @error('function')
-                                    <div class="text-danger">{{ $message }}</div>
-                                @enderror
-                            </div>
+                            @if (auth()->user()->role === 'HRD')
+                                <div class="mb-3">
+                                    <div class="col-lg-12 mb-3">
+                                        <label class="fs-5 fw-bold form-label mb-2">
+                                            <label class="form-label">Department</label>
+                                        </label>
+                                        <select name="department_id" aria-label="Pilih Departemen" data-control="select2"
+                                            data-placeholder="Pilih departemen"
+                                            class="form-select form-select-lg  fw-semibold">
+                                            <option value="">Pilih Departemen</option>
+                                            @foreach ($departments as $department)
+                                                <option data-kt-flag="flags/afghanistan.svg" value="{{ $department->id }}">
+                                                    {{ $department->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                </div>
+                            @endif
                             <div class="mb-3">
                                 <div class="col-lg-12 mb-3">
                                     <label class="fs-5 fw-bold form-label mb-2">
@@ -121,7 +137,8 @@
                                         data-placeholder="Select Position..."
                                         class="form-select form-select-lg fw-semibold">
                                         <option value="">Select Position</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="General Manager">General Manager
+                                        <option data-kt-flag="flags/afghanistan.svg" value="General Manager">General
+                                            Manager
                                         </option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Manager">Manager</option>
                                         <option data-kt-flag="flags/aland-islands.svg" value="Coordinator">Coordinator
@@ -193,7 +210,20 @@
             <div class="row align-items-end">
                 <div class="col-md-1">
                     <label class="form-label">Degree</label>
-                    <input type="text" name="level[]" class="form-control" placeholder="e.g., S1">
+                    <select name="level[]" aria-label="Select a Category"
+                        data-control="select2"
+                        data-placeholder="Select categories..."
+                        class="form-select form-select-lg fw-semibold">
+                        <option value="">Select Category</option>
+                        <option value="SMK">
+                            SMK</option>
+                        <option value="D3">
+                            D3</option>
+                        <option value="S1">
+                            S1</option>
+                        <option value="S2">
+                            S2</option>
+                    </select>
                 </div>
                 <div class="col-md-3">
                     <label class="form-label">Major</label>

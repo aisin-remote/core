@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\User;
 use App\Models\Employee;
 use App\Models\Department;
 use Illuminate\Http\Request;
@@ -58,7 +59,8 @@ class EmployeeController extends Controller
     public function create()
     {
         $title = 'Add Employee';
-        return view('website.employee.create', compact('title'));
+        $departments = Department::all();
+        return view('website.employee.create', compact('title', 'departments'));
     }
 
     /**
@@ -67,6 +69,9 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         DB::beginTransaction();
+        
+        // ambil department_id 
+        $departmentId = auth()->user()->employee->departments->first()->id;
 
         try {
             // Validasi data utama karyawan
@@ -76,15 +81,14 @@ class EmployeeController extends Controller
                 'birthday_date' => 'required|date',
                 'gender' => 'required|in:Male,Female',
                 'company_name' => 'required|string',
-                'function' => 'required|string',
                 'aisin_entry_date' => 'required|date',
                 'company_group' => 'required|string',
-                'foundation_group' => 'required|string',
                 'position' => 'required|string',
                 'grade' => 'required|string',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'department_id' => 'nullable|exists:departments,id', // Pastikan department_id valid
 
-                // Validasi untuk Pendidikan
+                // Validasi Pendidikan
                 'level' => 'array',
                 'level.*' => 'nullable|string|max:255',
                 'institute' => 'array',
@@ -94,7 +98,7 @@ class EmployeeController extends Controller
                 'end_date' => 'array',
                 'end_date.*' => 'nullable|string|max:255',
 
-                // Validasi untuk Pengalaman Kerja
+                // Validasi Pengalaman Kerja
                 'company' => 'array',
                 'company.*' => 'nullable|string|max:255',
                 'work_position' => 'array',
@@ -104,21 +108,17 @@ class EmployeeController extends Controller
                 'work_end_date' => 'array',
                 'work_end_date.*' => 'nullable|string|max:255',
             ]);
-            
-            // Debugging setelah validasi berhasil    
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Tangkap error validasi dan tampilkan dengan back()
             return redirect()->back()->with('error', $e->getMessage());
         }
 
-        try{
-
+        try {
             // Simpan foto jika ada
             if ($request->hasFile('photo')) {
                 $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
             }
 
-            // Hitung working period (hanya jumlah tahun)
+            // Hitung working period (jumlah tahun)
             $joinDate = Carbon::parse($validatedData['aisin_entry_date']);
             $now = Carbon::now();
             $validatedData['working_period'] = $joinDate->diffInYears($now);
@@ -127,21 +127,33 @@ class EmployeeController extends Controller
             $loggedInUser = auth()->user();
             $loggedInEmployee = Employee::where('user_id', $loggedInUser->id)->first();
 
-            // Cari atasan langsung berdasarkan posisi
-            $supervisor = $this->findSupervisor($validatedData['position']);
+            // Cek apakah department_id diisi
+            if (!empty($validatedData['department_id'])) {
+                // Cari supervisor berdasarkan department dan position
+                $supervisor = Employee::whereHas('departments', function ($query) use ($validatedData) {
+                    $query->where('department_id', $validatedData['department_id']);
+                })
+                ->where('position', 'LIKE', '%' . $validatedData['position'] . '%')
+                ->first();
+            
+                // Jika tidak ditemukan, kosongkan supervisor_id
+                $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
+            } else {
+                // Jika department_id tidak ada, gunakan mekanisme supervisor lama
+                $supervisor = $this->findSupervisor($validatedData['position'], $departmentId);
 
-            // Jika tidak ditemukan, gunakan user yang login sebagai atasan
-            if (!$supervisor && $loggedInEmployee) {
-                $supervisor = $loggedInEmployee;
+                // Jika tidak ditemukan, gunakan user yang login sebagai atasan
+                if (!$supervisor && $loggedInEmployee) {
+                    $supervisor = $loggedInEmployee;
+                }
+
+                $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
             }
-
-            // Tambahkan supervisor_id ke data
-            $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
 
             // Simpan employee ke database
             $employee = Employee::create($validatedData);
 
-            // Simpan data pendidikan jika tersedia
+            // Simpan data pendidikan
             if ($request->filled('level')) {
                 foreach ($request->level as $key => $level) {
                     if (!empty($level)) {
@@ -157,7 +169,7 @@ class EmployeeController extends Controller
                 }
             }
 
-            // Simpan data pengalaman kerja jika tersedia
+            // Simpan data pengalaman kerja
             if ($request->filled('company')) {
                 foreach ($request->company as $key => $company) {
                     if (!empty($company)) {
@@ -172,8 +184,14 @@ class EmployeeController extends Controller
                 }
             }
 
-            // Simpan department dari supervisor
-            if ($supervisor) {
+            // Simpan department jika tidak kosong
+            if (!empty($validatedData['department_id'])) {
+                DB::table('employee_departments')->insert([
+                    'employee_id' => $employee->id,
+                    'department_id' => $validatedData['department_id']
+                ]);
+            } elseif ($supervisor) {
+                // Jika department_id tidak diisi, ambil dari supervisor
                 $departments = DB::table('employee_departments')
                     ->where('employee_id', $supervisor->id)
                     ->pluck('department_id');
@@ -186,6 +204,18 @@ class EmployeeController extends Controller
                 }
             }
 
+             // **Tambahkan User jika Posisi Manager**
+            if (strtolower($validatedData['position']) === 'manager') {
+                $user = User::create([
+                    'name' => $validatedData['name'],
+                    'email' => strtolower($validatedData['name']) . '@aiia.co.id', // Gunakan NPK sebagai email
+                    'password' => bcrypt('aiia'), // Atur password default
+                ]);
+
+                // Hubungkan Employee dengan User
+                $employee->update(['user_id' => $user->id]);
+            }
+
             DB::commit();
 
             return redirect()->route('employee.index')->with('success', 'Karyawan berhasil ditambahkan!');
@@ -195,7 +225,7 @@ class EmployeeController extends Controller
         }
     }
 
-    private function findSupervisor($position)
+    private function findSupervisor($position, $departmentId)
     {
         $hierarchy = [
             'GM' => null,
@@ -211,7 +241,11 @@ class EmployeeController extends Controller
             return null;
         }
 
-        return Employee::where('position', $supervisorPosition)->first();
+        return Employee::where('position', $supervisorPosition)
+            ->whereHas('departments', function ($query) use ($departmentId) {
+                $query->where('department_id', $departmentId);
+            })
+            ->first();
     }
     /**
      * Tampilkan detail karyawan
@@ -222,23 +256,32 @@ class EmployeeController extends Controller
                                 ->whereHas('employee', function ($query) use ($npk) {
                                     $query->where('npk', $npk);
                                 })->get();
+                                
         $educations = EducationalBackground::with('employee')
-                                ->whereHas('employee', function ($query) use ($npk) {
-                                    $query->where('npk', $npk);
-                                })->get();
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+            ->limit(3) // Ambil hanya 3 data terbaru
+            ->get();
+        
         $workExperiences = WorkingExperience::with('employee')
-                                ->whereHas('employee', function ($query) use ($npk) {
-                                    $query->where('npk', $npk);
-                                })
-                                ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
-                                ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
-                                ->get();
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+            ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
+            ->limit(3) // Ambil hanya 3 data terbaru
+            ->get();
+        
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
-                                ->whereHas('employee', function ($query) use ($npk) {
-                                    $query->where('npk', $npk);
-                                })
-                                ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
-                                ->get();
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
+            ->limit(3) // Ambil hanya 3 data terbaru
+            ->get();
+                            
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
         return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments'));
