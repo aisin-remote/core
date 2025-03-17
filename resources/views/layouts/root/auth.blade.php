@@ -3,7 +3,7 @@
 <!--begin::Head-->
 
 <head>
-    <title>Metronic - The World's #1 Selling Tailwind CSS & Bootstrap Admin Template by KeenThemes</title>
+    <title>HR- People Development</title>
     <meta charset="utf-8" />
     <meta name="description"
         content="
@@ -105,10 +105,11 @@
 
                     <!--begin::Text-->
                     <div class="text-gray-600 fs-base text-center fw-semibold">
-                        A Human Resource System (HR System) is a digital solution that focuses on people development by facilitating employee growth,
-                        <br>
-                        skill enhancement, performance tracking, and career progression to maximize workforce potential and organizational success.
-                        
+                        A Human Resource System (HR System) is a digital solution that focuses on people development by
+                        facilitating employee growth,
+                        skill enhancement, performance tracking, and career progression to maximize workforce potential
+                        and organizational success.
+
                     </div>
                     <!--end::Text-->
                 </div>
