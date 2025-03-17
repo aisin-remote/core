@@ -56,7 +56,7 @@
 
                                     <td>
                                         @if (isset($strengths[$i]))
-                                        {{ $strengths[$i]->strength }}
+                                            {{ $strengths[$i]->strength }}
                                         @endif
                                     </td>
                                 </tr>
@@ -88,14 +88,12 @@
                                     <td>
                                         @if (isset($weaknesses[$i]))
                                             <strong>{{ $weaknesses[$i]->alc_name }}</strong>
-
                                         @endif
                                     </td>
 
                                     <td>
                                         @if (isset($weaknesses[$i]))
-                                        {{ $weaknesses[$i]->weakness }}
-
+                                            {{ $weaknesses[$i]->weakness }}
                                         @endif
                                     </td>
                                 </tr>

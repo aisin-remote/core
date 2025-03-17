@@ -6,16 +6,18 @@
 
 @section('main')
     <div class="container mt-4">
+        <h1 class="text-center mb-6 fw-bold">History Assessment</h1>
         <div class="card shadow-lg">
             <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-md-4">
-                        <p class="fs-4 fw-bold"><strong>NPK:</strong> {{ $employee->npk }}</p>
+                <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
+                    <div class="col-auto">
+                        <p class="fs-5 fw-bold"><strong>NPK:</strong> {{ $employee->npk }}</p>
                     </div>
-                    <div class="col-md-4">
-                        <p class="fs-4 fw-bold"><strong>Position:</strong> {{ $employee->position }}</p>
+                    <div class="col-auto">
+                        <p class="fs-5 fw-bold"><strong>Position:</strong> {{ $employee->position }}</p>
                     </div>
                 </div>
+
 
                 <div class="table-responsive">
                     <table class="table table-striped table-bordered align-middle table-hover fs-6"

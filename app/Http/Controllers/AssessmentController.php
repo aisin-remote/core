@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use \DB;
 use App\Models\Alc;
-use App\Models\Employee;
 use App\Models\Assessment;
-use Illuminate\Http\Request;
 use App\Models\DetailAssessment;
-use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
+use Symfony\Component\HttpFoundation\Request;
 
 class AssessmentController extends Controller
 {
@@ -90,13 +90,14 @@ class AssessmentController extends Controller
     }
 
 
-    public function create()
-    {
-        $employees = Employee::all(); // Ambil semua employee
-        $alcs = Alc::all(); // Ambil semua alc_id
 
-        return view('assessments.create', compact('employees', 'alcs'));
-    }
+        public function create()
+        {
+            $employees = Employee::all(); // Ambil semua employee
+            $alcs = Alc::all(); // Ambil semua alc_id
+
+            return view('assessments.create', compact('employees', 'alcs'));
+        }
     public function store(Request $request)
     {
         $request->validate([
@@ -150,6 +151,38 @@ class AssessmentController extends Controller
             'message' => 'Data assessment berhasil disimpan.',
             'assessment' => $assessment,
             'assessment_details' => $assessmentDetails,
+        ]);
+    }
+    public function getAssessmentDetail($employee_id)
+    {
+        // 🔹 Cari assessment terbaru dari employee
+        $assessment = Assessment::where('employee_id', $employee_id)
+            ->orderBy('created_at', 'desc') // Ambil yang paling baru diinput
+            ->first();
+
+        if (!$assessment) {
+            return response()->json(['error' => 'Data assessment tidak ditemukan'], 404);
+        }
+
+        // 🔹 Ambil data employee terbaru
+        $employee = Employee::findOrFail($employee_id);
+
+        // 🔹 Ambil detail assessment dengan ALC
+        $details = DetailAssessment::with('alc')
+            ->where('assessment_id', $assessment->id)
+            ->get();
+
+        // 🔹 Pisahkan Strength dan Weakness yang memiliki nilai
+        $strengths = $details->filter(fn($d) => !empty($d->strength))->values();
+        $weaknesses = $details->filter(fn($d) => !empty($d->weakness))->values();
+
+        return response()->json([
+            'employee' => $employee,
+            'assessment' => $assessment,
+            'date' => $assessment->date,
+            'details' => $details,
+            'strengths' => $strengths,
+            'weaknesses' => $weaknesses,
         ]);
     }
 }
