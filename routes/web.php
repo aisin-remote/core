@@ -21,7 +21,7 @@ use App\Http\Controllers\AssessmentController;
 |
 */
 
-Route::middleware('guest')->group(function () {
+Route::middleware('guest')->group(function(){
     Route::prefix('register')->group(function () {
         Route::get('/', [RegisterController::class, 'index'])->name('register.index');
         Route::post('/store', [RegisterController::class, 'store'])->name('register.store');
@@ -37,13 +37,13 @@ Route::middleware('guest')->group(function () {
     });
 });
 
-Route::middleware('auth')->group(function () {
-    Route::get('/dashboard', function () {
+Route::middleware('auth')->group(function(){
+    Route::get('/dashboard', function (){
         return view('website.dashboard.index');
     });
 
     Route::prefix('hav')->group(function () {
-        Route::get('/', function () {
+        Route::get('/', function (){
             return view('website.hav.index');
         })->name('dashboard.index');
     });
@@ -59,28 +59,7 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
 
-        // work experience
-        Route::prefix('work-experience')->group(function () {
-            Route::post('/store', [EmployeeController::class, 'workExperienceStore'])->name('work-experience.store');
-            Route::put('/update/{id}', [EmployeeController::class, 'workExperienceUpdate'])->name('work-experience.update');
-            Route::delete('/delete/{id}', [EmployeeController::class, 'workExperienceDestroy'])->name('work-experience.destroy');
-        });
-
-        // education
-        Route::prefix('education')->group(function () {
-            Route::post('/store', [EmployeeController::class, 'educationStore'])->name('education.store');
-            Route::put('/update/{id}', [EmployeeController::class, 'educationUpdate'])->name('education.update');
-            Route::delete('/delete/{id}', [EmployeeController::class, 'educationDestroy'])->name('education.destroy');
-        });
-        
-        // appraisal
-        Route::prefix('appraisal')->group(function () {
-            Route::post('/store', [EmployeeController::class, 'appraisalStore'])->name('appraisal.store');
-            Route::put('/update/{id}', [EmployeeController::class, 'appraisalUpdate'])->name('appraisal.update');
-            Route::delete('/delete/{id}', [EmployeeController::class, 'appraisalDestroy'])->name('appraisal.destroy');
-        });
-
-        Route::prefix('profile')->group(function () {
+        Route::prefix('profile')->group(function(){
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
         });
     });
@@ -88,6 +67,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
+        Route::get('/history_ajax', [AssessmentController::class, 'history_ajax'])->name('assessments.history_ajax');
         Route::post('/{employee_id}', [AssessmentController::class, 'update'])->name('assessments.update');
 
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
@@ -98,47 +78,18 @@ Route::middleware('auth')->group(function () {
 
 
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
-<<<<<<< HEAD
+        Route::post('/delete', [AssessmentController::class, 'delete'])->name('assessments.delete');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
 
-=======
->>>>>>> origin/IDP
     });
 
-
-
-
     Route::prefix('rtc')->group(function () {
-        Route::get('/', function () {
+        Route::get('/', function (){
             return view('website.rtc.index');
         });
     });
 
     Route::prefix('idp')->group(function () {
-<<<<<<< HEAD
-        Route::get('/', function () {
-            $employee = Employee::all(); // Ambil semua data karyawan
-            return view('website.idp.index', [
-                'employees' => $employee
-            ]);
-        });
-    });
-
-    Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
-        ->name('idp.exportTemplate');
-
-    Route::prefix('master')->group(function () {
-        Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');
-        Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
-        
-        Route::prefix('department')->group(function () {
-            Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
-            Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
-            Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
-        });
-
-    });
-=======
         Route::get('/', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
         Route::post('/idp/store-one-year', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
@@ -146,9 +97,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/development-mid-data', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
         Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
-    });
 
->>>>>>> origin/IDP
+        Route::get('/getData', [IdpController::class, 'getData'])->name('idp.getData');
+    });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
 });

@@ -1,5 +1,5 @@
 <!-- Modal -->
-<div class="modal fade" id="assessmentModal" tabindex="-1" aria-labelledby="assessmentModalLabel" >
+<div class="modal fade" id="assessmentModal" tabindex="-1" aria-labelledby="assessmentModalLabel">
     <div class="modal-dialog " style="max-width: 90%; width: 80%;">
         <div class="modal-content">
             <div class="modal-header">
@@ -9,11 +9,10 @@
             <div class="modal-body">
                 <!-- Informasi Karyawan -->
                 <div class="row mb-3">
-
-                    <div class="col-md-4">
+                    <div class="col-md-12">
                         <p class="fw-bold"><strong>Departemen:</strong> <span id="modal-department"></span></p>
                     </div>
-                    <div class="col-md-4">
+                    <div class="col-md-12">
                         <p class="fw-bold"><strong>Tanggal:</strong> <span id="modal-date"></span></p>
                     </div>
                 </div>

@@ -43,7 +43,6 @@
                     </div>
                 </div>
 
-
                 <div class="card-body">
                     <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                         <thead>
@@ -76,8 +75,6 @@
                                             Detail
                                         </button>
 
-
-
                                         <a href="{{ route('assessments.show', $assessment->employee->id) }}"
                                             class="btn btn-info btn-sm">
                                             History
@@ -100,8 +97,49 @@
     @include('website.assessment.modal')
     @include('website.assessment.modaldetail')
 @endsection
+
+@push('custom-css')
+    <link rel="stylesheet" href="{{ asset('assets/plugins/custom/select2/css/select2.min.css') }}">
+    <style>
+        .select2-container {
+            width: 100% !important;
+            /* Pastikan Select2 mengambil seluruh lebar */
+        }
+
+        .select2-selection {
+            height: calc(2.25rem + 2px) !important;
+            /* Samakan tinggi dengan form-select Bootstrap */
+            padding: 0.375rem 0.75rem !important;
+            border-radius: 0.375rem !important;
+            border: 1px solid #ced4da !important;
+            cursor: pointer !important;
+        }
+
+        .select2-selection__rendered {
+            line-height: 1.5 !important;
+            /* Sesuaikan dengan Bootstrap */
+        }
+
+        .select2-selection__arrow {
+            height: 100% !important;
+        }
+
+        /* Agar dropdown menyesuaikan dengan parent */
+        .select2-container--default .select2-selection--single {
+            display: flex !important;
+            align-items: center !important;
+        }
+
+        /* Menghindari overlap dengan elemen lain */
+        .select2-container--open {
+            z-index: 99999 !important;
+        }
+    </style>
+@endpush
+
 @push('scripts')
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="{{ asset('assets/plugins/custom/select2/js/select2.min.js') }}"></script>
 
     <script>
         $(document).ready(function() {
@@ -314,8 +352,6 @@
                 });
             }
 
-
-
             filterItems.on("click", function(event) {
                 event.preventDefault();
                 var selectedDepartment = $(this).data("department").toLowerCase();
@@ -324,6 +360,16 @@
             });
 
             $('#addAssessmentModal').on('show.bs.modal', function(event) {
+                // $('#employee_id').select2({
+                //     dropdownParent: $('#addAssessmentModal')
+                // });
+                // $('#employee_id').select2({
+                //     dropdownParent: $('#addAssessmentModal')
+                // });
+                // $('.alc-dropdown').select2({
+                //     dropdownParent: $('#addAssessmentModal')
+                // });
+
                 let button = $(event.relatedTarget);
                 let assessment_id = button.data('id') || null;
 

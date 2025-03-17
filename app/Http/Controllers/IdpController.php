@@ -10,7 +10,8 @@ use App\Models\Development;
 use App\Models\DevelopmentOne;
 use Illuminate\Http\Request;
 use App\Models\DetailAssessment;
-use App\Models\IDPEntry;
+use App\Models\Idp;
+use Illuminate\Support\Facades\DB;
 
 class IdpController extends Controller
 {
@@ -26,7 +27,7 @@ class IdpController extends Controller
             7 => 'Teamwork',
             8 => 'Drive & Courage'
         ];
-
+        
         // Ambil data assessment beserta employee
         $assessments = Assessment::with(['employee', 'details'])->paginate(10);
         $employees = Employee::all();
@@ -45,23 +46,46 @@ class IdpController extends Controller
     }
 
     public function store(Request $request)
-{
-    $request->validate([
-        'development_program' => 'required|array',
-        'development_achievement' => 'required|array',
-        'next_action' => 'required|array',
-    ]);
+    {
+        // $request->validate([
+        //     'development_program' => 'required|array',
+        //     'category' => 'required|array',
+        //     'development_target' => 'required',
+        //     'date' => 'required',
+        // ]);
 
-    foreach ($request->development_program as $key => $program) {
-        Development::create([
-            'development_program' => $program,
-            'development_achievement' => $request->development_achievement[$key] ?? '',
-            'next_action' => $request->next_action[$key] ?? '',
-        ]);
+        $assessment = Assessment::where('id', $request->assessment_id)->first();
+
+        try {
+            $idp = Idp::where('assessment_id', $request->assessment_id)
+                        ->where('alc_id', $request->alc_id)
+                        ->first();
+                        
+            if ($idp) {
+                $idp->update([
+                    'development_program' => $request->development_program,
+                    'category' => $request->category,
+                    'development_target' => $request->development_target,
+                    'date' => $request->date,
+                ]);
+                return redirect()->route('idp.index')->with('success', 'Development updated successfully.');
+            } else {
+                Idp::create([
+                    'alc_id' => $request->alc_id,
+                    'assessment_id' => $request->assessment_id,
+                    'employee_id' => $assessment->employee_id,
+                    'development_program' => $request->development_program,
+                    'category' => $request->category,
+                    'development_target' => $request->development_target,
+                    'date' => $request->date,
+                ]);
+                return redirect()->route('idp.index')->with('success', 'Development added successfully.');
+            }
+
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
     }
-
-    return redirect()->route('idp.index')->with('success', 'Mid-Year Development added successfully.');
-}
 
 // Simpan data One-Year Development
 public function storeOneYear(Request $request)
@@ -114,5 +138,19 @@ public function showDevelopmentMidData()
         $fileName = 'IDP_' . str_replace(' ', '_', $employee->name) . '.xlsx';
 
         return Storage::download($filePath, $fileName);
+    }
+
+    public function getData(Request $request)
+    {
+        $assessmentId = $request->input('assessment_id');
+        $alcId = $request->input('alc_id');
+
+        $idp = DB::table('idp')
+            ->where('assessment_id', $assessmentId)
+            ->where('alc_id', $alcId)
+            ->select('id', 'category', 'development_program', 'development_target', 'date')
+            ->first();
+
+        return response()->json(['idp' => $idp]);
     }
 }

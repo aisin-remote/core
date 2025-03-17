@@ -15,79 +15,60 @@
         <div class="row g-5 gx-xl-10 mb-2 mb-xl-10">
             @php
                 $titles = [
-                    'Maximal Contributor',
-                    'Top Performer',
-                    'Future Star',
-                    'Star',
-                    'Contributor',
-                    'Strong Performer',
-                    'Potential Candidate',
-                    'Future Star',
-                    'Minimal Contributor',
-                    'Career Person',
-                    'Candidate',
-                    'Raw Diamond',
-                    'Dead Wood',
-                    'Problem Employee',
-                    'Unit Employee',
-                    'Most Unfit Employee',
+                    '13. Maximal Contributor',
+                    '7. Top Performer',
+                    '3. Future Star',
+                    '1. Star',
+                    '14. Contributor',
+                    '8. Strong Performer',
+                    '4. Potential Candidate',
+                    '2. Future Star',
+                    '15. Minimal Contributor',
+                    '9. Career Person',
+                    '6. Candidate',
+                    '5. Raw Diamond',
+                    '16. Dead Wood',
+                    '12. Problem Employee',
+                    '11. Unfit Employee',
+                    '10. Most Unfit Employee',
                 ];
 
                 $borderColors = [
-                    'bg-light-warning',
-                    'bg-light-success',
-                    'bg-light-primary',
-                    'bg-light-info',
                     'bg-light-secondary',
                     'bg-light-warning',
                     'bg-light-success',
                     'bg-light-primary',
-                    'bg-light-danger',
-                    'bg-light-dark',
                     'bg-light-secondary',
                     'bg-light-warning',
-                    'bg-light-danger',
-                    'bg-light-dark',
+                    'bg-light-success',
+                    'bg-light-success',
                     'bg-light-secondary',
-                    'bg-light-danger',
+                    'bg-light-warning',
+                    'bg-light-warning',
+                    'bg-light-warning',
+                    'bg-light-secondary',
+                    'bg-light-secondary',
+                    'bg-light-secondary',
+                    'bg-light-secondary',
                 ];
 
                 $textColors = [
-                    'text-warning',
-                    'text-success',
-                    'text-primary',
-                    'text-info',
-                    'text-dark',
-                    'text-warning',
-                    'text-success',
-                    'text-primary',
-                    'text-danger',
                     'text-dark',
                     'text-dark',
-                    'text-warning',
-                    'text-danger',
                     'text-dark',
                     'text-dark',
-                    'text-danger',
-                ];
-
-                $progressColors = [
-                    'bg-warning',
-                    'bg-success',
-                    'bg-primary',
-                    'bg-info',
-                    'bg-dark',
-                    'bg-warning',
-                    'bg-success',
-                    'bg-primary',
-                    'bg-danger',
-                    'bg-dark',
-                    'bg-dark',
-                    'bg-warning',
-                    'bg-danger',
-                    'bg-dark',
-                    'bg-dark',
-                    'bg-danger',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
+                    'text-dark',
                 ];
             @endphp
 
@@ -97,21 +78,30 @@
                         <!--begin: Statistics Widget 6-->
                         <div class="card {{ $borderColors[$i] }} card-xl-stretch mb-xl-8">
                             <!--begin::Body-->
-                            <div class="card-body my-3">
-                                <a href="#" class="card-title fw-bold {{ $textColors[$i] }} fs-5 mb-3 d-block">
+                            <div class="card-body" style="padding: 10px 10px 10px 10px !important;">
+                                <a href="#"
+                                    class="card-title fw-bold text-center {{ $textColors[$i] }} fs-5 mb-3 d-block">
                                     {{ $titles[$i] }} </a>
 
-                                <div class="py-1">
-                                    <span class="text-gray-900 fs-1 fw-bold me-2">50%</span>
-
-                                    <span class="fw-semibold text-muted fs-7">Avarage</span>
+                                <div class="card-body bg-white">
+                                    <br>
+                                    <br>
+                                    <br>
+                                    <br>
                                 </div>
 
-                                <div class="progress h-7px {{ $progressColors[$i] }} bg-opacity-50 mt-7">
+                                <div class="py-1">
+                                    <center>
+                                        <span class="text-danger fw-bold me-2">0,00%</span>
+                                    </center>
+                                    {{-- <span class="fw-semibold text-muted fs-7">Avarage</span> --}}
+                                </div>
+
+                                {{-- <div class="progress h-7px {{ $progressColors[$i] }} bg-opacity-50 mt-7">
                                     <div class="progress-bar {{ $progressColors[$i] }}" role="progressbar"
                                         style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">
                                     </div>
-                                </div>
+                                </div> --}}
                             </div>
                             <!--end:: Body-->
                         </div>
@@ -193,12 +183,12 @@
                 </div>
             </div>
 
-                        <div id="kt_app_content_container" class="app-container  container-fluid ">
-                            <div class="app-content  container-fluid">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">Pergeseran HAV</h3>
-                                    </div>
+            <div id="kt_app_content_container" class="app-container  container-fluid ">
+                <div class="app-content  container-fluid">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="card-title">Pergeseran HAV</h3>
+                        </div>
 
                         <div class="card-body">
                             <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
@@ -213,59 +203,57 @@
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
-                             </div>
-                             <!--end::Row-->
                         </div>
-                        <!--end::Content container-->
+                        <!--end::Row-->
                     </div>
+                    <!--end::Content container-->
+                </div>
 
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const data2025 = {
-            labels: ['Pria', 'Wanita'],
-            datasets: [{
-                label: 'Employee 2025',
-                data: [556, 120],
-                backgroundColor: ['#50C878', '#3B5B92'],
-                hoverBackgroundColor: ['#C5E1C5', '#5A75C9']
-            }]
-        };
+                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+                <script>
+                    document.addEventListener("DOMContentLoaded", function() {
+                        const data2025 = {
+                            labels: ['Pria', 'Wanita'],
+                            datasets: [{
+                                label: 'Employee 2025',
+                                data: [556, 120],
+                                backgroundColor: ['#50C878', '#3B5B92'],
+                                hoverBackgroundColor: ['#C5E1C5', '#5A75C9']
+                            }]
+                        };
 
-        const data2024 = {
-            labels: ['Pria', 'Wanita'],
-            datasets: [{
-                label: 'Employee 2024',
-                data: [405, 174],
-                backgroundColor: ['#50c878', '#3b5b92'],
-                hoverBackgroundColor: ['#c5e1c5', '#5a75c9']
-            }]
-        };
+                        const data2024 = {
+                            labels: ['Pria', 'Wanita'],
+                            datasets: [{
+                                label: 'Employee 2024',
+                                data: [405, 174],
+                                backgroundColor: ['#50c878', '#3b5b92'],
+                                hoverBackgroundColor: ['#c5e1c5', '#5a75c9']
+                            }]
+                        };
 
-        const options = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'bottom'
-                }
-            }
-        };
+                        const options = {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: true,
+                                    position: 'bottom'
+                                }
+                            }
+                        };
 
-        new Chart(document.getElementById('employeeChart2025'), {
-            type: 'doughnut',
-            data: data2025,
-            options: options
-        });
+                        new Chart(document.getElementById('employeeChart2025'), {
+                            type: 'doughnut',
+                            data: data2025,
+                            options: options
+                        });
 
-        new Chart(document.getElementById('employeeChart2024'), {
-            type: 'doughnut',
-            data: data2024,
-            options: options
-        });
-    });
-</script>
-
-
-@endsection
+                        new Chart(document.getElementById('employeeChart2024'), {
+                            type: 'doughnut',
+                            data: data2024,
+                            options: options
+                        });
+                    });
+                </script>
+            @endsection

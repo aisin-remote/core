@@ -15,8 +15,8 @@ return new class extends Migration
     {
         Schema::create('idp', function (Blueprint $table) {
             $table->id();
-            $table->string('employee_id');
-            $table->foreign('employee_id')->references('npk')->on('employees')->onDelete('cascade');
+            $table->bigInteger('employee_id')->unsigned();
+            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
             $table->string('development_program');
             $table->string('category');
             $table->string('development_target');

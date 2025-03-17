@@ -119,7 +119,7 @@
 
                     <div class="menu-item">
                         <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('assessment') ? 'active' : '' }}" href="/assessment">
+                        <a class="menu-link {{ request()->is('assessment*') ? 'active' : '' }}" href="/assessment">
                             <span class="menu-icon">
                                 <i class="fas fa-chart-line"></i>
                             </span>

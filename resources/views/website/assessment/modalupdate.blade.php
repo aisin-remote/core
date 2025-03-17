@@ -51,10 +51,12 @@
                     </div>
 
                     <div class="section-title">Strength</div>
-                    <div id="update-strength-container"></div>
+                    {{-- <div id="update-strength-container"></div> --}}
+                    <div id="update-strengths-wrapper"></div>
 
                     <div class="section-title">Weakness</div>
-                    <div id="update-weakness-container"></div>
+                    {{-- <div id="update-weakness-container"></div> --}}
+                    <div id="update-weaknesses-wrapper"></div>
 
                     <div class="mb-4">
                         <label for="update_upload" class="form-label">Upload File Assessment (PDF, JPG, PNG)</label>
@@ -71,152 +73,199 @@
 </div>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        // Cek apakah elemen yang diperlukan ada sebelum dijalankan
-        let updateModal = document.getElementById("updateAssessmentModal");
-        let updateForm = document.getElementById("updateAssessmentForm");
+        const updateAssessmentButtons = document.querySelectorAll(".updateAssessment");
 
-        if (!updateModal || !updateForm) {
-            console.error("Modal atau form tidak ditemukan!");
-            return;
+        function updateDescriptionName(selectElement, type) {
+            let card = selectElement.closest('.assessment-card');
+            let textarea = card.querySelector(`.${type}-textarea`);
+            let alcId = selectElement.value;
+
+            if (alcId) {
+                textarea.setAttribute('name', `${type}[${alcId}]`);
+            } else {
+                textarea.removeAttribute('name');
+            }
         }
 
-        // Function untuk membuka modal update
-        function openUpdateModal(data) {
-            let idField = document.getElementById("update_assessment_id");
-            let employeeField = document.getElementById("update_employee_id");
-            let dateField = document.getElementById("update_date");
-            let uploadInfo = document.getElementById("update-upload-info");
+        function addAssessmentCard(type, containerClass) {
+            let container = document.querySelector(`.${containerClass}`);
+            let templateCard = document.querySelector(`.${type}-card`);
+            let newCard = templateCard.cloneNode(true);
 
-            if (!idField || !employeeField || !dateField || !uploadInfo) {
-                console.error("Salah satu elemen form tidak ditemukan!");
-                return;
-            }
+            let newDropdown = newCard.querySelector('.alc-dropdown');
+            let newTextarea = newCard.querySelector(`.${type}-textarea`);
 
-            // Set nilai form modal
-            idField.value = data.id || "";
-            employeeField.value = data.employee_id || "";
-            dateField.value = data.date || "";
-            uploadInfo.textContent = data.upload ? `File: ${data.upload}` : "";
+            newDropdown.value = '';
+            newTextarea.value = '';
+            newTextarea.removeAttribute('name');
 
-            // Load Scores
-            document.querySelectorAll('.update-score').forEach(input => {
-                let alcId = input.name.replace('scores[', '').replace(']', '');
-                if (data.scores && data.scores[alcId] == input.value) {
-                    input.checked = true;
-                }
+            newDropdown.addEventListener('change', function() {
+                updateDescriptionName(newDropdown, type);
             });
 
-            // Load Strengths
-            let strengthContainer = document.getElementById("update-strength-container");
-            if (strengthContainer) {
-                strengthContainer.innerHTML = "";
-                data.strengths.forEach((strength, index) => {
-                    let strengthCard = createAssessmentCard(strength, "strength", index);
-                    strengthContainer.appendChild(strengthCard);
-                });
-            }
+            let buttonContainer = newCard.querySelector('.d-flex');
 
-            // Load Weaknesses
-            let weaknessContainer = document.getElementById("update-weakness-container");
-            if (weaknessContainer) {
-                weaknessContainer.innerHTML = "";
-                data.weaknesses.forEach((weakness, index) => {
-                    let weaknessCard = createAssessmentCard(weakness, "weakness", index);
-                    weaknessContainer.appendChild(weaknessCard);
-                });
-            }
+            buttonContainer.innerHTML = `
+        <button type="button" class="btn btn-danger btn-sm remove-card me-2">Hapus</button>
+        <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
+    `;
 
-            let modalInstance = new bootstrap.Modal(updateModal);
-            modalInstance.show();
+            newCard.querySelector('.remove-card').addEventListener('click', function() {
+                newCard.remove();
+            });
+
+            newCard.querySelector('.add-assessment').addEventListener('click', function() {
+                addAssessmentCard(type, containerClass);
+            });
+
+            container.appendChild(newCard);
         }
 
-        // Function untuk membuat card Strength/Weakness
-        function createAssessmentCard(data, type, index) {
-            let card = document.createElement("div");
-            card.classList.add("card", "p-3", "mb-3");
-
-            let alcOptions = data.alc_options.map(alc =>
-                `<option value="${alc.id}" ${alc.id == data.alc_id ? 'selected' : ''}>${alc.name}</option>`
-            ).join("");
-
-            card.innerHTML = `
-                <div class="mb-3">
-                    <select class="form-control" name="${type}_ids[]" required>
-                        <option value="">Pilih ALC</option>
-                        ${alcOptions}
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label>${type.charAt(0).toUpperCase() + type.slice(1)}</label>
-                    <textarea class="form-control" name="${type}[${index}]" rows="2">${data.description}</textarea>
-                </div>
-                <div class="d-flex justify-content-end">
-                    <button type="button" class="btn btn-danger btn-sm remove-card">Hapus</button>
-                </div>
-            `;
-
-            let removeButton = card.querySelector(".remove-card");
-            if (removeButton) {
-                removeButton.addEventListener("click", function() {
-                    card.remove();
-                });
-            }
-
-            return card;
-        }
-
-        // Event listener untuk tombol edit
-        document.querySelectorAll(".edit-btn").forEach(btn => {
-            btn.addEventListener("click", function() {
-                let id = this.getAttribute("data-id");
-
-                fetch(`/assessment/${employee_id}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error("Gagal mengambil data");
-                        }
-                        return response.json();
-                    })
-                    .then(data => openUpdateModal(data))
-                    .catch(error => console.error("Error:", error));
+        document.querySelectorAll('.alc-dropdown').forEach(dropdown => {
+            let type = dropdown.closest('.assessment-card').classList.contains('strength-card') ?
+                'strength' : 'weakness';
+            dropdown.addEventListener('change', function() {
+                updateDescriptionName(this, type);
             });
         });
 
-        // Submit form update
-        if (updateForm) {
-            updateForm.addEventListener("submit", function(event) {
-                event.preventDefault();
-
-                let formData = new FormData(this);
-                let id = document.getElementById("update_assessment_id")?.value;
-
-                fetch(`/assessment/update/${id}`, {
-                        method: "POST",
-                        body: formData,
-                        headers: {
-                            "X-CSRF-TOKEN": document.querySelector('input[name="_token"]').value
-                        }
-                    })
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error("Gagal memperbarui assessment");
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        alert("Assessment berhasil diperbarui!");
-                        location.reload();
-                    })
-                    .catch(error => console.error("Error:", error));
+        function attachAddAssessmentListeners() {
+            document.querySelectorAll('.add-assessment').forEach(button => {
+                button.addEventListener('click', function() {
+                    let type = this.getAttribute('data-type');
+                    let containerClass = type === 'strength' ? 'update-strength-container' :
+                        'update-weakness-container';
+                    addAssessmentCard(type, containerClass);
+                });
             });
         }
 
-        // Perbaiki error DataTable
-        if (typeof $.fn.DataTable === 'undefined') {
-            console.error("DataTable belum di-load, pastikan file DataTables sudah dimasukkan.");
-        } else {
-            $("#yourTableId").DataTable();
-        }
+        attachAddAssessmentListeners();
+
+        updateAssessmentButtons.forEach(button => {
+            button.addEventListener("click", function() {
+                const id = this.dataset.id;
+                const employeeId = this.dataset.employeeId;
+                const date = this.dataset.date;
+                const upload = this.dataset.upload;
+                const scores = JSON.parse(this.dataset.scores);
+                const alcs = JSON.parse(this.dataset.alcs);
+                const alcNames = JSON.parse(this.dataset.alc_name);
+                const strengths = JSON.parse(this.dataset.strengths);
+                const weaknesses = JSON.parse(this.dataset.weaknesses);
+
+                document.getElementById("update_assessment_id").value = id;
+                document.getElementById("update_employee_id").value = employeeId;
+                document.getElementById("update_date").value = date;
+                document.getElementById("update-upload-info").textContent = upload ?
+                    `File: ${upload}` : '';
+
+                alcs.forEach((alcId, index) => {
+                    const score = scores[index];
+                    const radio = document.getElementById(
+                        `update_score_${alcId}_${score}`);
+                    if (radio) {
+                        radio.checked = true;
+                    }
+                });
+
+                // const strengthContainer = document.getElementById("update-strength-container");
+                const strengthContainer = document.getElementById("update-strengths-wrapper");
+                strengthContainer.innerHTML = '';
+                strengths.forEach((strength, idx) => {
+                    if (strength) {
+                        strengthContainer.innerHTML += `
+                        <div class="card p-3 mb-3">
+                            <label><strong>${alcNames[idx]}</strong></label>
+                            <textarea name="strength[${alcs[idx]}]" class="form-control">${strength}</textarea>
+                        </div>
+                    `;
+                    }
+                });
+
+                strengthContainer.innerHTML += `
+    <div id="strength-container">
+        <div class="assessment-card strength-card card p-3 mb-3">
+            <div class="mb-3">
+                <select class="form-control alc-dropdown" name="alc_ids[]">
+                    <option value="">Pilih ALC</option>
+                    @foreach ($alcs as $alc)
+                        <option value="{{ $alc->id }}">{{ $alc->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Strength</label>
+                <textarea class="form-control strength-textarea" name="strength[]" rows="2"></textarea>
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-success btn-sm add-assessment" data-type="strength">Tambah Strength</button>
+            </div>
+        </div>
+    </div>
+`;
+
+                // const weaknessContainer = document.getElementById("update-weakness-container");
+                const weaknessContainer = document.getElementById("update-weaknesses-wrapper");
+                weaknessContainer.innerHTML = '';
+                weaknesses.forEach((weakness, idx) => {
+                    if (weakness) {
+                        weaknessContainer.innerHTML += `
+                        <div class="card p-3 mb-3">
+                            <label><strong>${alcNames[idx]}</strong></label>
+                            <textarea name="weakness[${alcs[idx]}]" class="form-control">${weakness}</textarea>
+                        </div>
+                    `;
+                    }
+                });
+
+                weaknessContainer.innerHTML += `
+    <div id="weakness-container">
+        <div class="assessment-card weakness-card card p-3 mb-3">
+            <div class="mb-3">
+                <select class="form-control alc-dropdown" name="alc_ids[]">
+                    <option value="">Pilih ALC</option>
+                    @foreach ($alcs as $alc)
+                        <option value="{{ $alc->id }}">{{ $alc->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Weakness</label>
+                <textarea class="form-control weakness-textarea" name="weakness[]" rows="2"></textarea>
+            </div>
+            <div class="d-flex justify-content-end">
+                <button type="button" class="btn btn-success btn-sm add-assessment" data-type="weakness">Tambah Weakness</button>
+            </div>
+        </div>
+    </div>
+`;
+
+                attachAddAssessmentListeners();
+
+                const modal = new bootstrap.Modal(document.getElementById(
+                    "updateAssessmentModal"));
+                modal.show();
+            });
+        });
     });
 </script>
 
+@push('custom-css')
+    <style>
+        .section-title {
+            font-size: 24px;
+            /* Ukuran teks lebih besar */
+            font-weight: bold;
+            text-align: center;
+            /* Pusatkan teks */
+            padding: 15px 0;
+            border-top: 3px solid #000;
+            /* Garis atas sebagai pembatas */
+            border-bottom: 3px solid #000;
+            /* Garis bawah sebagai pembatas */
+            margin: 20px 0;
+            /* Jarak antara elemen */
+        }
+    </style>
+@endpush

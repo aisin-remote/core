@@ -9,14 +9,14 @@
         <div class="card shadow-lg">
             <div class="card-body">
                 <div class="card mt-4 p-3">
-                    <div class="row mb-3">
-                        <div class="col-md-4">
+                    <div class="row mt-3">
+                        <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Nama:</strong> {{ $employee->name }}</p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Departement:</strong> {{ $employee->function }}</p>
                         </div>
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Date:</strong> {{ $date }}</p>
                         </div>
                     </div>
@@ -133,8 +133,6 @@
                 return;
             }
 
-            Chart.register(ChartDataLabels);
-
             new Chart(ctx, {
                 type: 'bar',
                 data: {
@@ -155,16 +153,6 @@
                     plugins: {
                         legend: {
                             display: false
-                        },
-                        datalabels: {
-                            anchor: 'center',
-                            align: 'top',
-                            color: 'black',
-                            font: {
-                                weight: 'bold',
-                                size: 14
-                            },
-                            formatter: value => value
                         }
                     },
                     scales: {

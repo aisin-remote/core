@@ -10,8 +10,7 @@ class Assessment extends Model
     use HasFactory;
     protected $table = 'assessments';
     protected $guarded = ['id'];
-
-    protected $fillable = ['employee_id', 'alc_id'];
+    // protected $fillable = ['employee_id', 'date', 'upload', 'alc_id'];
 
     /**
      * Relasi ke model Employee
@@ -25,9 +24,6 @@ class Assessment extends Model
     {
     return $this->hasMany(DetailAssessment::class, 'assessment_id', 'id');
     }
-
-
-
 
     /**
      * Relasi ke model Alc

@@ -2,16 +2,14 @@
 
 namespace App\Http\Controllers;
 
-<<<<<<< HEAD
 use \DB;
-=======
-use Illuminate\Support\Facades\DB;
->>>>>>> origin/IDP
 use App\Models\Alc;
 use App\Models\Assessment;
 use App\Models\DetailAssessment;
 use App\Models\Employee;
 use Symfony\Component\HttpFoundation\Request;
+
+use DataTables;
 
 class AssessmentController extends Controller
 {
@@ -46,26 +44,41 @@ class AssessmentController extends Controller
 
         return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments'));
     }
-    public function destroy($id)
-{
-    $assessment = Assessment::findOrFail($id);
 
-    // Hapus juga data terkait di tabel detail_assessments
-    DetailAssessment::where('assessment_id', $id)->delete();
+    public function history_ajax(Request $request)
+    {
+        $data = Assessment::select('assessments.id', 'assessments.employee_id', 'assessments.date',
+                                    'assessments.upload', 'employees.npk as employee_npk', 'employees.name as employee_name',
+                                    )
+                            ->join('employees', 'assessments.employee_id', 'employees.id')
+                            ->with('details')
+                            ->with('alc')
+                            ->with('employee')
+                            ->orderBy('assessments.id', 'ASC');
 
-    // Hapus file jika ada
-    if ($assessment->upload) {
-        \Storage::delete('public/' . $assessment->upload);
+        return DataTables::eloquent($data)->make(true);
     }
 
-    // Hapus assessment
-    $assessment->delete();
+    public function destroy($id)
+    {
+        $assessment = Assessment::findOrFail($id);
 
-    return response()->json([
-        'success' => true,
-        'message' => 'Assessment berhasil dihapus.'
-    ]);
-}
+        // Hapus juga data terkait di tabel detail_assessments
+        DetailAssessment::where('assessment_id', $id)->delete();
+
+        // Hapus file jika ada
+        if ($assessment->upload) {
+            \Storage::delete('public/' . $assessment->upload);
+        }
+
+        // Hapus assessment
+        $assessment->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Assessment berhasil dihapus.'
+        ]);
+    }
 
     public function show($employee_id)
     {
@@ -74,12 +87,15 @@ class AssessmentController extends Controller
         $employee = Employee::with('assessments')->findOrFail($employee_id);
         $alcs = Alc::all();
 
-        // Ambil assessment dan sertakan kolom `upload`
         $assessments = Assessment::where('employee_id', $employee_id)
-            ->selectRaw('date, MAX(id) as id, employee_id, MAX(upload) as upload') // Tambahkan `upload`
-            ->groupBy('date', 'employee_id') // Grouping harus mencakup employee_id
-            ->orderBy('date', 'desc')
-            ->get();
+                                ->selectRaw('assessments.date, MAX(assessments.id) AS id, assessments.employee_id, MAX(assessments.upload) AS upload')
+                                ->groupBy('assessments.date', 'assessments.employee_id')
+                                ->orderBy('assessments.date', 'desc')
+                                ->with(['details' => function ($query) {
+                                    $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
+                                          ->with(['alc:id,name']); // join dengan master alc
+                                }])
+                                ->get();
 
         return view('website.assessment.show', compact('employee', 'assessments', 'employees', 'alcs'));
     }
@@ -116,15 +132,14 @@ class AssessmentController extends Controller
         return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details'));
     }
 
+    public function create()
+    {
+        $employees = Employee::all(); // Ambil semua employee
+        $alcs = Alc::all(); // Ambil semua alc_id
 
+        return view('assessments.create', compact('employees', 'alcs'));
+    }
 
-        public function create()
-        {
-            $employees = Employee::all(); // Ambil semua employee
-            $alcs = Alc::all(); // Ambil semua alc_id
-
-            return view('assessments.create', compact('employees', 'alcs'));
-        }
     public function store(Request $request)
     {
         $request->validate([
