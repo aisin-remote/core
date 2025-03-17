@@ -59,6 +59,27 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
 
+        // work experience
+        Route::prefix('work-experience')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'workExperienceStore'])->name('work-experience.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'workExperienceUpdate'])->name('work-experience.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'workExperienceDestroy'])->name('work-experience.destroy');
+        });
+
+        // education
+        Route::prefix('education')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'educationStore'])->name('education.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'educationUpdate'])->name('education.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'educationDestroy'])->name('education.destroy');
+        });
+        
+        // appraisal
+        Route::prefix('appraisal')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'appraisalStore'])->name('appraisal.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'appraisalUpdate'])->name('appraisal.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'appraisalDestroy'])->name('appraisal.destroy');
+        });
+
         Route::prefix('profile')->group(function () {
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
         });

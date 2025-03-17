@@ -87,8 +87,8 @@
                                 <td class="text-center">
                                     <a href="{{ route('employee.show', $employee->npk) }}"
                                         class="btn btn-primary btn-sm">Detail</a>
-                                    <a href="{{ route('employee.edit', $employee->npk) }}"
-                                        class="btn btn-warning btn-sm">Update</a>
+                                    {{-- <a href="{{ route('employee.edit', $employee->npk) }}"
+                                        class="btn btn-warning btn-sm">Update</a> --}}
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $employee->npk }}">Delete</button>
                                 </td>

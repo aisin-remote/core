@@ -8,6 +8,18 @@
     {{ $title ?? 'Employee' }}
 @endsection
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -68,8 +80,10 @@
             </div>
         </div>
     </div>
+@endsection
 
-    <!-- Tambahkan SweetAlert -->
+
+@push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
@@ -176,4 +190,5 @@
             });
         });
     </script>
-@endsection
+    <!-- Tambahkan SweetAlert -->
+@endpush

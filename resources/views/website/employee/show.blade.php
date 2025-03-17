@@ -1,262 +1,269 @@
 @extends('layouts.root.main')
 
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
+    @if (session()->has('error'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Error!",
+                    text: "{{ session('error') }}",
+                    icon: "error",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="container mt-4">
             <div class="card mb-5 mb-xl-10">
-                <!--begin::Card header-->
                 <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                     data-bs-target="#kt_account_profile_details" aria-expanded="true"
                     aria-controls="kt_account_profile_details">
-                    <!--begin::Card title-->
                     <div class="card-title m-0">
-                        <h3 class="fw-bold m-0">Profile Details</h3>
+                        <h3 class="fw-bold m-0">Detail Profil</h3>
                     </div>
-                    <!--end::Card title-->
                 </div>
-                <!--begin::Card header-->
-
-                <!--begin::Content-->
                 <div id="kt_account_settings_profile_details" class="collapse show">
-                    <!--begin::Form-->
                     <form id="kt_account_profile_details_form" class="form fv-plugins-bootstrap5 fv-plugins-framework"
+                        action="{{ route('employee.update', $employee->npk) }}" method="POST" enctype="multipart/form-data"
                         novalidate="novalidate">
-                        <!--begin::Card body-->
+                        @csrf
+                        @method('PUT')
                         <div class="card-body border-top p-9">
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Profile Picture</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
+                                <label class="col-lg-4 col-form-label fw-bold fs-6">Profile Photo</label>
                                 <div class="col-lg-8">
-                                    <!--begin::Image input-->
                                     <div class="image-input image-input-outline" data-kt-image-input="true"
                                         style="background-image: url('/metronic8/demo1/assets/media/svg/avatars/blank.svg')">
-                                        <!--begin::Preview existing avatar-->
-                                        <div class="image-input-wrapper w-125px h-125px"
-                                            style="background-image: url('{{ Storage::url($employee->photo) }}')">
-                                        </div>
-                                        <!--end::Preview existing avatar-->
 
-                                        <!--begin::Label-->
+                                        <div class="image-input-wrapper w-125px h-125px"
+                                            style="background-image: url('{{ $employee->photo ? asset('storage/' . $employee->photo) : '/metronic8/demo1/assets/media/svg/avatars/blank.svg' }}')">
+                                        </div>
+
                                         <label
                                             class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                             data-kt-image-input-action="change" data-bs-toggle="tooltip"
-                                            aria-label="Change avatar" data-bs-original-title="Change avatar"
-                                            data-kt-initialized="1">
-                                            <i class="ki-duotone ki-pencil fs-7"><span class="path1"></span><span
-                                                    class="path2"></span></i>
-                                            <!--begin::Inputs-->
-                                            <input type="file" name="avatar" accept=".png, .jpg, .jpeg">
-                                            <input type="hidden" name="avatar_remove">
-                                            <!--end::Inputs-->
+                                            title="Ubah avatar">
+                                            <i class="fa fa-pencil-alt fs-7"></i> <!-- Menggunakan Font Awesome -->
+                                            <input type="file" name="photo" accept=".png, .jpg, .jpeg" id="photoInput">
+                                            <input type="hidden" name="photo_remove">
                                         </label>
-                                        <!--end::Label-->
 
-                                        <!--begin::Cancel-->
-                                        <span
-                                            class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
-                                            data-kt-image-input-action="cancel" data-bs-toggle="tooltip"
-                                            aria-label="Cancel avatar" data-bs-original-title="Cancel avatar"
-                                            data-kt-initialized="1">
-                                            <i class="ki-duotone ki-cross fs-2"><span class="path1"></span><span
-                                                    class="path2"></span></i> </span>
-                                        <!--end::Cancel-->
-
-                                        <!--begin::Remove-->
                                         <span
                                             class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                             data-kt-image-input-action="remove" data-bs-toggle="tooltip"
-                                            aria-label="Remove avatar" data-bs-original-title="Remove avatar"
-                                            data-kt-initialized="1">
-                                            <i class="ki-duotone ki-cross fs-2"><span class="path1"></span><span
-                                                    class="path2"></span></i> </span>
-                                        <!--end::Remove-->
+                                            title="Hapus avatar" id="removePhoto">
+                                            <i class="fa fa-times fs-2"></i> <!-- Menggunakan Font Awesome -->
+                                        </span>
                                     </div>
-                                    <!--end::Image input-->
-
-                                    <!--begin::Hint-->
-                                    <div class="form-text">Allowed file types: png, jpg, jpeg.</div>
-                                    <!--end::Hint-->
+                                    <div class="form-text">Tipe file yang diizinkan: png, jpg, jpeg.</div>
+                                    @error('photo')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
                                 <label class="col-lg-4 col-form-label fw-bold fs-6">Full Name</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8">
-                                    <!--begin::Row-->
                                     <div class="row">
-                                        <!--begin::Col-->
                                         <div class="col-lg-12 fv-row fv-plugins-icon-container">
-                                            <input type="text" name="fname"
+                                            <input type="text" name="name"
                                                 class="form-control form-control-lg form-control-solid mb-3 mb-lg-0"
-                                                placeholder="First name" value="{{ $employee->name }}" readonly>
+                                                placeholder="Nama Lengkap" value="{{ old('name', $employee->name) }}">
+                                            @error('name')
+                                                <div class="text-danger">{{ $message }}</div>
+                                            @enderror
                                             <div
                                                 class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
                                             </div>
                                         </div>
-                                        <!--end::Col-->
-
                                     </div>
-                                    <!--end::Row-->
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
+                                <label class="col-lg-4 col-form-label fw-bold fs-6">NPK</label>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <input type="text" name="npk"
+                                        class="form-control form-control-lg form-control-solid"
+                                        placeholder="Nomor Pokok Karyawan" value="{{ old('npk', $employee->npk) }}">
+                                    @error('npk')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
+                                    <div
+                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-6">
                                 <label class="col-lg-4 col-form-label fw-bold fs-6">Gender</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
-                                <div class="col-lg-8">
-                                    <!--begin::Row-->
-                                    <div class="row">
-                                        <!--begin::Col-->
-                                        <div class="col-lg-12 fv-row fv-plugins-icon-container">
-                                            <input type="text" name="fname"
-                                                class="form-control form-control-lg form-control-solid mb-3 mb-lg-0"
-                                                placeholder="First name" value="{{ $employee->gender }}" readonly>
-                                            <div
-                                                class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                            </div>
-                                        </div>
-                                        <!--end::Col-->
-
-                                    </div>
-                                    <!--end::Row-->
-                                </div>
-                                <!--end::Col-->
-                            </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
-                            <div class="row mb-6">
-                                <!--begin::Label-->
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Company</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="text" name="company"
-                                        class="form-control form-control-lg form-control-solid" placeholder="Company name"
-                                        value="{{ $employee->company_name }}" readonly>
+                                    <select name="gender" class="form-select form-select-lg form-select-solid">
+                                        <option value="Male"
+                                            {{ old('gender', $employee->gender) == 'Male' ? 'selected' : '' }}>
+                                            Laki-laki
+                                        </option>
+                                        <option value="Female"
+                                            {{ old('gender', $employee->gender) == 'Female' ? 'selected' : '' }}>
+                                            Perempuan
+                                        </option>
+                                    </select>
+                                    @error('gender')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
                                     <div
                                         class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
                                     </div>
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
+                                <label class="col-lg-4 col-form-label fw-bold fs-6">Birthday Date</label>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <input type="date" name="birthday_date"
+                                        class="form-control form-control-lg form-control-solid"
+                                        value="{{ old('birthday_date', $employee->birthday_date) }}">
+                                    @error('birthday_date')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
+                                    <div
+                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-6">
+                                <label class="col-lg-4 col-form-label fw-bold fs-6">Company Name</label>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <select name="company_name" class="form-select form-select-lg form-select-solid">
+                                        <option value="">-- Pilih Perusahaan --</option>
+                                        <option value="AII"
+                                            {{ old('company_name', $employee->company_name) == 'AII' ? 'selected' : '' }}>
+                                            Aisin Indonesia
+                                        </option>
+                                        <option value="AIIA"
+                                            {{ old('company_name', $employee->company_name) == 'AIIA' ? 'selected' : '' }}>
+                                            Aisin Indonesia Automotive
+                                        </option>
+                                    </select>
+                                    @error('company_name')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
+                                    <div
+                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-6">
                                 <label class="col-lg-4 col-form-label fw-bold fs-6">Join Date</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="text" name="company"
-                                        class="form-control form-control-lg form-control-solid" placeholder="Company name"
-                                        value="{{ $employee->aisin_entry_date }}" readonly>
+                                    <input type="date" name="aisin_entry_date"
+                                        class="form-control form-control-lg form-control-solid"
+                                        value="{{ old('aisin_entry_date', $employee->aisin_entry_date) }}">
+                                    @error('aisin_entry_date')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
                                     <div
                                         class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
                                     </div>
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
                                 <label class="col-lg-4 col-form-label fw-bold fs-6">Working Period</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="text" name="company"
-                                        class="form-control form-control-lg form-control-solid" placeholder="Company name"
-                                        value="{{ $employee->working_period }} Years" readonly>
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                                <!--end::Col-->
-                            </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
-                            <div class="row mb-6">
-                                <!--begin::Label-->
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">
-                                    <span>Department</span>
-                                </label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="text" name="phone"
+                                    <input type="number" name="working_period" min="0"
                                         class="form-control form-control-lg form-control-solid"
-                                        value="{{ $employee->departments->first()->name }}">
+                                        value="{{ old('working_period', $employee->working_period) }}">
+                                    @error('working_period')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
                                     <div
                                         class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
                                     </div>
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Postion</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
+                                <label class="col-lg-4 col-form-label fw-bold fs-6">Company Group</label>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <input type="text" name="company_group"
+                                        class="form-control form-control-lg form-control-solid"
+                                        value="{{ old('company_group', $employee->company_group) }}">
+                                    @error('company_group')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
+                                    <div
+                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row mb-6">
+                                <label class="col-lg-4 col-form-label fw-bold fs-6">Position</label>
                                 <div class="col-lg-8 fv-row">
-                                    <input type="text" name="website"
+                                    <input type="text" name="position"
                                         class="form-control form-control-lg form-control-solid"
-                                        placeholder="Company website" value="{{ $employee->position }}">
+                                        placeholder="Jabatan Karyawan"
+                                        value="{{ old('position', $employee->position) }}">
+                                    @error('position')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-
-                            <!--begin::Input group-->
                             <div class="row mb-6">
-                                <!--begin::Label-->
                                 <label class="col-lg-4 col-form-label fw-bold fs-6">Grade</label>
-                                <!--end::Label-->
-
-                                <!--begin::Col-->
                                 <div class="col-lg-8 fv-row">
-                                    <input type="text" name="website"
+                                    <input type="text" name="grade"
                                         class="form-control form-control-lg form-control-solid"
-                                        placeholder="Company website" value="{{ $employee->grade }}">
+                                        placeholder="Grade Karyawan" value="{{ old('grade', $employee->grade) }}">
+                                    @error('grade')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
                                 </div>
-                                <!--end::Col-->
                             </div>
-                            <!--end::Input group-->
-
+                            <div class="row mb-6">
+                                <label class="col-lg-4 col-form-label fw-bold fs-6">
+                                    <span>Departement</span>
+                                </label>
+                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
+                                    <select name="department_id" aria-label="Pilih Departemen" data-control="select2"
+                                        data-placeholder="Pilih departemen"
+                                        class="form-select form-select-lg form-select-solid fw-semibold">
+                                        <option value="">Pilih Departemen</option>
+                                        @foreach ($departments as $department)
+                                            <option data-kt-flag="flags/afghanistan.svg" value="{{ $department->id }}"
+                                                {{ old('department_id', $employee->departments->first()->id ?? '') == $department->id ? 'selected' : '' }}>
+                                                {{ $department->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                    @error('department_id')
+                                        <div class="text-danger">{{ $message }}</div>
+                                    @enderror
+                                    <div
+                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <!--end::Card body-->
-
+                        <div class="card-footer d-flex justify-content-end py-6 px-9">
+                            <a href="{{ route('employee.master.index') }}"
+                                class="btn btn-light btn-active-light-primary me-2">
+                                <i class="bi bi-arrow-left-circle"></i> Back
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Changes
+                            </button>
+                        </div>
                     </form>
-                    <!--end::Form-->
                 </div>
-                <!--end::Content-->
             </div>
 
             <div class="card mb-5 mb-xl-10">
@@ -321,11 +328,12 @@
                 <!-- Card 1: Educational Background -->
                 <div class="col-md-6">
                     <div class="card mb-5 mb-xl-10">
-                        <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                            data-bs-target="#kt_account_signin_method">
-                            <div class="card-title m-0">
-                                <h3 class="fw-bold m-0">Educational Background</h3>
-                            </div>
+                        <div class="card-header border-0 d-flex justify-content-between align-items-center">
+                            <h3 class="fw-bold m-0">Educational Background</h3>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                data-bs-target="#addEducationModal">
+                                <i class="fas fa-plus"></i>
+                            </button>
                         </div>
 
                         <div id="kt_account_settings_signin_method" class="collapse show">
@@ -346,10 +354,136 @@
                                                 -
                                                 {{ \Illuminate\Support\Carbon::parse($education->end_date)->format('Y') }}
                                             </div>
+                                            <div>
+                                                <button class="btn btn-sm btn-light-warning edit-education-btn"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#editEducationModal{{ $education->id }}"
+                                                    data-education-id="{{ $education->id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-light-danger delete-education-btn"
+                                                    data-bs-toggle="modal"
+                                                    data-bs-target="#deleteEducationModal{{ $education->id }}">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                         @unless ($loop->last)
                                             <div class="separator separator-dashed my-3"></div>
                                         @endunless
+                                        <div class="modal fade" id="editEducationModal{{ $education->id }}"
+                                            tabindex="-1" aria-labelledby="editEducationModalLabel{{ $education->id }}"
+                                            aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title"
+                                                            id="editEducationModalLabel{{ $education->id }}">Edit
+                                                            Education History</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
+                                                    </div>
+                                                    <form action="{{ route('education.update', $education->id) }}"
+                                                        method="POST">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <input type="hidden" name="employee_id"
+                                                            value="{{ $education->employee_id }}">
+
+                                                        <div class="modal-body">
+                                                            <div class="col-lg-12 mb-3">
+                                                                <label class="fs-5 fw-bold form-label mb-2">
+                                                                    <span class="required">Education Level</span>
+                                                                </label>
+                                                                <select name="level" aria-label="Select a Category"
+                                                                    data-control="select2"
+                                                                    data-placeholder="Select categories..."
+                                                                    class="form-select form-select-lg fw-semibold">
+                                                                    <option value="">Select Category</option>
+                                                                    <option value="SMK"
+                                                                        {{ old('level', $education->educational_level) == 'SMK' ? 'selected' : '' }}>
+                                                                        SMK</option>
+                                                                    <option value="D3"
+                                                                        {{ old('level', $education->educational_level) == 'D3' ? 'selected' : '' }}>
+                                                                        D3</option>
+                                                                    <option value="S1"
+                                                                        {{ old('level', $education->educational_level) == 'S1' ? 'selected' : '' }}>
+                                                                        S1</option>
+                                                                    <option value="S2"
+                                                                        {{ old('level', $education->educational_level) == 'S2' ? 'selected' : '' }}>
+                                                                        S2</option>
+                                                                </select>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Major</label>
+                                                                <input type="text" name="major" class="form-control"
+                                                                    value="{{ $education->major }}" required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Institution</label>
+                                                                <input type="text" name="institute"
+                                                                    class="form-control"
+                                                                    value="{{ $education->institute }}" required>
+                                                            </div>
+                                                            <div class="row">
+                                                                <div class="col-6">
+                                                                    <label class="form-label">Start Year</label>
+                                                                    <input type="date" name="start_date"
+                                                                        class="form-control"
+                                                                        value="{{ $education->start_date ? \Illuminate\Support\Carbon::parse($education->start_date)->format('Y-m-d') : '' }}"
+                                                                        required>
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <label class="form-label">End Year (Optional)</label>
+                                                                    <input type="date" name="end_date"
+                                                                        class="form-control"
+                                                                        value="{{ $education->end_date ? \Illuminate\Support\Carbon::parse($education->end_date)->format('Y-m-d') : '' }}">
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary"
+                                                                data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-primary">Update</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal fade" id="deleteEducationModal{{ $education->id }}"
+                                            tabindex="-1"
+                                            aria-labelledby="deleteEducationModalLabel{{ $education->id }}"
+                                            aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title"
+                                                            id="deleteEducationModalLabel{{ $education->id }}">Hapus
+                                                            Riwayat Pendidikan</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
+                                                    </div>
+                                                    <form action="{{ route('education.destroy', $education->id) }}"
+                                                        method="POST">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <div class="modal-body">
+                                                            <p>Apakah Anda yakin ingin menghapus
+                                                                <strong>{{ $education->educational_level }} -
+                                                                    {{ $education->major }}</strong> dari riwayat
+                                                                pendidikan?
+                                                            </p>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary"
+                                                                data-bs-dismiss="modal">Batal</button>
+                                                            <button type="submit" class="btn btn-danger">Hapus</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endforeach
                                 @else
                                     <div class="text-center py-5">
@@ -360,6 +494,12 @@
                         </div>
                     </div>
                 </div>
+
+                {{-- modal education --}}
+                @include('website.modal.education', [
+                    'employee_id' => $employee->id,
+                ])
+                {{-- end of modal education --}}
 
                 <!-- Card 2: Historical Human Assets Value -->
                 <div class="col-md-6">
@@ -400,20 +540,26 @@
                 <!-- Working Experience -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                            data-bs-target="#kt_account_signin_method">
+                        <div class="card-header border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
+
+                            <!-- Judul Card -->
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Working Experience</h3>
                             </div>
-                        </div>
 
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                data-bs-target="#addEducationModal">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
                         <div id="kt_activity_year" class="card-body ps-5 tab-pane fade show active border-top"
-                            role="tabpanel" aria-labelledby="kt_activity_year_tab">
+                            role="tabpanel">
                             <div class="timeline timeline-border-dashed">
                                 @if ($workExperiences->isEmpty())
                                     <div class="text-center text-muted py-5">
                                         <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                        <p class="fs-6">Belum ada pengalaman kerja yang tersedia.</p>
+                                        <p class="fs-6">No work experience available.</p>
                                     </div>
                                 @else
                                     @foreach ($workExperiences as $experience)
@@ -430,11 +576,31 @@
                                                         class="fs-5 fw-semibold text-gray-800 text-hover-primary mb-0">
                                                         {{ $experience->position }}
                                                     </a>
-                                                    <button class="btn btn-sm btn-primary ms-auto" data-bs-toggle="modal"
-                                                        data-bs-target="#experienceModal{{ $loop->index }}">
-                                                        Lihat Detail
-                                                    </button>
+                                                    <div>
+                                                        <button class="btn btn-sm btn-light-primary"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#experienceModal{{ $loop->index }}">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-light-warning edit-experience-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#editExperienceModal{{ $loop->index }}"
+                                                            data-experience-id="{{ $loop->index }}">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-light-danger delete-experience-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#deleteExperienceModal{{ $loop->index }}">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
+
+                                                <!-- Tambahkan informasi Company -->
+                                                <div class="text-gray-700 fw-semibold fs-6">
+                                                    {{ $experience->company }}
+                                                </div>
+
                                                 <div class="text-muted fs-7">
                                                     {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y') }}
                                                     -
@@ -442,6 +608,7 @@
                                                 </div>
                                             </div>
                                         </div>
+
                                         <!-- Modal untuk Detail Pengalaman Kerja -->
                                         <div class="modal fade" id="experienceModal{{ $loop->index }}" tabindex="-1"
                                             aria-hidden="true">
@@ -453,18 +620,111 @@
                                                             aria-label="Close"></button>
                                                     </div>
                                                     <div class="modal-body">
-                                                        <p><strong>Perusahaan:</strong> {{ $experience->company }}</p>
-                                                        <p><strong>Periode:</strong>
+                                                        <p><strong>Company:</strong> {{ $experience->company }}</p>
+                                                        <p><strong>Period:</strong>
                                                             {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('d M Y') }}
                                                             -
                                                             {{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('d M Y') : 'Present' }}
                                                         </p>
-                                                        <p><strong>Deskripsi Pekerjaan:</strong></p>
+                                                        <p><strong>Job Description:</strong></p>
                                                         <p>{{ $experience->description }}</p>
                                                     </div>
                                                     <div class="modal-footer">
                                                         <button type="button" class="btn btn-secondary"
-                                                            data-bs-dismiss="modal">Tutup</button>
+                                                            data-bs-dismiss="modal">
+                                                            Close
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Modal untuk Edit Pengalaman Kerja -->
+                                        <div class="modal fade" id="editExperienceModal{{ $loop->index }}"
+                                            tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Edit Experience</h5>
+                                                        <button type="button" class="btn-close close-edit-modal"
+                                                            data-bs-dismiss="modal" aria-label="Close"
+                                                            data-experience-id="{{ $loop->index }}"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <!-- Form Edit -->
+                                                        <form
+                                                            action="{{ route('work-experience.update', $experience->id) }}"
+                                                            method="POST">
+                                                            @csrf
+                                                            @method('PUT')
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Position</label>
+                                                                <input type="text" class="form-control"
+                                                                    name="position" value="{{ $experience->position }}"
+                                                                    required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Company</label>
+                                                                <input type="text" class="form-control" name="company"
+                                                                    value="{{ $experience->company }}" required>
+                                                            </div>
+                                                            <div class="row mb-3">
+                                                                <div class="col-6">
+                                                                    <label class="form-label">Start Date</label>
+                                                                    <input type="date" class="form-control"
+                                                                        name="start_date"
+                                                                        value="{{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y-m-d') }}"
+                                                                        required>
+
+                                                                </div>
+                                                                <div class="col-6">
+                                                                    <label class="form-label">End Date</label>
+                                                                    <input type="date" class="form-control"
+                                                                        name="end_date"
+                                                                        value="{{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('Y-m-d') : '' }}">
+
+                                                                </div>
+                                                            </div>
+                                                            <div class="mb-10">
+                                                                <label class="form-label">Job Description</label>
+                                                                <textarea class="form-control" name="description" rows="3">{{ $experience->description }}</textarea>
+                                                            </div>
+                                                            <div class="text-end">
+                                                                <button type="submit" class="btn btn-primary">Save
+                                                                    Changes</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Modal Konfirmasi Delete -->
+                                        <div class="modal fade" id="deleteExperienceModal{{ $loop->index }}"
+                                            tabindex="-1" aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Delete Experience</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <p>Are you sure you want to delete the experience
+                                                            <strong>{{ $experience->position }}</strong> at
+                                                            <strong>{{ $experience->company }}</strong>?
+                                                        </p>
+                                                    </div>
+                                                    <div class="modal-footer">
+                                                        <form
+                                                            action="{{ route('work-experience.destroy', $experience->id) }}"
+                                                            method="POST">
+                                                            @csrf
+                                                            @method('DELETE')
+                                                            <button type="button" class="btn btn-secondary"
+                                                                data-bs-dismiss="modal">Cancel</button>
+                                                            <button type="submit" class="btn btn-danger">Delete</button>
+                                                        </form>
                                                     </div>
                                                 </div>
                                             </div>
@@ -476,6 +736,12 @@
                     </div>
                 </div>
 
+                {{-- work experience modal input --}}
+                @include('website.modal.work-experience', [
+                    'employee_id' => $employee->id,
+                ])
+                {{-- end of work experience modal input --}}
+
                 <!-- Historical Performance Appraisal -->
                 <div class="col-md-6">
                     <div class="card mb-5">
@@ -483,6 +749,10 @@
                             role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
                             aria-expanded="true" aria-controls="kt_account_connected_accounts">
                             <h3 class="fw-bold m-0">Historical Performance Appraisal</h3>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                data-bs-target="#addAppraisalModal">
+                                <i class="fas fa-plus"></i>
+                            </button>
                         </div>
 
                         <div id="kt_account_settings_signin_method" class="collapse show">
@@ -491,15 +761,68 @@
                                     @forelse ($performanceAppraisals as $appraisal)
                                         <div class="mb-3 d-flex justify-content-between align-items-center">
                                             <div>
-                                                <div class="fs-6 fw-bold">Score - {{ $appraisal->score }} </div>
+                                                <div class="fs-6 fw-bold">Score - {{ $appraisal->score }}</div>
                                                 <div class="text-muted fs-7">
                                                     {{ \Illuminate\Support\Carbon::parse($appraisal->date)->format('d M Y') }}
                                                 </div>
                                             </div>
-                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#detailModal{{ $appraisal->id }}">
-                                                Lihat Detail
-                                            </button>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-light-primary" data-bs-toggle="modal"
+                                                    data-bs-target="#detailModal{{ $appraisal->id }}">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-light-warning" data-bs-toggle="modal"
+                                                    data-bs-target="#editAppraisalModal{{ $appraisal->id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-light-danger" data-bs-toggle="modal"
+                                                    data-bs-target="#deleteAppraisalModal{{ $appraisal->id }}">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="modal fade" id="editAppraisalModal{{ $appraisal->id }}"
+                                            tabindex="-1" aria-labelledby="editAppraisalModalLabel{{ $appraisal->id }}"
+                                            aria-hidden="true">
+                                            <div class="modal-dialog">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title">Edit Appraisal</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                            aria-label="Close"></button>
+                                                    </div>
+                                                    <form action="{{ route('appraisal.update', $appraisal->id) }}"
+                                                        method="POST">
+                                                        @csrf
+                                                        @method('PUT')
+                                                        <div class="modal-body">
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Score</label>
+                                                                <input type="text" name="score" class="form-control"
+                                                                    value="{{ $appraisal->score }}" required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Date</label>
+                                                                <input type="date" name="date" class="form-control"
+                                                                    value="{{ isset($appraisal) ? \Illuminate\Support\Carbon::parse($appraisal->date)->format('Y-m-d') : old('date') }}"
+                                                                    required>
+                                                            </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label">Description</label>
+                                                                <textarea class="form-control" name="description" rows="3">
+                                                                    {{ $appraisal->description }}
+                                                                </textarea>
+                                                            </div>
+                                                        </div>
+                                                        <div class="modal-footer">
+                                                            <button type="button" class="btn btn-secondary"
+                                                                data-bs-dismiss="modal">Batal</button>
+                                                            <button type="submit" class="btn btn-primary">Update</button>
+                                                        </div>
+                                                    </form>
+                                                </div>
+                                            </div>
                                         </div>
 
                                         @if (!$loop->last)
@@ -529,17 +852,23 @@
                                 </div>
                                 <div class="modal-body">
                                     <p><strong>Hasil:</strong> {{ $appraisal->score }}</p>
-                                    <p><strong>Catatan:</strong> {{ $appraisal->notes }}</p>
+                                    <p><strong>Catatan:</strong> {{ $appraisal->description }}</p>
                                     <p><strong>Tahun:</strong> {{ $appraisal->date }}</p>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary"
-                                        data-bs-dismiss="modal">Tutup</button>
+                                        data-bs-dismiss="modal">Close</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 @endforeach
+
+                {{-- appraisal modal --}}
+                @include('website.modal.appraisal', [
+                    'employee_id' => $employee->id,
+                ])
+                {{-- end of appraisal modal --}}
 
                 <div class="row">
                     <!-- Strength & Weakness -->
@@ -658,3 +987,31 @@
 
     </div>
 @endsection
+
+@push('scripts')
+    <!-- Tambahkan SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(document).ready(function() {
+            $('input[name="aisin_entry_date"]').on('change', function() {
+                var joinDate = new Date($(this).val());
+                var currentDate = new Date();
+
+                if (!isNaN(joinDate.getTime())) { // Check if valid date
+                    var yearsDiff = currentDate.getFullYear() - joinDate.getFullYear();
+
+                    // Adjust if the current date is before the join date anniversary this year
+                    var currentMonthDay = (currentDate.getMonth() * 100) + currentDate.getDate();
+                    var joinMonthDay = (joinDate.getMonth() * 100) + joinDate.getDate();
+                    if (currentMonthDay < joinMonthDay) {
+                        yearsDiff--;
+                    }
+
+                    $('input[name="working_period"]').val(Math.max(yearsDiff, 0));
+                } else {
+                    $('input[name="working_period"]').val(0);
+                }
+            });
+        });
+    </script>
+@endpush

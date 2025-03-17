@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use App\Models\Employee;
 use App\Models\Department;
 use Illuminate\Http\Request;
@@ -68,29 +69,59 @@ class EmployeeController extends Controller
         DB::beginTransaction();
 
         try {
-            // Validasi data input
+            // Validasi data utama karyawan
             $validatedData = $request->validate([
                 'npk' => 'required|string|max:255',
                 'name' => 'required|string|max:255',
-                'identity_number' => 'required|string|unique:employees',
                 'birthday_date' => 'required|date',
                 'gender' => 'required|in:Male,Female',
                 'company_name' => 'required|string',
                 'function' => 'required|string',
                 'aisin_entry_date' => 'required|date',
-                'working_period' => 'nullable|integer',
                 'company_group' => 'required|string',
                 'foundation_group' => 'required|string',
                 'position' => 'required|string',
                 'grade' => 'required|string',
-                'last_promote_date' => 'nullable|date',
-                'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
-            ]);
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
-            // Simpan file foto jika ada
+                // Validasi untuk Pendidikan
+                'level' => 'array',
+                'level.*' => 'nullable|string|max:255',
+                'institute' => 'array',
+                'institute.*' => 'nullable|string|max:255',
+                'start_date' => 'array',
+                'start_date.*' => 'nullable|string|max:255',
+                'end_date' => 'array',
+                'end_date.*' => 'nullable|string|max:255',
+
+                // Validasi untuk Pengalaman Kerja
+                'company' => 'array',
+                'company.*' => 'nullable|string|max:255',
+                'work_position' => 'array',
+                'work_position.*' => 'nullable|string|max:255',
+                'work_start_date' => 'array',
+                'work_start_date.*' => 'nullable|string|max:255',
+                'work_end_date' => 'array',
+                'work_end_date.*' => 'nullable|string|max:255',
+            ]);
+            
+            // Debugging setelah validasi berhasil    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Tangkap error validasi dan tampilkan dengan back()
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+
+        try{
+
+            // Simpan foto jika ada
             if ($request->hasFile('photo')) {
                 $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
             }
+
+            // Hitung working period (hanya jumlah tahun)
+            $joinDate = Carbon::parse($validatedData['aisin_entry_date']);
+            $now = Carbon::now();
+            $validatedData['working_period'] = $joinDate->diffInYears($now);
 
             // Ambil user yang sedang login
             $loggedInUser = auth()->user();
@@ -99,18 +130,49 @@ class EmployeeController extends Controller
             // Cari atasan langsung berdasarkan posisi
             $supervisor = $this->findSupervisor($validatedData['position']);
 
-            // Jika atasan langsung tidak ditemukan, gunakan user yang login sebagai atasan
+            // Jika tidak ditemukan, gunakan user yang login sebagai atasan
             if (!$supervisor && $loggedInEmployee) {
                 $supervisor = $loggedInEmployee;
             }
 
-            // Tambahkan supervisor_id ke data yang disimpan
+            // Tambahkan supervisor_id ke data
             $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
 
-            // Simpan data employee ke database
+            // Simpan employee ke database
             $employee = Employee::create($validatedData);
 
-            // Jika ada supervisor, ambil department dari supervisor atau user yang login
+            // Simpan data pendidikan jika tersedia
+            if ($request->filled('level')) {
+                foreach ($request->level as $key => $level) {
+                    if (!empty($level)) {
+                        EducationalBackground::create([
+                            'employee_id' => $employee->id,
+                            'educational_level' => $level,
+                            'major' => $request->major[$key] ?? null,
+                            'institute' => $request->institute[$key] ?? null,
+                            'start_date' => $request->start_date[$key] ?? null,
+                            'end_date' => $request->end_date[$key] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Simpan data pengalaman kerja jika tersedia
+            if ($request->filled('company')) {
+                foreach ($request->company as $key => $company) {
+                    if (!empty($company)) {
+                        WorkingExperience::create([
+                            'employee_id' => $employee->id,
+                            'company' => $company,
+                            'position' => $request->position[$key] ?? null,
+                            'start_date' => $request->work_start_date[$key] ?? null,
+                            'end_date' => $request->work_end_date[$key] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Simpan department dari supervisor
             if ($supervisor) {
                 $departments = DB::table('employee_departments')
                     ->where('employee_id', $supervisor->id)
@@ -132,7 +194,6 @@ class EmployeeController extends Controller
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
-
 
     private function findSupervisor($position)
     {
@@ -179,7 +240,8 @@ class EmployeeController extends Controller
                                 ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
                                 ->get();
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
-        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals'));
+        $departments = Department::all();
+        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments'));
     }
 
     public function edit($npk)
@@ -299,5 +361,268 @@ class EmployeeController extends Controller
         }
 
         return redirect()->back();
+    }
+
+    public function workExperienceStore(Request $request)
+    {
+        $employee = DB::table('employees')->where('id', $request->employee_id)->exists();
+
+        if (!$employee) {
+            return back()->with('error', 'Employee tidak ditemukan!');
+        }
+        
+        $request->validate([
+            'position' => 'required|string|max:255',
+            'company' => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'description' => 'nullable|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            WorkingExperience::create([
+                'employee_id' => $request->employee_id, // Sesuaikan dengan sistem autentikasi
+                'position' => $request->position,
+                'company' => $request->company,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+                'description' => $request->description,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Pengalaman kerja berhasil ditambahkan.');
+        } catch (\Throwable $th) {
+
+            dd($th);
+            DB::rollback();
+            return redirect()->back()->with('error' , 'Pengalaman kerja gagal ditambahkan!');
+        }
+    }
+
+    public function workExperienceUpdate(Request $request, $id)
+    {
+        $experience = WorkingExperience::findOrFail($id);
+
+        $request->validate([
+            'position'   => 'required|string|max:255',
+            'company'    => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date'   => 'nullable|date|after_or_equal:start_date',
+            'description'=> 'nullable|string',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $experience->update([
+                'position'    => $request->position,
+                'company'     => $request->company,
+                'start_date'  => Carbon::parse($request->start_date),
+                'end_date'    => $request->end_date ? Carbon::parse($request->end_date) : null,
+                'description' => $request->description,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Pengalaman kerja berhasil diupdate.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Pengalaman kerja gagal diupdate.');
+        }
+    }
+
+    public function workExperienceDestroy($id)
+    {
+        $experience = WorkingExperience::findOrFail($id);
+
+        try {
+            DB::beginTransaction();
+
+            $experience->delete();
+            
+            DB::commit();
+            return redirect()->back()->with('success', 'Pengalaman kerja berhasil dihapus.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Pengalaman kerja gagal dihapus.');
+        }
+    }
+
+    public function educationStore(Request $request)
+    {
+        try {
+            $employeeExists = DB::table('employees')->where('id', $request->employee_id)->exists();
+    
+            if (!$employeeExists) {
+                return back()->with('error', 'Employee tidak ditemukan!');
+            }
+    
+            $request->validate([
+                'level' => 'required',
+                'major' => 'required',
+                'institute' => 'required',
+                'start_date' => 'required|date',
+                'end_date' => 'nullable|date',
+            ]);
+    
+            // Debugging setelah validasi berhasil    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Tangkap error validasi dan tampilkan dengan back()
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+        
+        try {
+            DB::beginTransaction();
+
+            EducationalBackground::create([
+                'employee_id' => $request->employee_id,
+                'educational_level' => $request->level,
+                'major' => $request->major,
+                'institute' => $request->institute,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Riwayat pendidikan berhasil ditambahkan.');
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Riwayat pendidikan gagal ditambahkan!');
+        }
+    }
+
+    public function educationUpdate(Request $request, $id)
+    {
+        $education = EducationalBackground::findOrFail($id);
+
+        $validatedData = $request->validate([
+            'level' => 'required',
+            'major' => 'required',
+            'institute' => 'required',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $education->update([
+                'educational_level'       => $validatedData['level'],
+                'major'       => $validatedData['major'],
+                'institute'   => $validatedData['institute'],
+                'start_date'  => Carbon::parse($validatedData['start_date']),
+                'end_date'    => $validatedData['end_date'] ? Carbon::parse($validatedData['end_date']) : null,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Riwayat pendidikan berhasil diupdate.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Riwayat pendidikan gagal diupdate.');
+        }
+    }
+
+    public function educationDestroy($id)
+    {
+        $experience = EducationalBackground::findOrFail($id);
+
+        try {
+            DB::beginTransaction();
+
+            $experience->delete();
+            
+            DB::commit();
+            return redirect()->back()->with('success', 'Riwayat pendidikan berhasil dihapus.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Riwayat pendidikan gagal dihapus.');
+        }
+    }
+
+    public function appraisalStore(Request $request)
+    {
+        try {
+            $employeeExists = DB::table('employees')->where('id', $request->employee_id)->exists();
+    
+            if (!$employeeExists) {
+                return back()->with('error', 'Employee tidak ditemukan!');
+            }
+    
+            $validatedData = $request->validate([
+                'score' => 'required',
+                'description' => 'required',
+                'date' => 'required|date',
+            ]);
+    
+            // Debugging setelah validasi berhasil    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Tangkap error validasi dan tampilkan dengan back()
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+        
+        try {
+            DB::beginTransaction();
+    
+            // Simpan data appraisal
+            PerformanceAppraisalHistory::create([
+                'employee_id' => $request->employee_id,
+                'score'       => $validatedData['score'],
+                'description' => $validatedData['description'],
+                'date'        => Carbon::parse($validatedData['date']),
+            ]);
+    
+            DB::commit();
+            return redirect()->back()->with('success', 'Performance appraisal berhasil ditambahkan.');
+        } catch (\Throwable $th) {
+            DB::rollback();
+            dd($th);
+            return redirect()->back()->with('error', 'Performance appraisal gagal ditambahkan : ' . $th->getMessage());
+        }
+    }
+
+    public function appraisalUpdate(Request $request, $id)
+    {
+        $appraisal = PerformanceAppraisalHistory::findOrFail($id);
+
+        $validatedData = $request->validate([
+            'score' => 'required',
+            'description' => 'required',
+            'date' => 'required|date',
+        ]);
+
+        try {
+            DB::beginTransaction();
+        
+            // Update dengan field yang benar
+            $appraisal->update([
+                'score'       => $validatedData['score'],
+                'description' => $validatedData['description'],
+                'date'        => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
+            ]);
+        
+            DB::commit();
+            return redirect()->back()->with('success', 'Performance appraisal berhasil diperbarui.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Performance appraisal gagal diperbarui.');
+        }
+    }
+
+    public function appraisalDestroy($id)
+    {
+        $appraisal = PerformanceAppraisalHistory::findOrFail($id);
+
+        try {
+            DB::beginTransaction();
+
+            $appraisal->delete();
+            
+            DB::commit();
+            return redirect()->back()->with('success', 'Performance appraisal berhasil dihapus.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Performance appraisal gagal dihapus.');
+        }
     }
 }
