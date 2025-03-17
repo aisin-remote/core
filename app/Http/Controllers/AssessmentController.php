@@ -42,10 +42,33 @@ class AssessmentController extends Controller
 
         return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments'));
     }
+    public function destroy($id)
+{
+    $assessment = Assessment::findOrFail($id);
+
+    // Hapus juga data terkait di tabel detail_assessments
+    DetailAssessment::where('assessment_id', $id)->delete();
+
+    // Hapus file jika ada
+    if ($assessment->upload) {
+        \Storage::delete('public/' . $assessment->upload);
+    }
+
+    // Hapus assessment
+    $assessment->delete();
+
+    return response()->json([
+        'success' => true,
+        'message' => 'Assessment berhasil dihapus.'
+    ]);
+}
+
     public function show($employee_id)
     {
         // Ambil data karyawan berdasarkan ID
+        $employees = Employee::all();
         $employee = Employee::with('assessments')->findOrFail($employee_id);
+        $alcs = Alc::all();
 
         // Ambil assessment dan sertakan kolom `upload`
         $assessments = Assessment::where('employee_id', $employee_id)
@@ -54,7 +77,7 @@ class AssessmentController extends Controller
             ->orderBy('date', 'desc')
             ->get();
 
-        return view('website.assessment.show', compact('employee', 'assessments'));
+        return view('website.assessment.show', compact('employee', 'assessments', 'employees', 'alcs'));
     }
 
     public function showByDate($assessment_id, $date)
@@ -185,4 +208,53 @@ class AssessmentController extends Controller
             'weaknesses' => $weaknesses,
         ]);
     }
+    public function edit($id)
+{
+    $assessment = Assessment::with('details.alc')->findOrFail($id);
+
+    return response()->json([
+        'id' => $assessment->id,
+        'employee_id' => $assessment->employee_id,
+        'date' => $assessment->date,
+        'upload' => $assessment->upload,
+        'scores' => $assessment->details->pluck('score', 'alc_id'),
+        'strengths' => $assessment->details->map(fn($d) => [
+            'alc_id' => $d->alc_id,
+            'description' => $d->strength
+        ]),
+        'weaknesses' => $assessment->details->map(fn($d) => [
+            'alc_id' => $d->alc_id,
+            'description' => $d->weakness
+        ]),
+        'alc_options' => Alc::all(['id', 'name'])
+    ]);
+}
+
+public function update(Request $request, $id)
+{
+    $assessment = Assessment::findOrFail($id);
+    $assessment->update($request->only('employee_id', 'date'));
+
+    foreach ($request->scores as $alc_id => $score) {
+        DetailAssessment::updateOrInsert(
+            ['assessment_id' => $assessment->id, 'alc_id' => $alc_id],
+            [
+                'score' => $score ?? "0",
+                'strength' => $request->strength[$alc_id] ?? "",
+                'weakness' => $request->weakness[$alc_id] ?? "",
+                'updated_at' => now()
+            ]
+        );
+    }
+
+    if ($request->hasFile('upload')) {
+        $path = $request->file('upload')->store('uploads', 'public');
+        $assessment->update(['upload' => $path]);
+    }
+
+    return response()->json(['success' => true]);
+}
+
+
+
 }

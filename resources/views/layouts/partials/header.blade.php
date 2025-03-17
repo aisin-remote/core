@@ -342,8 +342,8 @@
                                             <!--begin::Symbol-->
                                             <div class="symbol symbol-40px me-4">
                                                 <span class="symbol-label bg-light">
-                                                    <img class="w-20px h-20px" <!--
-                                                        src="assets/media/svg/brand-logos/leaf.svg" alt="" />
+                                                    {{-- <img class="w-20px h-20px" <!--
+                                                        src="assets/media/svg/brand-logos/leaf.svg" alt="" /> --}}
                                                     -->
                                                 </span>
                                             </div>
