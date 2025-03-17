@@ -11,6 +11,8 @@ class Assessment extends Model
     protected $table = 'assessments';
     protected $guarded = ['id'];
 
+    protected $fillable = ['employee_id', 'alc_id'];
+
     /**
      * Relasi ke model Employee
      */
@@ -18,6 +20,14 @@ class Assessment extends Model
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
+
+    public function details()
+    {
+    return $this->hasMany(DetailAssessment::class, 'assessment_id', 'id');
+    }
+
+
+
 
     /**
      * Relasi ke model Alc

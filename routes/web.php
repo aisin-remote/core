@@ -98,8 +98,11 @@ Route::middleware('auth')->group(function () {
 
 
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
+<<<<<<< HEAD
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
 
+=======
+>>>>>>> origin/IDP
     });
 
 
@@ -112,6 +115,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('idp')->group(function () {
+<<<<<<< HEAD
         Route::get('/', function () {
             $employee = Employee::all(); // Ambil semua data karyawan
             return view('website.idp.index', [
@@ -134,6 +138,17 @@ Route::middleware('auth')->group(function () {
         });
 
     });
+=======
+        Route::get('/', [IdpController::class, 'index'])->name('idp.index');
+        Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
+        Route::post('/idp/store-one-year', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
+        Route::get('/development-data', [IdpController::class, 'showDevelopmentData'])->name('development.data');
+        Route::get('/development-mid-data', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
+        Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
+        Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
+    });
+
+>>>>>>> origin/IDP
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
 });

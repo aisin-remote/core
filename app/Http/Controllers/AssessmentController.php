@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+<<<<<<< HEAD
 use \DB;
+=======
+use Illuminate\Support\Facades\DB;
+>>>>>>> origin/IDP
 use App\Models\Alc;
 use App\Models\Assessment;
 use App\Models\DetailAssessment;
@@ -76,7 +80,7 @@ class AssessmentController extends Controller
         }
 
         // Ambil detail menggunakan join untuk mendapatkan alc_name dan score dari detail_assessment
-        $details = \DB::table('detail_assessments')
+        $details = DB::table('detail_assessments')
             ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
             ->where('detail_assessments.assessment_id', $assessment_id)
             ->select(
