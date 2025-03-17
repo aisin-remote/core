@@ -73,7 +73,6 @@ Route::middleware('auth')->group(function(){
         Route::get('/{assessment_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate'); // Pindahkan ke bawah
 
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
-        Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
     });
 
 
@@ -86,21 +85,15 @@ Route::middleware('auth')->group(function(){
     });
 
     Route::prefix('idp')->group(function () {
-        Route::get('/', function (){
-            $employee = Employee::all(); // Ambil semua data karyawan
-            return view('website.idp.index', [
-                'employees' => $employee
-            ]);
-        });
+        Route::get('/', [IdpController::class, 'index'])->name('idp.index');
+        Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
+        Route::post('/idp/store-one-year', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
+        Route::get('/development-data', [IdpController::class, 'showDevelopmentData'])->name('development.data');
+        Route::get('/development-mid-data', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
+        Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
+        Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
     });
 
-    Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
-    ->name('idp.exportTemplate');
-
-    Route::prefix('master')->group(function () {
-        Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');
-        Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
-    });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
 });

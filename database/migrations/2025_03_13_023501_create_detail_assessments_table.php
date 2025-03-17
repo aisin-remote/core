@@ -15,6 +15,8 @@ return new class extends Migration
     {
         Schema::create('detail_assessments', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->bigInteger('assessment_id')->unsigned();
+            $table->foreign('assessment_id')->references('id')->on('assessments')->onDelete('cascade');
             $table->bigInteger('alc_id')->unsigned();
             $table->foreign('alc_id')->references('id')->on('alc')->onDelete('cascade');
             $table->string('score', 2);

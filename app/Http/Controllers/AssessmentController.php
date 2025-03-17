@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Support\Facades\DB;
 use App\Models\Alc;
 use App\Models\Employee;
 use App\Models\Assessment;
@@ -75,7 +76,7 @@ class AssessmentController extends Controller
         }
 
         // Ambil detail menggunakan join untuk mendapatkan alc_name dan score dari detail_assessment
-        $details = \DB::table('detail_assessments')
+        $details = DB::table('detail_assessments')
             ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
             ->where('detail_assessments.assessment_id', $assessment_id)
             ->select(
@@ -128,7 +129,7 @@ class AssessmentController extends Controller
         // Simpan data detail ke tabel assessment_details
         $assessmentDetails = [];
         foreach ($request->alc_ids as $index => $alc_id) {
-            \DB::table('detail_assessments')
+            DB::table('detail_assessments')
                 ->updateOrInsert(
                     [
                         'assessment_id' => $assessment->id,

@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -13,10 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('detail_assessment', function (Blueprint $table): void {
+        Schema::create('detail_assessments', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->bigInteger('assessment_id')->unsigned();
-            $table->foreign('assessment_id')->references('id')->on('assessment')->onDelete('cascade');
+            $table->foreign('assessment_id')->references('id')->on('assessments')->onDelete('cascade');
             $table->bigInteger('alc_id')->unsigned();
             $table->foreign('alc_id')->references('id')->on('alc')->onDelete('cascade');
             $table->string('score', 2);
@@ -33,6 +33,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('detail_assessment');
+        Schema::dropIfExists('detail_assessments');
     }
 };
