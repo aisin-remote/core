@@ -67,11 +67,14 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
+        Route::get('/{employee_id}/edit', [AssessmentController::class, 'edit'])->name('assessments.edit');
+        Route::post('/{employee_id}/update', [AssessmentController::class, 'update'])->name('assessments.update');
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
 
         Route::get('/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ditaruh di atas agar tidak bentrok
 
         Route::get('/{assessment_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate'); // Pindahkan ke bawah
+
 
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');

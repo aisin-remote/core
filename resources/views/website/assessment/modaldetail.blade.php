@@ -1,6 +1,6 @@
 <!-- Modal -->
 <div class="modal fade" id="assessmentModal" tabindex="-1" aria-labelledby="assessmentModalLabel" >
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog " style="max-width: 90%; width: 80%;">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="assessmentModalLabel">Detail Assessment</h5>
