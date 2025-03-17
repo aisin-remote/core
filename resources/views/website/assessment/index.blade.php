@@ -367,7 +367,6 @@
                 let url = assessment_id ? "{{ url('/assessments') }}/" + assessment_id :
                     "{{ route('assessments.store') }}";
                 let method = assessment_id ? "PUT" : "POST";
-
                 $.ajax({
                     url: url,
                     type: method,
@@ -375,15 +374,32 @@
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                        alert(assessment_id ? "Assessment berhasil diperbarui!" :
-                            "Assessment berhasil ditambahkan!");
-                        $('#addAssessmentModal').modal('hide');
-                        location.reload();
+                        Swal.fire({
+                            title: "Berhasil!",
+                            text: assessment_id ? "Assessment berhasil diperbarui!" :
+                                "Assessment berhasil ditambahkan!",
+                            icon: "success",
+                            confirmButtonText: "OK"
+                        }).then(() => {
+                            $('#addAssessmentModal').modal('hide'); // Tutup modal
+                            location.reload(); // Refresh halaman setelah sukses
+                        });
                     },
-                    error: function() {
-                        alert("Terjadi kesalahan!");
+                    error: function(xhr, status, error) {
+                        let errorMessage = "Terjadi kesalahan!";
+                        if (xhr.responseJSON && xhr.responseJSON.message) {
+                            errorMessage = xhr.responseJSON.message;
+                        }
+
+                        Swal.fire({
+                            title: "Gagal!",
+                            text: errorMessage,
+                            icon: "error",
+                            confirmButtonText: "Coba Lagi"
+                        });
                     }
                 });
+
             });
         });
     </script>
