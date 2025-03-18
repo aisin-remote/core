@@ -195,6 +195,57 @@
 
 @push('scripts')
     <script src="{{ asset('assets/plugins/custom/datatables/js/datatables.min.js') }}"></script>
+    <script>
+        document.querySelectorAll(".delete-btn").forEach(button => {
+            button.addEventListener("click", function() {
+                let assessmentId = this.getAttribute("data-id");
+
+                if (!assessmentId) {
+                    console.error("ID Assessment tidak ditemukan!");
+                    return;
+                }
+
+                // SweetAlert Konfirmasi
+                Swal.fire({
+                    title: "Apakah Anda yakin?",
+                    text: "Data assessment ini akan dihapus secara permanen!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Ya, Hapus!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // AJAX request untuk menghapus data
+                        fetch(`/assessment/${assessmentId}`, {
+                                method: "DELETE",
+                                headers: {
+                                    "X-CSRF-TOKEN": document.querySelector(
+                                        'meta[name="csrf-token"]').getAttribute(
+                                        "content"),
+                                    "Content-Type": "application/json"
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    Swal.fire("Terhapus!", data.message, "success")
+                                        .then(() => location
+                                            .reload()); // Refresh halaman
+                                } else {
+                                    Swal.fire("Error!", "Gagal menghapus data!",
+                                        "error");
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error:", error);
+                                Swal.fire("Error!", "Terjadi kesalahan!", "error");
+                            });
+                    }
+                });
+            });
+        });
+    </script>
     {{-- <script>
         $(document).ready(function() {
             var table = $('#kt_table_assessments').DataTable({
@@ -504,55 +555,7 @@
             }
 
             // Event listener untuk tombol Delete
-            document.querySelectorAll(".delete-btn").forEach(button => {
-                button.addEventListener("click", function() {
-                    let assessmentId = this.getAttribute("data-id");
-
-                    if (!assessmentId) {
-                        console.error("ID Assessment tidak ditemukan!");
-                        return;
-                    }
-
-                    // SweetAlert Konfirmasi
-                    Swal.fire({
-                        title: "Apakah Anda yakin?",
-                        text: "Data assessment ini akan dihapus secara permanen!",
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#d33",
-                        cancelButtonColor: "#3085d6",
-                        confirmButtonText: "Ya, Hapus!"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // AJAX request untuk menghapus data
-                            fetch(`/assessment/${assessmentId}`, {
-                                    method: "DELETE",
-                                    headers: {
-                                        "X-CSRF-TOKEN": document.querySelector(
-                                            'meta[name="csrf-token"]').getAttribute(
-                                            "content"),
-                                        "Content-Type": "application/json"
-                                    }
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    if (data.success) {
-                                        Swal.fire("Terhapus!", data.message, "success")
-                                            .then(() => location
-                                                .reload()); // Refresh halaman
-                                    } else {
-                                        Swal.fire("Error!", "Gagal menghapus data!",
-                                            "error");
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error("Error:", error);
-                                    Swal.fire("Error!", "Terjadi kesalahan!", "error");
-                                });
-                        }
-                    });
-                });
-            });
+            
 
             // Submit form update
             document.getElementById("updateAssessmentForm").addEventListener("submit", function(event) {

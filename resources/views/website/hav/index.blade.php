@@ -70,190 +70,246 @@
                     'text-dark',
                     'text-dark',
                 ];
+
+                $percentage = [
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                    '3.3%',
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                    '3.3%',
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                    '0.0%',
+                ];
             @endphp
 
             <div class="row mt-5">
                 @for ($i = 0; $i < count($titles); $i++)
                     <div class="col-3">
-                        <!--begin: Statistics Widget 6-->
-                        <div class="card {{ $borderColors[$i] }} card-xl-stretch mb-xl-8">
-                            <!--begin::Body-->
-                            <div class="card-body" style="padding: 10px 10px 10px 10px !important;">
+                        <div class="card {{ $borderColors[$i] }} card-xl-stretch mb-xl-8 card-clickable"
+                            data-title="{{ $titles[$i] }}">
+                            <div class="card-body" style="padding: 10px;">
                                 <a href="#"
                                     class="card-title fw-bold text-center {{ $textColors[$i] }} fs-5 mb-3 d-block">
-                                    {{ $titles[$i] }} </a>
-
-                                <div class="card-body bg-white">
-                                    <br>
-                                    <br>
-                                    <br>
-                                    <br>
+                                    {{ $titles[$i] }}
+                                </a>
+                                <div class="card-body bg-white" style="height: 100px;"></div>
+                                <div class="py-1 text-center">
+                                    <span class="text-danger fw-bold me-2">{{ $percentage[$i] }}</span>
                                 </div>
-
-                                <div class="py-1">
-                                    <center>
-                                        <span class="text-danger fw-bold me-2">0,00%</span>
-                                    </center>
-                                    {{-- <span class="fw-semibold text-muted fs-7">Avarage</span> --}}
-                                </div>
-
-                                {{-- <div class="progress h-7px {{ $progressColors[$i] }} bg-opacity-50 mt-7">
-                                    <div class="progress-bar {{ $progressColors[$i] }}" role="progressbar"
-                                        style="width: 50%" aria-valuenow="50" aria-valuemin="0" aria-valuemax="100">
-                                    </div>
-                                </div> --}}
                             </div>
-                            <!--end:: Body-->
                         </div>
-                        <!--end: Statistics Widget 6-->
                     </div>
                 @endfor
             </div>
+            <!--end::Content container-->
+        </div>
 
-            <div class="row g-5 g-xl-10 mb-5 mb-xl-10">
-                <!--begin::Col-->
-                <div class="col-xl-12">
-
-                    <!--begin::Chart widget 22-->
-                    <div class="card h-xl-100">
-                        <!--begin::Header-->
-                        <div class="card-header position-relative py-0 border-bottom-2">
-                            <!--begin::Nav-->
-                            <ul class="nav nav-stretch nav-pills nav-pills-custom d-flex mt-3" role="tablist">
-                                <!--begin::Item-->
-                                <li class="nav-item p-0 ms-0 me-8" role="presentation">
-                                    <!--begin::Link-->
-                                    <a class="nav-link btn btn-color-muted px-0 active" data-bs-toggle="tab"
-                                        id="kt_chart_widgets_22_tab_1" href="#kt_chart_widgets_22_tab_content_1"
-                                        aria-selected="true" role="tab">
-                                        <!--begin::Subtitle-->
-                                        <span class="nav-text fw-semibold fs-4 mb-3">
-                                            Overview 2025
-                                        </span>
-                                        <!--end::Subtitle-->
-
-                                        <!--begin::Bullet-->
-                                        <span
-                                            class="bullet-custom position-absolute z-index-2 w-100 h-2px top-100 bottom-n100 bg-primary rounded"></span>
-                                        <!--end::Bullet-->
-                                    </a>
-                                    <!--end::Link-->
-                                </li>
-                                <!--end::Item-->
-                            </ul>
-                            <!--end::Nav-->
-
-                            <!--begin::Toolbar-->
-                            <div class="card-toolbar">
-                                <!--begin::Daterangepicker(defined in src/js/layout/app.js)-->
-                                <div data-kt-daterangepicker="true" data-kt-daterangepicker-opens="left"
-                                    class="btn btn-sm btn-light d-flex align-items-center px-4" data-kt-initialized="1">
-                                    <!--begin::Display range-->
-                                    <span class="text-gray-600 fw-bold">
-                                        Loading date range...
-                                    </span>
-                                    <!--end::Display range-->
-
-                                    <i class="ki-duotone ki-calendar-8 text-gray-500 lh-0 fs-2 ms-2 me-0"><span
-                                            class="path1"></span><span class="path2"></span><span
-                                            class="path3"></span><span class="path4"></span><span
-                                            class="path5"></span><span class="path6"></span></i>
-                                </div>
-                                <!--end::Daterangepicker-->
-                            </div>
-                            <!--end::Toolbar-->
-                        </div>
-                        <!--end::Header-->
-                        <div class="container mt-3">
-                            <h4 class="text-center mb-4">Employee Composition</h4>
-
-                            <div class="row justify-content-center">
-                                <div class="col-md-6">
-                                    <canvas id="employeeChart2025" style="max-height: 300px;"></canvas>
-                                    <p class="text-center small mt-2">Employee Composition 2025</p>
-                                </div>
-
-                                <div class="col-md-6">
-                                    <canvas id="employeeChart2024" style="max-height: 300px;"></canvas>
-                                    <p class="text-center small mt-2">Employee Composition 2024</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h3 class="card-title">Human Assets Value</h3>
+                <div class="d-flex align-items-center">
+                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
+                        style="width: 200px;">
+                    <button type="button" class="btn btn-primary me-3" id="searchButton">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
+                        data-kt-menu-placement="bottom-end">
+                        <i class="fas fa-filter"></i> Filter
+                    </button>
                 </div>
             </div>
+            <div class="card-body">
+                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>No</th>
+                            <th>NPK</th>
+                            <th>Employee Name</th>
+                            <th>Quadran</th>
+                            <th>Departement</th>
+                            <th>Grade</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>000019</td>
+                            <td>Arif Kurniawan Dwi Haryadi</td>
+                            <td>
+                                <span class="badge badge-lg badge-warning">
+                                    6 - [Candidate]
+                                </span>
+                            </td>
+                            <td>PRO EC</td>
+                            <td>11A</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-light-warning">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <a class="btn btn-sm btn-light-info">
+                                    <i class="fas fa-file-export"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>000026</td>
+                            <td>Tegar Avrilla Kharismawan</td>
+                            <td>
+                                <span class="badge badge-lg badge-warning">
+                                    8 - [Strong Performer]
+                                </span>
+                            </td>
+                            <td>MMA</td>
+                            <td>10A</td>
+                            <td class="text-center">
+                                <button class="btn btn-sm btn-light-warning">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light-danger">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                                <a href="{{ asset('assets/file/Tegar_Avrilia_HAV_Summary.xlsm') }}"
+                                    class="btn btn-sm btn-light-info" download>
+                                    <i class="fas fa-file-export"></i>
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-            <div id="kt_app_content_container" class="app-container  container-fluid ">
-                <div class="app-content  container-fluid">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <h3 class="card-title">Pergeseran HAV</h3>
-                        </div>
-
-                        <div class="card-body">
-                            <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                                <thead>
-                                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                                        <th>Employee Name</th>
-                                        <th>Company</th>
-                                        <th>Grade</th>
-                                        <th>Age</th>
-                                        <th>Prev Hav</th>
-                                        <th>Current HAV</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                        </div>
-                        <!--end::Row-->
-                    </div>
-                    <!--end::Content container-->
+    {{-- modal top performer --}}
+    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="infoModalLabel">Card Information</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+                <div class="modal-body">
+                    <ul id="modalEmployeeList" class="list-group list-group-flush">
+                        <!-- Employee list will be inserted here -->
+                    </ul>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- end of modal --}}
+@endsection
 
-                <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-                <script>
-                    document.addEventListener("DOMContentLoaded", function() {
-                        const data2025 = {
-                            labels: ['Pria', 'Wanita'],
-                            datasets: [{
-                                label: 'Employee 2025',
-                                data: [556, 120],
-                                backgroundColor: ['#50C878', '#3B5B92'],
-                                hoverBackgroundColor: ['#C5E1C5', '#5A75C9']
-                            }]
-                        };
 
-                        const data2024 = {
-                            labels: ['Pria', 'Wanita'],
-                            datasets: [{
-                                label: 'Employee 2024',
-                                data: [405, 174],
-                                backgroundColor: ['#50c878', '#3b5b92'],
-                                hoverBackgroundColor: ['#c5e1c5', '#5a75c9']
-                            }]
-                        };
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        $(document).ready(function() {
+            var strongPerformers = [{
+                npk: "000026",
+                name: "Tegar Avrilla Kharismawan",
+                department: "MMA",
+                grade: "10A"
+            }, ];
 
-                        const options = {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            plugins: {
-                                legend: {
-                                    display: true,
-                                    position: 'bottom'
-                                }
-                            }
-                        };
+            var candidates = [{
+                npk: "000019",
+                name: "Arif Kurniawan Dwi Haryadi",
+                department: "PRO EC",
+                grade: "10A"
+            }, ];
 
-                        new Chart(document.getElementById('employeeChart2025'), {
-                            type: 'doughnut',
-                            data: data2025,
-                            options: options
-                        });
+            $(".card-clickable").on("click", function() {
+                var title = $(this).data("title");
 
-                        new Chart(document.getElementById('employeeChart2024'), {
-                            type: 'doughnut',
-                            data: data2024,
-                            options: options
-                        });
+                $("#infoModalLabel").text(title);
+                $("#modalEmployeeList").empty();
+
+                var selectedEmployees = [];
+
+                if (title === "8. Strong Performer") {
+                    selectedEmployees = strongPerformers;
+                } else if (title === "6. Candidate") {
+                    selectedEmployees = candidates;
+                }
+
+                if (selectedEmployees.length > 0) {
+                    selectedEmployees.forEach(function(employee) {
+                        $("#modalEmployeeList").append(`
+            <li class="list-group-item border-0 py-3 d-flex align-items-center shadow-sm rounded" style="background: linear-gradient(135deg, #6a11cb, #2575fc); color: #fff;">
+                <div>
+                    <strong class="fs-6">${employee.name}</strong><br>
+                    <small class="opacity-75">NPK: ${employee.npk} | ${employee.department} | Grade: ${employee.grade}</small>
+                </div>
+            </li>
+        `);
                     });
-                </script>
-            @endsection
+
+                    $("#infoModal").modal("show");
+                }
+            });
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const data2025 = {
+                labels: ['Pria', 'Wanita'],
+                datasets: [{
+                    label: 'Employee 2025',
+                    data: [556, 120],
+                    backgroundColor: ['#50C878', '#3B5B92'],
+                    hoverBackgroundColor: ['#C5E1C5', '#5A75C9']
+                }]
+            };
+
+            const data2024 = {
+                labels: ['Pria', 'Wanita'],
+                datasets: [{
+                    label: 'Employee 2024',
+                    data: [405, 174],
+                    backgroundColor: ['#50c878', '#3b5b92'],
+                    hoverBackgroundColor: ['#c5e1c5', '#5a75c9']
+                }]
+            };
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    }
+                }
+            };
+
+            new Chart(document.getElementById('employeeChart2025'), {
+                type: 'doughnut',
+                data: data2025,
+                options: options
+            });
+
+            new Chart(document.getElementById('employeeChart2024'), {
+                type: 'doughnut',
+                data: data2024,
+                options: options
+            });
+        });
+    </script>
+@endpush

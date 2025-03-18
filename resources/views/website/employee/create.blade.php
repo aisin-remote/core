@@ -146,6 +146,9 @@
                                         <option data-kt-flag="flags/albania.svg" value="Section Head">Section Head
                                         </option>
                                         <option data-kt-flag="flags/algeria.svg" value="Supervisor">Supervisor</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Act Leader">Act Leader</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Act JP">Act JP</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Operator">Operator</option>
                                     </select>
                                 </div>
                                 @error('position')

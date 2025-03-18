@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Employee;
 use App\Models\Department;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -18,14 +19,18 @@ class EmployeeImport implements ToCollection, WithHeadingRow
         try {
             DB::transaction(function () use ($rows) {
                 foreach ($rows as $row) {
+                    Log::info('Memproses NPK: ' . $row['npk']);
+
                     // **1. Cek apakah NPK sudah ada**
                     if (Employee::where('npk', $row['npk'])->exists()) {
+                        Log::warning("NPK {$row['npk']} sudah ada, dilewati.");
                         continue; // Skip jika NPK sudah ada
                     }
 
                     // **2. Cari department berdasarkan nama**
                     $department = Department::where('name', $row['department'])->first();
                     if (!$department) {
+                        Log::warning("Departemen {$row['department']} tidak ditemukan, dilewati.");
                         continue; // Skip jika department tidak ditemukan
                     }
 
@@ -39,6 +44,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     $workingPeriod = $joinDate ? Carbon::parse($joinDate)->diffInYears(Carbon::now()) : null;
 
                     // **5. Simpan employee baru**
+                    Log::info("Membuat Employee baru: {$row['name']}");
                     $employee = Employee::create([
                         'npk'              => $row['npk'],
                         'name'             => $row['name'],
@@ -54,8 +60,11 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                         'working_period'   => $workingPeriod,
                     ]);
 
+                    Log::info("Employee ID: {$employee->id} berhasil dibuat.");
+
                     // **6. Hubungkan Employee dengan Department**
                     $employee->departments()->attach($department->id);
+                    Log::info("Employee {$employee->id} terhubung ke Department ID {$department->id}");
 
                     // **7. Cari atasan dalam department yang sama**
                     $supervisor = Employee::whereHas('departments', function ($query) use ($department) {
@@ -69,6 +78,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     $employee->update([
                         'supervisor_id' => $supervisor ? $supervisor->id : null,
                     ]);
+                    Log::info("Employee {$employee->id} mendapatkan Supervisor ID " . ($supervisor ? $supervisor->id : 'NULL'));
 
                     // **9. Jika jabatan adalah "manager", buat akun user untuk login**
                     if ($position === 'manager') {
@@ -79,15 +89,17 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                             'role'        => 'manager',
                             'employee_id' => $employee->id,
                         ]);
+                        Log::info("Akun user dibuat untuk {$row['name']} dengan email " . strtolower(str_replace(' ', '.', $row['name'])) . '@aiia.co.id');
                     }
                 }
             });
 
             // **10. Simpan pesan sukses ke session**
             Session::flash('success', 'Data karyawan berhasil diimport!');
+            Log::info("Import selesai, tidak ada error.");
         } catch (\Exception $e) {
-            // **11. Simpan pesan error ke session**
-            Session::flash('error', 'Gagal mengimport data: ' . $e->getMessage());
+            Log::error("Terjadi error saat import: " . $e->getMessage());
+            Session::flash('error', 'Gagal mengimport data.');
         }
     }
 

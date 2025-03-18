@@ -59,6 +59,27 @@ Route::middleware('auth')->group(function(){
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
 
+        // work experience
+        Route::prefix('work-experience')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'workExperienceStore'])->name('work-experience.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'workExperienceUpdate'])->name('work-experience.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'workExperienceDestroy'])->name('work-experience.destroy');
+        });
+
+        // education
+        Route::prefix('education')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'educationStore'])->name('education.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'educationUpdate'])->name('education.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'educationDestroy'])->name('education.destroy');
+        });
+        
+        // appraisal
+        Route::prefix('appraisal')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'appraisalStore'])->name('appraisal.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'appraisalUpdate'])->name('appraisal.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'appraisalDestroy'])->name('appraisal.destroy');
+        });
+
         Route::prefix('profile')->group(function(){
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
         });
@@ -99,6 +120,18 @@ Route::middleware('auth')->group(function(){
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
 
         Route::get('/getData', [IdpController::class, 'getData'])->name('idp.getData');
+    });
+
+    Route::prefix('master')->group(function () {
+        Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');
+        Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
+        
+        Route::prefix('department')->group(function () {
+            Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
+            Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
+            Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
+        });
+
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');

@@ -55,9 +55,17 @@
                     <!--begin:Menu item-->
                     <div data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-placement="bottom-start"
                         class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
-                        <!--begin:Menu link--><span class="menu-link"><span
-                                class="menu-title">{{ ucfirst(request()->path()) }}</span><span
-                                class="menu-arrow d-lg-none"></span></span><!--end:Menu link--><!--begin:Menu sub-->
+                        <!--begin:Menu link--><span class="menu-link">
+                            @php
+                                $title = match (ucfirst(request()->path())) {
+                                    'Hav' => 'Human Assets Value',
+                                    'Idp' => 'Individual Development Plan',
+                                    default => ucfirst(request()->path()),
+                                };
+                            @endphp
+                            <span class="menu-title">{{ $title }}</span>
+                            <span class="menu-arrow d-lg-none"></span>
+                        </span><!--end:Menu link--><!--begin:Menu sub-->
                     </div><!--end:Menu item--><!--begin:Menu item-->
                 </div>
                 <!--end::Menu-->

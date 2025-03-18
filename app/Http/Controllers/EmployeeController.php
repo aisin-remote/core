@@ -397,8 +397,9 @@ class EmployeeController extends Controller
         ]);
 
         try {
-            Excel::import(new EmployeeImport, $request->file('file'));
-            session()->flash('success', 'Data karyawan berhasil diimport!');
+            $import = Excel::import(new EmployeeImport, $request->file('file'));
+            // dd($import);
+            // session()->flash('success', 'Data karyawan berhasil diimport!');
         } catch (\Exception $e) {
             session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }

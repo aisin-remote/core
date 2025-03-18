@@ -208,14 +208,46 @@
                             <div class="row mb-6">
                                 <label class="col-lg-4 col-form-label fw-bold fs-6">Position</label>
                                 <div class="col-lg-8 fv-row">
-                                    <input type="text" name="position"
-                                        class="form-control form-control-lg form-control-solid"
-                                        placeholder="Jabatan Karyawan"
-                                        value="{{ old('position', $employee->position) }}">
-                                    @error('position')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
+                                    <select name="position" aria-label="Select a Country" data-control="select2"
+                                        data-placeholder="Select Position..."
+                                        class="form-select form-select-lg fw-semibold">
+                                        <option value="">Select Position</option>
+                                        <option value="General Manager"
+                                            {{ old('position', $employee->position ?? '') == 'General Manager' ? 'selected' : '' }}>
+                                            General Manager</option>
+                                        <option value="Manager"
+                                            {{ old('position', $employee->position ?? '') == 'Manager' ? 'selected' : '' }}>
+                                            Manager
+                                        </option>
+                                        <option value="Coordinator"
+                                            {{ old('position', $employee->position ?? '') == 'Coordinator' ? 'selected' : '' }}>
+                                            Coordinator</option>
+                                        <option value="Section Head"
+                                            {{ old('position', $employee->position ?? '') == 'Section Head' ? 'selected' : '' }}>
+                                            Section
+                                            Head</option>
+                                        <option value="Supervisor"
+                                            {{ old('position', $employee->position ?? '') == 'Supervisor' ? 'selected' : '' }}>
+                                            Supervisor
+                                        </option>
+                                        <option value="Act Leader"
+                                            {{ old('position', $employee->position ?? '') == 'Act Leader' ? 'selected' : '' }}>
+                                            Act Leader
+                                        </option>
+                                        <option value="Act JP"
+                                            {{ old('position', $employee->position ?? '') == 'Act JP' ? 'selected' : '' }}>
+                                            Act
+                                            JP
+                                        </option>
+                                        <option value="Operator"
+                                            {{ old('position', $employee->position ?? '') == 'Operator' ? 'selected' : '' }}>
+                                            Operator
+                                        </option>
+                                    </select>
                                 </div>
+                                @error('position')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="row mb-6">
                                 <label class="col-lg-4 col-form-label fw-bold fs-6">Grade</label>
@@ -254,10 +286,6 @@
                             </div>
                         </div>
                         <div class="card-footer d-flex justify-content-end py-6 px-9">
-                            <a href="{{ route('employee.master.index') }}"
-                                class="btn btn-light btn-active-light-primary me-2">
-                                <i class="bi bi-arrow-left-circle"></i> Back
-                            </a>
                             <button type="submit" class="btn btn-primary">
                                 <i class="bi bi-save"></i> Save Changes
                             </button>
