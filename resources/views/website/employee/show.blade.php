@@ -909,19 +909,33 @@
                                 </div>
                             </div>
 
-                            <div class="card-body">
-                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                    <thead>
-                                        <tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
-                                            <th>Strength</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <!-- Data bisa ditambahkan di sini -->
-                                        </tr>
-                                    </tbody>
-                                </table>
+                            <div id="kt_account_settings_signin_method" class="collapse show">
+                                <div class="card-body border-top p-4">
+                                    <div class="d-flex flex-wrap align-items-center">
+                                        <div id="kt_signin_email">
+                                            <div class="fs-6 fw-bold mb-1">Teamwork
+                                            </div>
+                                            <div class="fw-semibold text-gray-600">Memahami dan
+                                                mengembangkan kompetensi bawahan</div>
+                                            <div class="fw-semibold text-gray-600">
+                                                Menginspirasi dan memotivasi</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="separator separator-dashed my-4"></div>
+
+                                    <div class="d-flex flex-wrap align-items-center mb-4">
+                                        <div id="kt_signin_password">
+                                            <div class="fs-6 fw-bold mb-1">Customer Focus</div>
+                                            <div class="fw-semibold text-gray-600">
+                                                Pemahaman tentang bisnis inti dari perusahaan
+                                                dan mengoptimalkan peluang-peluang
+                                                yang ada di dalam/luar organisasi untuk
+                                                meningkatkan unjuk kerja perusahaan.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
