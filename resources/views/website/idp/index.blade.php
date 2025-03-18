@@ -264,7 +264,7 @@
                                     <label class="form-label fw-bold">Next Action</label>
                                     <input type="text" class="form-control" name="next_action[]">
                                 </div>
-                                <button type="submit" class="btn btn-primary">Save Mid Year</button>
+                                <button type="submit" class="btn btn-primary">Save</button>
                             </form>
                             @endforeach
                         </div>

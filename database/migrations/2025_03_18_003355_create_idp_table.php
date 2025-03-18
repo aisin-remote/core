@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->text('development_program');
             $table->text('development_target');
             $table->date('date');
-            $table->timestamps(); // Created_at & Updated_at timestamps
+            $table->timestamps(); 
         });
     }
 

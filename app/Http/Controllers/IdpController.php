@@ -53,7 +53,7 @@ class IdpController extends Controller
     }
 
     foreach ($assessments as $assessment) {
-        $assessment->strengths = $assessment->strength;  
+        $assessment->strengths = $assessment->strength;
         $assessment->weaknesses = $assessment->weakness;
     }
 

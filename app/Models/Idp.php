@@ -12,11 +12,6 @@ class Idp extends Model
     protected $table = 'idp';
     protected $guarded = ['id'];
 
-    protected $fillable = [
-        'alc_id', 'assessment_id', 'employee_id',
-        'development_program', 'category', 'development_target', 'date'
-    ];
-
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
