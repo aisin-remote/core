@@ -70,15 +70,15 @@
                                         {{ $age ?? '-' }}
                                     </td>
                                     <td class="text-center">
-                                        <button class="btn btn-primary open-modal btn-sm"
+                                        {{-- <button class="btn btn-primary open-modal btn-sm"
                                             data-id="{{ $assessment->employee->id }}">
                                             Detail
-                                        </button>
+                                        </button> --}}
 
-                                        <a href="{{ route('assessments.show', $assessment->employee->id) }}"
-                                            class="btn btn-info btn-sm">
+                                        <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#detailAssessmentModal">
                                             History
-                                        </a>
+                                        </button>
                                     </td>
                                 </tr>
                             @endforeach
@@ -96,6 +96,7 @@
 
     @include('website.assessment.modal')
     @include('website.assessment.modaldetail')
+    @include('website.assessment.show')
 @endsection
 
 @push('custom-css')
@@ -183,108 +184,13 @@
                     }
                 });
 
-                if (!isMatchFound) {
-                    tbody.append(
-                        '<tr id="noDataRow"><td colspan="6" class="text-center text-muted">No Data Found</td></tr>'
-                    );
-                } else {
-                    $("#noDataRow").remove();
-                }
+
             }
 
             searchInput.on("keyup", function() {
                 filterTable();
             });
-            $(document).on('click', '.open-modal', function() {
-                let employeeId = $(this).data('id');
 
-                // Kosongkan modal sebelum request baru
-                $('#assessmentModalLabel').text('Detail Assessment');
-                $('#modal-department').text('');
-                $('#modal-date').text('');
-                $('#modal-strengths-body').empty().append(
-                    `<tr><td colspan="3" class="text-center">Memuat data...</td></tr>`);
-                $('#modal-weaknesses-body').empty().append(
-                    `<tr><td colspan="3" class="text-center">Memuat data...</td></tr>`);
-
-                // Hancurkan chart lama jika ada
-                if (assessmentChartInstance) {
-                    assessmentChartInstance.destroy();
-                    assessmentChartInstance = null;
-                }
-
-                // 🔹 Ambil data berdasarkan employee_id
-                $.ajax({
-                    url: `/assessment/detail/${employeeId}`,
-                    type: 'GET',
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.error) {
-                            alert(response.error);
-                            return;
-                        }
-
-                        // Masukkan data ke dalam modal
-                        $('#assessmentModalLabel').text(
-                            `Detail Assessment - ${response.employee.name}`);
-                        $('#modal-department').text(response.employee.function);
-                        $('#modal-date').text(response.date);
-
-                        // Kosongkan tbody sebelum menambahkan data baru
-                        $('#modal-strengths-body').empty();
-                        $('#modal-weaknesses-body').empty();
-
-                        // Filter hanya Strengths & Weaknesses yang valid
-                        let filteredStrengths = response.strengths.filter(s => s.strength && s
-                            .strength.trim() !== "");
-                        let filteredWeaknesses = response.weaknesses.filter(w => w.weakness && w
-                            .weakness.trim() !== "");
-
-                        // Isi tabel Strengths
-                        if (filteredStrengths.length > 0) {
-                            filteredStrengths.forEach((s, index) => {
-                                $('#modal-strengths-body').append(`
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td><strong>${s.alc.name}</strong></td>
-                            <td>${s.strength}</td>
-                        </tr>
-                    `);
-                            });
-                        } else {
-                            $('#modal-strengths-body').append(`
-                    <tr><td colspan="3" class="text-center">Tidak ada Strengths</td></tr>
-                `);
-                        }
-
-                        // Isi tabel Weaknesses
-                        if (filteredWeaknesses.length > 0) {
-                            filteredWeaknesses.forEach((w, index) => {
-                                $('#modal-weaknesses-body').append(`
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td><strong>${w.alc.name}</strong></td>
-                            <td>${w.weakness}</td>
-                        </tr>
-                    `);
-                            });
-                        } else {
-                            $('#modal-weaknesses-body').append(`
-                    <tr><td colspan="3" class="text-center">Tidak ada Weaknesses</td></tr>
-                `);
-                        }
-
-                        // Render Chart
-                        renderChart(response.details);
-
-                        // Tampilkan modal
-                        $('#assessmentModal').modal('show');
-                    },
-                    error: function() {
-                        alert('Gagal mengambil data');
-                    }
-                });
-            });
 
             // 🔹 Variabel Global untuk Chart
             let assessmentChartInstance = null;
@@ -410,7 +316,7 @@
                 e.preventDefault();
                 let assessment_id = $('#assessment_id').val();
                 let formData = new FormData(this);
-                let url = assessment_id ? "{{ url('/assessments') }}/" + assessment_id :
+                let url = assessment_id ? "{{ url('/assessment') }}/" + assessment_id :
                     "{{ route('assessments.store') }}";
                 let method = assessment_id ? "PUT" : "POST";
                 $.ajax({

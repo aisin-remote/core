@@ -235,43 +235,64 @@ class AssessmentController extends Controller
         'id' => $assessment->id,
         'employee_id' => $assessment->employee_id,
         'date' => $assessment->date,
-        'upload' => $assessment->upload,
-        'scores' => $assessment->details->pluck('score', 'alc_id'),
-        'strengths' => $assessment->details->map(fn($d) => [
+        'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
+        'scores' => $assessment->details->map(fn($d) => [
+            'alc_id' => $d->alc_id,
+            'score' => $d->score
+        ]),
+        'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
             'alc_id' => $d->alc_id,
             'description' => $d->strength
-        ]),
-        'weaknesses' => $assessment->details->map(fn($d) => [
+        ])->values(),
+        'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
             'alc_id' => $d->alc_id,
             'description' => $d->weakness
-        ]),
-        'alc_options' => Alc::all(['id', 'name'])
+        ])->values(),
+        'alc_options' => Alc::select('id', 'name')->get()
     ]);
 }
 
-public function update(Request $request, $id)
+
+public function update(Request $request)
 {
-    $assessment = Assessment::findOrFail($id);
-    $assessment->update($request->only('employee_id', 'date'));
+    $validated = $request->validate([
+        'assessment_id' => 'required|exists:assessments,id',
+        'employee_id' => 'required|exists:employees,id',
+        'date' => 'required|date',
+        'scores' => 'required|array',
+        'strength' => 'nullable|array',
+        'weakness' => 'nullable|array',
+        'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
+    ]);
+
+    // **Update tabel `assessments`**
+    $assessment = Assessment::findOrFail($request->assessment_id);
+    $assessment->employee_id = $request->employee_id;
+    $assessment->date = $request->date;
+
+    // **Handle File Upload**
+    if ($request->hasFile('upload')) {
+        $file = $request->file('upload');
+        $path = $file->store('assessments', 'public');
+        $assessment->upload = $path;
+    }
+
+    $assessment->save();
+
+    // **Update `detail_assessments` untuk scores, strengths, weaknesses**
+    DetailAssessment::where('assessment_id', $assessment->id)->delete();
 
     foreach ($request->scores as $alc_id => $score) {
-        DetailAssessment::updateOrInsert(
-            ['assessment_id' => $assessment->id, 'alc_id' => $alc_id],
-            [
-                'score' => $score ?? "0",
-                'strength' => $request->strength[$alc_id] ?? "",
-                'weakness' => $request->weakness[$alc_id] ?? "",
-                'updated_at' => now()
-            ]
-        );
+        DetailAssessment::create([
+            'assessment_id' => $assessment->id,
+            'alc_id' => $alc_id,
+            'score' => $score,
+            'strength' => $request->strength[$alc_id] ?? null,
+            'weakness' => $request->weakness[$alc_id] ?? null
+        ]);
     }
 
-    if ($request->hasFile('upload')) {
-        $path = $request->file('upload')->store('uploads', 'public');
-        $assessment->update(['upload' => $path]);
-    }
-
-    return response()->json(['success' => true]);
+    return response()->json(['message' => 'Assessment updated successfully']);
 }
 
 
