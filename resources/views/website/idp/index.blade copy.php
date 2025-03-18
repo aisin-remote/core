@@ -985,3 +985,14 @@
         });
     </script>
 @endpush
+
+
+
+                <!-- Pagination -->
+                <div class="d-flex justify-content-center mt-3">
+                    {{ $assessments->links() }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

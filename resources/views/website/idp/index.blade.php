@@ -107,15 +107,12 @@
                                                 data-bs-target="#addEntryModal">
                                                 <i class="fas fa-pencil-alt"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal"
-                                                data-bs-target="#addEntryModal2">
-                                                <i class="fas fa-pen"></i>
-                                            </button>
 
                                             <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#notes_{{ $assessment->id }}">
-                                                <i class="fas fa-file-alt"></i>
+                                                 data-bs-target="#notes_{{ $assessment->id }}">
+                                                 <i class="fas fa-eye"></i>
                                             </button>
+
                                             <button type="button" class="btn btn-sm btn-success"
                                                 onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
                                                 <i class="fas fa-file-export"></i>
@@ -229,345 +226,153 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addEntryModalLabel">Add Development Mid Year</h5>
+                    <h5 class="modal-title" id="addEntryModalLabel">Add Development</h5>
                 </div>
-
-                <!-- Tambahkan method="POST" dan action -->
-                <form id="developmentForm" action="{{ route('idp.store') }}" method="POST">
-                    @csrf
-                    <div class="modal-body">
-                        <div id="formContainer">
-                            <!-- Group of input fields -->
-                            <div class="entry-group">
+                <div class="modal-body">
+                    <!-- Navigation Tabs -->
+                    <ul class="nav nav-tabs" id="developmentTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="midYear-tab" data-bs-toggle="tab" data-bs-target="#midYear" type="button" role="tab">Mid Year</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="oneYear-tab" data-bs-toggle="tab" data-bs-target="#oneYear" type="button" role="tab">One Year</button>
+                        </li>
+                    </ul>
+                    <div class="tab-content mt-3" id="developmentTabsContent">
+                        @foreach($assessments as $assessment)
+                        <div class="tab-pane fade show active" id="midYear" role="tabpanel">
+                            <form id="developmentForm" action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
+                                @csrf
                                 <div class="mb-3">
+                                    <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
                                     <label class="form-label fw-bold">Development Program</label>
-                                    <select id="program_select_mid_year{{ $assessment->id }}" name="idp"
-                                        aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Programs..."
-                                        class="form-select form-select-solid form-select-lg fw-semibold" multiple>
-
-                                        <option value="">Select Development Program</option>
-
-                                        @php
-                                            // Ambil semua skor < 3 dari employee terkait
-                                            $lowScores = $assessment->details->where('score', '<', 3);
-                                            $recommendedPrograms = [];
-
-                                            foreach ($lowScores as $lowScore) {
-                                                // Sesuaikan program berdasarkan nilai assessment
-                                                if ($lowScore->alc_id == 'some_id_1') {
-                                                    $recommendedPrograms[] = 'Book Reading';
-                                                } elseif ($lowScore->alc_id == 'some_id_2') {
-                                                    $recommendedPrograms[] = 'Leadership';
-                                                } elseif ($lowScore->alc_id == 'some_id_3') {
-                                                    $recommendedPrograms[] = 'Developing Sub Ordinate';
-                                                }
-                                            }
-
-                                            $recommendedPrograms = array_unique($recommendedPrograms);
-                                        @endphp
-
-                                        @foreach ($recommendedPrograms as $program)
-                                            <option value="{{ $program }}" selected>{{ $program }}</option>
+                                    <div>
+                                        @foreach ($assessment->recommendedPrograms as $program)
+                                            <input type="text" class="form-control mb-2" name="development_program[]" value="{{ $program }}" readonly>
                                         @endforeach
-
-                                        <!-- Opsi Default (jika tidak ada skor < 3) -->
-                                        <option value="Superior (DGM & GM)">Superior (DGM & GM) + DIC PUR + BOD Members
-                                        </option>
-                                        <option value="Book Reading">Book Reading/ Journal Business and BEST PRACTICES
-                                            (Asia Pacific Region)</option>
-                                        <option value="FIGURE LEADER">To find "FIGURE LEADER" with Strong in Drive and
-                                            Courage in Their Team --> Sharing Success Tips</option>
-                                        <option value="Team Leader">Team Leader of TASK FORCE with MULTY FUNCTION --> (AII)
-                                            HYBRID DUMPER Project (CAPACITY UP) & (AIIA) EV Project</option>
-                                        <option value="SR PROJECT">SR Project (Structural Reform --> DM & SCM)</option>
-                                        <option value="People Development Program">PEOPLE Development Program of Team
-                                            members (ICT, IDP)</option>
-                                        <option value="Leadership">(Leadership) --> Courageously & Situational Leadership
-                                        </option>
-                                        <option value="Developing Sub Ordinate">(Developing Sub Ordinate) --> Coaching
-                                            Skill/ Developing Talents</option>
-                                    </select>
-
+                                    </div>
                                 </div>
+
+                                <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
+                                <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
 
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Development Achievement</label>
-                                    <input type="text" class="form-control developmentAchievement"
-                                        name="development_achievement[]">
+                                    <input type="text" class="form-control" name="development_achievement[]">
                                 </div>
-
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Next Action</label>
-                                    <input type="text" class="form-control nextAction" name="next_action[]">
+                                    <input type="text" class="form-control" name="next_action[]">
                                 </div>
-                            </div>
+                                <button type="submit" class="btn btn-primary">Save Mid Year</button>
+                            </form>
+                            @endforeach
                         </div>
+
+                        <div class="tab-pane fade" id="oneYear" role="tabpanel">
+                            @foreach($assessments as $assessment)
+                            <form id="reviewForm2" action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
+
+                                @csrf
+                                <div id="programContainer">
+                                    <!-- Development Program & Evaluation Result (Default) -->
+                                    <div class="programItem">
+                                        <div class="mb-3">
+
+                                            <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
+
+                                            <label class="form-label fw-bold">Development Program</label>
+                                            <select class="form-select" name="development_program[]" required>
+                                                <option value="">-- Select Development Program --</option>
+                                                <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
+                                                <option value="Book Reading">Book Reading</option>
+                                                <option value="FIGURE LEADER">FIGURE LEADER</option>
+                                                <option value="Team Leader">Team Leader</option>
+                                                <option value="SR PROJECT">SR PROJECT</option>
+                                                <option value="People Development Program">People Development Program</option>
+                                                <option value="Leadership">Leadership</option>
+                                                <option value="Developing Sub Ordinate">Developing Sub Ordinate</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Evaluation Result</label>
+                                            <input type="text" class="form-control" name="evaluation_result[]" placeholder="Evaluation Result" required>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex justify-content-between mt-2">
+                                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                    <button type="button" class="btn btn-success btn-sm addMore">+ Add</button>
+                                </div>
+                            </form>
+                            @endforeach
                     </div>
-
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Save</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
-
-    <div class="modal fade" id="addEntryModal2" tabindex="-1" aria-labelledby="addEntryModal2Label"
-        aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addEntryModal2Label">Add Development One Year</h5>
                 </div>
-
-                <form id="reviewForm2" method="POST" action="{{ route('idp.storeOneYear') }}">
-                    @csrf
-                    <div class="modal-body">
-                        <div id="formContainer">
-                            <div class="entry-group">
-                                <div class="mb-3">
-                                    <label for="developmentProgram2" class="form-label fw-bold">Development
-                                        Program</label>
-                                    <select class="form-select" id="developmentProgram2" name="development_program[]"
-                                        required>
-                                        <option value="">-- Select Development Program --</option>
-                                        <option value="Superior (DGM & GM) + DIC PUR + BOD Members">Superior (DGM & GM) +
-                                            DIC PUR + BOD Members</option>
-                                        <option
-                                            value="Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)">
-                                            Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)
-                                        </option>
-                                        <option
-                                            value="To find FIGURE LEADER with Strong in Drive and Courage in Their Team --> Sharing Success Tips">
-                                            To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team -->
-                                            Sharing Success Tips </option>
-                                        <option
-                                            value="Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project (CAPACITY UP) & (AIIA) EV Project">
-                                            Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project
-                                            (CAPACITY UP) & (AIIA) EV Project </option>
-                                        <option value="SR Project (Structural Reform -->DM & SCM)">SR Project (Structural
-                                            Reform -->DM & SCM)</option>
-                                        <option value="PEOPLE Development Program of Team members (ICT, IDP)">PEOPLE
-                                            Development Program of Team members (ICT, IDP)</option>
-                                        <option value="(Leadership) --> Courageously & Situational Leadership">(Leadership)
-                                            --> Courageously & Situational Leadership </option>
-                                        <option value="(Developing Sub Ordinate) --> Coaching Skill / Developing Talents">
-                                            (Developing Sub Ordinate) --> Coaching Skill / Developing Talents</option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="evaluationResult2" class="form-label fw-bold">Evaluation Result</label>
-                                    <input type="text" class="form-control" id="evaluationResult2"
-                                        name="evaluation_result[]" required>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Save</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
-            </form>
         </div>
     </div>
     </div>
-
-
 
     <div class="modal fade" id="notes_{{ $assessment->id }}" tabindex="-1" aria-modal="true" role="dialog">
         <div class="modal-dialog modal-dialog-centered mw-1000px">
             <div class="modal-content">
                 <div class="modal-header">
                     <h2 class="fw-bold">Summary</h2>
-
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body scroll-y mx-2">
-                    <form id="kt_modal_update_role_form_{{ $assessment->id }}"
-                        class="form fv-plugins-bootstrap5 fv-plugins-framework" action="#">
+                    <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form fv-plugins-bootstrap5 fv-plugins-framework" action="#">
                         <div class="d-flex flex-column scroll-y me-n7 pe-7"
-                            id="kt_modal_update_role_scroll_{{ $assessment->id }}" data-kt-scroll="true"
-                            data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto"
+                            id="kt_modal_update_role_scroll_{{ $assessment->id }}"
+                            data-kt-scroll="true"
+                            data-kt-scroll-activate="{default: false, lg: true}"
+                            data-kt-scroll-max-height="auto"
                             data-kt-scroll-dependencies="#kt_modal_update_role_header"
-                            data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px"
-                            style="">
-                            <h3 class="card-title mb-5">I. Development Program</h3>
-                            <div class="row">
-                                <div class="col-6">
-                                    <div class="card bg-light ">
-                                        <div class="card-body">
-                                            <div class="mb-7">
-                                                <h2 class="fs-1 text-gray-800 w-bolder mb-6">
-                                                    Area of Strength
-                                                </h2>
+                            data-kt-scroll-wrappers="#kt_modal_update_role_scroll"
+                            data-kt-scroll-offset="300px">
 
-                                                <div class="mt-10 accordion accordion-icon-toggle">
-                                                    <div class="m-0">
-                                                        <div class="d-flex align-items-center collapsible py-3 toggle mb-0 collapsed"
-                                                            data-bs-toggle="collapse" data-bs-target="#strength_1"
-                                                            aria-expanded="false">
-                                                            <div
-                                                                class="btn btn-sm btn-icon mw-20px btn-active-color-primary me-5">
-                                                                <i
-                                                                    class="fas fa-minus-square toggle-on text-primary fs-1"></i>
-                                                                <i class="fas fa-plus-square toggle-off fs-1"></i>
-                                                            </div>
+                            <div class="row mt-8">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h3 class="card-title">I. Development Program</h3>
+                                        <div class="d-flex align-items-center"></div>
+                                    </div>
+                                    <div class="card-body table-responsive">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                                            <thead>
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                    <th class="text-center" style="width: 50px">Strength</th>
+                                                    <th class="text-center" style="width: 50px">Weakness</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach($assessments as $assessment)
+                                                    @foreach($assessment->details as $detail)
+                                                        @if(!empty($detail->strength) || !empty($detail->weakness))
+                                                        <tr>
+                                                            <td class="text-center">{{ $detail->alc->name ?? '-' }}</td>
+                                                            <td class="text-center">{{ $detail->alc->name ?? '-' }}</td>
+                                                        </tr>
+                                                        @endif
+                                                    @endforeach
+                                                @endforeach
+                                            </tbody>
+                                        </table>
 
-                                                            <h4 class="text-gray-700 fw-bold cursor-pointer mb-0">
-                                                                Customer Focus
-                                                            </h4>
-                                                        </div>
-
-                                                        <div id="strength_1" class="fs-6 ms-1 collapse" style="">
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 ">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="separator separator-dashed"></div>
-                                                    </div>
-                                                    <div class="m-0">
-                                                        <div class="d-flex align-items-center collapsible py-3 toggle mb-0 collapsed"
-                                                            data-bs-toggle="collapse" data-bs-target="#strength_2"
-                                                            aria-expanded="false">
-                                                            <div
-                                                                class="btn btn-sm btn-icon mw-20px btn-active-color-primary me-5">
-                                                                <i
-                                                                    class="fas fa-minus-square toggle-on text-primary fs-1"></i>
-                                                                <i class="fas fa-plus-square toggle-off fs-1"></i>
-                                                            </div>
-                                                            <h4 class="text-gray-700 fw-bold cursor-pointer mb-0">
-                                                                Interpersonal
-                                                                Skill
-                                                            </h4>
-                                                        </div>
-
-                                                        <div id="strength_2" class="fs-6 ms-1 collapse" style="">
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                            </div>
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 ">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        <div class="separator separator-dashed"></div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <div class="col-6">
-                                    <div class="card bg-light ">
-                                        <div class="card-body">
-                                            <div class="mb-7">
-                                                <h2 class="fs-1 text-gray-800 w-bolder mb-6">
-                                                    Area of Weakness
-                                                </h2>
-                                                <div class="mt-10">
-                                                    <div class="m-0">
-                                                        <div class="d-flex align-items-center collapsible py-3 toggle mb-0 collapsed"
-                                                            data-bs-toggle="collapse" data-bs-target="#weakness"
-                                                            aria-expanded="false">
-                                                            <div
-                                                                class="btn btn-sm btn-icon mw-20px btn-active-color-primary me-5">
-                                                                <i
-                                                                    class="fas fa-minus-square toggle-on text-primary fs-1"></i>
-                                                                <i class="fas fa-plus-square toggle-off fs-1"></i>
-                                                            </div>
-
-                                                            <h4 class="text-gray-700 fw-bold cursor-pointer mb-0">
-                                                                Leading & Motivating
-                                                            </h4>
-                                                        </div>
-                                                        <div id="weakness" class="fs-6 ms-1 collapse" style="">
-                                                            <div class="mb-4">
-                                                                <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                </div>
-                                                                <div class="mb-4">
-                                                                    <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                    </div>
-                                                                    <div class="mb-4">
-                                                                        <div class="d-flex align-items-center ps-10 mb-n1">
-                                                                        </div>
-                                                                        <div class="mb-4">
-                                                                            <div
-                                                                                class="d-flex align-items-center ps-10 mb-n1">
-                                                                            </div>
-                                                                            <div class="mb-4">
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="mb-4">
-                                                                        <div class="d-flex align-items-center ps-10 ">
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="separator separator-dashed"></div>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                                 <div class="row mt-8">
                                     <div class="card">
                                         <div class="card-header d-flex justify-content-between align-items-center">
                                             <h3 class="card-title">II. Individual Development Program</h3>
                                             <div class="d-flex align-items-center">
-                                                <input type="text" id="searchInput2" class="form-control me-2"
-                                                    placeholder="Search..." style="width: 200px;">
-                                                <button type="button" class="btn btn-primary me-3" id="searchButton">
-                                                    <i class="fas fa-search"></i> Search
-                                                </button>
                                             </div>
                                         </div>
                                         <div class="card-body table-responsive">
@@ -588,52 +393,25 @@
                                                     </tr>
                                                 </thead>
                                                 <tbody>
-
-                                                </tbody>
-
+                                                    @foreach ($idps as $idp)
+                                                <tr>
+                                                 <td class="text-center">{{ $idp->category }}</td>
+                                                 <td class="text-center">{{ $idp->development_program }}</td>
+                                                 <td class="text-center">{{ $idp->development_target }}</td>
+                                                 <td class="text-center">{{ \Carbon\Carbon::parse($idp->date)->format('d-m-Y') }}</td>
+                                                </tr>
+                                                   @endforeach
+                                                           </tbody>
                                             </table>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            <div class="modal fade" id="midYearModal" tabindex="-1" aria-labelledby="midYearModalLabel"
-                                aria-hidden="true">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title" id="midYearModalLabel">III Mid Year Review</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <table class="table">
-                                                <thead>
-                                                    <tr>
-                                                        <th>Development Program</th>
-                                                        <th>Development Achievement</th>
-                                                        <th>Next Action</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             <div class="row mt-8">
                                 <div class="card">
                                     <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">III Mid Year Riview</h3>
+                                        <h3 class="card-title">III. Mid Year Review</h3>
                                         <div class="d-flex align-items-center">
-                                            <input type="text" id="searchInput3" class="form-control me-2"
-                                                placeholder="Search..." style="width: 200px;">
-                                            <button type="button" class="btn btn-primary me-3" id="searchButton">
-                                                <i class="fas fa-search"></i> Search
-                                            </button>
                                         </div>
                                     </div>
                                     <div class="card-body table-responsive">
@@ -670,13 +448,8 @@
                     <div class="row mt-8">
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
-                                <h3 class="card-title">IV. One Year Riview</h3>
+                                <h3 class="card-title">IV. One Year Review</h3>
                                 <div class="d-flex align-items-center">
-                                    <input type="text" id="searchInput4" class="form-control me-2"
-                                        placeholder="Search..." style="width: 200px;">
-                                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                                        <i class="fas fa-search"></i> Search
-                                    </button>
                                 </div>
                             </div>
                             <div class="card-body table-responsive">
@@ -970,6 +743,48 @@
             dueDateInput.min = startDate;
             dueDateInput.max = endDate;
         });
+
+        document.addEventListener("DOMContentLoaded", function () {
+        document.querySelector(".addMore").addEventListener("click", function () {
+            let programContainer = document.getElementById("programContainer");
+
+            let newProgram = document.createElement("div");
+            newProgram.classList.add("programItem");
+
+            newProgram.innerHTML = `
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Development Program</label>
+                    <select class="form-select" name="development_program[]" required>
+                        <option value="">-- Select Development Program --</option>
+                        <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
+                        <option value="Book Reading">Book Reading</option>
+                        <option value="FIGURE LEADER">FIGURE LEADER</option>
+                        <option value="Team Leader">Team Leader</option>
+                        <option value="SR PROJECT">SR PROJECT</option>
+                        <option value="People Development Program">People Development Program</option>
+                        <option value="Leadership">Leadership</option>
+                        <option value="Developing Sub Ordinate">Developing Sub Ordinate</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Evaluation Result</label>
+                    <input type="text" class="form-control" name="evaluation_result[]" placeholder="Evaluation Result" required>
+                </div>
+                <div class="d-flex justify-content-start mb-3">
+                    <button type="button" class="btn btn-danger btn-sm removeProgram">Remove</button>
+                </div>
+            `;
+
+            programContainer.appendChild(newProgram);
+        });
+
+        document.getElementById("programContainer").addEventListener("click", function (e) {
+            if (e.target.classList.contains("removeProgram")) {
+                e.target.closest(".programItem").remove();
+            }
+        });
+    });
+
 
         document.addEventListener("DOMContentLoaded", function() {
             Highcharts.chart('stackedGroupedChart', {

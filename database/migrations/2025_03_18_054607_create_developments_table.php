@@ -14,8 +14,10 @@ return new class extends Migration
     public function up()
     {
         Schema::create('developments', function (Blueprint $table) {
-            $table->id();
-            $table->string('development_program'); // Dropdown
+            $table->bigIncrements('id');
+            $table->bigInteger('employee_id')->unsigned();
+            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
+            $table->string('development_program');
             $table->text('development_achievement');
             $table->text('next_action');
             $table->timestamps();
