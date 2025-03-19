@@ -10,7 +10,12 @@ class DevelopmentOne extends Model
     use HasFactory;
 
 
-    protected $fillable = [ 'development_program', 'evaluation_result'];
+    protected $fillable = [  'employee_id','development_program', 'evaluation_result'];
 
-   
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'employee_id');
+    }
+
+
 }

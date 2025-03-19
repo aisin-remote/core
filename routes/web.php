@@ -113,9 +113,10 @@ Route::middleware('auth')->group(function(){
     Route::prefix('idp')->group(function () {
         Route::get('/', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
-        Route::post('/idp/store-one-year', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
-        Route::get('/development-data', [IdpController::class, 'showDevelopmentData'])->name('development.data');
-        Route::get('/development-mid-data', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
+        Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
+        Route::post('/idp/store-one-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('idp.storeMidYear');
+        Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
+        Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
         Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
 

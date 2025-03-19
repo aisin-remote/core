@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use \DB;
+use Illuminate\Support\Facades\DB;
 use App\Models\Alc;
 use App\Models\Assessment;
 use App\Models\DetailAssessment;
