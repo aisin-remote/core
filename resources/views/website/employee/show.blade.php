@@ -42,30 +42,27 @@
                         @csrf
                         @method('PUT')
                         <div class="card-body border-top p-9">
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Profile Photo</label>
-                                <div class="col-lg-8">
+                            <div class="row">
+                                <label class="col-lg-12 col-form-label fw-bold fs-6 text-center">Profile Photo</label>
+                                <div class="col-lg-12 text-center mb-8">
                                     <div class="image-input image-input-outline" data-kt-image-input="true"
                                         style="background-image: url('/metronic8/demo1/assets/media/svg/avatars/blank.svg')">
-
                                         <div class="image-input-wrapper w-125px h-125px"
                                             style="background-image: url('{{ $employee->photo ? asset('storage/' . $employee->photo) : '/metronic8/demo1/assets/media/svg/avatars/blank.svg' }}')">
                                         </div>
-
                                         <label
                                             class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                             data-kt-image-input-action="change" data-bs-toggle="tooltip"
                                             title="Ubah avatar">
-                                            <i class="fa fa-pencil-alt fs-7"></i> <!-- Menggunakan Font Awesome -->
+                                            <i class="fa fa-pencil-alt fs-7"></i>
                                             <input type="file" name="photo" accept=".png, .jpg, .jpeg" id="photoInput">
                                             <input type="hidden" name="photo_remove">
                                         </label>
-
                                         <span
                                             class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                             data-kt-image-input-action="remove" data-bs-toggle="tooltip"
                                             title="Hapus avatar" id="removePhoto">
-                                            <i class="fa fa-times fs-2"></i> <!-- Menggunakan Font Awesome -->
+                                            <i class="fa fa-times fs-2"></i>
                                         </span>
                                     </div>
                                     <div class="form-text">Tipe file yang diizinkan: png, jpg, jpeg.</div>
@@ -73,222 +70,130 @@
                                         <div class="text-danger">{{ $message }}</div>
                                     @enderror
                                 </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Full Name</label>
-                                <div class="col-lg-8">
-                                    <div class="row">
-                                        <div class="col-lg-12 fv-row fv-plugins-icon-container">
-                                            <input type="text" name="name"
-                                                class="form-control form-control-lg form-control-solid mb-3 mb-lg-0"
-                                                placeholder="Nama Lengkap" value="{{ old('name', $employee->name) }}">
-                                            @error('name')
-                                                <div class="text-danger">{{ $message }}</div>
-                                            @enderror
-                                            <div
-                                                class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                            </div>
-                                        </div>
+                                <div class="col-lg-6">
+                                    <!-- Kolom Pertama -->
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Full Name</label>
+                                        <input type="text" name="name"
+                                            class="form-control form-control-lg form-control-solid"
+                                            placeholder="Nama Lengkap" value="{{ old('name', $employee->name) }}">
                                     </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">NPK</label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="text" name="npk"
-                                        class="form-control form-control-lg form-control-solid"
-                                        placeholder="Nomor Pokok Karyawan" value="{{ old('npk', $employee->npk) }}">
-                                    @error('npk')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">NPK</label>
+                                        <input type="text" name="npk"
+                                            class="form-control form-control-lg form-control-solid"
+                                            placeholder="Nomor Pokok Karyawan" value="{{ old('npk', $employee->npk) }}">
                                     </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Gender</label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <select name="gender" class="form-select form-select-lg form-select-solid">
-                                        <option value="Male"
-                                            {{ old('gender', $employee->gender) == 'Male' ? 'selected' : '' }}>
-                                            Laki-laki
-                                        </option>
-                                        <option value="Female"
-                                            {{ old('gender', $employee->gender) == 'Female' ? 'selected' : '' }}>
-                                            Perempuan
-                                        </option>
-                                    </select>
-                                    @error('gender')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Birthday Date</label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="date" name="birthday_date"
-                                        class="form-control form-control-lg form-control-solid"
-                                        value="{{ old('birthday_date', $employee->birthday_date) }}">
-                                    @error('birthday_date')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Company Name</label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <select name="company_name" class="form-select form-select-lg form-select-solid">
-                                        <option value="">-- Pilih Perusahaan --</option>
-                                        <option value="AII"
-                                            {{ old('company_name', $employee->company_name) == 'AII' ? 'selected' : '' }}>
-                                            Aisin Indonesia
-                                        </option>
-                                        <option value="AIIA"
-                                            {{ old('company_name', $employee->company_name) == 'AIIA' ? 'selected' : '' }}>
-                                            Aisin Indonesia Automotive
-                                        </option>
-                                    </select>
-                                    @error('company_name')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Join Date</label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="date" name="aisin_entry_date"
-                                        class="form-control form-control-lg form-control-solid"
-                                        value="{{ old('aisin_entry_date', $employee->aisin_entry_date) }}">
-                                    @error('aisin_entry_date')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Working Period</label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="number" name="working_period" min="0"
-                                        class="form-control form-control-lg form-control-solid"
-                                        value="{{ old('working_period', $employee->working_period) }}">
-                                    @error('working_period')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Company Group</label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <input type="text" name="company_group"
-                                        class="form-control form-control-lg form-control-solid"
-                                        value="{{ old('company_group', $employee->company_group) }}">
-                                    @error('company_group')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Position</label>
-                                <div class="col-lg-8 fv-row">
-                                    <select name="position" aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Position..."
-                                        class="form-select form-select-lg fw-semibold">
-                                        <option value="">Select Position</option>
-                                        <option value="General Manager"
-                                            {{ old('position', $employee->position ?? '') == 'General Manager' ? 'selected' : '' }}>
-                                            General Manager</option>
-                                        <option value="Manager"
-                                            {{ old('position', $employee->position ?? '') == 'Manager' ? 'selected' : '' }}>
-                                            Manager
-                                        </option>
-                                        <option value="Coordinator"
-                                            {{ old('position', $employee->position ?? '') == 'Coordinator' ? 'selected' : '' }}>
-                                            Coordinator</option>
-                                        <option value="Section Head"
-                                            {{ old('position', $employee->position ?? '') == 'Section Head' ? 'selected' : '' }}>
-                                            Section
-                                            Head</option>
-                                        <option value="Supervisor"
-                                            {{ old('position', $employee->position ?? '') == 'Supervisor' ? 'selected' : '' }}>
-                                            Supervisor
-                                        </option>
-                                        <option value="Act Leader"
-                                            {{ old('position', $employee->position ?? '') == 'Act Leader' ? 'selected' : '' }}>
-                                            Act Leader
-                                        </option>
-                                        <option value="Act JP"
-                                            {{ old('position', $employee->position ?? '') == 'Act JP' ? 'selected' : '' }}>
-                                            Act
-                                            JP
-                                        </option>
-                                        <option value="Operator"
-                                            {{ old('position', $employee->position ?? '') == 'Operator' ? 'selected' : '' }}>
-                                            Operator
-                                        </option>
-                                    </select>
-                                </div>
-                                @error('position')
-                                    <div class="text-danger">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">Grade</label>
-                                <div class="col-lg-8 fv-row">
-                                    <input type="text" name="grade"
-                                        class="form-control form-control-lg form-control-solid"
-                                        placeholder="Grade Karyawan" value="{{ old('grade', $employee->grade) }}">
-                                    @error('grade')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                </div>
-                            </div>
-                            <div class="row mb-6">
-                                <label class="col-lg-4 col-form-label fw-bold fs-6">
-                                    <span>Departement</span>
-                                </label>
-                                <div class="col-lg-8 fv-row fv-plugins-icon-container">
-                                    <select name="department_id" aria-label="Pilih Departemen" data-control="select2"
-                                        data-placeholder="Pilih departemen"
-                                        class="form-select form-select-lg form-select-solid fw-semibold">
-                                        <option value="">Pilih Departemen</option>
-                                        @foreach ($departments as $department)
-                                            <option data-kt-flag="flags/afghanistan.svg" value="{{ $department->id }}"
-                                                {{ old('department_id', $employee->departments->first()->id ?? '') == $department->id ? 'selected' : '' }}>
-                                                {{ $department->name }}
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Gender</label>
+                                        <select name="gender" class="form-select form-select-lg form-select-solid">
+                                            <option value="Male"
+                                                {{ old('gender', $employee->gender) == 'Male' ? 'selected' : '' }}>Laki-laki
                                             </option>
-                                        @endforeach
-                                    </select>
-                                    @error('department_id')
-                                        <div class="text-danger">{{ $message }}</div>
-                                    @enderror
-                                    <div
-                                        class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback">
+                                            <option value="Female"
+                                                {{ old('gender', $employee->gender) == 'Female' ? 'selected' : '' }}>
+                                                Perempuan</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Birthday Date</label>
+                                        <input type="date" name="birthday_date"
+                                            class="form-control form-control-lg form-control-solid"
+                                            value="{{ old('birthday_date', $employee->birthday_date) }}">
+                                    </div>
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Company Name</label>
+                                        <select name="company_name" class="form-select form-select-lg form-select-solid">
+                                            <option value="">-- Pilih Perusahaan --</option>
+                                            <option value="AII"
+                                                {{ old('company_name', $employee->company_name) == 'AII' ? 'selected' : '' }}>
+                                                Aisin Indonesia</option>
+                                            <option value="AIIA"
+                                                {{ old('company_name', $employee->company_name) == 'AIIA' ? 'selected' : '' }}>
+                                                Aisin Indonesia Automotive</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6">
+                                    <!-- Kolom Kedua -->
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Join Date</label>
+                                        <input type="date" name="aisin_entry_date"
+                                            class="form-control form-control-lg form-control-solid"
+                                            value="{{ old('aisin_entry_date', $employee->aisin_entry_date) }}">
+                                    </div>
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Working Period</label>
+                                        <input type="number" name="working_period" min="0"
+                                            class="form-control form-control-lg form-control-solid"
+                                            value="{{ old('working_period', $employee->working_period) }}">
+                                    </div>
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Company Group</label>
+                                        <input type="text" name="company_group"
+                                            class="form-control form-control-lg form-control-solid"
+                                            value="{{ old('company_group', $employee->company_group) }}">
+                                    </div>
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Position</label>
+                                        <select name="position" class="form-select form-select-lg fw-semibold">
+                                            <option value="">Select Position</option>
+                                            <option value="General Manager"
+                                                {{ old('position', $employee->position ?? '') == 'General Manager' ? 'selected' : '' }}>
+                                                General Manager</option>
+                                            <option value="Manager"
+                                                {{ old('position', $employee->position ?? '') == 'Manager' ? 'selected' : '' }}>
+                                                Manager</option>
+                                            <option value="Coordinator"
+                                                {{ old('position', $employee->position ?? '') == 'Coordinator' ? 'selected' : '' }}>
+                                                Coordinator</option>
+                                            <option value="Section Head"
+                                                {{ old('position', $employee->position ?? '') == 'Section Head' ? 'selected' : '' }}>
+                                                Section Head</option>
+                                            <option value="Supervisor"
+                                                {{ old('position', $employee->position ?? '') == 'Supervisor' ? 'selected' : '' }}>
+                                                Supervisor</option>
+                                            <option value="Act Leader"
+                                                {{ old('position', $employee->position ?? '') == 'Act Leader' ? 'selected' : '' }}>
+                                                Act Leader</option>
+                                            <option value="Act JP"
+                                                {{ old('position', $employee->position ?? '') == 'Act JP' ? 'selected' : '' }}>
+                                                Act JP</option>
+                                            <option value="Operator"
+                                                {{ old('position', $employee->position ?? '') == 'Operator' ? 'selected' : '' }}>
+                                                Operator</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Department</label>
+                                        <select name="department_id" aria-label="Pilih Departemen" data-control="select2"
+                                            data-placeholder="Pilih departemen"
+                                            class="form-select form-select-lg fw-semibold">
+                                            <option value="">Pilih Departemen</option>
+                                            @foreach ($departments as $department)
+                                                <option data-kt-flag="flags/afghanistan.svg"
+                                                    value="{{ $department->id }}"
+                                                    {{ old('department_id', $employee->departments->first()->id ?? '') == $department->id ? 'selected' : '' }}>
+                                                    {{ $department->name }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                        @error('department_id')
+                                            <div class="text-danger">{{ $message }}</div>
+                                        @enderror
+                                    </div>
+                                    <div class="mb-6">
+                                        <label class="form-label fw-bold fs-6">Grade</label>
+                                        <input type="text" name="grade"
+                                            class="form-control form-control-lg form-control-solid"
+                                            placeholder="Grade Karyawan" value="{{ old('grade', $employee->grade) }}">
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="card-footer d-flex justify-content-end py-6 px-9">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save"></i> Save Changes
-                            </button>
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save
+                                Changes</button>
                         </div>
                     </form>
                 </div>
@@ -577,7 +482,7 @@
                             </div>
 
                             <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                data-bs-target="#addEducationModal">
+                                data-bs-target="#addExperienceModal">
                                 <i class="fas fa-plus"></i>
                             </button>
                         </div>
