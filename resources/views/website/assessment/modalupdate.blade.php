@@ -73,76 +73,50 @@
 </div>
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const updateAssessmentButtons = document.querySelectorAll(".updateAssessment");
+        const updateForm = document.getElementById("updateAssessmentForm");
 
-        function updateDescriptionName(selectElement, type) {
-            let card = selectElement.closest('.assessment-card');
-            let textarea = card.querySelector(`.${type}-textarea`);
-            let alcId = selectElement.value;
+        updateForm.addEventListener("submit", function(event) {
+            event.preventDefault(); // Mencegah halaman reload
 
-            if (alcId) {
-                textarea.setAttribute('name', `${type}[${alcId}]`);
-            } else {
-                textarea.removeAttribute('name');
-            }
-        }
+            let formData = new FormData(updateForm); // Ambil semua data form
 
-        function addAssessmentCard(type, containerClass) {
-            let container = document.querySelector(`.${containerClass}`);
-            let templateCard = document.querySelector(`.${type}-card`);
-            let newCard = templateCard.cloneNode(true);
+            fetch("/assessment/update", {
+                    method: "POST",
+                    body: formData
+                })
+                .then(response => response.json()) // Parsing JSON dari response
+                .then(data => {
+                    if (data.message) { // Jika update berhasil
+                        Swal.fire({
+                            title: "Berhasil!",
+                            text: "Assessment berhasil diperbarui!",
+                            icon: "success",
+                            confirmButtonText: "OK"
+                        }).then(() => {
+                            $('#updateAssessmentModal').modal('hide'); // Tutup modal
+                            setTimeout(() => {
+                                $('#detailAssessmentModal').modal(
+                                'show'); // Buka modal History setelah modal update tertutup
+                            }, 500); // Refresh halaman
+                        });
+                    } else {
+                        throw new Error("Gagal memperbarui assessment. Silakan coba lagi.");
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        title: "Gagal!",
+                        text: "Terjadi kesalahan saat memperbarui assessment. " + error
+                            .message,
+                        icon: "error",
+                        confirmButtonText: "OK"
+                    });
+                });
 
-            let newDropdown = newCard.querySelector('.alc-dropdown');
-            let newTextarea = newCard.querySelector(`.${type}-textarea`);
-
-            newDropdown.value = '';
-            newTextarea.value = '';
-            newTextarea.removeAttribute('name');
-
-            newDropdown.addEventListener('change', function() {
-                updateDescriptionName(newDropdown, type);
-            });
-
-            let buttonContainer = newCard.querySelector('.d-flex');
-
-            buttonContainer.innerHTML = `
-        <button type="button" class="btn btn-danger btn-sm remove-card me-2">Hapus</button>
-        <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
-    `;
-
-            newCard.querySelector('.remove-card').addEventListener('click', function() {
-                newCard.remove();
-            });
-
-            newCard.querySelector('.add-assessment').addEventListener('click', function() {
-                addAssessmentCard(type, containerClass);
-            });
-
-            container.appendChild(newCard);
-        }
-
-        document.querySelectorAll('.alc-dropdown').forEach(dropdown => {
-            let type = dropdown.closest('.assessment-card').classList.contains('strength-card') ?
-                'strength' : 'weakness';
-            dropdown.addEventListener('change', function() {
-                updateDescriptionName(this, type);
-            });
         });
 
-        function attachAddAssessmentListeners() {
-            document.querySelectorAll('.add-assessment').forEach(button => {
-                button.addEventListener('click', function() {
-                    let type = this.getAttribute('data-type');
-                    let containerClass = type === 'strength' ? 'update-strength-container' :
-                        'update-weakness-container';
-                    addAssessmentCard(type, containerClass);
-                });
-            });
-        }
-
-        attachAddAssessmentListeners();
-
-        updateAssessmentButtons.forEach(button => {
+        // Load data ke modal saat tombol update diklik
+        document.querySelectorAll(".updateAssessment").forEach(button => {
             button.addEventListener("click", function() {
                 const id = this.dataset.id;
                 const employeeId = this.dataset.employeeId;
@@ -150,7 +124,6 @@
                 const upload = this.dataset.upload;
                 const scores = JSON.parse(this.dataset.scores);
                 const alcs = JSON.parse(this.dataset.alcs);
-                const alcNames = JSON.parse(this.dataset.alc_name);
                 const strengths = JSON.parse(this.dataset.strengths);
                 const weaknesses = JSON.parse(this.dataset.weaknesses);
 
@@ -158,8 +131,9 @@
                 document.getElementById("update_employee_id").value = employeeId;
                 document.getElementById("update_date").value = date;
                 document.getElementById("update-upload-info").textContent = upload ?
-                    `File: ${upload}` : '';
+                    `File: ${upload}` : "";
 
+                // Set nilai radio button untuk scores
                 alcs.forEach((alcId, index) => {
                     const score = scores[index];
                     const radio = document.getElementById(
@@ -169,87 +143,129 @@
                     }
                 });
 
-                // const strengthContainer = document.getElementById("update-strength-container");
+                // Mengisi Strengths
                 const strengthContainer = document.getElementById("update-strengths-wrapper");
-                strengthContainer.innerHTML = '';
+                strengthContainer.innerHTML = "";
                 strengths.forEach((strength, idx) => {
                     if (strength) {
-                        strengthContainer.innerHTML += `
-                        <div class="card p-3 mb-3">
-                            <label><strong>${alcNames[idx]}</strong></label>
-                            <textarea name="strength[${alcs[idx]}]" class="form-control">${strength}</textarea>
-                        </div>
-                    `;
+                        addAssessmentCard("strength", "update-strengths-wrapper", alcs[
+                            idx], strength);
                     }
                 });
 
-                strengthContainer.innerHTML += `
-    <div id="strength-container">
-        <div class="assessment-card strength-card card p-3 mb-3">
-            <div class="mb-3">
-                <select class="form-control alc-dropdown" name="alc_ids[]">
-                    <option value="">Pilih ALC</option>
-                    @foreach ($alcs as $alc)
-                        <option value="{{ $alc->id }}">{{ $alc->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="mb-3">
-                <label>Strength</label>
-                <textarea class="form-control strength-textarea" name="strength[]" rows="2"></textarea>
-            </div>
-            <div class="d-flex justify-content-end">
-                <button type="button" class="btn btn-success btn-sm add-assessment" data-type="strength">Tambah Strength</button>
-            </div>
-        </div>
-    </div>
-`;
+                if (strengths.length === 0) {
+                    addAssessmentCard("strength", "update-strengths-wrapper");
+                }
 
-                // const weaknessContainer = document.getElementById("update-weakness-container");
+                // Mengisi Weaknesses
                 const weaknessContainer = document.getElementById("update-weaknesses-wrapper");
-                weaknessContainer.innerHTML = '';
+                weaknessContainer.innerHTML = "";
                 weaknesses.forEach((weakness, idx) => {
                     if (weakness) {
-                        weaknessContainer.innerHTML += `
-                        <div class="card p-3 mb-3">
-                            <label><strong>${alcNames[idx]}</strong></label>
-                            <textarea name="weakness[${alcs[idx]}]" class="form-control">${weakness}</textarea>
-                        </div>
-                    `;
+                        addAssessmentCard("weakness", "update-weaknesses-wrapper", alcs[
+                            idx], weakness);
                     }
                 });
 
-                weaknessContainer.innerHTML += `
-    <div id="weakness-container">
-        <div class="assessment-card weakness-card card p-3 mb-3">
-            <div class="mb-3">
-                <select class="form-control alc-dropdown" name="alc_ids[]">
-                    <option value="">Pilih ALC</option>
-                    @foreach ($alcs as $alc)
-                        <option value="{{ $alc->id }}">{{ $alc->name }}</option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="mb-3">
-                <label>Weakness</label>
-                <textarea class="form-control weakness-textarea" name="weakness[]" rows="2"></textarea>
-            </div>
-            <div class="d-flex justify-content-end">
-                <button type="button" class="btn btn-success btn-sm add-assessment" data-type="weakness">Tambah Weakness</button>
-            </div>
-        </div>
-    </div>
-`;
+                if (weaknesses.length === 0) {
+                    addAssessmentCard("weakness", "update-weaknesses-wrapper");
+                }
 
-                attachAddAssessmentListeners();
-
+                // Tampilkan modal
                 const modal = new bootstrap.Modal(document.getElementById(
                     "updateAssessmentModal"));
                 modal.show();
             });
         });
+
+        function addAssessmentCard(type, containerId, selectedAlc = "", description = "") {
+            let container = document.getElementById(containerId);
+            if (!container) {
+                console.error(`Container '${containerId}' tidak ditemukan.`);
+                return;
+            }
+
+            let templateCard = document.createElement("div");
+            templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
+
+            templateCard.innerHTML = `
+                <div class="mb-3">
+                    <label>ALC</label>
+                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                        <option value="">Pilih ALC</option>
+                        @foreach ($alcs as $alc)
+                            <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
+                                {{ $alc->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label>Description</label>
+                    <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${description}</textarea>
+                </div>
+                <div class="d-flex justify-content-end button-group">
+                    <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
+                </div>
+            `;
+
+            let selectElement = templateCard.querySelector(".alc-dropdown");
+            selectElement.addEventListener("change", function() {
+                updateDescriptionName(selectElement, type);
+            });
+
+            let buttonGroup = templateCard.querySelector(".button-group");
+
+            templateCard.querySelector(".add-assessment").addEventListener("click", function() {
+                addAssessmentCard(type, containerId);
+                updateRemoveButtons(container);
+            });
+
+            container.appendChild(templateCard);
+            updateRemoveButtons(container);
+        }
+
+        function updateDescriptionName(selectElement, type) {
+            let card = selectElement.closest(".assessment-card");
+            let textarea = card.querySelector(`.${type}-textarea`);
+            let alcId = selectElement.value;
+
+            if (alcId) {
+                textarea.setAttribute("name", `${type}[${alcId}]`);
+            } else {
+                textarea.removeAttribute("name");
+            }
+        }
+
+        function updateRemoveButtons(container) {
+            let cards = container.querySelectorAll(".assessment-card");
+            let removeButtons = container.querySelectorAll(".remove-card");
+
+            removeButtons.forEach(button => button.remove());
+
+            if (cards.length > 1) {
+                cards.forEach((card, index) => {
+                    if (index !== 0) {
+                        let buttonGroup = card.querySelector(".button-group");
+                        let removeButton = document.createElement("button");
+                        removeButton.type = "button";
+                        removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card",
+                            "me-2");
+                        removeButton.textContent = "Hapus";
+
+                        removeButton.addEventListener("click", function() {
+                            card.remove();
+                            updateRemoveButtons(container);
+                        });
+
+                        buttonGroup.insertBefore(removeButton, buttonGroup.firstChild);
+                    }
+                });
+            }
+        }
     });
 </script>
+
 
 @push('custom-css')
     <style>

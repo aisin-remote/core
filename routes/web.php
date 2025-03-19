@@ -89,7 +89,7 @@ Route::middleware('auth')->group(function(){
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
         Route::get('/history_ajax', [AssessmentController::class, 'history_ajax'])->name('assessments.history_ajax');
-        Route::post('/{employee_id}', [AssessmentController::class, 'update'])->name('assessments.update');
+        Route::post('/update', [AssessmentController::class, 'update'])->name('assessments.update');
 
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
 
