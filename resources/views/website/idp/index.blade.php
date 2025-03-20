@@ -50,10 +50,6 @@
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
-                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                        data-kt-menu-placement="bottom-end">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
                 </div>
             </div>
 
@@ -145,8 +141,8 @@
             </div>
 
             @foreach($assessments as $assessment)
-    @if(isset($assessment->employee)) <!-- Pastikan ada relasi employee -->
-        @php $employee = $assessment->employee; @endphp
+            @if(isset($assessment->employee))
+            @php $employee = $assessment->employee; @endphp
                 <div class="modal fade" id="kt_modal_warning_{{ $assessment->id }}" tabindex="-1" style="display: none;"
                     aria-modal="true" role="dialog">
                     <div class="modal-dialog modal-dialog-centered mw-750px">
@@ -254,37 +250,43 @@
                         <form action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
                             @csrf
                             <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Development Program</label>
-                                <div>
-                                    @foreach ($assessment->recommendedPrograms as $program)
-                                        <input type="text" class="form-control mb-2" name="development_program[]" value="{{ $program }}" readonly>
-                                    @endforeach
-                                </div>
-                            </div>
                             <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Development Achievement</label>
-                                <input type="text" class="form-control" name="development_achievement[]">
+
+                            <div id="programContainerMid_{{$assessment->employee->id}}">
+                                @foreach ($assessment->recommendedPrograms as $index => $program)
+                                    <div class="programItem">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Development Program</label>
+                                            <input type="text" class="form-control" name="development_program[]" value="{{ $program }}" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Development Achievement</label>
+                                            <input type="text" class="form-control" name="development_achievement[]" placeholder="Enter achievement">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Next Action</label>
+                                            <input type="text" class="form-control" name="next_action[]" placeholder="Enter next action">
+                                        </div>
+                                        <hr>
+                                    </div>
+                                @endforeach
                             </div>
-                            <div class="mb-3">
-                                <label class="form-label fw-bold">Next Action</label>
-                                <input type="text" class="form-control" name="next_action[]">
-                            </div>
+
                             <button type="submit" class="btn btn-primary">Save</button>
                         </form>
                     </div>
 
-                    <!-- ONE YEAR TAB -->
+
                     <div class="tab-pane fade" id="oneYear-{{$assessment->employee->id}}" role="tabpanel">
                         <form id="reviewForm2-{{$assessment->employee->id}}" action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
                             @csrf
                             <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
-                            <div id="programContainer">
+
+                            <div id="programContainerOne_{{$assessment->employee->id}}" class="programContainer">
                                 <div class="programItem">
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">Development Program</label>
-                                        <select class="form-select" name="development_program[]" required>
+                                        <select class="form-select" name="development_program[{{$assessment->employee->id}}][]" required>
                                             <option value="">-- Select Development Program --</option>
                                             <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
                                             <option value="Book Reading">Book Reading</option>
@@ -298,13 +300,14 @@
                                     </div>
                                     <div class="mb-3">
                                         <label class="form-label fw-bold">Evaluation Result</label>
-                                        <input type="text" class="form-control" name="evaluation_result[]" placeholder="Evaluation Result" required>
+                                        <input type="text" class="form-control" name="evaluation_result[{{$assessment->employee->id}}][]" placeholder="Evaluation Result" required>
                                     </div>
                                 </div>
                             </div>
+
                             <div class="d-flex justify-content-between mt-2">
                                 <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                                <button type="button" class="btn btn-success btn-sm addMore">+ Add</button>
+                                <button type="button" class="btn btn-success btn-sm addMore" data-employee-id="{{$assessment->employee->id}}">+ Add</button>
                             </div>
                         </form>
                     </div>
@@ -720,17 +723,25 @@
             dueDateInput.max = endDate;
         });
 
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelector(".addMore").addEventListener("click", function() {
-                let programContainer = document.getElementById("programContainer");
+        document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".addMore").forEach(button => {
+        button.addEventListener("click", function () {
+            let employeeId = this.dataset.employeeId;
+            let containerId = `programContainerOne_${employeeId}`;
+            let container = document.getElementById(containerId);
 
-                let newProgram = document.createElement("div");
-                newProgram.classList.add("programItem");
+            if (!container) {
+                console.error("Container tidak ditemukan: " + containerId);
+                return;
+            }
 
-                newProgram.innerHTML = `
+            // Buat elemen baru
+            let newProgram = document.createElement("div");
+            newProgram.classList.add("programItem");
+            newProgram.innerHTML = `
                 <div class="mb-3">
                     <label class="form-label fw-bold">Development Program</label>
-                    <select class="form-select" name="development_program[]" required>
+                    <select class="form-select" name="development_program[${employeeId}][]" required>
                         <option value="">-- Select Development Program --</option>
                         <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
                         <option value="Book Reading">Book Reading</option>
@@ -744,22 +755,23 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Evaluation Result</label>
-                    <input type="text" class="form-control" name="evaluation_result[]" placeholder="Evaluation Result" required>
+                    <input type="text" class="form-control" name="evaluation_result[${employeeId}][]" placeholder="Evaluation Result" required>
                 </div>
-                <div class="d-flex justify-content-start mb-3">
-                    <button type="button" class="btn btn-danger btn-sm removeProgram">Remove</button>
-                </div>
+                <button type="button" class="btn btn-danger btn-sm removeProgram">Remove</button>
+                <hr>
             `;
 
-                programContainer.appendChild(newProgram);
-            });
+            container.appendChild(newProgram);
 
-            document.getElementById("programContainer").addEventListener("click", function(e) {
-                if (e.target.classList.contains("removeProgram")) {
-                    e.target.closest(".programItem").remove();
-                }
+            // Event listener untuk menghapus program
+            newProgram.querySelector(".removeProgram").addEventListener("click", function () {
+                newProgram.remove();
             });
         });
+    });
+});
+
+
 
 
         document.addEventListener("DOMContentLoaded", function() {

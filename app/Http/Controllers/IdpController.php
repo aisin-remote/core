@@ -2,16 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Idp;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Development;
-use Illuminate\Http\Request;
 use App\Models\DevelopmentOne;
+use Illuminate\Http\Request;
 use App\Models\DetailAssessment;
+use App\Models\Idp;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IdpController extends Controller
 {
@@ -131,16 +131,23 @@ public function store(Request $request)
         'evaluation_result' => 'required|array',
     ]);
 
-    foreach ($request->development_program as $key => $program) {
-        DevelopmentOne::create([
-            'employee_id' => $employee_id,
-            'development_program' => $program,
-            'evaluation_result' => $request->evaluation_result[$key] ?? '',
-        ]);
+    foreach ($request->development_program as $empId => $programs) {
+        if (!is_array($programs)) {
+            continue; 
+        }
+
+        foreach ($programs as $key => $program) {
+            DevelopmentOne::create([
+                'employee_id' => $employee_id,
+                'development_program' => $program,
+                'evaluation_result' => $request->evaluation_result[$empId][$key] ?? '', // Akses sesuai indeks employee
+            ]);
+        }
     }
 
     return redirect()->route('idp.index')->with('success', 'One-Year Development added successfully.');
-    }
+}
+
     public function showDevelopmentData($employeeId)
     {
     $details = DevelopmentOne::where('employee_id', $employeeId)->get();
