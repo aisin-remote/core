@@ -67,7 +67,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('assessment')->group(function () {
         Route::get('/', [AssessmentController::class, 'index'])->name('assessments.index');
-        Route::post('/{employee_id}', [AssessmentController::class, 'update'])->name('assessments.update');
+        Route::post('/update', [AssessmentController::class, 'update'])->name('assessments.update');
 
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
 
@@ -109,3 +109,4 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
 });
+
