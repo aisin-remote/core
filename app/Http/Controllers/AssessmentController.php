@@ -18,16 +18,58 @@ class AssessmentController extends Controller
      *
      *
      */
-    public function index(Request $request)
+    public function getSubordinates($employeeId, $processedIds = [])
     {
-        // Ambil semua employee untuk dropdown
-        $employees = Employee::all();
-        $employeesWithAssessments = Employee::whereHas('assessments')->get();
+        // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
+        if (in_array($employeeId, $processedIds)) {
+            return collect(); // Kembalikan collection kosong untuk menghindari loop
+        }
+
+        // Tambahkan ID saat ini ke daftar yang sudah diproses
+        $processedIds[] = $employeeId;
+
+        // Ambil hanya bawahan langsung (bukan atasan)
+        $employees = Employee::where('supervisor_id', $employeeId)->get();
+        $subordinates = collect($employees);
+
+        // Lanjutkan rekursi untuk mendapatkan semua bawahan di level lebih dalam
+        foreach ($employees as $employee) {
+            $subordinates = $subordinates->merge($this->getSubordinates($employee->id, $processedIds));
+        }
+
+        return $subordinates;
+    }
+    
+    public function index(Request $request, $company = null)
+    {
+        $user = auth()->user();
+        $title = 'Assessment';
+
+        // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
+        if ($user->role === 'HRD') {
+            $employees = Employee::with('departments')
+                ->when($company, fn($query) => $query->where('company_name', $company))
+                ->get();
+        } else {
+            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
+            $employee = Employee::with('departments')->where('user_id', $user->id)->first();
+            if (!$employee) {
+                $employees = collect();
+            } else {
+                $employees = $this->getSubordinates($employee->id)
+                    ->where('company_name', $employee->company_name);
+            }
+        }
+        
+        // Dapatkan employee yang memiliki assessment
+        $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());
         $alcs = Alc::all();
 
         // Ambil assessment terbaru per employee
         $assessments = Assessment::with(['employee.departments', 'alc'])
-            ->whereHas('employee')
+            ->whereHas('employee', function ($query) use ($employees) {
+                return $query->whereIn('id', $employees->pluck('id'));
+            })
             ->when($request->search, function ($query) use ($request) {
                 return $query->whereHas('employee', function ($q) use ($request) {
                     $q->where('name', 'like', '%' . $request->search . '%')
@@ -40,8 +82,8 @@ class AssessmentController extends Controller
                     ->groupBy('employee_id');
             })
             ->paginate(10);
-
-        return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments'));
+        
+        return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments', 'title'));
     }
 
     // public function history_ajax(Request $request)
