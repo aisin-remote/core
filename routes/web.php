@@ -136,12 +136,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
         ->name('idp.exportTemplate');
-
-    Route::prefix('master')->group(function () {
-        Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');
-        Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
-    });
-
+        
     Route::prefix('master')->group(function () {
         Route::get('/employee/{company?}', [MasterController::class, 'employee'])->name('employee.master.index');
         Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');

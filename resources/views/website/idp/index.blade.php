@@ -113,10 +113,10 @@
                                                 onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
                                                 <i class="fas fa-file-export"></i>
                                             </button>
-                                            <a type="button" class="btn btn-sm btn-success"
+                                            {{-- <a type="button" class="btn btn-sm btn-success"
                                                 href="{{ asset('assets/file/IDP_Tegar_2024.xlsx') }}" download>
                                                 <i class="fas fa-file-export"></i>
-                                            </a>
+                                            </a> --}}
                                         </div>
                                     </div>
                                 </td>
