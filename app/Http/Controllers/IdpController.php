@@ -189,16 +189,23 @@ class IdpController extends Controller
         'evaluation_result' => 'required|array',
     ]);
 
-    foreach ($request->development_program as $key => $program) {
-        DevelopmentOne::create([
-            'employee_id' => $employee_id,
-            'development_program' => $program,
-            'evaluation_result' => $request->evaluation_result[$key] ?? '',
-        ]);
+    foreach ($request->development_program as $empId => $programs) {
+        if (!is_array($programs)) {
+            continue; 
+        }
+
+        foreach ($programs as $key => $program) {
+            DevelopmentOne::create([
+                'employee_id' => $employee_id,
+                'development_program' => $program,
+                'evaluation_result' => $request->evaluation_result[$empId][$key] ?? '', // Akses sesuai indeks employee
+            ]);
+        }
     }
 
     return redirect()->route('idp.index')->with('success', 'One-Year Development added successfully.');
-    }
+}
+
     public function showDevelopmentData($employeeId)
     {
     $details = DevelopmentOne::where('employee_id', $employeeId)->get();
@@ -242,4 +249,5 @@ class IdpController extends Controller
 
         return response()->json(['idp' => $idp]);
     }
+
 }

@@ -30,6 +30,12 @@ class Assessment extends Model
         return $this->hasMany(Idp::class, 'assessment_id', 'id');
     }
 
+    public function idpPrograms()
+    {
+        return $this->hasMany(Idp::class, 'assessment_id');
+    }
+
+
     /**
      * Relasi ke model Alc
      */
