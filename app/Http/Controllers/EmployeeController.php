@@ -19,13 +19,23 @@ use App\Models\PerformanceAppraisalHistory;
 class EmployeeController extends Controller
 {
     
-    public function getSubordinates($employeeId)
+    public function getSubordinates($employeeId, $processedIds = [])
     {
+        // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
+        if (in_array($employeeId, $processedIds)) {
+            return collect(); // Kembalikan collection kosong untuk menghindari loop
+        }
+
+        // Tambahkan ID saat ini ke daftar yang sudah diproses
+        $processedIds[] = $employeeId;
+
+        // Ambil hanya bawahan langsung (bukan atasan)
         $employees = Employee::where('supervisor_id', $employeeId)->get();
         $subordinates = collect($employees);
 
+        // Lanjutkan rekursi untuk mendapatkan semua bawahan di level lebih dalam
         foreach ($employees as $employee) {
-            $subordinates = $subordinates->merge($this->getSubordinates($employee->id));
+            $subordinates = $subordinates->merge($this->getSubordinates($employee->id, $processedIds));
         }
 
         return $subordinates;
@@ -52,7 +62,20 @@ class EmployeeController extends Controller
         return view('website.employee.index', compact('employees', 'title'));
     }
 
+    public function status($id)
+    {
+        try {
+            $employee = Employee::findOrFail($id);
 
+            // Toggle status
+            $employee->is_active = !$employee->is_active;
+            $employee->save();
+
+            return redirect()->back()->with('success', 'Employee status updated successfully.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Failed to update employee status: ' . $e->getMessage());
+        }
+    }
     /**
      * Form tambah karyawan
      */
@@ -667,6 +690,45 @@ class EmployeeController extends Controller
         } catch (\Throwable $th) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Performance appraisal gagal dihapus.');
+        }
+    }
+    
+    public function promotionDestroy($id)
+    {
+        $promotion = PromotionHistory::findOrFail($id);
+
+        try {
+            DB::beginTransaction();
+
+            // Ambil karyawan yang dipromosikan
+            $employee = Employee::findOrFail($promotion->employee_id);
+
+            // Cari promotion history sebelumnya sebelum yang dihapus
+            $lastPromotion = PromotionHistory::where('employee_id', $employee->id)
+                ->where('id', '<', $promotion->id) // Hanya cari promosi sebelum yang sedang dihapus
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if ($lastPromotion) {
+                // Jika ada history sebelumnya, rollback grade & position ke data tersebut
+                $employee->position = $lastPromotion->previous_position;
+                $employee->grade = $lastPromotion->previous_grade;
+            } else {
+                // Jika tidak ada promotion history sebelumnya, reset ke nilai default awal
+                $employee->position = $promotion->previous_position;
+                $employee->grade = $promotion->previous_grade;
+            }
+
+            $employee->save();
+
+            // Hapus promotion history
+            $promotion->delete();
+            
+            DB::commit();
+            return redirect()->back()->with('success', 'Promotion history berhasil dihapus dan posisi/grade dikembalikan.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Promotion history gagal dihapus.');
         }
     }
 }

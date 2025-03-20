@@ -42,6 +42,7 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
+                            <th>Photo</th>
                             <th>NPK</th>
                             <th>Employee Name</th>
                             <th>Company</th>
@@ -56,6 +57,11 @@
                         @forelse ($employees as $index => $employee)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
+                                <td class="text-center">
+                                    <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                        alt="Employee Photo" class="rounded" width="40" height="40"
+                                        style="object-fit: cover;">
+                                </td>
                                 <td>{{ $employee->npk }}</td>
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
@@ -67,12 +73,11 @@
                                     <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
                                         <i class="bi bi-eye"></i> Summary
                                     </a>
-
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted">No employees found</td>
+                                <td colspan="10" class="text-center text-muted">No employees found</td>
                             </tr>
                         @endforelse
                     </tbody>

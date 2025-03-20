@@ -2,14 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Support\Facades\DB;
+use DataTables;
 use App\Models\Alc;
+use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\DetailAssessment;
-use App\Models\Employee;
-use Symfony\Component\HttpFoundation\Request;
+use Illuminate\Support\Facades\DB;
 
-use DataTables;
+use Symfony\Component\HttpFoundation\Request;
 
 class AssessmentController extends Controller
 {

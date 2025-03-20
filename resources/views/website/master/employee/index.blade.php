@@ -63,20 +63,27 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
+                            <th>Photo</th>
                             <th>NPK</th>
                             <th>Employee Name</th>
                             <th>Company</th>
                             <th>Position</th>
-                            <th>Departement</th>
+                            <th>Department</th>
                             <th>Grade</th>
                             <th>Age</th>
                             <th class="text-center">Actions</th>
+                            <th class="text-center">Status</th> {{-- Kolom Status --}}
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($employee as $index => $employee)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
+                                <td class="text-center">
+                                    <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                        alt="Employee Photo" class="rounded" width="40" height="40"
+                                        style="object-fit: cover;">
+                                </td>
                                 <td>{{ $employee->npk }}</td>
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
@@ -87,15 +94,21 @@
                                 <td class="text-center">
                                     <a href="{{ route('employee.show', $employee->npk) }}"
                                         class="btn btn-primary btn-sm">Detail</a>
-                                    {{-- <a href="{{ route('employee.edit', $employee->npk) }}"
-                                        class="btn btn-warning btn-sm">Update</a> --}}
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $employee->npk }}">Delete</button>
+                                </td>
+                                <td class="text-center">
+                                    <button type="button"
+                                        class="btn {{ $employee->is_active ? 'btn-light-success' : 'btn-light-danger' }} btn-sm status-btn"
+                                        data-id="{{ $employee->id }}" data-name="{{ $employee->name }}"
+                                        data-status="{{ $employee->is_active ? 'Non Active' : 'Active' }}">
+                                        {{ $employee->is_active ? 'Active' : 'Non Active' }}
+                                    </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted">No employees found</td>
+                                <td colspan="11" class="text-center text-muted">No employees found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -197,6 +210,41 @@
             });
 
             console.log("✅ Event Listeners Added Successfully");
+
+
+            document.querySelectorAll('.status-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    let employeeId = this.getAttribute('data-id');
+                    let employeeName = this.getAttribute('data-name');
+                    let newStatus = this.getAttribute('data-status');
+
+                    Swal.fire({
+                        title: "Are you sure?",
+                        text: `Do you want to change the status of ${employeeName} to ${newStatus}?`,
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#28a745",
+                        cancelButtonColor: "#d33",
+                        confirmButtonText: "Yes, change it!"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            let form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = `/employee/status/${employeeId}`;
+
+                            let csrfToken = document.createElement('input');
+                            csrfToken.type = 'hidden';
+                            csrfToken.name = '_token';
+                            csrfToken.value = '{{ csrf_token() }}';
+
+                            form.appendChild(csrfToken);
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    });
+                });
+            });
+
 
             // SweetAlert untuk Delete Button
             document.querySelectorAll('.delete-btn').forEach(button => {

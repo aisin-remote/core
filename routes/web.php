@@ -58,6 +58,12 @@ Route::middleware('auth')->group(function(){
         Route::get('/detail/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
+        Route::post('/status/{id}', [EmployeeController::class, 'status'])->name('employee.status');
+
+        // promotion
+        Route::prefix('promotion')->group(function () {
+            Route::delete('/delete/{id}', [EmployeeController::class, 'promotionDestroy'])->name('promotion.destroy');
+        });
 
         // work experience
         Route::prefix('work-experience')->group(function () {
@@ -105,13 +111,13 @@ Route::middleware('auth')->group(function(){
     });
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/', function (){
+        Route::get('/{company?}', function (){
             return view('website.rtc.index');
         });
     });
 
     Route::prefix('idp')->group(function () {
-        Route::get('/', [IdpController::class, 'index'])->name('idp.index');
+        Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
         Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
         Route::post('/idp/store-one-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('idp.storeMidYear');
@@ -124,7 +130,7 @@ Route::middleware('auth')->group(function(){
     });
 
     Route::prefix('master')->group(function () {
-        Route::get('/employee', [MasterController::class, 'employee'])->name('employee.master.index');
+        Route::get('/employee/{company?}', [MasterController::class, 'employee'])->name('employee.master.index');
         Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
         
         Route::prefix('department')->group(function () {

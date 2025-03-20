@@ -15,51 +15,110 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IdpController extends Controller
 {
-    public function index($reviewType = 'mid_year')
-{
-    $alcs = [
-        1 => 'Vision & Business Sense',
-        2 => 'Customer Focus',
-        3 => 'Interpersonal Skill',
-        4 => 'Analysis & Judgment',
-        5 => 'Planning & Driving Action',
-        6 => 'Leading & Motivating',
-        7 => 'Teamwork',
-        8 => 'Drive & Courage'
-    ];
+    public function getSubordinates($employeeId, $processedIds = [])
+    {
+        // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
+        if (in_array($employeeId, $processedIds)) {
+            return collect(); // Kembalikan collection kosong untuk menghindari loop
+        }
 
-    $assessments = Assessment::with(['employee', 'details', 'idp'])->paginate(10);
-    $employees = Employee::all();
-    $idps = Idp::with('assessment', 'employee')->get();
+        // Tambahkan ID saat ini ke daftar yang sudah diproses
+        $processedIds[] = $employeeId;
 
-    $programs = [
-        'Superior (DGM & GM) + DIC PUR + BOD Member',
-        'Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)',
-        'To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team --> Sharing Success Tips',
-        'Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project  (CAPACITY UP) & (AIIA) EV Project',
-        'SR Project (Structural Reform -->DM & SCM)',
-        'PEOPLE Development Program of Team members (ICT, IDP)',
-        '(Leadership) --> Courageously & Situational Leadership',
-        '(Developing Sub Ordinate) --> Coaching Skill / Developing Talents'
-    ];
+        // Ambil hanya bawahan langsung (bukan atasan)
+        $employees = Employee::where('supervisor_id', $employeeId)->get();
+        $subordinates = collect($employees);
 
-    $details = DevelopmentOne::all();
-    $mid = Development::all();
+        // Lanjutkan rekursi untuk mendapatkan semua bawahan di level lebih dalam
+        foreach ($employees as $employee) {
+            $subordinates = $subordinates->merge($this->getSubordinates($employee->id, $processedIds));
+        }
 
-    // Ambil program dari IDP yang sudah tersimpan
-    foreach ($assessments as $assessment) {
-        $savedPrograms = $assessment->idp->pluck('development_program')->toArray();
-        $assessment->recommendedPrograms = $savedPrograms;
+        return $subordinates;
     }
+    public function index( $company = null, $reviewType = 'mid_year')
+    {
+        $user = auth()->user();
+        $alcs = [
+            1 => 'Vision & Business Sense',
+            2 => 'Customer Focus',
+            3 => 'Interpersonal Skill',
+            4 => 'Analysis & Judgment',
+            5 => 'Planning & Driving Action',
+            6 => 'Leading & Motivating',
+            7 => 'Teamwork',
+            8 => 'Drive & Courage'
+        ];
 
-    foreach ($assessments as $assessment) {
-        $assessment->strengths = $assessment->strength;
-        $assessment->weaknesses = $assessment->weakness;
+        
+        // Ambil assessment dengan hubungan ke employee, dan filter berdasarkan company jika diberikan
+        if ($user->role === 'HRD') {
+            $assessments = Assessment::with(['employee', 'details', 'idp'])
+                ->when($company, fn($query) => $query->whereHas('employee', fn($q) => $q->where('company_name', $company)))
+                ->paginate(10);
+        }else{
+            // Ambil employee berdasarkan user login
+            $emp = Employee::where('user_id', $user->id)->first();
+            if (!$emp) {
+                $assessments = collect(); // Kosong jika tidak ada employee
+            } else {
+                // Ambil semua bawahan
+                $subordinates = $this->getSubordinates($emp->id)->pluck('id')->toArray();
+
+                // Ambil assessment hanya milik bawahannya
+                $assessments = Assessment::with(['employee', 'details', 'idp'])
+                    ->whereIn('employee_id', $subordinates)
+                    ->when($company, fn($query) => 
+                        $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                    )
+                    ->paginate(10);
+            }
+        }
+
+
+        // Ambil semua karyawan
+        $employees = Employee::all();
+
+        // Ambil IDP
+        $idps = Idp::with('assessment', 'employee')->get();
+
+        // Daftar program
+        $programs = [
+            'Superior (DGM & GM) + DIC PUR + BOD Member',
+            'Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)',
+            'To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team --> Sharing Success Tips',
+            'Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project  (CAPACITY UP) & (AIIA) EV Project',
+            'SR Project (Structural Reform -->DM & SCM)',
+            'PEOPLE Development Program of Team members (ICT, IDP)',
+            '(Leadership) --> Courageously & Situational Leadership',
+            '(Developing Sub Ordinate) --> Coaching Skill / Developing Talents'
+        ];
+
+        $details = DevelopmentOne::all();
+        $mid = Development::all();
+
+        // Proses assessment data
+        foreach ($assessments as $assessment) {
+            // Ambil IDP development program yang sudah tersimpan
+            $savedPrograms = $assessment->idp->pluck('development_program')->toArray();
+            $assessment->recommendedPrograms = $savedPrograms;
+
+            // Tambahkan strengths & weaknesses
+            $assessment->strengths = $assessment->strength;
+            $assessment->weaknesses = $assessment->weakness;
+        }
+
+        return view('website.idp.index', compact(
+            'employees',
+            'assessments',
+            'alcs',
+            'programs',
+            'details',
+            'mid',
+            'idps',
+            'company'
+        ));
     }
-
-    return view('website.idp.index', compact('employees', 'assessments', 'alcs', 'programs', 'details', 'mid', 'idps'));
-}
-
 
     public function store(Request $request)
     {

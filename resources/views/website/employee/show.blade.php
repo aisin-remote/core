@@ -225,6 +225,7 @@
                                     <th class="text-center">Current Grade</th>
                                     <th class="text-center">Current Position</th>
                                     <th class="min-w-250px text-center">Last Promotion Date</th>
+                                    <th class="text-center">Action</th>
                                 </tr>
                             </thead>
                             <!--end::Thead-->
@@ -241,13 +242,55 @@
                                         <td class="text-center">
                                             {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y, g:i A') }}
                                         </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-light-danger delete-experience-btn"
+                                                data-bs-toggle="modal"
+                                                data-bs-target="#deletePromotionModal{{ $promotionHistory->id }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-center">No data available</td>
+                                        <td colspan="7" class="text-center">No data available</td>
                                     </tr>
                                 @endforelse
                             </tbody>
+
+                            <!-- Modal dipindahkan ke luar tbody -->
+                            @foreach ($promotionHistories as $promotionHistory)
+                                <div class="modal fade" id="deletePromotionModal{{ $promotionHistory->id }}"
+                                    tabindex="-1" aria-labelledby="deletePromotionLabel{{ $promotionHistory->id }}"
+                                    aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title"
+                                                    id="deletePromotionLabel{{ $promotionHistory->id }}">
+                                                    Hapus History Promotion
+                                                </h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                                    aria-label="Close"></button>
+                                            </div>
+                                            <form action="{{ route('promotion.destroy', $promotionHistory->id) }}"
+                                                method="POST">
+                                                @csrf
+                                                @method('DELETE')
+                                                <div class="modal-body">
+                                                    <p>Apakah Anda yakin ingin menghapus data
+                                                        <strong>{{ $promotionHistory->id }}</strong> dari riwayat ini?
+                                                    </p>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary"
+                                                        data-bs-dismiss="modal">Batal</button>
+                                                    <button type="submit" class="btn btn-danger">Hapus</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
                             <!--end::Tbody-->
                         </table>
                         <!--end::Table-->
@@ -815,7 +858,7 @@
                             </div>
 
                             <div id="kt_account_settings_signin_method" class="collapse show">
-                                <div class="card-body border-top p-4">
+                                <div class="card-body border-top p-10">
                                     <div class="d-flex flex-wrap align-items-center">
                                         <div id="kt_signin_email">
                                             <div class="fs-6 fw-bold mb-1">Teamwork
@@ -856,7 +899,7 @@
                             </div>
 
                             <div id="kt_account_settings_signin_method" class="collapse show">
-                                <div class="card-body border-top p-4">
+                                <div class="card-body border-top p-10">
                                     <div class="d-flex flex-wrap align-items-center">
                                         <div id="kt_signin_email">
                                             <div class="fs-6 fw-bold mb-1">Leading & Motivating

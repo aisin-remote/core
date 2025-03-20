@@ -65,7 +65,7 @@
                             <th class="text-center" style="width: 100px">Employee Name</th>
 
                             @foreach ($alcs as $id => $title)
-                                <th class="text-center" style="width: 50px">{{ $title }}</th>
+                                <th class="text-center" style="width: 100px">{{ $title }}</th>
                             @endforeach
 
                             <th class="text-center">Actions</th>
@@ -100,35 +100,31 @@
                                         </span>
                                     </td>
                                 @endforeach
+
                                 <td class="text-center" style="width: 50px">
                                     <div class="d-flex gap-2 justify-content-center">
-                                        <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addEntryModal">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
+                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#addEntryModal">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
 
-                                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#notes_{{ $assessment->id }}">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            {{-- <button type="button" class="btn btn-sm btn-success"
+                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#notes_{{ $assessment->id }}">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
 
-                                            <button type="button" class="btn btn-sm btn-success"
-                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                <i class="fas fa-file-export"></i>
-                                            </button> --}}
-                                            <a type="button" class="btn btn-sm btn-success"
-                                                href="{{ asset('assets/file/IDP_Tegar_2024.xlsx') }}" download>
-                                                <i class="fas fa-file-export"></i>
-                                            </a>
-                                        </div>
+                                        <a type="button" class="btn btn-sm btn-success"
+                                            href="{{ asset('assets/file/IDP_Tegar_2024.xlsx') }}" download>
+                                            <i class="fas fa-file-export"></i>
+                                        </a>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted">No employees found</td>
+                                <td colspan="{{ count($alcs) + 3 }}" class="text-center text-muted py-4">
+                                    No employees found
+                                </td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -333,173 +329,109 @@
     </div>
     </div>
 
-    <div class="modal fade" id="notes_{{ $assessment->id }}" tabindex="-1" aria-modal="true" role="dialog">
-        <div class="modal-dialog modal-dialog-centered mw-1000px">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h2 class="fw-bold">Summary</h2>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
 
-                <div class="modal-body scroll-y mx-2">
-                    <form id="kt_modal_update_role_form_{{ $assessment->id }}"
-                        class="form fv-plugins-bootstrap5 fv-plugins-framework" action="#">
-                        <div class="d-flex flex-column scroll-y me-n7 pe-7"
-                            id="kt_modal_update_role_scroll_{{ $assessment->id }}" data-kt-scroll="true"
-                            data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto"
-                            data-kt-scroll-dependencies="#kt_modal_update_role_header"
-                            data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px">
+    @foreach ($assessments as $assessment)
+        <div class="modal fade" id="notes_{{ $assessment->id }}" tabindex="-1" aria-modal="true" role="dialog">
+            <div class="modal-dialog modal-dialog-centered mw-1000px">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="fw-bold">Summary</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
 
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">I. Development Program</h3>
-                                        <div class="d-flex align-items-center"></div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 50px">Strength</th>
-                                                    <th class="text-center" style="width: 50px">Weakness</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($assessments as $assessment)
-                                                    @foreach ($assessment->details as $detail)
-                                                        @if (!empty($detail->strength) || !empty($detail->weakness))
+                    <div class="modal-body scroll-y mx-2">
+                        <form id="kt_modal_update_role_form_{{ $assessment->id }}"
+                            class="form fv-plugins-bootstrap5 fv-plugins-framework" action="#">
+                            <div class="d-flex flex-column scroll-y me-n7 pe-7"
+                                id="kt_modal_update_role_scroll_{{ $assessment->id }}" data-kt-scroll="true"
+                                data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto"
+                                data-kt-scroll-offset="300px">
+                                @php
+                                    $sections = [
+                                        [
+                                            'title' => 'I. Development Program',
+                                            'headers' => ['Strength', 'Weakness'],
+                                            'data' => $assessment->details,
+                                            'fields' => ['alc.name', 'alc.name'],
+                                        ],
+                                        [
+                                            'title' => 'II. Individual Development Program',
+                                            'headers' => [
+                                                'Development Area',
+                                                'Development Program',
+                                                'Development Target',
+                                                'Due Date',
+                                            ],
+                                            'data' => $idps,
+                                            'fields' => [
+                                                'category',
+                                                'development_program',
+                                                'development_target',
+                                                'date',
+                                            ],
+                                        ],
+                                        [
+                                            'title' => 'III. Mid Year Review',
+                                            'headers' => [
+                                                'Development Program',
+                                                'Development Achievement',
+                                                'Next Action',
+                                            ],
+                                            'data' => $mid,
+                                            'fields' => [
+                                                'development_program',
+                                                'development_achievement',
+                                                'next_action',
+                                            ],
+                                        ],
+                                        [
+                                            'title' => 'IV. One Year Review',
+                                            'headers' => ['Development Program', 'Evaluation Result'],
+                                            'data' => $details,
+                                            'fields' => ['development_program', 'evaluation_result'],
+                                        ],
+                                    ];
+                                @endphp
+
+                                @foreach ($sections as $section)
+                                    <div class="row mt-8">
+                                        <div class="card">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h3 class="card-title">{{ $section['title'] }}</h3>
+                                            </div>
+                                            <div class="card-body table-responsive">
+                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
+                                                    <thead>
+                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                            @foreach ($section['headers'] as $header)
+                                                                <th class="text-center">{{ $header }}</th>
+                                                            @endforeach
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach ($section['data'] as $item)
                                                             <tr>
-                                                                <td class="text-center">{{ $detail->alc->name ?? '-' }}
-                                                                </td>
-                                                                <td class="text-center">{{ $detail->alc->name ?? '-' }}
-                                                                </td>
+                                                                @foreach ($section['fields'] as $field)
+                                                                    <td class="text-center">
+                                                                        {{ data_get($item, $field, '-') }}
+                                                                    </td>
+                                                                @endforeach
                                                             </tr>
-                                                        @endif
-                                                    @endforeach
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">II. Individual Development Program</h3>
-                                        <div class="d-flex align-items-center">
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 100px">
-                                                        Development Area
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Target
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">Due Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($idps as $idp)
-                                                    <tr>
-                                                        <td class="text-center">{{ $idp->category }}</td>
-                                                        <td class="text-center">{{ $idp->development_program }}</td>
-                                                        <td class="text-center">{{ $idp->development_target }}</td>
-                                                        <td class="text-center">
-                                                            {{ \Carbon\Carbon::parse($idp->date)->format('d-m-Y') }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                                @endforeach
                             </div>
-
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">III. Mid Year Review</h3>
-                                        <div class="d-flex align-items-center">
-                                        </div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Achivement
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Next Action
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($mid as $index => $items)
-                                                    <tr>
-                                                        <td>{{ $items->development_program }}</td>
-                                                        <td>{{ $items->development_achievement }}</td>
-                                                        <td>{{ $items->next_action }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                    </form>
-
-                    <div class="row mt-8">
-                        <div class="card">
-                            <div class="card-header d-flex justify-content-between align-items-center">
-                                <h3 class="card-title">IV. One Year Review</h3>
-                                <div class="d-flex align-items-center">
-                                </div>
-                            </div>
-                            <div class="card-body table-responsive">
-                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                    id="kt_table_users">
-                                    <thead>
-                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                            <th class="text-center" style="width: 50px">
-                                                Development Program
-                                            </th>
-                                            <th class="text-center" style="width: 50px">
-                                                Evaluation Result
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($details as $index => $item)
-                                            <tr>
-                                                <td>{{ $item->development_program }}</td>
-                                                <td>{{ $item->evaluation_result }}</td>
-                                            </tr>
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
+                        </form>
                     </div>
                 </div>
-                </form>
             </div>
         </div>
-    </div>
+    @endforeach
+
 @endsection
 
 @push('scripts')
