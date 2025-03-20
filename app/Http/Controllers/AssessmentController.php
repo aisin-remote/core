@@ -26,7 +26,7 @@ class AssessmentController extends Controller
         $alcs = Alc::all();
 
         // Ambil assessment terbaru per employee
-        $assessments = Assessment::with(['employee', 'alc'])
+        $assessments = Assessment::with(['employee.departments', 'alc'])
             ->whereHas('employee')
             ->when($request->search, function ($query) use ($request) {
                 return $query->whereHas('employee', function ($q) use ($request) {
@@ -39,25 +39,24 @@ class AssessmentController extends Controller
                     ->from('assessments')
                     ->groupBy('employee_id');
             })
-            ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
             ->paginate(10);
 
         return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments'));
     }
 
-    public function history_ajax(Request $request)
-    {
-        $data = Assessment::select('assessments.id', 'assessments.employee_id', 'assessments.date',
-                                    'assessments.upload', 'employees.npk as employee_npk', 'employees.name as employee_name',
-                                    )
-                            ->join('employees', 'assessments.employee_id', 'employees.id')
-                            ->with('details')
-                            ->with('alc')
-                            ->with('employee')
-                            ->orderBy('assessments.id', 'ASC');
+    // public function history_ajax(Request $request)
+    // {
+    //     $data = Assessment::select('assessments.id', 'assessments.employee_id', 'assessments.date',
+    //                                 'assessments.upload', 'employees.npk as employee_npk', 'employees.name as employee_name',
+    //                                 )
+    //                         ->join('employees', 'assessments.employee_id', 'employees.id')
+    //                         ->with('details')
+    //                         ->with('alc')
+    //                         ->with('employee')
+    //                         ->orderBy('assessments.id', 'ASC');
 
-        return DataTables::eloquent($data)->make(true);
-    }
+    //     return DataTables::eloquent($data)->make(true);
+    // }
 
     public function destroy($id)
     {
@@ -79,26 +78,33 @@ class AssessmentController extends Controller
             'message' => 'Assessment berhasil dihapus.'
         ]);
     }
-
     public function show($employee_id)
     {
-        // Ambil data karyawan berdasarkan ID
-        $employees = Employee::all();
-        $employee = Employee::with('assessments')->findOrFail($employee_id);
-        $alcs = Alc::all();
+        $employee = Employee::with('assessments')->find($employee_id);
+
+        if (!$employee) {
+            return response()->json([
+                'error' => 'Employee not found'
+            ], 404);
+        }
 
         $assessments = Assessment::where('employee_id', $employee_id)
-                                ->selectRaw('assessments.date, MAX(assessments.id) AS id, assessments.employee_id, MAX(assessments.upload) AS upload')
-                                ->groupBy('assessments.date', 'assessments.employee_id')
-                                ->orderBy('assessments.date', 'desc')
-                                ->with(['details' => function ($query) {
-                                    $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
-                                          ->with(['alc:id,name']); // join dengan master alc
-                                }])
-                                ->get();
+            ->select('id', 'date', 'employee_id', 'upload')
+            ->orderBy('date', 'desc')
+            ->with(['details' => function ($query) {
+                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
+                    ->with(['alc:id,name']);
+            }])
+            ->get();
 
-        return view('website.assessment.show', compact('employee', 'assessments', 'employees', 'alcs'));
+        return response()->json([
+            'employee' => $employee,
+            'assessments' => $assessments
+        ]);
     }
+
+
+
 
     public function showByDate($assessment_id, $date)
     {
@@ -106,7 +112,7 @@ class AssessmentController extends Controller
         $assessment = Assessment::findOrFail($assessment_id);
 
         // Ambil employee dari assessment (pastikan kolom employee_id ada di tabel assessments)
-        $employee = Employee::findOrFail($assessment->employee_id);
+        $employee = Employee::with('departments')->findOrFail($assessment->employee_id);
 
         // Ambil data detail_assessment dengan alc (menggunakan Eloquent)
         $assessments = DetailAssessment::with('alc')
@@ -228,73 +234,70 @@ class AssessmentController extends Controller
         ]);
     }
     public function edit($id)
-{
-    $assessment = Assessment::with('details.alc')->findOrFail($id);
+    {
+        $assessment = Assessment::with('details.alc')->findOrFail($id);
 
-    return response()->json([
-        'id' => $assessment->id,
-        'employee_id' => $assessment->employee_id,
-        'date' => $assessment->date,
-        'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
-        'scores' => $assessment->details->map(fn($d) => [
-            'alc_id' => $d->alc_id,
-            'score' => $d->score
-        ]),
-        'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
-            'alc_id' => $d->alc_id,
-            'description' => $d->strength
-        ])->values(),
-        'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
-            'alc_id' => $d->alc_id,
-            'description' => $d->weakness
-        ])->values(),
-        'alc_options' => Alc::select('id', 'name')->get()
-    ]);
-}
-
-
-public function update(Request $request)
-{
-    $validated = $request->validate([
-        'assessment_id' => 'required|exists:assessments,id',
-        'employee_id' => 'required|exists:employees,id',
-        'date' => 'required|date',
-        'scores' => 'required|array',
-        'strength' => 'nullable|array',
-        'weakness' => 'nullable|array',
-        'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
-    ]);
-
-    // **Update tabel `assessments`**
-    $assessment = Assessment::findOrFail($request->assessment_id);
-    $assessment->employee_id = $request->employee_id;
-    $assessment->date = $request->date;
-
-    // **Handle File Upload**
-    if ($request->hasFile('upload')) {
-        $file = $request->file('upload');
-        $path = $file->store('assessments', 'public');
-        $assessment->upload = $path;
-    }
-
-    $assessment->save();
-
-    // **Update `detail_assessments` untuk scores, strengths, weaknesses**
-    DetailAssessment::where('assessment_id', $assessment->id)->delete();
-
-    foreach ($request->scores as $alc_id => $score) {
-        DetailAssessment::create([
-            'assessment_id' => $assessment->id,
-            'alc_id' => $alc_id,
-            'score' => $score,
-            'strength' => $request->strength[$alc_id] ?? null,
-            'weakness' => $request->weakness[$alc_id] ?? null
+        return response()->json([
+            'id' => $assessment->id,
+            'employee_id' => $assessment->employee_id,
+            'date' => $assessment->date,
+            'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
+            'scores' => $assessment->details->map(fn($d) => [
+                'alc_id' => $d->alc_id,
+                'score' => $d->score
+            ]),
+            'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
+                'alc_id' => $d->alc_id,
+                'description' => $d->strength
+            ])->values(),
+            'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
+                'alc_id' => $d->alc_id,
+                'description' => $d->weakness
+            ])->values(),
+            'alc_options' => Alc::select('id', 'name')->get()
         ]);
     }
 
-    return response()->json(['message' => 'Assessment updated successfully']);
-}
 
+    public function update(Request $request)
+    {
+        $validated = $request->validate([
+            'assessment_id' => 'required|exists:assessments,id',
+            'employee_id' => 'required|exists:employees,id',
+            'date' => 'required|date',
+            'scores' => 'required|array',
+            'strength' => 'nullable|array',
+            'weakness' => 'nullable|array',
+            'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
+        ]);
 
+        // **Update tabel `assessments`**
+        $assessment = Assessment::findOrFail($request->assessment_id);
+        $assessment->employee_id = $request->employee_id;
+        $assessment->date = $request->date;
 
+        // **Handle File Upload**
+        if ($request->hasFile('upload')) {
+            $file = $request->file('upload');
+            $path = $file->store('assessments', 'public');
+            $assessment->upload = $path;
+        }
+
+        $assessment->save();
+
+        // **Update `detail_assessments` untuk scores, strengths, weaknesses**
+        DetailAssessment::where('assessment_id', $assessment->id)->delete();
+
+        foreach ($request->scores as $alc_id => $score) {
+            DetailAssessment::create([
+                'assessment_id' => $assessment->id,
+                'alc_id' => $alc_id,
+                'score' => $score,
+                'strength' => $request->strength[$alc_id] ?? null,
+                'weakness' => $request->weakness[$alc_id] ?? null
+            ]);
+        }
+
+        return response()->json(['message' => 'Assessment updated successfully']);
+    }
 }

@@ -20,24 +20,7 @@
                         <button type="button" class="btn btn-primary me-3" id="searchButton">
                             <i class="fas fa-search"></i> Search
                         </button>
-                        <div class="dropdown">
-                            <button class="btn btn-light-primary me-3 dropdown-toggle" type="button"
-                                id="departmentFilterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                                <i class="fas fa-filter"></i> Filter
-                            </button>
-                            <ul class="dropdown-menu" aria-labelledby="departmentFilterDropdown" id="filterMenu">
-                                <li><a class="dropdown-item filter-department" href="#" data-department="">All
-                                        Departments</a></li>
-                                @foreach ($employees->unique('function') as $employee)
-                                    <li>
-                                        <a class="dropdown-item filter-department" href="#"
-                                            data-department="{{ strtolower($employee->function) }}">
-                                            {{ $employee->function }}
-                                        </a>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        </div>
+
                         <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                             data-bs-target="#addAssessmentModal">Add</a>
                     </div>
@@ -60,7 +43,13 @@
                                 <tr>
                                     <td>{{ $assessments->firstItem() + $index }}</td>
                                     <td>{{ $assessment->employee->name ?? '-' }}</td>
-                                    <td>{{ $assessment->employee->function ?? '-' }}</td>
+                                    <td>
+                                        @if ($assessment->employee->departments->isNotEmpty())
+                                            {{ $assessment->employee->departments->pluck('name')->join(', ') }}
+                                        @else
+                                            Tidak Ada Departemen
+                                        @endif
+                                    </td>
                                     <td>{{ $assessment->employee->npk ?? '-' }}</td>
                                     <td>
                                         @php
@@ -75,10 +64,12 @@
                                             Detail
                                         </button> --}}
 
-                                        <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal"
+                                        <a class="btn btn-info btn-sm history-btn"
+                                            data-employee-id="{{ $assessment->employee->id }}" data-bs-toggle="modal"
                                             data-bs-target="#detailAssessmentModal">
                                             History
-                                        </button>
+                                        </a>
+
                                     </td>
                                 </tr>
                             @endforeach
@@ -144,6 +135,298 @@
 
     <script>
         $(document).ready(function() {
+            $(document).on("click", ".history-btn", function(event) {
+                event.preventDefault();
+
+                let employeeId = $(this).data("employee-id");
+                console.log("Fetching history for Employee ID:", employeeId); // Debug
+
+                // Reset data modal sebelum request baru dilakukan
+                $("#npkText").text("-");
+                $("#positionText").text("-");
+                $("#kt_table_assessments tbody").empty();
+
+                $.ajax({
+                    url: `/assessment/history/${employeeId}`,
+                    type: "GET",
+                    success: function(response) {
+                        console.log("Response received:", response); // Debug respons
+
+                        if (!response.employee) {
+                            console.error("Employee data not found in response!");
+                            alert("Employee not found!");
+                            return;
+                        }
+
+                        // Update informasi karyawan
+                        $("#npkText").text(response.employee.npk);
+                        $("#positionText").text(response.employee.position);
+
+                        // Kosongkan tabel sebelum menambahkan data baru
+                        $("#kt_table_assessments tbody").empty();
+
+                        if (response.assessments.length > 0) {
+                            response.assessments.forEach((assessment, index) => {
+                                let row = `
+                        <tr>
+                            <td class="text-center">${index + 1}</td>
+                            <td class="text-center">${assessment.date}</td>
+                            <td class="text-center">
+                                <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
+                                    Detail
+                                </a>
+                                ${assessment.upload ? `
+                                                                                <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                    View PDF
+                                                                                </a>`
+                                    : '<span class="text-muted">No PDF Available</span>'
+                                }
+                                <button type="button" class="btn btn-warning btn-sm updateAssessment"
+                                data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
+                                data-id="${assessment.id}"
+                                data-employee-id="${assessment.employee_id}"
+                                data-date="${assessment.date}"
+                                data-upload="${assessment.upload}"
+                                data-scores='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.score)))}'
+                                data-alcs='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
+                                data-alc_name='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
+                                data-strengths='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
+                                data-weaknesses='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'>
+                                Edit
+                            </button>
+
+                                <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                    data-id="${assessment.id}">Delete</button>
+                            </td>
+                        </tr>
+                    `;
+                                $("#kt_table_assessments tbody").append(row);
+                            });
+                        } else {
+                            $("#kt_table_assessments tbody").append(`
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">No assessment found</td>
+                    </tr>
+                `);
+                        }
+
+                        // Tampilkan modal setelah data dimuat
+                        $("#detailAssessmentModal").modal("show");
+                    },
+                    error: function(error) {
+                        console.error("Error fetching data:", error);
+                        alert("Failed to load assessment data!");
+                    }
+                });
+            });
+            $(document).on("click", ".updateAssessment", function() {
+                let assessmentId = $(this).data("id");
+                let employeeId = $(this).data("employee-id");
+                let date = $(this).data("date");
+                let upload = $(this).data("upload");
+
+                // Decode data yang di-encode sebelumnya
+                let scores = JSON.parse(decodeURIComponent($(this).attr("data-scores")));
+                let alcs = JSON.parse(decodeURIComponent($(this).attr("data-alcs")));
+                let alcNames = JSON.parse(decodeURIComponent($(this).attr("data-alc_name")));
+                let strengths = JSON.parse(decodeURIComponent($(this).attr("data-strengths")));
+                let weaknesses = JSON.parse(decodeURIComponent($(this).attr("data-weaknesses")));
+
+                // Masukkan data ke dalam modal
+                $("#update_assessment_id").val(assessmentId);
+                $("#update_employee_id").val(employeeId);
+                $("#update_date").val(date);
+                $("#update_upload").attr("href", upload).text("Lihat File");
+
+                /*** Mengisi Radio Button Scores ***/
+                scores.forEach((score, index) => {
+                    let alcId = alcs[index]; // ID dari ALC yang sesuai
+                    $(`#update_score_${alcId}_${score}`).prop("checked", true);
+                });
+
+                /*** Mengisi Strengths ***/
+                const strengthContainer = document.getElementById("update-strengths-wrapper");
+                strengthContainer.innerHTML = "";
+                strengths.forEach((strength, idx) => {
+                    if (strength.trim() !== "") {
+                        addAssessmentCard("strength", "update-strengths-wrapper", alcs[idx],
+                            strength, alcNames[idx]);
+                    }
+                });
+
+                if (strengths.length === 0) {
+                    addAssessmentCard("strength", "update-strengths-wrapper");
+                }
+
+                /*** Mengisi Weaknesses ***/
+                const weaknessContainer = document.getElementById("update-weaknesses-wrapper");
+                weaknessContainer.innerHTML = "";
+                weaknesses.forEach((weakness, idx) => {
+                    if (weakness.trim() !== "") {
+                        addAssessmentCard("weakness", "update-weaknesses-wrapper", alcs[idx],
+                            weakness, alcNames[idx]);
+                    }
+                });
+
+                if (weaknesses.length === 0) {
+                    addAssessmentCard("weakness", "update-weaknesses-wrapper");
+                }
+
+                // Tampilkan modal
+                const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
+                modal.show();
+
+                $("#updateAssessmentModal").modal("show");
+
+                // Tutup modal History sebelum membuka modal Update
+                $("#detailAssessmentModal").modal("hide");
+
+                setTimeout(() => {
+                    $(".modal-backdrop").remove(); // Hapus overlay modal history
+                    $("body").removeClass("modal-open"); // Pastikan body tidak terkunci
+
+                    $("#updateAssessmentModal").modal("show");
+
+                    // Buat overlay baru agar tetap ada
+                    $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+                }, 300);
+            });
+
+            /**
+             * Fungsi untuk menambahkan card Strength atau Weakness ke dalam modal
+             */
+            function addAssessmentCard(type, containerId, selectedAlc = "", description = "", alcName = "") {
+                let container = document.getElementById(containerId);
+                if (!container) {
+                    console.error(`Container '${containerId}' tidak ditemukan.`);
+                    return;
+                }
+
+                let templateCard = document.createElement("div");
+                templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
+
+                templateCard.innerHTML = `
+        <div class="mb-3">
+            <label>ALC</label>
+            <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                <option value="">Pilih ALC</option>
+                @foreach ($alcs as $alc)
+                    <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
+                        {{ $alc->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="mb-3">
+            <label>Description</label>
+            <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${description}</textarea>
+        </div>
+        <div class="d-flex justify-content-end button-group">
+            <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
+        </div>
+    `;
+
+                let selectElement = templateCard.querySelector(".alc-dropdown");
+                selectElement.addEventListener("change", function() {
+                    updateDescriptionName(selectElement, type);
+                });
+
+                let buttonGroup = templateCard.querySelector(".button-group");
+
+                templateCard.querySelector(".add-assessment").addEventListener("click", function() {
+                    addAssessmentCard(type, containerId);
+                    updateRemoveButtons(container);
+                });
+
+                container.appendChild(templateCard);
+                updateRemoveButtons(container);
+            }
+
+            /**
+             * Fungsi untuk mengupdate nama textarea berdasarkan ALC yang dipilih
+             */
+            function updateDescriptionName(selectElement, type) {
+                let card = selectElement.closest(".assessment-card");
+                let textarea = card.querySelector(`.${type}-textarea`);
+                let alcId = selectElement.value;
+
+                if (alcId) {
+                    textarea.setAttribute("name", `${type}[${alcId}]`);
+                } else {
+                    textarea.removeAttribute("name");
+                }
+            }
+
+            /**
+             * Fungsi untuk menambahkan tombol hapus jika ada lebih dari 1 field
+             */
+            function updateRemoveButtons(container) {
+                let cards = container.querySelectorAll(".assessment-card");
+                let removeButtons = container.querySelectorAll(".remove-card");
+
+                removeButtons.forEach(button => button.remove());
+
+                if (cards.length > 1) {
+                    cards.forEach((card, index) => {
+                        if (index !== 0) {
+                            let buttonGroup = card.querySelector(".button-group");
+                            let removeButton = document.createElement("button");
+                            removeButton.type = "button";
+                            removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card",
+                                "me-2");
+                            removeButton.textContent = "Hapus";
+
+                            removeButton.addEventListener("click", function() {
+                                card.remove();
+                                updateRemoveButtons(container);
+                            });
+
+                            buttonGroup.insertBefore(removeButton, buttonGroup.firstChild);
+                        }
+                    });
+                }
+            }
+
+
+
+            // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+            $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                setTimeout(() => {
+                    $(".modal-backdrop").remove(); // Hapus overlay modal update
+                    $("body").removeClass("modal-open");
+
+                    $("#detailAssessmentModal").modal("show");
+
+                    // Tambahkan overlay kembali untuk modal history
+                    $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+                }, 300);
+            });
+
+
+            // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
+            $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+                setTimeout(() => {
+                    if (!$("#updateAssessmentModal").hasClass("show")) {
+                        $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
+                        $("body").removeClass("modal-open");
+                    }
+                }, 300);
+            });
+
+            // ===== CEGAH OVERLAY BERLAPIS =====
+            $(".modal").on("shown.bs.modal", function() {
+                $(".modal-backdrop").last().css("z-index",
+                    1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+            });
+
+
+
+
+
+
+            // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+
+
             var searchInput = $("#searchInput");
             var filterItems = $(".filter-department");
             var table = $("#kt_table_users");

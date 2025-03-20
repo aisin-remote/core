@@ -12,10 +12,10 @@
 
                 <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
                     <div class="col-auto">
-                        <p class="fs-5 fw-bold"><strong>NPK:</strong> {{ $employee->npk }}</p>
+                        <p class="fs-5 fw-bold"><strong>NPK:</strong><span id="npkText"></span></p>
                     </div>
                     <div class="col-auto">
-                        <p class="fs-5 fw-bold"><strong>Position:</strong> {{ $employee->position }}</p>
+                        <p class="fs-5 fw-bold"><strong>Position:</strong> <span id="positionText"></span></p>
                     </div>
                 </div>
 
@@ -84,6 +84,7 @@
         // ===== DELETE FUNCTION =====
         $(document).on("click", ".delete-btn", function() {
             let assessmentId = $(this).data("id");
+            console.log("ID yang akan dihapus:", assessmentId); // Debugging
 
             if (!assessmentId) {
                 console.error("ID Assessment tidak ditemukan!");
@@ -100,6 +101,8 @@
                 confirmButtonText: "Ya, Hapus!"
             }).then((result) => {
                 if (result.isConfirmed) {
+                    console.log("Mengirim request DELETE untuk ID:", assessmentId); // Debugging
+
                     fetch(`/assessment/${assessmentId}`, {
                             method: "DELETE",
                             headers: {
@@ -110,6 +113,8 @@
                         })
                         .then(response => response.json())
                         .then(data => {
+                            console.log("Response dari server:", data); // Debugging
+
                             if (data.success) {
                                 Swal.fire("Terhapus!", data.message, "success")
                                     .then(() => location.reload());
@@ -118,68 +123,70 @@
                             }
                         })
                         .catch(error => {
-                            console.error("Error:", error);
+                            console.error("Error saat menghapus:", error);
                             Swal.fire("Error!", "Terjadi kesalahan!", "error");
                         });
                 }
             });
         });
 
+
         // ===== UPDATE FUNCTION =====
-        $(document).on("click", ".updateAssessment", function() {
-            let assessmentId = $(this).data("id");
-            let employeeId = $(this).data("employee-id");
-            let date = $(this).data("date");
-            let upload = $(this).data("upload");
-
-            // Set nilai input dalam modal Update
-            $("#updateAssessmentId").val(assessmentId);
-            $("#updateEmployeeId").val(employeeId);
-            $("#updateDate").val(date);
-            $("#updateUpload").text(upload ? "View File" : "No File");
-
-            // Tutup modal History sebelum membuka modal Update
-            $("#detailAssessmentModal").modal("hide");
-
-            setTimeout(() => {
-                $(".modal-backdrop").remove(); // Hapus overlay modal history
-                $("body").removeClass("modal-open"); // Pastikan body tidak terkunci
-
-                $("#updateAssessmentModal").modal("show");
-
-                // Buat overlay baru agar tetap ada
-                $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-            }, 300);
-        });
-
-        // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
-        $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-            setTimeout(() => {
-                $(".modal-backdrop").remove(); // Hapus overlay modal update
-                $("body").removeClass("modal-open");
-
-                $("#detailAssessmentModal").modal("show");
-
-                // Tambahkan overlay kembali untuk modal history
-                $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-            }, 300);
-        });
+        // $(document).on("click", ".updateAssessment", function() {
+        //     let assessmentId = $(this).data("id");
+        //     let employeeId = $(this).data("employee-id");
+        //     let date = $(this).data("date");
+        //     let upload = $(this).data("upload");
 
 
-        // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
-        $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-            setTimeout(() => {
-                if (!$("#updateAssessmentModal").hasClass("show")) {
-                    $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
-                    $("body").removeClass("modal-open");
-                }
-            }, 300);
-        });
+        //     // Set nilai input dalam modal Update
+        //     $("#updateAssessmentId").val(assessmentId);
+        //     $("#updateEmployeeId").val(employeeId);
+        //     $("#updateDate").val(date);
+        //     $("#updateUpload").text(upload ? "View File" : "No File");
 
-        // ===== CEGAH OVERLAY BERLAPIS =====
-        $(".modal").on("shown.bs.modal", function() {
-            $(".modal-backdrop").last().css("z-index",
-                1050); // Atur overlay agar tidak bertumpuk terlalu tebal
-        });
+        //     // Tutup modal History sebelum membuka modal Update
+        //     $("#detailAssessmentModal").modal("hide");
+
+        //     setTimeout(() => {
+        //         $(".modal-backdrop").remove(); // Hapus overlay modal history
+        //         $("body").removeClass("modal-open"); // Pastikan body tidak terkunci
+
+        //         $("#updateAssessmentModal").modal("show");
+
+        //         // Buat overlay baru agar tetap ada
+        //         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+        //     }, 300);
+        // });
+
+        // // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+        // $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+        //     setTimeout(() => {
+        //         $(".modal-backdrop").remove(); // Hapus overlay modal update
+        //         $("body").removeClass("modal-open");
+
+        //         $("#detailAssessmentModal").modal("show");
+
+        //         // Tambahkan overlay kembali untuk modal history
+        //         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+        //     }, 300);
+        // });
+
+
+        // // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
+        // $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+        //     setTimeout(() => {
+        //         if (!$("#updateAssessmentModal").hasClass("show")) {
+        //             $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
+        //             $("body").removeClass("modal-open");
+        //         }
+        //     }, 300);
+        // });
+
+        // // ===== CEGAH OVERLAY BERLAPIS =====
+        // $(".modal").on("shown.bs.modal", function() {
+        //     $(".modal-backdrop").last().css("z-index",
+        //         1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+        // });
     });
 </script>
