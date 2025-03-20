@@ -106,7 +106,6 @@
                     <!--begin::Text-->
                     <div class="text-gray-600 fs-base text-center fw-semibold">
                         A Human Resource System (HR System) is a digital solution that focuses on people development by facilitating employee growth,
-                        <br>
                         skill enhancement, performance tracking, and career progression to maximize workforce potential and organizational success.
                         
                     </div>

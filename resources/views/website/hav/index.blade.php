@@ -193,13 +193,12 @@
                 </div>
             </div>
 
-                        <div id="kt_app_content_container" class="app-container  container-fluid ">
-                            <div class="app-content  container-fluid">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">Pergeseran HAV</h3>
-                                    </div>
-
+            <div id="kt_app_content_container" class="app-container  container-fluid ">
+                <div class="app-content  container-fluid">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h3 class="card-title">Pergeseran HAV</h3>
+                        </div>
                         <div class="card-body">
                             <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                                 <thead>
@@ -213,11 +212,16 @@
                                         <th>Notes</th>
                                     </tr>
                                 </thead>
-                             </div>
-                             <!--end::Row-->
+                            </table>
                         </div>
-                        <!--end::Content container-->
+
                     </div>
+                </div>
+                 <!--end::Row-->
+            <!--end::Content container-->
+            </div>
+
+
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
