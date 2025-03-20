@@ -103,21 +103,20 @@
                                 <td class="text-center" style="width: 50px">
                                     <div class="d-flex gap-2 justify-content-center">
                                         <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addEntryModal">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
-
-                                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#notes_{{ $assessment->id }}">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
-                                            {{-- <button type="button" class="btn btn-sm btn-success"
+                                            <button type="button" class="btn btn-sm btn-primary"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#addEntryModal-{{$assessment->employee->id}}">
+                                            <i class="fas fa-pencil-alt"></i>
+                                        </button>
+                                           <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#notes_{{ $assessment->employee->id }}">
+                                            <i class="fas fa-eye"></i>
+                                             </button>
 
                                             <button type="button" class="btn btn-sm btn-success"
                                                 onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
                                                 <i class="fas fa-file-export"></i>
-                                            </button> --}}
+                                            </button>
                                             <a type="button" class="btn btn-sm btn-success"
                                                 href="{{ asset('assets/file/IDP_Tegar_2024.xlsx') }}" download>
                                                 <i class="fas fa-file-export"></i>
@@ -145,7 +144,9 @@
                 </div>
             </div>
 
-            @foreach ($assessments as $assessment)
+            @foreach($assessments as $assessment)
+    @if(isset($assessment->employee)) <!-- Pastikan ada relasi employee -->
+        @php $employee = $assessment->employee; @endphp
                 <div class="modal fade" id="kt_modal_warning_{{ $assessment->id }}" tabindex="-1" style="display: none;"
                     aria-modal="true" role="dialog">
                     <div class="modal-dialog modal-dialog-centered mw-750px">
@@ -164,6 +165,7 @@
 
                             @endphp
                             <div class="modal-body scroll-y mx-2 mt-5">
+                                <input type="hidden" name="employee_id" value="{{ $assessment->id }}">
                                 <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
                                 <input type="hidden" name="alc_id" id="alc_id_{{ $assessment->id }}" value="">
 
@@ -223,245 +225,201 @@
                         </div>
                     </div>
                 </div>
+                @endif
             @endforeach
         </div>
     </div>
+    @foreach ($assessments as $assessment)
+<div class="modal fade" id="addEntryModal-{{$assessment->employee->id}}" tabindex="-1" aria-labelledby="addEntryModalLabel-{{$assessment->employee->id}}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Development for {{ $assessment->employee->name }}</h5>
+            </div>
+            <div class="modal-body">
+                <!-- Tab Navigation -->
+                <ul class="nav nav-tabs" id="developmentTabs-{{$assessment->employee->id}}" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="midYear-tab-{{$assessment->employee->id}}" data-bs-toggle="tab" data-bs-target="#midYear-{{$assessment->employee->id}}" type="button" role="tab">Mid Year</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="oneYear-tab-{{$assessment->employee->id}}" data-bs-toggle="tab" data-bs-target="#oneYear-{{$assessment->employee->id}}" type="button" role="tab">One Year</button>
+                    </li>
+                </ul>
 
-    <div class="modal fade" id="addEntryModal" tabindex="-1" aria-labelledby="addEntryModalLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="addEntryModalLabel">Add Development</h5>
-                </div>
-                <div class="modal-body">
-                    <!-- Navigation Tabs -->
-                    <ul class="nav nav-tabs" id="developmentTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="midYear-tab" data-bs-toggle="tab"
-                                data-bs-target="#midYear" type="button" role="tab">Mid Year</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="oneYear-tab" data-bs-toggle="tab" data-bs-target="#oneYear"
-                                type="button" role="tab">One Year</button>
-                        </li>
-                    </ul>
-                    <div class="tab-content mt-3" id="developmentTabsContent">
-                        @foreach ($assessments as $assessment)
-                            <div class="tab-pane fade show active" id="midYear" role="tabpanel">
-                                <form id="developmentForm"
-                                    action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}"
-                                    method="POST">
-                                    @csrf
+                <!-- Tab Content -->
+                <div class="tab-content mt-3">
+                    <!-- MID YEAR TAB -->
+                    <div class="tab-pane fade show active" id="midYear-{{$assessment->employee->id}}" role="tabpanel">
+                        <form action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Development Program</label>
+                                <div>
+                                    @foreach ($assessment->recommendedPrograms as $program)
+                                        <input type="text" class="form-control mb-2" name="development_program[]" value="{{ $program }}" readonly>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Development Achievement</label>
+                                <input type="text" class="form-control" name="development_achievement[]">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Next Action</label>
+                                <input type="text" class="form-control" name="next_action[]">
+                            </div>
+                            <button type="submit" class="btn btn-primary">Save</button>
+                        </form>
+                    </div>
+
+                    <!-- ONE YEAR TAB -->
+                    <div class="tab-pane fade" id="oneYear-{{$assessment->employee->id}}" role="tabpanel">
+                        <form id="reviewForm2-{{$assessment->employee->id}}" action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
+                            <div id="programContainer">
+                                <div class="programItem">
                                     <div class="mb-3">
-                                        <input type="hidden" name="employee_id"
-                                            value="{{ $assessment->employee->id }}">
                                         <label class="form-label fw-bold">Development Program</label>
-                                        <div>
-                                            @foreach ($assessment->recommendedPrograms as $program)
-                                                <input type="text" class="form-control mb-2"
-                                                    name="development_program[]" value="{{ $program }}" readonly>
-                                            @endforeach
-                                        </div>
-                                    </div>
-
-                                    <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
-                                    <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
-
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold">Development Achievement</label>
-                                        <input type="text" class="form-control" name="development_achievement[]">
+                                        <select class="form-select" name="development_program[]" required>
+                                            <option value="">-- Select Development Program --</option>
+                                            <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
+                                            <option value="Book Reading">Book Reading</option>
+                                            <option value="FIGURE LEADER">FIGURE LEADER</option>
+                                            <option value="Team Leader">Team Leader</option>
+                                            <option value="SR PROJECT">SR PROJECT</option>
+                                            <option value="People Development Program">People Development Program</option>
+                                            <option value="Leadership">Leadership</option>
+                                            <option value="Developing Sub Ordinate">Developing Sub Ordinate</option>
+                                        </select>
                                     </div>
                                     <div class="mb-3">
-                                        <label class="form-label fw-bold">Next Action</label>
-                                        <input type="text" class="form-control" name="next_action[]">
-                                    </div>
-                                    <button type="submit" class="btn btn-primary">Save</button>
-                                </form>
-                        @endforeach
-                    </div>
-
-                    <div class="tab-pane fade" id="oneYear" role="tabpanel">
-                        @foreach ($assessments as $assessment)
-                            <form id="reviewForm2"
-                                action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}"
-                                method="POST">
-
-                                @csrf
-                                <div id="programContainer">
-                                    <!-- Development Program & Evaluation Result (Default) -->
-                                    <div class="programItem">
-                                        <div class="mb-3">
-
-                                            <input type="hidden" name="employee_id"
-                                                value="{{ $assessment->employee->id }}">
-
-                                            <label class="form-label fw-bold">Development Program</label>
-                                            <select class="form-select" name="development_program[]" required>
-                                                <option value="">-- Select Development Program --</option>
-                                                <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
-                                                <option value="Book Reading">Book Reading</option>
-                                                <option value="FIGURE LEADER">FIGURE LEADER</option>
-                                                <option value="Team Leader">Team Leader</option>
-                                                <option value="SR PROJECT">SR PROJECT</option>
-                                                <option value="People Development Program">People Development Program
-                                                </option>
-                                                <option value="Leadership">Leadership</option>
-                                                <option value="Developing Sub Ordinate">Developing Sub Ordinate</option>
-                                            </select>
-                                        </div>
-                                        <div class="mb-3">
-                                            <label class="form-label fw-bold">Evaluation Result</label>
-                                            <input type="text" class="form-control" name="evaluation_result[]"
-                                                placeholder="Evaluation Result" required>
-                                        </div>
+                                        <label class="form-label fw-bold">Evaluation Result</label>
+                                        <input type="text" class="form-control" name="evaluation_result[]" placeholder="Evaluation Result" required>
                                     </div>
                                 </div>
-
-                                <div class="d-flex justify-content-between mt-2">
-                                    <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                                    <button type="button" class="btn btn-success btn-sm addMore">+ Add</button>
-                                </div>
-                            </form>
-                        @endforeach
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                <button type="button" class="btn btn-success btn-sm addMore">+ Add</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
+            </div>
+            <!-- Modal Footer -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
-    </div>
+</div>
+@endforeach
 
-    <div class="modal fade" id="notes_{{ $assessment->id }}" tabindex="-1" aria-modal="true" role="dialog">
-        <div class="modal-dialog modal-dialog-centered mw-1000px">
+
+                  <!-- Modal -->
+                  @foreach ($assessments as $assessment)
+    <div class="modal fade" id="notes_{{ $assessment->employee->id }}" tabindex="-1" aria-modal="true" role="dialog">
+        <div class="modal-dialog modal-dialog-centered mw-800px">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h2 class="fw-bold">Summary</h2>
+                    <h2 class="fw-bold">Summary  {{ $assessment->employee->name }}</h2>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body scroll-y mx-2">
-                    <form id="kt_modal_update_role_form_{{ $assessment->id }}"
-                        class="form fv-plugins-bootstrap5 fv-plugins-framework" action="#">
-                        <div class="d-flex flex-column scroll-y me-n7 pe-7"
-                            id="kt_modal_update_role_scroll_{{ $assessment->id }}" data-kt-scroll="true"
-                            data-kt-scroll-activate="{default: false, lg: true}" data-kt-scroll-max-height="auto"
-                            data-kt-scroll-dependencies="#kt_modal_update_role_header"
-                            data-kt-scroll-wrappers="#kt_modal_update_role_scroll" data-kt-scroll-offset="300px">
-
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">I. Development Program</h3>
-                                        <div class="d-flex align-items-center"></div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 50px">Strength</th>
-                                                    <th class="text-center" style="width: 50px">Weakness</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($assessments as $assessment)
-                                                    @foreach ($assessment->details as $detail)
-                                                        @if (!empty($detail->strength) || !empty($detail->weakness))
-                                                            <tr>
-                                                                <td class="text-center">{{ $detail->alc->name ?? '-' }}
-                                                                </td>
-                                                                <td class="text-center">{{ $detail->alc->name ?? '-' }}
-                                                                </td>
-                                                            </tr>
-                                                        @endif
-                                                    @endforeach
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-
-                                    </div>
+                    <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
+                        <div class="row mt-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">I. Development Program</h3>
                                 </div>
-                            </div>
-
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">II. Individual Development Program</h3>
-                                        <div class="d-flex align-items-center">
-                                        </div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 100px">
-                                                        Development Area
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Target
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">Due Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($idps as $idp)
+                                <div class="card-body table-responsive">
+                                    <table class="table align-middle">
+                                        <thead>
+                                            <tr class="text-start text-gray-500 fw-bold">
+                                                <th class="text-center">Strength</th>
+                                                <th class="text-center">Weakness</th>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($assessment->details as $detail)
+                                                @if(!empty($detail->strength) || !empty($detail->weakness))
                                                     <tr>
-                                                        <td class="text-center">{{ $idp->category }}</td>
-                                                        <td class="text-center">{{ $idp->development_program }}</td>
-                                                        <td class="text-center">{{ $idp->development_target }}</td>
-                                                        <td class="text-center">
-                                                            {{ \Carbon\Carbon::parse($idp->date)->format('d-m-Y') }}</td>
+                                                        <td class="text-center">{{ $detail->strength ?? '-' }}</td>
+                                                        <td class="text-center">{{ $detail->weakness ?? '-' }}</td>
                                                     </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                @endif
+                                            @endforeach
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
+                        </div>
 
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">III. Mid Year Review</h3>
-                                        <div class="d-flex align-items-center">
-                                        </div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Development Achivement
-                                                    </th>
-                                                    <th class="text-center" style="width: 50px">
-                                                        Next Action
-                                                    </th>
+                        <!-- Individual Development Program -->
+                        <div class="row mt-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">II. Individual Development Program</h3>
+                                </div>
+                                <div class="card-body table-responsive">
+                                    <table class="table align-middle">
+                                        <thead>
+                                            <tr>
+                                                <tr class="text-start text-gray-500 fw-bold">
+                                                <th class="text-center">Development Area</th>
+                                                <th class="text-center">Development Program</th>
+                                                <th class="text-center">Development Target</th>
+                                                <th class="text-center">Due Date</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($idps->where('employee_id', $assessment->employee->id) as $idp)
+                                                <tr>
+                                                    <td class="text-center">{{ $idp->category }}</td>
+                                                    <td class="text-center">{{ $idp->development_program }}</td>
+                                                    <td class="text-center">{{ $idp->development_target }}</td>
+                                                    <td class="text-center">{{ \Carbon\Carbon::parse($idp->date)->format('d-m-Y') }}</td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($mid as $index => $items)
-                                                    <tr>
-                                                        <td>{{ $items->development_program }}</td>
-                                                        <td>{{ $items->development_achievement }}</td>
-                                                        <td>{{ $items->next_action }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
-                    </form>
+                        </div>
+
+                        <!-- Mid Year Review -->
+                        <div class="row mt-8">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">III. Mid Year Review</h3>
+                                </div>
+                                <div class="card-body table-responsive">
+                                    <table class="table align-middle">
+                                        <thead>
+                                            <tr>
+                                                <tr class="text-start text-gray-500 fw-bold">
+                                                <th class="text-center">Development Program</th>
+                                                <th class="text-center">Development Achievement</th>
+                                                <th class="text-center">Next Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($mid->where('employee_id', $assessment->employee->id) as $items)
+                                                <tr>
+                                                    <td>{{ $items->development_program }}</td>
+                                                    <td>{{ $items->development_achievement }}</td>
+                                                    <td>{{ $items->next_action }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
 
                     <div class="row mt-8">
                         <div class="card">
@@ -484,7 +442,7 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @foreach ($details as $index => $item)
+                                        @foreach ($details->where('employee_id', $assessment->employee->id) as $item)
                                             <tr>
                                                 <td>{{ $item->development_program }}</td>
                                                 <td>{{ $item->evaluation_result }}</td>
@@ -496,10 +454,10 @@
                         </div>
                     </div>
                 </div>
-                </form>
             </div>
         </div>
     </div>
+    @endforeach
 @endsection
 
 @push('scripts')
@@ -871,5 +829,16 @@
                 ]
             });
         });
+
+        document.addEventListener("DOMContentLoaded", function() {
+                document.querySelectorAll(".open-modal").forEach(button => {
+                    button.addEventListener("click", function() {
+                        let id = this.getAttribute("data-id");
+                        let modal = new bootstrap.Modal(document.getElementById(
+                            `notes_${id}`));
+                        modal.show();
+                    });
+                });
+            });
     </script>
 @endpush

@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IdpController extends Controller
 {
-    public function index($reviewType = 'mid_year')
+    public function index(Request $request, $reviewType = 'mid_year')
 {
     $alcs = [
         1 => 'Vision & Business Sense',
@@ -30,6 +30,7 @@ class IdpController extends Controller
 
     $assessments = Assessment::with(['employee', 'details', 'idp'])->paginate(10);
     $employees = Employee::all();
+    $employee = Employee::find($request->employee_id);
     $idps = Idp::with('assessment', 'employee')->get();
 
     $programs = [
@@ -57,11 +58,11 @@ class IdpController extends Controller
         $assessment->weaknesses = $assessment->weakness;
     }
 
-    return view('website.idp.index', compact('employees', 'assessments', 'alcs', 'programs', 'details', 'mid', 'idps'));
+    return view('website.idp.index', compact( 'employees', 'assessments', 'alcs', 'programs', 'details', 'mid', 'idps'));
 }
 
 
-    public function store(Request $request)
+public function store(Request $request)
     {
         // $request->validate([
         //     'development_program' => 'required|array',
@@ -183,4 +184,5 @@ class IdpController extends Controller
 
         return response()->json(['idp' => $idp]);
     }
+
 }
