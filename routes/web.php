@@ -9,6 +9,7 @@ use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\HavController;
 
 /*
 |--------------------------------------------------------------------------
@@ -46,6 +47,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/', function () {
             return view('website.hav.index');
         })->name('dashboard.index');
+        Route::get('/list-create', [HavController::class, 'listCreate'])->name('hav.list-create'); // Menampilkan form create
+        Route::get('/generate-create/{id}', [HavController::class, 'generateCreate'])->name('hav.generate-create'); // Menampilkan form create
+        Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update'); // Menampilkan form create
+        Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');
     });
 
     Route::prefix('employee')->group(function () {

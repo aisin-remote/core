@@ -195,31 +195,84 @@
         </div>
     </div>
 
-    {{-- modal top performer --}}
-    <div class="modal fade" id="infoModal" tabindex="-1" aria-labelledby="infoModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-md">
-            <div class="modal-content">
-                <div class="modal-header border-0">
-                    <h5 class="modal-title" id="infoModalLabel">Card Information</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    <div id="kt_app_content_container" class="app-container  container-fluid ">
+        <div class="app-content  container-fluid">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title">Pergeseran HAV</h3>
                 </div>
-                <div class="modal-body">
-                    <ul id="modalEmployeeList" class="list-group list-group-flush">
-                        <!-- Employee list will be inserted here -->
-                    </ul>
+                <div class="card-body">
+                    <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                        <thead>
+                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                                <th>Employee Name</th>
+                                <th>Company</th>
+                                <th>Grade</th>
+                                <th>Age</th>
+                                <th>Prev Hav</th>
+                                <th>Current HAV</th>
+                                <th>Notes</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
-                <div class="modal-footer border-0">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                </div>
+
             </div>
         </div>
+        <!--end::Row-->
+        <!--end::Content container-->
     </div>
-    {{-- end of modal --}}
 @endsection
 
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const data2025 = {
+                labels: ['Pria', 'Wanita'],
+                datasets: [{
+                    label: 'Employee 2025',
+                    data: [556, 120],
+                    backgroundColor: ['#50C878', '#3B5B92'],
+                    hoverBackgroundColor: ['#C5E1C5', '#5A75C9']
+                }]
+            };
+
+            const data2024 = {
+                labels: ['Pria', 'Wanita'],
+                datasets: [{
+                    label: 'Employee 2024',
+                    data: [405, 174],
+                    backgroundColor: ['#50c878', '#3b5b92'],
+                    hoverBackgroundColor: ['#c5e1c5', '#5a75c9']
+                }]
+            };
+
+            const options = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'bottom'
+                    }
+                }
+            };
+
+            new Chart(document.getElementById('employeeChart2025'), {
+                type: 'doughnut',
+                data: data2025,
+                options: options
+            });
+
+            new Chart(document.getElementById('employeeChart2024'), {
+                type: 'doughnut',
+                data: data2024,
+                options: options
+            });
+        });
+    </script>
     <script>
         $(document).ready(function() {
             var strongPerformers = [{
