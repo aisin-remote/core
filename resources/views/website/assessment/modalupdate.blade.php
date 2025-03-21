@@ -96,7 +96,8 @@
                             $('#updateAssessmentModal').modal('hide'); // Tutup modal
                             setTimeout(() => {
                                 $('#detailAssessmentModal').modal(
-                                'show'); // Buka modal History setelah modal update tertutup
+                                    'show'
+                                    ); // Buka modal History setelah modal update tertutup
                             }, 500); // Refresh halaman
                         });
                     } else {

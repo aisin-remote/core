@@ -3,13 +3,13 @@
 use App\Models\Employee;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\HavController;
 use App\Http\Controllers\IdpController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
-use App\Http\Controllers\HavController;
 
 /*
 |--------------------------------------------------------------------------
@@ -99,7 +99,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('assessment')->group(function () {
         Route::get('/{company?}', [AssessmentController::class, 'index'])->name('assessments.index');
-        Route::post('/{employee_id}', [AssessmentController::class, 'update'])->name('assessments.update');
+        Route::post('/update', [AssessmentController::class, 'update'])->name('assessments.update');
 
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
 
@@ -112,9 +112,6 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
 
     });
-
-
-
 
     Route::prefix('rtc')->group(function () {
         Route::get('/{company?}', function (){
@@ -156,3 +153,4 @@ Route::middleware('auth')->group(function () {
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
 });
+
