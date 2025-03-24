@@ -12,6 +12,7 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\CompetencyController;
+use App\Http\Controllers\EmpCompetencyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +24,13 @@ use App\Http\Controllers\CompetencyController;
 | contains the "web" middleware group. Now create something great!
 |
 */
+
+Route::get('emp_competency', [EmpCompetencyController::class, 'index'])->name('emp_competency.index');
+Route::get('emp_competency/create', [EmpCompetencyController::class, 'create'])->name('emp_competency.create');
+Route::post('emp_competency', [EmpCompetencyController::class, 'store'])->name('emp_competency.store');
+Route::get('emp_competency/{competency_id}/{employee_id}/edit', [EmpCompetencyController::class, 'edit'])->name('emp_competency.edit');
+Route::put('emp_competency/{competency_id}/{employee_id}', [EmpCompetencyController::class, 'update'])->name('emp_competency.update');
+Route::delete('emp_competency/{competency_id}/{employee_id}', [EmpCompetencyController::class, 'destroy'])->name('emp_competency.destroy');
 
 Route::resource('group_competency', GroupCompetencyController::class);
 Route::resource('competency', CompetencyController::class);
