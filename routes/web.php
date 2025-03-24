@@ -25,13 +25,8 @@ use App\Http\Controllers\EmpCompetencyController;
 |
 */
 
-Route::get('emp_competency', [EmpCompetencyController::class, 'index'])->name('emp_competency.index');
-Route::get('emp_competency/create', [EmpCompetencyController::class, 'create'])->name('emp_competency.create');
-Route::post('emp_competency', [EmpCompetencyController::class, 'store'])->name('emp_competency.store');
-Route::get('emp_competency/{competency_id}/{employee_id}/edit', [EmpCompetencyController::class, 'edit'])->name('emp_competency.edit');
-Route::put('emp_competency/{competency_id}/{employee_id}', [EmpCompetencyController::class, 'update'])->name('emp_competency.update');
-Route::delete('emp_competency/{competency_id}/{employee_id}', [EmpCompetencyController::class, 'destroy'])->name('emp_competency.destroy');
 
+Route::resource('emp_competency', EmpCompetencyController::class);
 Route::resource('group_competency', GroupCompetencyController::class);
 Route::resource('competency', CompetencyController::class);
 

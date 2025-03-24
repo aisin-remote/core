@@ -18,48 +18,30 @@ class GroupCompetencyController extends Controller
     // Menampilkan form untuk membuat data baru
     public function create()
     {
-        $title = 'Tambah Group Competency';
-        return view('website.group_competency.create', compact('title'));
+        
     }
 
     // Menyimpan data baru ke database
-    public function store(Request $request)
+    public function store()
     {
-        $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ]);
-
-        GroupCompetency::create($validated);
-        return redirect()->route('group_competency.index')
-                         ->with('success', 'Group Competency berhasil ditambahkan.');
+       
     }
 
     // Menampilkan form edit untuk data yang sudah ada
-    public function edit(GroupCompetency $group_competency)
+    public function edit()
     {
-        $title = 'Edit Group Competency';
-        return view('website.group_competency.edit', compact('group_competency', 'title'));
+        
     }    
 
     // Memperbarui data di database
-    public function update(Request $request, GroupCompetency $group_competency)
+    public function update()
     {
-        $validated = $request->validate([
-            'name'        => 'required|string|max:255',
-            'description' => 'nullable|string',
-        ]);
 
-        $group_competency->update($validated);
-        return redirect()->route('group_competency.index')
-                         ->with('success', 'Group Competency berhasil diupdate.');
     }
 
     // Menghapus data dari database
-    public function destroy(GroupCompetency $group_competency)
+    public function destroy()
     {
-        $group_competency->delete();
-        return redirect()->route('group_competency.index')
-                         ->with('success', 'Group Competency berhasil dihapus.');
+
     }
 }

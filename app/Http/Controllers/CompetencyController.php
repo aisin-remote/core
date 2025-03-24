@@ -19,54 +19,30 @@ class CompetencyController extends Controller
     // Menampilkan form untuk membuat data baru
     public function create()
     {
-        $title = 'Create Competency';
-        return view('website.competency.create', compact('title'));
+
     }
 
     // Menyimpan data baru ke database
-    public function store(Request $request)
+    public function store()
     {
-        $validated = $request->validate([
-            'name'       => 'required|string|max:100',
-            'description'      => 'nullable|string',
-            'group_competency_id' => 'required|integer',
-            'dept_id'       => 'required|integer',
-            'role_id'             => 'required|integer',
-        ]);
-
-        Competency::create($validated);
-        return redirect()->route('competency.index')
-                         ->with('success', 'Competency berhasil ditambahkan.');
+       
     }
 
     // Menampilkan form edit untuk data yang sudah ada
-    public function edit(Competency $competency)
+    public function edit()
     {
-        $title = 'Edit Competency';
-        return view('website.competency.edit', compact('competency', 'title'));
+        
     }
 
     // Memperbarui data di database
-    public function update(Request $request, Competency $competency)
+    public function update()
     {
-        $validated = $request->validate([
-            'name'       => 'required|string|max:100',
-            'description'      => 'nullable|string',
-            'group_competency_id' => 'required|integer',
-            'dept_id'       => 'required|integer',
-            'role_id'             => 'required|integer',
-        ]);
-
-        $competency->update($validated);
-        return redirect()->route('competency.index')
-                         ->with('success', 'Competency berhasil diupdate.');
+      
     }
 
     // Menghapus data dari database
-    public function destroy(Competency $competency)
+    public function destroy()
     {
-        $competency->delete();
-        return redirect()->route('competency.index')
-                         ->with('success', 'Competency berhasil dihapus.');
+      
     }
 }
