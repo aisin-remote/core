@@ -320,6 +320,39 @@
                         <!--end:Menu content-->
                     </div>
 
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('Employee Competency') ? 'active' : '' }}" href="/emp_competency">
+                            <span class="menu-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </span>
+                            <span class="menu-title ps-1">Employee Competency</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('Competency') ? 'active' : '' }}" href="/competency">
+                            <span class="menu-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </span>
+                            <span class="menu-title ps-1">Competency</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('Group Competency') ? 'active' : '' }}" href="/group_competency">
+                            <span class="menu-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </span>
+                            <span class="menu-title ps-1">Group Competency</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+
                     @if (auth()->user()->role == 'User')
                         <div class="menu-item">
                             <!--begin:Menu link-->
