@@ -57,6 +57,29 @@
                                 </button>
                             </td>
                         </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Daniel</td>
+                            <td>Functional</td>
+                            <td>Journal</td>
+                            <td>ACC</td>
+                            <td>ACCOUNTING</td>
+                            <td>2</td>
+                            <td>4</td>
+                            <td>3</td>
+                            <td>Belum Selesai</td>
+                            <td class="text-center">
+                                <button class="btn btn-warning btn-sm" onclick="editRow(this)">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </button>
+                                <button class="btn btn-info btn-sm" onclick="showDetail('Daniel','Functional','Journal','ACC','ACCOUNTING','2','4','3','Belum Selesai')">
+                                    <i class="bi bi-eye"></i> Show
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">
+                                    <i class="bi bi-trash"></i> Delete
+                                </button>
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
