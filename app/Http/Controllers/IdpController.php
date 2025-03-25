@@ -267,7 +267,7 @@ class IdpController extends Controller
     $sheet->setCellValue('R6', $employee->aisin_entry_date);
     $sheet->setCellValue('R7', $assessment->date);
     $sheet->setCellValue('H6', $employee->grade);
-    $sheet->setCellValue('K5', $employee->department_id);
+    $sheet->setCellValue('H5', $employee->department_id);
 
 
     $startRow = 13;
@@ -293,6 +293,7 @@ class IdpController extends Controller
     $idpRecords = Idp::where('assessment_id', $assessment_id)->get();
 
     foreach ($idpRecords as $idp) {
+        $sheet->setCellValue('C' . $startRow, $idp->alc_name ?? "-");
         $sheet->setCellValue('E' . $startRow, $idp->development_program ?? "-");
         $sheet->setCellValue('D' . $startRow, $idp->category ?? "-");
         $sheet->setCellValue('H' . $startRow, $idp->development_target ?? "-");

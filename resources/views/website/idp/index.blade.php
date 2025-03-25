@@ -54,25 +54,29 @@
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-tabs" id="employeeTabs" role="tablist">
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                    role="tablist" style="cursor:pointer">
                     @php
                         $jobPositions = ['General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor'];
                     @endphp
 
                     @foreach ($jobPositions as $index => $position)
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link {{ $index === 0 ? 'active' : '' }}" id="{{ Str::slug($position) }}-tab"
-                                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($position) }}" type="button"
-                                role="tab" aria-controls="{{ Str::slug($position) }}" aria-selected="true">
+                            <a class="nav-link text-active-primary pb-4 {{ $index === 0 ? 'active' : '' }}"
+                               data-bs-toggle="tab"
+                               data-bs-target="#{{ Str::slug($position) }}"
+                               role="tab"
+                               aria-controls="{{ Str::slug($position) }}">
                                 {{ $position }}
-                            </button>
+                            </a>
                         </li>
                     @endforeach
                 </ul>
 
                 <div class="tab-content mt-3" id="employeeTabsContent">
                     @foreach ($jobPositions as $index => $position)
-                        <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}" id="{{ Str::slug($position) }}" role="tabpanel"
+                        <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}"
+                             id="{{ Str::slug($position) }}" role="tabpanel"
                             aria-labelledby="{{ Str::slug($position) }}-tab">
 
                             <div class="table-responsive">
