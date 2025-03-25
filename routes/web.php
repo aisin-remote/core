@@ -148,6 +148,18 @@ Route::middleware('auth')->group(function () {
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
         });
+        
+        Route::prefix('section')->group(function () {
+            Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
+            Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
+            Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
+        });
+        
+        Route::prefix('grade')->group(function () {
+            Route::get('/', [MasterController::class, 'grade'])->name('grade.master.index');
+            Route::post('/store', [MasterController::class, 'gradeStore'])->name('grade.master.store');
+            Route::delete('/delete/{id}', [MasterController::class, 'gradeDestroy'])->name('grade.master.destroy');
+        });
 
     });
 

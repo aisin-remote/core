@@ -267,7 +267,7 @@
                             <!--begin:Menu link-->
                             <a class="menu-link {{ request()->is('rtc') ? 'active' : '' }}" href="/rtc">
                                 <span class="menu-icon">
-                                    <i class="fas fa-server"></i>
+                                    <i class="fas fa-sitemap"></i>
                                 </span>
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
@@ -278,7 +278,7 @@
                             <!-- Begin: Menu Link -->
                             <span class="menu-link">
                                 <span class="menu-icon">
-                                    <i class="fas fa-server"></i>
+                                    <i class="fas fa-sitemap"></i>
                                 </span>
                                 <span class="menu-title ps-1">RTC</span>
                                 <span class="menu-arrow"></span>
@@ -373,12 +373,34 @@
 
                     <div class="menu-item">
                         <!--begin:Menu link-->
+                        <a class="menu-link" href="/master/department">
+                            <span class="menu-icon">
+                                <i class="fas fa-layer-group"></i>
+                            </span>
+                            <span class="menu-title ps-1">Grade</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
                             href="/master/department">
                             <span class="menu-icon">
-                                <i class="fas fa-server"></i>
+                                <i class="fas fa-building"></i>
                             </span>
                             <span class="menu-title ps-1">Department</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link" href="/master/department">
+                            <span class="menu-icon">
+                                <i class="fas fa-users"></i>
+                            </span>
+                            <span class="menu-title ps-1">Section</span>
                         </a>
                         <!--end:Menu link-->
                     </div>
