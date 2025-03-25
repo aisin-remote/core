@@ -53,83 +53,110 @@
                 </div>
             </div>
 
-            <div class="card-body table-responsive">
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                    <thead>
-                        <tr class="text-start text-muted fw-bold fs-7 gs-0">
-                            <th style="width: 20px">No</th>
-                            <th class="text-center" style="width: 100px">Employee Name</th>
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="employeeTabs" role="tablist">
+                    @php
+                        $jobPositions = ['General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor'];
+                    @endphp
 
-                            @foreach ($alcs as $id => $title)
-                                <th class="text-center" style="width: 100px">{{ $title }}</th>
-                            @endforeach
+                    @foreach ($jobPositions as $index => $position)
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link {{ $index === 0 ? 'active' : '' }}" id="{{ Str::slug($position) }}-tab"
+                                data-bs-toggle="tab" data-bs-target="#{{ Str::slug($position) }}" type="button"
+                                role="tab" aria-controls="{{ Str::slug($position) }}" aria-selected="true">
+                                {{ $position }}
+                            </button>
+                        </li>
+                    @endforeach
+                </ul>
 
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
+                <div class="tab-content mt-3" id="employeeTabsContent">
+                    @foreach ($jobPositions as $index => $position)
+                        <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}" id="{{ Str::slug($position) }}" role="tabpanel"
+                            aria-labelledby="{{ Str::slug($position) }}-tab">
 
-                    <tbody>
-                        @forelse ($assessments as $index => $assessment)
-                            <tr>
-                                <td class="text-center">
-                                    {{ ($assessments->currentPage() - 1) * $assessments->perPage() + $index + 1 }}
-                                </td>
-                                <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
+                            <div class="table-responsive">
+                                <table class="table align-middle table-row-dashed fs-6 gy-5">
+                                    <thead>
+                                        <tr class="text-start text-muted fw-bold fs-7 gs-0">
+                                            <th style="width: 20px">No</th>
+                                            <th class="text-center" style="width: 150px">Employee Name</th>
+                                            @foreach ($alcs as $id => $title)
+                                                <th class="text-center" style="width: 100px">{{ $title }}</th>
+                                            @endforeach
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
 
-                                @foreach ($alcs as $id => $title)
-                                    @php
-                                        $score = $assessment->details->where('alc_id', $id)->first()->score ?? '-';
-                                    @endphp
-                                    <td class="text-center">
-                                        <span
-                                            class="badge badge-lg {{ $score >= 3 ? 'badge-success' : 'badge-danger' }} score d-block w-100"
-                                            @if ($score < 3 && $score !== '-') data-bs-toggle="modal"
-                                            data-bs-target="#kt_modal_warning_{{ $assessment->id }}"
-                                            data-title="Update IDP - {{ $title }}"
-                                            data-assessment="{{ $assessment->id }}"
-                                            data-alc="{{ $id }}"
-                                            style="cursor: pointer;" @endif>
-                                            {{ $score }}
-                                            @if ($score < 3 && $score !== '-')
-                                                <i class="fas fa-exclamation-triangle ps-2"></i>
-                                            @endif
-                                        </span>
-                                    </td>
-                                @endforeach
+                                    <tbody>
+                                        @php
+                                            $filteredEmployees = $assessments->where('employee.position', $position)->groupBy('employee_id')->map(function ($group) {
+                                                return $group->sortByDesc('created_at')->first();
+                                            });
+                                        @endphp
 
-                                <td class="text-center" style="width: 50px">
-                                    <div class="d-flex gap-2 justify-content-center">
-                                        <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#notes_{{ $assessment->employee->id }}">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
+                                        @forelse ($filteredEmployees as $index => $assessment)
+                                            <tr>
+                                                <td class="text-center">{{ $loop->iteration }}</td>
+                                                <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
 
-                                            <button type="button" class="btn btn-sm btn-success"
-                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                <i class="fas fa-file-export"></i>
-                                            </button>
-                                            {{-- <a type="button" class="btn btn-sm btn-success"
-                                                href="{{ asset('assets/file/IDP_Tegar_2024.xlsx') }}" download>
-                                                <i class="fas fa-file-export"></i>
-                                            </a> --}}
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="{{ count($alcs) + 3 }}" class="text-center text-muted py-4">
-                                    No employees found
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                                @foreach ($alcs as $id => $title)
+                                                    @php
+                                                        $detail = $assessment->details->where('alc_id', $id)->first();
+                                                        $score = $detail->score ?? '-';
+                                                        $idpExists = DB::table('idp')->where('assessment_id', $assessment->id)->where('alc_id', $id)->exists();
+                                                    @endphp
+                                                    <td class="text-center">
+                                                        @if ($score >= 3 || $score === '-')
+                                                            <span class="badge badge-lg badge-success d-block w-100">
+                                                                {{ $score }}
+                                                            </span>
+                                                        @else
+                                                            <span
+                                                                class="badge badge-lg badge-danger d-block w-100"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#kt_modal_warning_{{ $assessment->id }}"
+                                                                data-title="Update IDP - {{ $title }}"
+                                                                data-assessment="{{ $assessment->id }}"
+                                                                data-alc="{{ $id }}"
+                                                                style="cursor: pointer;">
+                                                                {{ $score }}
+                                                                <i class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                @endforeach
+
+                                                <td class="text-center" style="width: 50px">
+                                                    <div class="d-flex gap-2 justify-content-center">
+                                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                            data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
+                                                            <i class="fas fa-pencil-alt"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                            data-bs-target="#notes_{{ $assessment->employee->id }}">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-success"
+                                                            onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
+                                                            <i class="fas fa-file-export"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="{{ count($alcs) + 3 }}" class="text-center text-muted py-4">
+                                                    No employees found
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
                 <div class="d-flex align-items-center gap-4 mt-3">
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
@@ -264,29 +291,32 @@
                                     <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
 
                                     <div id="programContainerMid_{{ $assessment->employee->id }}">
-                                        @foreach ($assessment->recommendedPrograms as $index => $program)
-                                            <div class="programItem">
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Development Program</label>
-                                                    <input type="text" class="form-control"
-                                                        name="development_program[]" value="{{ $program }}"
-                                                        readonly>
+                                        @if (!empty($assessment->recommendedPrograms))
+                                            @foreach ($assessment->recommendedPrograms as $index => $program)
+                                                <div class="programItem">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Development Program</label>
+                                                        <input type="text" class="form-control"
+                                                            name="development_program[]" value="{{ $program }}"
+                                                            readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Development Achievement</label>
+                                                        <input type="text" class="form-control"
+                                                            name="development_achievement[]" placeholder="Enter achievement" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Next Action</label>
+                                                        <input type="text" class="form-control" name="next_action[]"
+                                                            placeholder="Enter next action" required>
+                                                    </div>
+                                                    <hr>
                                                 </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Development Achievement</label>
-                                                    <input type="text" class="form-control"
-                                                        name="development_achievement[]" placeholder="Enter achievement">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Next Action</label>
-                                                    <input type="text" class="form-control" name="next_action[]"
-                                                        placeholder="Enter next action">
-                                                </div>
-                                                <hr>
-                                            </div>
-                                        @endforeach
+                                            @endforeach
+                                        @else
+                                            <p class="text-center text-muted">No data available</p>
+                                        @endif
                                     </div>
-
                                     <button type="submit" class="btn btn-primary">Save</button>
                                 </form>
                             </div>
@@ -369,9 +399,10 @@
                                     <div class="card-body table-responsive">
                                         <table class="table align-middle">
                                             <thead>
-                                                <tr class="text-start text-gray-500 fw-bold">
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
                                                     <th class="text-center">Strength</th>
                                                     <th class="text-center">Weakness</th>
+                                                </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach ($assessment->details as $detail)
@@ -398,7 +429,7 @@
                                         <table class="table align-middle">
                                             <thead>
                                                 <tr>
-                                                <tr class="text-start text-gray-500 fw-bold">
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
                                                     <th class="text-center">Development Area</th>
                                                     <th class="text-center">Development Program</th>
                                                     <th class="text-center">Development Target</th>
@@ -431,7 +462,7 @@
                                         <table class="table align-middle">
                                             <thead>
                                                 <tr>
-                                                <tr class="text-start text-gray-500 fw-bold">
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
                                                     <th class="text-center">Development Program</th>
                                                     <th class="text-center">Development Achievement</th>
                                                     <th class="text-center">Next Action</th>
@@ -620,6 +651,7 @@
             });
         });
 
+
         // document.addEventListener("DOMContentLoaded", function() {
         //     document.querySelectorAll("form").forEach(form => {
         //         form.addEventListener("submit", function(e) {
@@ -796,77 +828,6 @@
                             newProgram.remove();
                         });
                 });
-            });
-        });
-
-
-
-
-        document.addEventListener("DOMContentLoaded", function() {
-            Highcharts.chart('stackedGroupedChart', {
-                chart: {
-                    type: 'column'
-                },
-                title: {
-                    text: 'Assessment Score [Actual vs Target]'
-                },
-                xAxis: {
-                    categories: ['Vision & Business Sense', 'Customer Focus', 'Interpersonal Skill',
-                        'Analysis & Judgment', 'Planning & Driving Action', 'Leading & Motivating',
-                        'Teamwork', 'Drive & Courage'
-                    ],
-                    title: {
-                        text: 'Competencies'
-                    }
-                },
-                yAxis: {
-                    min: 0,
-                    max: 5,
-                    title: {
-                        text: 'Score'
-                    },
-                    stackLabels: {
-                        enabled: true
-                    }
-                },
-                tooltip: {
-                    shared: true
-                },
-                plotOptions: {
-                    column: {
-                        stacking: 'normal',
-                        dataLabels: {
-                            enabled: true
-                        }
-                    },
-                    line: {
-                        dataLabels: {
-                            enabled: true, // Show labels for target values
-                            format: '{y}', // Display the target score
-                            style: {
-                                fontWeight: 'bold',
-                                color: '#ff6347'
-                            }
-                        },
-                        marker: {
-                            symbol: 'circle',
-                            radius: 5
-                        }
-                    }
-                },
-                series: [{
-                        name: 'Actual Score',
-                        type: 'column',
-                        data: [4.5, 3, 2.5, 3.1, 2, 4.8, 3.7, 2.7],
-                        color: '#007bff'
-                    },
-                    {
-                        name: 'Target Score',
-                        type: 'line', // Line for target scores
-                        data: [4, 4.5, 4, 3.5, 4.5, 5, 3.5, 4.2],
-                        color: '#ff6347'
-                    }
-                ]
             });
         });
 
