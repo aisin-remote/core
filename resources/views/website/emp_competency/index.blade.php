@@ -46,15 +46,17 @@
                             <td>3</td>
                             <td>Selesai</td>
                             <td class="text-center">
-                                <button class="btn btn-warning btn-sm" onclick="editRow(this)">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button class="btn btn-info btn-sm" onclick="showDetail('Tatang','Basic','Organizational Awareness','Operator','ENG','2','3','3','Selesai')">
-                                    <i class="bi bi-eye"></i> Show
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <button class="btn btn-warning btn-sm" onclick="editRow(this)">
+                                        <i class="bi bi-pencil"></i> 
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="showDetail(...)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
                             </td>
                         </tr>
                         <tr>
@@ -69,16 +71,18 @@
                             <td>3</td>
                             <td>Belum Selesai</td>
                             <td class="text-center">
-                                <button class="btn btn-warning btn-sm" onclick="editRow(this)">
-                                    <i class="bi bi-pencil"></i> Edit
-                                </button>
-                                <button class="btn btn-info btn-sm" onclick="showDetail('Daniel','Functional','Journal','ACC','ACCOUNTING','2','4','3','Belum Selesai')">
-                                    <i class="bi bi-eye"></i> Show
-                                </button>
-                                <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">
-                                    <i class="bi bi-trash"></i> Delete
-                                </button>
-                            </td>
+                                <div class="d-flex gap-1 justify-content-center">
+                                    <button class="btn btn-warning btn-sm" onclick="editRow(this)">
+                                        <i class="bi bi-pencil"></i> 
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="showDetail(...)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteRow(this)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </td>                                                       
                         </tr>
                     </tbody>
                 </table>

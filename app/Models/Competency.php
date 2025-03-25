@@ -8,6 +8,6 @@ use Illuminate\Database\Eloquent\Model;
 class Competency extends Model
 {
     use HasFactory;
-    protected $table = 'competency';
+    protected $table = 'competencies';
     protected $guarded = ['id'];
 }
