@@ -27,7 +27,12 @@ use App\Http\Controllers\EmpCompetencyController;
 
 
 Route::resource('emp_competency', EmpCompetencyController::class);
+Route::get('/create', [EmpCompetencyController::class, 'create'])->name('emp_competency.create');
+
 Route::resource('group_competency', GroupCompetencyController::class);
+Route::get('/create', [GroupCompetencyController::class, 'create'])->name('group_competency.create');
+Route::resource('group_competency', GroupCompetencyController::class)->except(['show']);
+
 Route::resource('competency', CompetencyController::class);
 
 Route::middleware('guest')->group(function () {
