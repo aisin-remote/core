@@ -39,175 +39,25 @@
 
             <div class="card-body">
                 <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist">
-                    <!--begin:::Tab item-->
+                    role="tablist" style="cursor:pointer">
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 active" data-bs-toggle="tab"
-                            href="#kt_customer_view_overview_tab" aria-selected="true" role="tab">Show All</a>
-                    </li>
-                    <!--end:::Tab item-->
-                    <!--begin:::Tab item-->
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4" data-bs-toggle="tab"
-                            href="#kt_customer_view_overview_tab" aria-selected="false" role="tab">Manager</a>
-                    </li>
-                    <!--end:::Tab item-->
-
-                    <!--begin:::Tab item-->
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4" data-bs-toggle="tab"
-                            href="#kt_customer_view_overview_events_and_logs_tab" aria-selected="false" role="tab"
-                            tabindex="-1">Leader</a>
-                    </li>
-                    <!--end:::Tab item-->
-
-                    <!--begin:::Tab item-->
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4" data-kt-countup-tabs="true" data-bs-toggle="tab"
-                            href="#kt_customer_view_overview_statements" data-kt-initialized="1" aria-selected="false"
-                            role="tab" tabindex="-1">JP</a>
+                        <a class="nav-link text-active-primary pb-4 active filter-tab"" data-filter="all">Show All</a>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4" data-kt-countup-tabs="true" data-bs-toggle="tab"
-                            href="#kt_customer_view_overview_statements" data-kt-initialized="1" aria-selected="false"
-                            role="tab" tabindex="-1">Operator</a>
+                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
                     </li>
-                    <!--end:::Tab item-->
-
-                    <!--begin:::Tab item-->
-                    <li class="nav-item ms-auto">
-                        <!--begin::Action menu-->
-                        <!--begin::Menu-->
-                        <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg-light-primary fw-semibold py-4 w-250px fs-6"
-                            data-kt-menu="true">
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5">
-                                <div class="menu-content text-muted pb-2 px-5 fs-7 text-uppercase">
-                                    Payments
-                                </div>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5">
-                                <a href="#" class="menu-link px-5">
-                                    Create invoice
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5">
-                                <a href="#" class="menu-link flex-stack px-5">
-                                    Create payments
-
-                                    <span class="ms-2" data-bs-toggle="tooltip"
-                                        aria-label="Specify a target name for future usage and reference"
-                                        data-bs-original-title="Specify a target name for future usage and reference"
-                                        data-kt-initialized="1">
-                                        <i class="ki-duotone ki-information fs-7"><span class="path1"></span><span
-                                                class="path2"></span><span class="path3"></span></i> </span>
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5" data-kt-menu-trigger="hover" data-kt-menu-placement="left-start">
-                                <a href="#" class="menu-link px-5">
-                                    <span class="menu-title">Subscription</span>
-                                    <span class="menu-arrow"></span>
-                                </a>
-
-                                <!--begin::Menu sub-->
-                                <div class="menu-sub menu-sub-dropdown w-175px py-4">
-                                    <!--begin::Menu item-->
-                                    <div class="menu-item px-3">
-                                        <a href="#" class="menu-link px-5">
-                                            Apps
-                                        </a>
-                                    </div>
-                                    <!--end::Menu item-->
-
-                                    <!--begin::Menu item-->
-                                    <div class="menu-item px-3">
-                                        <a href="#" class="menu-link px-5">
-                                            Billing
-                                        </a>
-                                    </div>
-                                    <!--end::Menu item-->
-
-                                    <!--begin::Menu item-->
-                                    <div class="menu-item px-3">
-                                        <a href="#" class="menu-link px-5">
-                                            Statements
-                                        </a>
-                                    </div>
-                                    <!--end::Menu item-->
-
-                                    <!--begin::Menu separator-->
-                                    <div class="separator my-2"></div>
-                                    <!--end::Menu separator-->
-
-                                    <!--begin::Menu item-->
-                                    <div class="menu-item px-3">
-                                        <div class="menu-content px-3">
-                                            <label class="form-check form-switch form-check-custom form-check-solid">
-                                                <input class="form-check-input w-30px h-20px" type="checkbox"
-                                                    value="" name="notifications" checked=""
-                                                    id="kt_user_menu_notifications">
-                                                <span class="form-check-label text-muted fs-6"
-                                                    for="kt_user_menu_notifications">
-                                                    Notifications
-                                                </span>
-                                            </label>
-                                        </div>
-                                    </div>
-                                    <!--end::Menu item-->
-                                </div>
-                                <!--end::Menu sub-->
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu separator-->
-                            <div class="separator my-3"></div>
-                            <!--end::Menu separator-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5">
-                                <div class="menu-content text-muted pb-2 px-5 fs-7 text-uppercase">
-                                    Account
-                                </div>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5">
-                                <a href="#" class="menu-link px-5">
-                                    Reports
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5 my-1">
-                                <a href="#" class="menu-link px-5">
-                                    Account Settings
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-
-                            <!--begin::Menu item-->
-                            <div class="menu-item px-5">
-                                <a href="#" class="menu-link text-danger px-5">
-                                    Delete customer
-                                </a>
-                            </div>
-                            <!--end::Menu item-->
-                        </div>
-                        <!--end::Menu-->
-                        <!--end::Menu-->
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
                     </li>
-                    <!--end:::Tab item-->
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
+                    </li>
                 </ul>
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
@@ -226,7 +76,7 @@
                     </thead>
                     <tbody>
                         @forelse ($employees as $index => $employee)
-                            <tr>
+                            <tr data-position="{{ $employee->position }}">
                                 <td>{{ $index + 1 }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
@@ -263,6 +113,32 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const tabs = document.querySelectorAll(".filter-tab");
+            const rows = document.querySelectorAll("#kt_table_users tbody tr");
+
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function(e) {
+                    e.preventDefault();
+
+                    // Hapus class active dari semua tab
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+
+                    const filter = this.getAttribute("data-filter");
+
+                    rows.forEach(row => {
+                        const position = row.getAttribute("data-position");
+                        if (filter === "all" || position === filter) {
+                            row.style.display = "";
+                        } else {
+                            row.style.display = "none";
+                        }
+                    });
+                });
+            });
+        });
+
         document.addEventListener("DOMContentLoaded", function() {
             console.log("✅ Script Loaded!");
 
