@@ -10,9 +10,9 @@ use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
-use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\EmpCompetencyController;
+use App\Http\Controllers\GroupCompetencyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -155,6 +155,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
+        });
+        
+        Route::prefix('division')->group(function () {
+            Route::get('/', [MasterController::class, 'division'])->name('division.master.index');
+            Route::post('/store', [MasterController::class, 'divisionStore'])->name('division.master.store');
+            Route::delete('/delete/{id}', [MasterController::class, 'divisionDestroy'])->name('division.master.destroy');
         });
         
         Route::prefix('section')->group(function () {

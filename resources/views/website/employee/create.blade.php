@@ -137,7 +137,7 @@
                                         data-placeholder="Select Position..."
                                         class="form-select form-select-lg fw-semibold">
                                         <option value="">Select Position</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="General Manager">General
+                                        <option data-kt-flag="flags/afghanistan.svg" value="GM">General
                                             Manager
                                         </option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Manager">Manager</option>

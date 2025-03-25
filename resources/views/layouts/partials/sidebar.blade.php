@@ -331,7 +331,6 @@
                         </span>
                         <!-- End: Menu Link -->
 
-
                         <!-- Begin: Menu Sub -->
                         <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
                             style="display: none; overflow: hidden;">
@@ -421,7 +420,7 @@
 
                     <div class="menu-item">
                         <!--begin:Menu link-->
-                        <a class="menu-link" href="/master/department">
+                        <a class="menu-link" href="/master/grade">
                             <span class="menu-icon">
                                 <i class="fas fa-layer-group"></i>
                             </span>
@@ -444,7 +443,19 @@
 
                     <div class="menu-item">
                         <!--begin:Menu link-->
-                        <a class="menu-link" href="/master/department">
+                        <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                            href="/master/division">
+                            <span class="menu-icon">
+                                <i class="fas fa-network-wired"></i>
+                            </span>
+                            <span class="menu-title ps-1">Division</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link" href="/master/section">
                             <span class="menu-icon">
                                 <i class="fas fa-users"></i>
                             </span>

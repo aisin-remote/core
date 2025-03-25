@@ -88,4 +88,16 @@ class MasterController extends Controller
         }
     }
 
+    public function division()
+    {
+        return view('website.master.division.index');
+    }
+    public function section()
+    {
+        return view('website.master.section.index');
+    }
+    public function grade()
+    {
+        return view('website.master.grade.index');
+    }
 }
