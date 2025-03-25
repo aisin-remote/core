@@ -243,15 +243,15 @@ class IdpController extends Controller
         return back()->with('error', 'Employee tidak ditemukan.');
     }
 
-    $assessment = Assessment::where('employee_id', $employee_id)->latest()->first(); // Ambil assessment terbaru
+    $assessment = Assessment::where('employee_id', $employee_id)->latest()->first();
     if (!$assessment) {
         return back()->with('error', 'Assessment tidak ditemukan.');
     }
 
 
     $assessmentDetails = DB::table('detail_assessments')
-    ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id') // Sesuaikan dengan tabel ALC
-    ->select('detail_assessments.*', 'alc.name as alc_name') // Ambil nama ALC
+    ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
+    ->select('detail_assessments.*', 'alc.name as alc_name')
     ->where('detail_assessments.assessment_id', $assessment->id)
     ->get();
 
@@ -272,12 +272,57 @@ class IdpController extends Controller
 
     $startRow = 13;
 
+    $latestAssessment = DB::table('assessments')
+    ->where('employee_id', $employee_id)
+    ->latest('created_at')
+    ->first();
+
+if (!$latestAssessment) {
+    return back()->with('error', 'Assessment tidak ditemukan untuk employee ini.');
+}
+
+
+$assessmentDetails = DB::table('detail_assessments')
+    ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
+    ->where('detail_assessments.assessment_id', $latestAssessment->id)
+    ->select('detail_assessments.*', 'alc.name as alc_name')
+    ->get();
+
+foreach ($assessmentDetails as $detail) {
+    if (!empty($detail->strength)) {
+        $sheet->setCellValue('B' . $startRow, $detail->alc_name . " - " . $detail->strength);
+    }
+
+    if (!empty($detail->weakness)) {
+        $sheet->setCellValue('F' . $startRow, $detail->alc_name . " - " . $detail->weakness);
+    }
+
+    if (!empty($detail->strength) || !empty($detail->weakness)) {
+        $startRow++;
+    }
+}
+
+    $startRow = 33;
+
+    $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
+
+    if (!$assessment_id) {
+        return back()->with('error', 'Assessment ID tidak ditemukan.');
+    }
+
+    $assessmentDetails = DB::table('detail_assessments')
+    ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
+    ->where('detail_assessments.assessment_id', $latestAssessment->id)
+    ->select('detail_assessments.*', 'alc.name as alc_name')
+    ->get();
+
     foreach ($assessmentDetails as $detail) {
-        if (!empty($detail->strength) || !empty($detail->weakness)) {
-            $sheet->setCellValue('A' . $startRow, $detail->alc_name);
-            $sheet->setCellValue('B' . $startRow, $detail->strength ?? "-");
-            $sheet->setCellValue('F' . $startRow, $detail->weakness ?? "-");
-            $startRow++;
+        if (!empty($detail->weakness)) {
+            $sheet->setCellValue('C' . $startRow, $detail->alc_name . " - " . $detail->weakness);
+        }
+
+        if (!empty($detail->weakness)) {
+            $startRow += 2;
         }
     }
 
@@ -293,7 +338,7 @@ class IdpController extends Controller
     $idpRecords = Idp::where('assessment_id', $assessment_id)->get();
 
     foreach ($idpRecords as $idp) {
-        $sheet->setCellValue('C' . $startRow, $idp->alc_name ?? "-");
+        $sheet->setCellValue('C' . $startRow, $detail->alc_name . " - " . ($detail->weakness ?? "-"));
         $sheet->setCellValue('E' . $startRow, $idp->development_program ?? "-");
         $sheet->setCellValue('D' . $startRow, $idp->category ?? "-");
         $sheet->setCellValue('H' . $startRow, $idp->development_target ?? "-");

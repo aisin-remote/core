@@ -54,10 +54,10 @@
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8"
                     role="tablist" style="cursor:pointer">
                     @php
-                        $jobPositions = ['General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor'];
+                        $jobPositions = ['Director', 'General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
                     @endphp
 
                     @foreach ($jobPositions as $index => $position)
@@ -430,7 +430,7 @@
                                         <h3 class="card-title">II. Individual Development Program</h3>
                                     </div>
                                     <div class="card-body table-responsive">
-                                        <table class="table align-middle">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                             <thead>
                                                 <tr>
                                                     <tr class="text-start text-muted fw-bold fs-8 gs-0">
@@ -463,7 +463,7 @@
                                         <h3 class="card-title">III. Mid Year Review</h3>
                                     </div>
                                     <div class="card-body table-responsive">
-                                        <table class="table align-middle">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                             <thead>
                                                 <tr>
                                                     <tr class="text-start text-muted fw-bold fs-8 gs-0">
