@@ -36,7 +36,7 @@
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Section List</h3>
+                <h3 class="card-title">Division List</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                         style="width: 200px;">
@@ -69,7 +69,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td colspan="9" class="text-center text-muted">No section found</td>
+                            <td colspan="9" class="text-center text-muted">No division found</td>
                         </tr>
                     </tbody>
                 </table>
