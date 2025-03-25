@@ -6,7 +6,7 @@
 
 
 <head>
-    <title>HR</title>
+    <title>HR- People Development</title>
     <meta charset="utf-8" />
     <meta name="description"
         content="
@@ -27,7 +27,7 @@
     <meta property="og:title"
         content="Metronic - The World's #1 Selling Tailwind CSS & Bootstrap Admin Template by KeenThemes" />
     <link rel="canonical" href="index.html" />
-    <link rel="shortcut icon" href="{{ asset('assets/media/logos/favicon.ico') }}" />
+    <link rel="shortcut icon" href="{{ asset('assets/media/logos/satu-aisin-final1.png') }}" />
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
     <!--begin::Fonts(mandatory for all pages)-->

@@ -176,9 +176,9 @@
                                     Detail
                                 </a>
                                 ${assessment.upload ? `
-                                                                                <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                    View PDF
-                                                                                </a>`
+                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                            View PDF
+                                                                                        </a>`
                                     : '<span class="text-muted">No PDF Available</span>'
                                 }
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
@@ -225,54 +225,25 @@
                 let date = $(this).data("date");
                 let upload = $(this).data("upload");
 
-                // Decode data yang di-encode sebelumnya
                 let scores = JSON.parse(decodeURIComponent($(this).attr("data-scores")));
                 let alcs = JSON.parse(decodeURIComponent($(this).attr("data-alcs")));
                 let alcNames = JSON.parse(decodeURIComponent($(this).attr("data-alc_name")));
                 let strengths = JSON.parse(decodeURIComponent($(this).attr("data-strengths")));
                 let weaknesses = JSON.parse(decodeURIComponent($(this).attr("data-weaknesses")));
 
-                // Masukkan data ke dalam modal
                 $("#update_assessment_id").val(assessmentId);
                 $("#update_employee_id").val(employeeId);
                 $("#update_date").val(date);
                 $("#update_upload").attr("href", upload).text("Lihat File");
 
-                /*** Mengisi Radio Button Scores ***/
                 scores.forEach((score, index) => {
-                    let alcId = alcs[index]; // ID dari ALC yang sesuai
+                    let alcId = alcs[index];
                     $(`#update_score_${alcId}_${score}`).prop("checked", true);
                 });
 
-                /*** Mengisi Strengths ***/
-                const strengthContainer = document.getElementById("update-strengths-wrapper");
-                strengthContainer.innerHTML = "";
-                strengths.forEach((strength, idx) => {
-                    if (strength.trim() !== "") {
-                        addAssessmentCard("strength", "update-strengths-wrapper", alcs[idx],
-                            strength, alcNames[idx]);
-                    }
-                });
-
-                if (strengths.length === 0) {
-                    addAssessmentCard("strength", "update-strengths-wrapper");
-                }
-
-                /*** Mengisi Weaknesses ***/
-                const weaknessContainer = document.getElementById("update-weaknesses-wrapper");
-                weaknessContainer.innerHTML = "";
-                weaknesses.forEach((weakness, idx) => {
-                    if (weakness.trim() !== "") {
-                        addAssessmentCard("weakness", "update-weaknesses-wrapper", alcs[idx],
-                            weakness, alcNames[idx]);
-                    }
-                });
-
-                if (weaknesses.length === 0) {
-                    addAssessmentCard("weakness", "update-weaknesses-wrapper");
-                }
-
-                // Tampilkan modal
+                populateAssessmentCards("strength", "update-strengths-wrapper", strengths, alcs, alcNames);
+                populateAssessmentCards("weakness", "update-weaknesses-wrapper", weaknesses, alcs,
+                alcNames);
                 const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
                 modal.show();
 
@@ -292,16 +263,25 @@
                 }, 300);
             });
 
-            /**
-             * Fungsi untuk menambahkan card Strength atau Weakness ke dalam modal
-             */
-            function addAssessmentCard(type, containerId, selectedAlc = "", description = "", alcName = "") {
+            function populateAssessmentCards(type, containerId, data, alcs, alcNames) {
                 let container = document.getElementById(containerId);
-                if (!container) {
-                    console.error(`Container '${containerId}' tidak ditemukan.`);
-                    return;
+                container.innerHTML = "";
+
+                data.forEach((desc, idx) => {
+                    if (desc.trim() !== "") {
+                        addAssessmentCard(type, containerId, alcs[idx], desc, alcNames[idx]);
+                    }
+                });
+
+                if (data.length === 0) {
+                    addAssessmentCard(type, containerId);
                 }
 
+                updateDropdownOptions();
+            }
+
+            function addAssessmentCard(type, containerId, selectedAlc = "", description = "", alcName = "") {
+                let container = document.getElementById(containerId);
                 let templateCard = document.createElement("div");
                 templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
@@ -329,22 +309,34 @@
                 let selectElement = templateCard.querySelector(".alc-dropdown");
                 selectElement.addEventListener("change", function() {
                     updateDescriptionName(selectElement, type);
+                    updateDropdownOptions();
                 });
 
                 let buttonGroup = templateCard.querySelector(".button-group");
 
+                if (container.children.length > 0) {
+                    let removeButton = document.createElement("button");
+                    removeButton.type = "button";
+                    removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card", "me-2");
+                    removeButton.textContent = "Hapus";
+
+                    removeButton.addEventListener("click", function() {
+                        templateCard.remove();
+                        updateDropdownOptions();
+                    });
+
+                    buttonGroup.insertBefore(removeButton, buttonGroup.firstChild);
+                }
+
                 templateCard.querySelector(".add-assessment").addEventListener("click", function() {
                     addAssessmentCard(type, containerId);
-                    updateRemoveButtons(container);
+                    updateDropdownOptions();
                 });
 
                 container.appendChild(templateCard);
-                updateRemoveButtons(container);
+                updateDropdownOptions();
             }
 
-            /**
-             * Fungsi untuk mengupdate nama textarea berdasarkan ALC yang dipilih
-             */
             function updateDescriptionName(selectElement, type) {
                 let card = selectElement.closest(".assessment-card");
                 let textarea = card.querySelector(`.${type}-textarea`);
@@ -357,35 +349,36 @@
                 }
             }
 
-            /**
-             * Fungsi untuk menambahkan tombol hapus jika ada lebih dari 1 field
-             */
-            function updateRemoveButtons(container) {
-                let cards = container.querySelectorAll(".assessment-card");
-                let removeButtons = container.querySelectorAll(".remove-card");
+            function updateDropdownOptions() {
+                let selectedStrengths = new Set();
+                let selectedWeaknesses = new Set();
 
-                removeButtons.forEach(button => button.remove());
+                document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
+                    if (select.value) selectedStrengths.add(select.value);
+                });
 
-                if (cards.length > 1) {
-                    cards.forEach((card, index) => {
-                        if (index !== 0) {
-                            let buttonGroup = card.querySelector(".button-group");
-                            let removeButton = document.createElement("button");
-                            removeButton.type = "button";
-                            removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card",
-                                "me-2");
-                            removeButton.textContent = "Hapus";
+                document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
+                    if (select.value) selectedWeaknesses.add(select.value);
+                });
 
-                            removeButton.addEventListener("click", function() {
-                                card.remove();
-                                updateRemoveButtons(container);
-                            });
-
-                            buttonGroup.insertBefore(removeButton, buttonGroup.firstChild);
-                        }
+                document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
+                    let currentValue = select.value;
+                    select.querySelectorAll("option").forEach(option => {
+                        option.hidden = (selectedWeaknesses.has(option.value) || selectedStrengths
+                            .has(option.value)) && option.value !== currentValue;
                     });
-                }
+                });
+
+                document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
+                    let currentValue = select.value;
+                    select.querySelectorAll("option").forEach(option => {
+                        option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
+                            .has(option.value)) && option.value !== currentValue;
+                    });
+                });
             }
+
+
 
 
 
