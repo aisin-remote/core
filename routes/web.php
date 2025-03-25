@@ -10,6 +10,9 @@ use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\GroupCompetencyController;
+use App\Http\Controllers\CompetencyController;
+use App\Http\Controllers\EmpCompetencyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -21,6 +24,11 @@ use App\Http\Controllers\AssessmentController;
 | contains the "web" middleware group. Now create something great!
 |
 */
+
+
+Route::resource('emp_competency', EmpCompetencyController::class);
+Route::resource('group_competency', GroupCompetencyController::class);
+Route::resource('competency', CompetencyController::class);
 
 Route::middleware('guest')->group(function () {
     Route::prefix('register')->group(function () {

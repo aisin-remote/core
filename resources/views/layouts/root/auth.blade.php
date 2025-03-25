@@ -99,7 +99,7 @@
 
                     <!--begin::Title-->
                     <h1 class="text-gray-800 fs-2qx fw-bold text-center mb-7">
-                        Fast, Efficient and Productive
+                        Fast & Efficient
                     </h1>
                     <!--end::Title-->
 
