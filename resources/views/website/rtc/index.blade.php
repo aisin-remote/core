@@ -201,7 +201,9 @@
                         <div class="col-md-3 text-center">
                             <span class="team-title designers">ENG Body</span>
                             <div class="team">
-                                <div class="member p-3 border rounded shadow-sm bg-light" style="width: 300px;">
+                                <div class="member p-3 border rounded shadow-sm bg-light"
+                                    style="width: 300px; cursor: pointer;" data-bs-toggle="modal"
+                                    data-bs-target="#inputModal">
                                     <div class="fw-bold fs-4 fst-italic">Lutfi Dahlan</div>
                                     <hr class="my-2">
                                     <div class="container text-start my-5">
@@ -226,7 +228,9 @@
                         <div class="col-md-3 text-center">
                             <span class="team-title developers">ENG Unit</span>
                             <div class="team">
-                                <div class="member p-3 border rounded shadow-sm bg-light" style="width: 300px;">
+                                <div class="member p-3 border rounded shadow-sm bg-light"
+                                    style="width: 300px; cursor: pointer;" data-bs-toggle="modal"
+                                    data-bs-target="#inputModal">
                                     <div class="fw-bold text-danger fs-4 fst-italic">Ricky P</div>
                                     <hr class="my-2">
                                     <div class="container text-start my-5">
@@ -254,7 +258,9 @@
                         <div class="col-md-3 text-center">
                             <span class="team-title qa">QA Unit</span>
                             <div class="team">
-                                <div class="member p-3 border rounded shadow-sm bg-light" style="width: 300px;">
+                                <div class="member p-3 border rounded shadow-sm bg-light"
+                                    style="width: 300px; cursor: pointer;" data-bs-toggle="modal"
+                                    data-bs-target="#inputModal">
                                     <div class="fw-bold fs-4 fst-italic">Junjunan</div>
                                     <hr class="my-2">
                                     <div class="container text-start my-5">
@@ -281,7 +287,9 @@
                         <div class="col-md-3 text-center">
                             <span class="team-title scrum">QA Body</span>
                             <div class="team">
-                                <div class="member p-3 border rounded shadow-sm bg-light" style="width: 300px;">
+                                <div class="member p-3 border rounded shadow-sm bg-light"
+                                    style="width: 300px; cursor: pointer;" data-bs-toggle="modal"
+                                    data-bs-target="#inputModal">
                                     <div class="fw-bold fs-4 fst-italic">Harpan Sapli</div>
                                     <hr class="my-2">
                                     <div class="container text-start my-5">
@@ -304,6 +312,59 @@
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div class="modal fade" id="inputModal" tabindex="-1" aria-labelledby="inputModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="inputModalLabel">Input Candidate</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form>
+                        <div class="mb-6">
+                            <label for="st" class="form-label">S/T Candidate</label>
+                            <select name="position" aria-label="Select a Country" data-control="select2"
+                                data-placeholder="Select Candidate..." class="form-select form-select-lg fw-semibold">
+                                <option value="">Select Candidate</option>
+                                <option data-kt-flag="flags/afghanistan.svg" value="GM">Ikhsan
+                                    Manager
+                                </option>
+                                <option data-kt-flag="flags/afghanistan.svg" value="Manager">Roy</option>
+                            </select>
+                        </div>
+                        <div class="mb-6">
+                            <label for="mt" class="form-label">M/T Candidate</label>
+                            <select name="position" aria-label="Select a Country" data-control="select2"
+                                data-placeholder="Select Candidate..." class="form-select form-select-lg fw-semibold">
+                                <option value="">Select Candidate</option>
+                                <option data-kt-flag="flags/afghanistan.svg" value="GM">Valen
+                                    Manager
+                                </option>
+                                <option data-kt-flag="flags/afghanistan.svg" value="Manager">Roy</option>
+                            </select>
+                        </div>
+                        <div class="mb-6">
+                            <label for="lt" class="form-label">L/T Candidate</label>
+                            <select name="position" aria-label="Select a Country" data-control="select2"
+                                data-placeholder="Select Candidate..." class="form-select form-select-lg fw-semibold">
+                                <option value="">Select Candidate</option>
+                                <option data-kt-flag="flags/afghanistan.svg" value="GM">Naza
+                                    Manager
+                                </option>
+                                <option data-kt-flag="flags/afghanistan.svg" value="Manager">Aji</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save changes</button>
                 </div>
             </div>
         </div>
