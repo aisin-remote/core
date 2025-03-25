@@ -66,7 +66,7 @@
                             <span class="menu-icon">
                                 <i class="fas fa-dashboard"></i>
                             </span>
-                            <span class="menu-title ps-1">Dashboard</span>
+                            <span class="menu-title ps-1">Development Plan</span>
                         </a>
                         <!--end:Menu link-->
                     </div>
@@ -311,7 +311,7 @@
                             </div>
                             <!-- End: Menu Sub -->
                         </div>
-                    @endif 
+                    @endif
 
                     <div class="menu-item pt-5">
                         <!--begin:Menu content-->
@@ -320,38 +320,53 @@
                         <!--end:Menu content-->
                     </div>
 
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('Employee Competency') ? 'active' : '' }}" href="/emp_competency">
+                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
+                        <!-- Begin: Menu Link -->
+                        <span class="menu-link {{ request()->is('Competency') ? 'active' : '' }}">
                             <span class="menu-icon">
-                                <i class="fas fa-user-tie"></i>
+                                <i class="fas fa-chalkboard-teacher"></i>
                             </span>
-                            <span class="menu-title ps-1">Employee Competency</span>
-                        </a>
-                        <!--end:Menu link-->
+                            <span class="menu-title ps-1">Training</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+                        <!-- End: Menu Link -->
+
+
+                        <!-- Begin: Menu Sub -->
+                        <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
+                            style="display: none; overflow: hidden;">
+                            <!-- Menu Item: FAQ Classic -->
+                            <div class="menu-item">
+                                <a class="menu-link" href="/emp_competency">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Employee Competency</span>
+                                </a>
+                            </div>
+
+                            <!-- Menu Item: FAQ Extended -->
+                            <div class="menu-item">
+                                <a class="menu-link" href="/competency">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Competency</span>
+                                </a>
+                            </div>
+
+                            <div class="menu-item">
+                                <a class="menu-link" href="/group_competency">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Group Competency</span>
+                                </a>
+                            </div>
+                        </div>
+                        <!-- End: Menu Sub -->
                     </div>
 
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('Competency') ? 'active' : '' }}" href="/competency">
-                            <span class="menu-icon">
-                                <i class="fas fa-user-tie"></i>
-                            </span>
-                            <span class="menu-title ps-1">Competency</span>
-                        </a>
-                        <!--end:Menu link-->
-                    </div>
-
-                    <div class="menu-item">
-                        <!--begin:Menu link-->
-                        <a class="menu-link {{ request()->is('Group Competency') ? 'active' : '' }}" href="/group_competency">
-                            <span class="menu-icon">
-                                <i class="fas fa-user-tie"></i>
-                            </span>
-                            <span class="menu-title ps-1">Group Competency</span>
-                        </a>
-                        <!--end:Menu link-->
-                    </div>
 
                     @if (auth()->user()->role == 'User')
                         <div class="menu-item">
