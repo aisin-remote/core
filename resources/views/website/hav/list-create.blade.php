@@ -33,16 +33,17 @@
         <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 gy-10">
                         <!--begin::Item-->
                 @foreach ($employees as $item)
+                <a href="{{url('hav/generate-create',['id' => $item->id])}}" class="text-gray-900 fw-bold text-hover-primary fs-3">
                     <div class="col text-center mb-9">
                         <!--begin::Photo-->
-                        <div class="octagon mx-auto mb-2 d-flex w-150px h-150px bgi-no-repeat bgi-size-contain bgi-position-center" style="background-image:url('/metronic8/demo1/assets/media/avatars/300-1.jpg')">
+                        <div class="octagon mx-auto mb-2 d-flex w-150px h-150px bgi-no-repeat bgi-size-contain bgi-position-center" style="background-image:url('{{ asset('assets/media/avatars/300-1.jpg') }}')">
                         </div>
                         <!--end::Photo-->
         
                         <!--begin::Person-->
                         <div class="mb-0">
                             <!--begin::Name-->
-                            <a href="{{url('hav/generate-create',['id' => $item->id])}}" class="text-gray-900 fw-bold text-hover-primary fs-3">{{$item->name}}</a>           
+                            <h3> {{$item->name}}   </h3>      
                             <!--end::Name-->
                             
                             <!--begin::Position-->
@@ -51,6 +52,7 @@
                         </div>
                         <!--end::Person-->                
                     </div>
+                </a>  
                 @endforeach
                  
         </div>

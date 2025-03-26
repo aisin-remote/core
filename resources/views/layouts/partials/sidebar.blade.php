@@ -189,11 +189,21 @@
                             style="display: none; overflow: hidden;">
                             <!-- Menu Item: FAQ Classic -->
                             <div class="menu-item">
-                                <a class="menu-link" href="/hav/list-create">
+                                <a class="menu-link  {{ request()->is('hav/list-create') ? 'active' : '' }}" href="/hav/list-create">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
                                     <span class="menu-title">HAV Entry</span>
+                                </a>
+                            </div>
+
+                            <!-- Menu Item: FAQ Extended -->
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->is('hav/list') ? 'active' : '' }}" href="/hav/list">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">HAV List</span>
                                 </a>
                             </div>
 
