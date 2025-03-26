@@ -1,5 +1,13 @@
 @extends('layouts.root.main')
 
+@section('title')
+    {{ $title ?? 'Employee Details' }}
+@endsection
+
+@section('breadcrumbs')
+    {{ $title ?? 'Employee' }}
+@endsection
+
 @section('main')
     @if (session()->has('success'))
         <script>
@@ -77,71 +85,116 @@
                                         <div class="mt-2">
                                             <div class="row">
                                                 <div class="col-6 mb-8">
-                                                    <label class="form-label fw-bold fs-6">NPK</label>
+                                                    <label class="form-label fw-bold fs-6">Name</label>
                                                     <input type="text" name="name"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Nama Lengkap"
+                                                        value="{{ old('name', $employee->name) }}">
+                                                </div>
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">NPK</label>
+                                                    <input type="text" name="npk"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->npk) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Gender</label>
-                                                    <input type="text" name="name"
+                                                    <input type="text" name="gender"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->gender) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Birthday Date</label>
-                                                    <input type="date" name="name"
+                                                    <input type="date" name="birthday_date"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->birthday_date) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Name</label>
-                                                    <input type="text" name="name"
-                                                        class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->company_name) }}">
+                                                    <select name="company_name" class="form-select form-select-sm"
+                                                        data-control="select2">
+                                                        <option value="">-- Pilih Perusahaan --</option>
+                                                        <option value="AII"
+                                                            {{ old('company_name', $employee->company_name) == 'AII' ? 'selected' : '' }}>
+                                                            Aisin Indonesia</option>
+                                                        <option value="AIIA"
+                                                            {{ old('company_name', $employee->company_name) == 'AIIA' ? 'selected' : '' }}>
+                                                            Aisin Indonesia Automotive</option>
+                                                    </select>
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Group</label>
-                                                    <input type="text" name="name"
+                                                    <input type="text" name="company_group"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->company_group) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Join Date</label>
-                                                    <input type="date" name="name"
+                                                    <input type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->aisin_entry_date) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Working Period</label>
-                                                    <input type="text" name="name"
+                                                    <input type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->working_period) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Position</label>
-                                                    <input type="text" name="name"
-                                                        class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->position) }}">
+                                                    <select name="position" class="form-select form-select-sm fw-semibold"
+                                                        data-control="select2">
+                                                        <option value="">Select Position</option>
+                                                        <option value="GM"
+                                                            {{ old('position', $employee->position ?? '') == 'GM' ? 'selected' : '' }}>
+                                                            General Manager</option>
+                                                        <option value="Manager"
+                                                            {{ old('position', $employee->position ?? '') == 'Manager' ? 'selected' : '' }}>
+                                                            Manager</option>
+                                                        <option value="Coordinator"
+                                                            {{ old('position', $employee->position ?? '') == 'Coordinator' ? 'selected' : '' }}>
+                                                            Coordinator</option>
+                                                        <option value="Section Head"
+                                                            {{ old('position', $employee->position ?? '') == 'Section Head' ? 'selected' : '' }}>
+                                                            Section Head</option>
+                                                        <option value="Supervisor"
+                                                            {{ old('position', $employee->position ?? '') == 'Supervisor' ? 'selected' : '' }}>
+                                                            Supervisor</option>
+                                                        <option value="Act Leader"
+                                                            {{ old('position', $employee->position ?? '') == 'Act Leader' ? 'selected' : '' }}>
+                                                            Act Leader</option>
+                                                        <option value="Act JP"
+                                                            {{ old('position', $employee->position ?? '') == 'Act JP' ? 'selected' : '' }}>
+                                                            Act JP</option>
+                                                        <option value="Operator"
+                                                            {{ old('position', $employee->position ?? '') == 'Operator' ? 'selected' : '' }}>
+                                                            Operator</option>
+                                                    </select>
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Department</label>
-                                                    <input type="text" name="name"
-                                                        class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->departments->first()->name) }}">
+                                                    <select name="department_id" aria-label="Pilih Departemen"
+                                                        data-control="select2" data-placeholder="Pilih departemen"
+                                                        class="form-select form-select-sm fw-semibold">
+                                                        <option value="">Pilih Departemen</option>
+                                                        @foreach ($departments as $department)
+                                                            <option data-kt-flag="flags/afghanistan.svg"
+                                                                value="{{ $department->id }}"
+                                                                {{ old('department_id', $employee->departments->first()->id ?? '') == $department->id ? 'selected' : '' }}>
+                                                                {{ $department->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Grade</label>
-                                                    <input type="text" name="name"
+                                                    <input type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->grade) }}">
