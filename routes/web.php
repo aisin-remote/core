@@ -143,6 +143,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('rtc')->group(function () {
+        Route::get('/detail', function () {
+            return view('website.rtc.detail');
+        })->name('rtc.detail');
+        
         Route::get('/{company?}', function () {
             return view('website.rtc.index');
         });
