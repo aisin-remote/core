@@ -34,7 +34,7 @@ Route::resource('group_competency', GroupCompetencyController::class);
 Route::get('/competencies', [CompetencyController::class, 'index'])->name('competencies.index');
 Route::get('/competencies/create', [CompetencyController::class, 'create'])->name('competencies.create');
 Route::post('/competencies/store', [CompetencyController::class, 'store'])->name('competencies.store');
-
+Route::get('/competencies/{competency}/edit', [CompetencyController::class, 'edit'])->name('competencies.edit');
 Route::put('/competencies/{competency}', [CompetencyController::class, 'update'])->name('competencies.update');
 Route::delete('/competencies/{competency}', [CompetencyController::class, 'destroy'])->name('competencies.destroy');
 

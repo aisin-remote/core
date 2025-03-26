@@ -33,7 +33,7 @@
                             <th>Description</th>
                             <th>Group Competency</th>
                             <th>Department</th>
-                            <th>Role</th>
+                            <th>Position</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -45,9 +45,10 @@
                                 <td>{{ $competency->description }}</td>
                                 <td>{{ $competency->group_competency->name }}</td>
                                 <td>{{ $competency->department->name }}</td>
-                                <td>{{ $competency->employee->position }}</td>
+                                <td>{{ $competency->position }}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-warning btn-sm edit-btn" data-id="{{ $competency->id }}">
+                                    <button class="btn btn-warning btn-sm edit-btn" data-bs-target="#editmodal"
+                                        data-id="{{ $competency->id }}">
                                         <i class="bi bi-pencil"></i> Edit
                                     </button>
                                     <button class="btn btn-danger btn-sm delete-btn" data-id="{{ $competency->id }}">
@@ -65,50 +66,176 @@
             </div>
         </div>
     </div>
+    @include('website.competency.modal')
+    @include('website.competency.update')
 @endsection
 
-@include('website.competency.modal')
+
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
-        $(document).ready(function() {
+        document.addEventListener("DOMContentLoaded", function() {
+            // Inisialisasi Select2
             $('#group_competency_id, #department_id, #employee_id').select2({
                 placeholder: "Select an option",
-                allowClear: true
+                allowClear: true,
+                minimumResultsForSearch: Infinity
             });
-        });
 
-        document.getElementById('addForm').addEventListener('submit', function(event) {
-            event.preventDefault();
-            let formData = new FormData(this);
+            // Elemen yang sering digunakan
+            const addForm = document.getElementById('addForm');
+            const editForm = document.getElementById('editForm');
+            const searchInput = document.getElementById('searchInput');
+            const openAddModal = document.getElementById('openAddModal');
 
-            fetch("{{ route('competencies.store') }}", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    "X-CSRF-TOKEN": document.querySelector('input[name="_token"]').value
+            // Fungsi untuk menampilkan modal tambah
+            openAddModal.addEventListener('click', function() {
+                const addModal = new bootstrap.Modal(document.getElementById('addModal'));
+                addModal.show();
+            });
+
+            // Fungsi untuk mencari data dalam tabel
+            searchInput.addEventListener('keyup', function() {
+                let input = searchInput.value.toLowerCase();
+                document.querySelectorAll("#competencyTable tbody tr").forEach(row => {
+                    row.style.display = row.innerText.toLowerCase().includes(input) ? "" : "none";
+                });
+            });
+
+            // Handle Submit Form Tambah
+            addForm.addEventListener('submit', function(event) {
+                event.preventDefault();
+                let formData = new FormData(addForm);
+
+                fetch("{{ route('competencies.store') }}", {
+                        method: "POST",
+                        body: formData,
+                        headers: {
+                            "X-CSRF-TOKEN": document.querySelector('input[name="_token"]').value
+                        }
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        Swal.fire("Success", data.message, "success");
+                        location.reload();
+                    })
+                    .catch(error => console.error('Error:', error));
+            });
+
+            // Delegasi Event untuk tombol Edit dan Delete
+            document.addEventListener('click', function(event) {
+                let target = event.target;
+
+                // ✅ Handle Edit Button
+                // if (target.classList.contains('edit-btn')) {
+                //     let competencyId = target.getAttribute('data-id');
+                //     console.log("Editing competency with ID:", competencyId);
+
+                //     fetch(`{{ url('competencies') }}/${competencyId}/edit`)
+                //         .then(response => response.json())
+                //         .then(data => {
+                //             console.log("Fetched Data:", data); // Debugging
+
+                //             document.getElementById('edit_id').value = data.id;
+                //             document.getElementById('edit_name').value = data.name;
+                //             document.getElementById('edit_description').value = data.description;
+
+                //             let groupSelect = document.getElementById('edit_group_competency_id');
+                //             let departmentSelect = document.getElementById('edit_department_id');
+                //             let positionSelect = document.getElementById('edit_position');
+
+                //             // Reset dropdown sebelum mengisi ulang
+                //             groupSelect.innerHTML = '<option value="">Select Group</option>';
+                //             departmentSelect.innerHTML = '<option value="">Select Department</option>';
+                //             positionSelect.innerHTML = '<option value="">Select Position</option>';
+
+                //             // Tambahkan semua opsi untuk group competency
+                //             data.all_groups.forEach(group => {
+                //                 let selected = group.id == data.group_competency_id ?
+                //                     "selected" : "";
+                //                 groupSelect.innerHTML +=
+                //                     `<option value="${group.id}" ${selected}>${group.name}</option>`;
+                //             });
+
+                //             // Tambahkan semua opsi untuk department
+                //             data.all_departments.forEach(department => {
+                //                 let selected = department.id == data.department_id ?
+                //                     "selected" : "";
+                //                 departmentSelect.innerHTML +=
+                //                     `<option value="${department.id}" ${selected}>${department.name}</option>`;
+                //             });
+
+                //             // 🔹 Perbaiki pengisian dropdown position
+                //             data.all_positions.forEach(pos => {
+                //                 let selected = pos === data.position ? "selected" : "";
+                //                 positionSelect.innerHTML +=
+                //                     `<option value="${pos}" ${selected}>${pos}</option>`;
+                //             });
+
+                //             // Tampilkan modal edit
+                //             const editModal = new bootstrap.Modal(document.getElementById('editModal'));
+                //             editModal.show();
+                //         })
+                //         .catch(error => console.error('Error fetching data:', error));
+
+
+                // }
+
+                // Jika tombol delete diklik
+                if (target.classList.contains('delete-btn')) {
+                    let competencyId = target.getAttribute('data-id');
+
+                    Swal.fire({
+                        title: "Are you sure?",
+                        text: "You won't be able to revert this!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#3085d6",
+                        confirmButtonText: "Yes, delete it!"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch(`{{ url('competencies') }}/${competencyId}`, {
+                                    method: "DELETE",
+                                    headers: {
+                                        "X-CSRF-TOKEN": document.querySelector(
+                                            'input[name="_token"]').value
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    Swal.fire("Deleted!", data.message, "success");
+                                    location.reload();
+                                })
+                                .catch(error => console.error('Error:', error));
+                        }
+                    });
                 }
-            }).then(response => response.json())
-            .then(data => {
-                Swal.fire("Success", data.message, "success");
-                location.reload();
-            }).catch(error => console.error('Error:', error));
-        });
-
-        document.getElementById('openAddModal').addEventListener('click', function() {
-            var myModal = new bootstrap.Modal(document.getElementById('addModal'));
-            myModal.show();
-        });
-
-        function searchData() {
-            let input = document.getElementById("searchInput").value.toLowerCase();
-            let rows = document.querySelectorAll("#competencyTable tbody tr");
-
-            rows.forEach(row => {
-                let text = row.innerText.toLowerCase();
-                row.style.display = text.includes(input) ? "" : "none";
             });
-        }
+
+            // Handle Submit Form Edit
+            // editForm.addEventListener('submit', function(event) {
+            //     event.preventDefault();
+            //     let formData = new FormData(editForm);
+            //     let competencyId = document.getElementById('edit_id').value;
+
+            //     fetch(`{{ url('competencies') }}/${competencyId}`, {
+            //             method: "POST",
+            //             body: formData,
+            //             headers: {
+            //                 "X-CSRF-TOKEN": document.querySelector('input[name="_token"]').value,
+            //                 "X-HTTP-Method-Override": "PUT"
+            //             }
+            //         })
+            //         .then(response => response.json())
+            //         .then(data => {
+            //             Swal.fire("Updated!", data.message, "success");
+            //             location.reload();
+            //         })
+            //         .catch(error => console.error('Error:', error));
+            // });
+        });
     </script>
 @endpush
