@@ -257,7 +257,8 @@ class IdpController extends Controller
 
     public function exportTemplate($employee_id)
 {
-    $filePath = storage_path('app/public/templates/idp_template.xlsx');
+    $filePath = public_path('assets/file/idp_template.xlsx');
+
 
     if (!file_exists($filePath)) {
         return back()->with('error', 'File template tidak ditemukan.');
