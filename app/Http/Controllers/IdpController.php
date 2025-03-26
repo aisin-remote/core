@@ -11,6 +11,7 @@ use App\Models\DevelopmentOne;
 use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use Carbon\Carbon;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -107,15 +108,39 @@ class IdpController extends Controller
     $details = DevelopmentOne::all();
     $mid = Development::all();
 
-    // Proses assessment data
-    foreach ($assessments as $assessment) {
-        // Ambil IDP development program yang sudah tersimpan
-        $savedPrograms = $assessment->idp->pluck('development_program')->toArray();
-        $assessment->recommendedPrograms = $savedPrograms;
+  foreach ($assessments as $assessment) {
+    // Ambil semua program IDP yang tersimpan
+    $savedPrograms = $assessment->idp->map(function ($idp) {
+        return [
+            'program' => $idp->development_program,
+            'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
+        ];
+    });
 
-        // Tambahkan strengths & weaknesses
-        $assessment->strengths = $assessment->strength;
-        $assessment->weaknesses = $assessment->weakness;
+    // Pisahkan berdasarkan due date
+    $midYearPrograms = [];
+    $oneYearPrograms = [];
+    $currentDate = Carbon::now();
+
+    foreach ($savedPrograms as $program) {
+        $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
+        $diffInMonths = $currentDate->diffInMonths($dueDate);
+
+        if ($diffInMonths <= 6) {
+            $midYearPrograms[] = $program;
+        } else {
+            $oneYearPrograms[] = $program;
+        }
+    }
+
+    // Simpan ke objek assessment agar bisa diakses di Blade
+    $assessment->recommendedProgramsMidYear = $midYearPrograms;
+    $assessment->recommendedProgramsOneYear = $oneYearPrograms;
+
+
+     // Tambahkan strengths & weaknesses
+    $assessment->strengths = $assessment->strength;
+    $assessment->weaknesses = $assessment->weakness;
     }
 
     return view('website.idp.index', compact(
