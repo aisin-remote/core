@@ -37,7 +37,7 @@
         <div class="container mt-4">
             <div class="row">
                 <div class="col-4">
-                    <div class="card mb-5 mb-xl-10">
+                    <div class="card mb-5 mb-xl-10" style="height: 1435px !important">
                         <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                             data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
@@ -112,7 +112,19 @@
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->birthday_date) }}">
                                                 </div>
-                                                <div class="col-6 mb-8">
+                                                <div class="col-12 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Email</label>
+                                                    <input type="text" name="email"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Nama Lengkap" value="mitsalf1@gmail.com">
+                                                </div>
+                                                <div class="col-12 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Phone Number</label>
+                                                    <input type="text" name="email"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Nama Lengkap" value="082428591267">
+                                                </div>
+                                                <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Name</label>
                                                     <select name="company_name" class="form-select form-select-sm"
                                                         data-control="select2">
@@ -125,28 +137,28 @@
                                                             Aisin Indonesia Automotive</option>
                                                     </select>
                                                 </div>
-                                                <div class="col-6 mb-8">
+                                                <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Group</label>
                                                     <input type="text" name="company_group"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->company_group) }}">
                                                 </div>
-                                                <div class="col-6 mb-8">
+                                                <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Join Date</label>
                                                     <input type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->aisin_entry_date) }}">
                                                 </div>
-                                                <div class="col-6 mb-8">
+                                                <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Working Period</label>
                                                     <input type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
                                                         value="{{ old('name', $employee->working_period) }}">
                                                 </div>
-                                                <div class="col-6 mb-8">
+                                                <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Position</label>
                                                     <select name="position" class="form-select form-select-sm fw-semibold"
                                                         data-control="select2">
@@ -177,7 +189,7 @@
                                                             Operator</option>
                                                     </select>
                                                 </div>
-                                                <div class="col-6 mb-8">
+                                                <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Department</label>
                                                     <select name="department_id" aria-label="Pilih Departemen"
                                                         data-control="select2" data-placeholder="Pilih departemen"
@@ -192,7 +204,7 @@
                                                         @endforeach
                                                     </select>
                                                 </div>
-                                                <div class="col-6 mb-8">
+                                                <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Grade</label>
                                                     <input type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
@@ -204,7 +216,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="card-footer d-flex justify-content-end py-6 px-9">
+                            <div class="card-footer d-flex justify-content-end pt-10 px-9">
                                 <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save
                                     Changes</button>
                             </div>
@@ -217,17 +229,19 @@
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
                                 <div class="card-header border-0 d-flex justify-content-between align-items-center">
-                                    <h3 class="fw-bold m-0">Educational Background</h3>
-                                    <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                        data-bs-target="#addEducationModal">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
+                                    <h3 class="fw-bolder m-0">Educational Background</h3>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        @if ($educations->isNotEmpty())
-                                            @foreach ($educations as $education)
+                                        @php
+                                            $totalEducation = $educations->count();
+                                            $maxSlots = 3;
+                                        @endphp
+
+                                        @for ($i = 0; $i < $maxSlots; $i++)
+                                            @if (isset($educations[$i]))
+                                                @php $education = $educations[$i]; @endphp
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold">
@@ -256,144 +270,43 @@
                                                         </button>
                                                     </div>
                                                 </div>
-                                                @unless ($loop->last)
-                                                    <div class="separator separator-dashed my-3"></div>
-                                                @endunless
-                                                <div class="modal fade" id="editEducationModal{{ $education->id }}"
-                                                    tabindex="-1"
-                                                    aria-labelledby="editEducationModalLabel{{ $education->id }}"
-                                                    aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title"
-                                                                    id="editEducationModalLabel{{ $education->id }}">Edit
-                                                                    Education History</h5>
-                                                                <button type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <form action="{{ route('education.update', $education->id) }}"
-                                                                method="POST">
-                                                                @csrf
-                                                                @method('PUT')
-                                                                <input type="hidden" name="employee_id"
-                                                                    value="{{ $education->employee_id }}">
 
-                                                                <div class="modal-body">
-                                                                    <div class="col-lg-12 mb-3">
-                                                                        <label class="fs-5 fw-bold form-label mb-2">
-                                                                            <span class="required">Education Level</span>
-                                                                        </label>
-                                                                        <select name="level"
-                                                                            aria-label="Select a Category"
-                                                                            data-control="select2"
-                                                                            data-placeholder="Select categories..."
-                                                                            class="form-select form-select-lg fw-semibold">
-                                                                            <option value="">Select Category</option>
-                                                                            <option value="SMK"
-                                                                                {{ old('level', $education->educational_level) == 'SMK' ? 'selected' : '' }}>
-                                                                                SMK</option>
-                                                                            <option value="D3"
-                                                                                {{ old('level', $education->educational_level) == 'D3' ? 'selected' : '' }}>
-                                                                                D3</option>
-                                                                            <option value="S1"
-                                                                                {{ old('level', $education->educational_level) == 'S1' ? 'selected' : '' }}>
-                                                                                S1</option>
-                                                                            <option value="S2"
-                                                                                {{ old('level', $education->educational_level) == 'S2' ? 'selected' : '' }}>
-                                                                                S2</option>
-                                                                        </select>
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Major</label>
-                                                                        <input type="text" name="major"
-                                                                            class="form-control"
-                                                                            value="{{ $education->major }}" required>
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Institution</label>
-                                                                        <input type="text" name="institute"
-                                                                            class="form-control"
-                                                                            value="{{ $education->institute }}" required>
-                                                                    </div>
-                                                                    <div class="row">
-                                                                        <div class="col-6">
-                                                                            <label class="form-label">Start Year</label>
-                                                                            <input type="date" name="start_date"
-                                                                                class="form-control"
-                                                                                value="{{ $education->start_date ? \Illuminate\Support\Carbon::parse($education->start_date)->format('Y-m-d') : '' }}"
-                                                                                required>
-                                                                        </div>
-                                                                        <div class="col-6">
-                                                                            <label class="form-label">End Year
-                                                                                (Optional)
-                                                                            </label>
-                                                                            <input type="date" name="end_date"
-                                                                                class="form-control"
-                                                                                value="{{ $education->end_date ? \Illuminate\Support\Carbon::parse($education->end_date)->format('Y-m-d') : '' }}">
-                                                                        </div>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary"
-                                                                        data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit"
-                                                                        class="btn btn-primary">Update</button>
-                                                                </div>
-                                                            </form>
-                                                        </div>
+                                                @include('website.modal.education.update', [
+                                                    'education' => $education,
+                                                ])
+
+                                                @include('website.modal.education.delete', [
+                                                    'education' => $education,
+                                                ])
+                                            @else
+                                                <!-- Slot kosong -->
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
+                                                        <div class="fw-semibold text-gray-600">Click to add education</div>
+                                                    </div>
+                                                    <div>
+                                                        <button class="btn btn-sm btn-light-primary"
+                                                            data-bs-toggle="modal" data-bs-target="#addEducationModal">
+                                                            <i class="fas fa-plus"></i> Add
+                                                        </button>
                                                     </div>
                                                 </div>
+                                            @endif
 
-                                                <div class="modal fade" id="deleteEducationModal{{ $education->id }}"
-                                                    tabindex="-1"
-                                                    aria-labelledby="deleteEducationModalLabel{{ $education->id }}"
-                                                    aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title"
-                                                                    id="deleteEducationModalLabel{{ $education->id }}">
-                                                                    Hapus
-                                                                    Riwayat Pendidikan</h5>
-                                                                <button type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <form
-                                                                action="{{ route('education.destroy', $education->id) }}"
-                                                                method="POST">
-                                                                @csrf
-                                                                @method('DELETE')
-                                                                <div class="modal-body">
-                                                                    <p>Apakah Anda yakin ingin menghapus
-                                                                        <strong>{{ $education->educational_level }} -
-                                                                            {{ $education->major }}</strong> dari riwayat
-                                                                        pendidikan?
-                                                                    </p>
-                                                                </div>
-                                                                <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary"
-                                                                        data-bs-dismiss="modal">Batal</button>
-                                                                    <button type="submit"
-                                                                        class="btn btn-danger">Hapus</button>
-                                                                </div>
-                                                            </form>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        @else
-                                            <div class="text-center py-5">
-                                                <span class="text-gray-500 fs-6">Tidak ada riwayat pendidikan</span>
-                                            </div>
-                                        @endif
+                                            @unless ($i == $maxSlots - 1)
+                                                <div class="separator separator-dashed my-3"></div>
+                                            @endunless
+                                        @endfor
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
                         {{-- modal education --}}
-                        @include('website.modal.education', [
+                        @include('website.modal.education.create', [
                             'employee_id' => $employee->id,
                         ])
                         {{-- end of modal education --}}
@@ -401,30 +314,22 @@
                     <div class="row">
                         <!-- Working Experience -->
                         <div class="col-md-12">
-                            <div class="card mb-5">
-                                <div class="card-header border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                                    role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
-
-                                    <!-- Judul Card -->
-                                    <div class="card-title m-0">
-                                        <h3 class="fw-bold m-0">Working Experience</h3>
-                                    </div>
-
-                                    <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                        data-bs-target="#addExperienceModal">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
+                            <div class="card mb-5 mb-xl-10">
+                                <div class="card-header border-0 d-flex justify-content-between align-items-center">
+                                    <h3 class="fw-bolder m-0">Working Experience</h3>
                                 </div>
+
                                 <div id="kt_activity_year" class="card-body ps-5 tab-pane fade show active border-top"
                                     role="tabpanel">
                                     <div class="timeline timeline-border-dashed">
-                                        @if ($workExperiences->isEmpty())
-                                            <div class="text-center text-muted py-5">
-                                                <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                                <p class="fs-6">No work experience available.</p>
-                                            </div>
-                                        @else
-                                            @foreach ($workExperiences as $experience)
+                                        @php
+                                            $maxSlots = 3;
+                                            $experienceCount = $workExperiences->count();
+                                        @endphp
+
+                                        @for ($i = 0; $i < $maxSlots; $i++)
+                                            @if (isset($workExperiences[$i]))
+                                                @php $experience = $workExperiences[$i]; @endphp
                                                 <div class="timeline-item d-flex">
                                                     <div class="timeline-line"></div>
                                                     <div class="timeline-icon">
@@ -442,20 +347,20 @@
                                                             <div>
                                                                 <button class="btn btn-sm btn-light-primary"
                                                                     data-bs-toggle="modal"
-                                                                    data-bs-target="#experienceModal{{ $loop->index }}">
+                                                                    data-bs-target="#experienceModal{{ $experience->id }}">
                                                                     <i class="fas fa-eye"></i>
                                                                 </button>
                                                                 <button
                                                                     class="btn btn-sm btn-light-warning edit-experience-btn"
                                                                     data-bs-toggle="modal"
-                                                                    data-bs-target="#editExperienceModal{{ $loop->index }}"
-                                                                    data-experience-id="{{ $loop->index }}">
+                                                                    data-bs-target="#editExperienceModal{{ $experience->id }}"
+                                                                    data-experience-id="{{ $experience->id }}">
                                                                     <i class="fas fa-edit"></i>
                                                                 </button>
                                                                 <button
                                                                     class="btn btn-sm btn-light-danger delete-experience-btn"
                                                                     data-bs-toggle="modal"
-                                                                    data-bs-target="#deleteExperienceModal{{ $loop->index }}">
+                                                                    data-bs-target="#deleteExperienceModal{{ $experience->id }}">
                                                                     <i class="fas fa-trash-alt"></i>
                                                                 </button>
                                                             </div>
@@ -474,138 +379,48 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- Modal untuk Detail Pengalaman Kerja -->
-                                                <div class="modal fade" id="experienceModal{{ $loop->index }}"
-                                                    tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">{{ $experience->position }}</h5>
-                                                                <button type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <p><strong>Company:</strong> {{ $experience->company }}</p>
-                                                                <p><strong>Period:</strong>
-                                                                    {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('d M Y') }}
-                                                                    -
-                                                                    {{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('d M Y') : 'Present' }}
-                                                                </p>
-                                                                <p><strong>Job Description:</strong></p>
-                                                                <p>{{ $experience->description }}</p>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary"
-                                                                    data-bs-dismiss="modal">
-                                                                    Close
-                                                                </button>
-                                                            </div>
+                                                @include('website.modal.work.detail', [
+                                                    'experience' => $experience,
+                                                ])
+
+
+                                                @include('website.modal.work.update', [
+                                                    'experience' => $experience,
+                                                ])
+
+                                                @include('website.modal.work.delete', [
+                                                    'experience' => $experience,
+                                                ])
+                                            @else
+                                                <!-- Slot kosong -->
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
+                                                        <div class="fw-semibold text-gray-600">Click to add experience
                                                         </div>
                                                     </div>
-                                                </div>
-
-                                                <!-- Modal untuk Edit Pengalaman Kerja -->
-                                                <div class="modal fade" id="editExperienceModal{{ $loop->index }}"
-                                                    tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Edit Experience</h5>
-                                                                <button type="button" class="btn-close close-edit-modal"
-                                                                    data-bs-dismiss="modal" aria-label="Close"
-                                                                    data-experience-id="{{ $loop->index }}"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <!-- Form Edit -->
-                                                                <form
-                                                                    action="{{ route('work-experience.update', $experience->id) }}"
-                                                                    method="POST">
-                                                                    @csrf
-                                                                    @method('PUT')
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Position</label>
-                                                                        <input type="text" class="form-control"
-                                                                            name="position"
-                                                                            value="{{ $experience->position }}" required>
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Company</label>
-                                                                        <input type="text" class="form-control"
-                                                                            name="company"
-                                                                            value="{{ $experience->company }}" required>
-                                                                    </div>
-                                                                    <div class="row mb-3">
-                                                                        <div class="col-6">
-                                                                            <label class="form-label">Start Date</label>
-                                                                            <input type="date" class="form-control"
-                                                                                name="start_date"
-                                                                                value="{{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y-m-d') }}"
-                                                                                required>
-
-                                                                        </div>
-                                                                        <div class="col-6">
-                                                                            <label class="form-label">End Date</label>
-                                                                            <input type="date" class="form-control"
-                                                                                name="end_date"
-                                                                                value="{{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('Y-m-d') : '' }}">
-
-                                                                        </div>
-                                                                    </div>
-                                                                    <div class="mb-10">
-                                                                        <label class="form-label">Job Description</label>
-                                                                        <textarea class="form-control" name="description" rows="3">{{ $experience->description }}</textarea>
-                                                                    </div>
-                                                                    <div class="text-end">
-                                                                        <button type="submit"
-                                                                            class="btn btn-primary">Save
-                                                                            Changes</button>
-                                                                    </div>
-                                                                </form>
-                                                            </div>
-                                                        </div>
+                                                    <div>
+                                                        <button class="btn btn-sm btn-light-primary"
+                                                            data-bs-toggle="modal" data-bs-target="#addExperienceModal">
+                                                            <i class="fas fa-plus"></i> Add
+                                                        </button>
                                                     </div>
                                                 </div>
+                                            @endif
 
-                                                <!-- Modal Konfirmasi Delete -->
-                                                <div class="modal fade" id="deleteExperienceModal{{ $loop->index }}"
-                                                    tabindex="-1" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Delete Experience</h5>
-                                                                <button type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <p>Are you sure you want to delete the experience
-                                                                    <strong>{{ $experience->position }}</strong> at
-                                                                    <strong>{{ $experience->company }}</strong>?
-                                                                </p>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <form
-                                                                    action="{{ route('work-experience.destroy', $experience->id) }}"
-                                                                    method="POST">
-                                                                    @csrf
-                                                                    @method('DELETE')
-                                                                    <button type="button" class="btn btn-secondary"
-                                                                        data-bs-dismiss="modal">Cancel</button>
-                                                                    <button type="submit"
-                                                                        class="btn btn-danger">Delete</button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                        @endif
+                                            @unless ($i == $maxSlots - 1)
+                                                <div class="separator separator-dashed my-3"></div>
+                                            @endunless
+                                        @endfor
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
                         {{-- work experience modal input --}}
-                        @include('website.modal.work-experience', [
+                        @include('website.modal.work.create', [
                             'employee_id' => $employee->id,
                         ])
                         {{-- end of work experience modal input --}}
@@ -618,17 +433,19 @@
                                     role="button" data-bs-toggle="collapse"
                                     data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
                                     aria-controls="kt_account_connected_accounts">
-                                    <h3 class="fw-bold m-0">Historical Performance Appraisal</h3>
-                                    <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                        data-bs-target="#addAppraisalModal">
-                                        <i class="fas fa-plus"></i>
-                                    </button>
+                                    <h3 class="fw-bolder m-0">Historical Performance Appraisal</h3>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        <div class="d-flex flex-column">
-                                            @forelse ($performanceAppraisals as $appraisal)
+                                        @php
+                                            $maxSlots = 3;
+                                            $appraisalCount = $performanceAppraisals->count();
+                                        @endphp
+
+                                        @for ($i = 0; $i < $maxSlots; $i++)
+                                            @if (isset($performanceAppraisals[$i]))
+                                                @php $appraisal = $performanceAppraisals[$i]; @endphp
                                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <div class="fs-6 fw-bold">Score - {{ $appraisal->score }}</div>
@@ -654,95 +471,46 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="modal fade" id="editAppraisalModal{{ $appraisal->id }}"
-                                                    tabindex="-1"
-                                                    aria-labelledby="editAppraisalModalLabel{{ $appraisal->id }}"
-                                                    aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title">Edit Appraisal</h5>
-                                                                <button type="button" class="btn-close"
-                                                                    data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <form action="{{ route('appraisal.update', $appraisal->id) }}"
-                                                                method="POST">
-                                                                @csrf
-                                                                @method('PUT')
-                                                                <div class="modal-body">
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Score</label>
-                                                                        <input type="text" name="score"
-                                                                            class="form-control"
-                                                                            value="{{ $appraisal->score }}" required>
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Date</label>
-                                                                        <input type="date" name="date"
-                                                                            class="form-control"
-                                                                            value="{{ isset($appraisal) ? \Illuminate\Support\Carbon::parse($appraisal->date)->format('Y-m-d') : old('date') }}"
-                                                                            required>
-                                                                    </div>
-                                                                    <div class="mb-3">
-                                                                        <label class="form-label">Description</label>
-                                                                        <textarea class="form-control" name="description" rows="3">
-                                                                    {{ $appraisal->description }}
-                                                                </textarea>
-                                                                    </div>
-                                                                </div>
-                                                                <div class="modal-footer">
-                                                                    <button type="button" class="btn btn-secondary"
-                                                                        data-bs-dismiss="modal">Batal</button>
-                                                                    <button type="submit"
-                                                                        class="btn btn-primary">Update</button>
-                                                                </div>
-                                                            </form>
-                                                        </div>
+                                                @include('website.modal.appraisal.detail', [
+                                                    'appraisal' => $appraisal,
+                                                ])
+
+                                                @include('website.modal.appraisal.update', [
+                                                    'appraisal' => $appraisal,
+                                                ])
+
+                                                @include('website.modal.appraisal.delete', [
+                                                    'appraisal' => $appraisal,
+                                                ])
+                                            @else
+                                                <!-- Slot kosong -->
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
+                                                        <div class="fw-semibold text-gray-600">Click to add appraisal</div>
+                                                    </div>
+                                                    <div>
+                                                        <button class="btn btn-sm btn-light-primary"
+                                                            data-bs-toggle="modal" data-bs-target="#addAppraisalModal">
+                                                            <i class="fas fa-plus"></i> Add
+                                                        </button>
                                                     </div>
                                                 </div>
+                                            @endif
 
-                                                @if (!$loop->last)
-                                                    <div class="separator separator-dashed my-3"></div>
-                                                @endif
-                                            @empty
-                                                <div class="text-center text-muted py-5">
-                                                    <i class="fas fa-info-circle fa-2x mb-3"></i>
-                                                    <p class="fs-6">Belum ada data appraisal yang tersedia.</p>
-                                                </div>
-                                            @endforelse
-                                        </div>
+                                            @unless ($i == $maxSlots - 1)
+                                                <div class="separator separator-dashed my-3"></div>
+                                            @endunless
+                                        @endfor
                                     </div>
                                 </div>
                             </div>
+
                         </div>
 
-                        @foreach ($performanceAppraisals as $appraisal)
-                            <!-- Modal Detail -->
-                            <div class="modal fade" id="detailModal{{ $appraisal->id }}" tabindex="-1"
-                                aria-hidden="true">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Detail Appraisal {{ $appraisal->year }}</h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                aria-label="Close"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p><strong>Hasil:</strong> {{ $appraisal->score }}</p>
-                                            <p><strong>Catatan:</strong> {{ $appraisal->description }}</p>
-                                            <p><strong>Tahun:</strong> {{ $appraisal->date }}</p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary"
-                                                data-bs-dismiss="modal">Close</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        @endforeach
-
                         {{-- appraisal modal --}}
-                        @include('website.modal.appraisal', [
+                        @include('website.modal.appraisal.create', [
                             'employee_id' => $employee->id,
                         ])
                         {{-- end of appraisal modal --}}
@@ -755,16 +523,19 @@
                                     data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
                                     aria-controls="kt_account_connected_accounts">
                                     <div class="card-title m-0">
-                                        <h3 class="fw-bold m-0">Historical Human Assets Value</h3>
+                                        <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
                                     </div>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
-                                    <div class="card-body border-top p-4">
+                                    <div class="card-body border-top p-10">
                                         <!-- Mengurangi padding agar card lebih kecil -->
                                         <div class="d-flex flex-wrap align-items-center">
                                             <div id="kt_signin_email">
-                                                <div class="fs-6 fw-bold mb-1">2024 - Future Star [2]
+                                                <div class="fs-6 fw-bold mb-1">Future Star [2]
+                                                    <div class="text-muted fs-7">
+                                                        2024
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -773,8 +544,10 @@
 
                                         <div class="d-flex flex-wrap align-items-center">
                                             <div id="kt_signin_password">
-                                                <div class="fs-6 fw-bold mb-1">2023 - Potential
-                                                    Candidate [4]</div>
+                                                <div class="fs-6 fw-bold mb-1">Potential Candidate [4]</div>
+                                                <div class="text-muted fs-7">
+                                                    2023
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -784,6 +557,180 @@
                     </div>
                 </div>
             </div>
+
+            <div class="row">
+                <!-- Historical Astra  -->
+                <div class="col-md-6">
+                    <div class="card mb-5">
+                        <div class="card-header border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
+                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
+                            <h3 class="fw-bolder m-0">Astra Training History</h3>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                data-bs-target="#addAstraTrainingModal">
+                                <i class="fas
+                                fa-plus"></i>
+                            </button>
+                        </div>
+
+                        <div id="kt_account_settings_signin_method" class="collapse show">
+                            <div class="card-body border-top p-5    ">
+                                <!--begin::Table wrapper-->
+                                <div class="table-responsive">
+                                    <!--begin::Table-->
+                                    <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
+                                        <!--begin::Thead-->
+                                        <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
+                                            <tr>
+                                                <th class="text-center">Year</th>
+                                                <th class="text-center">Program</th>
+                                                <th class="text-center">ICT/Project/Total</th>
+                                                <th class="text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <!--end::Thead-->
+
+                                        <!--begin::Tbody-->
+                                        <tbody class="fw-6 fw-semibold text-gray-600">
+                                            @forelse ($astraTrainings as $astraTraining)
+                                                <tr>
+                                                    <td class="text-center">{{ $astraTraining->year }}</td>
+                                                    <td class="text-center">{{ $astraTraining->program }}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        {{ $astraTraining->ict_score }}/{{ $astraTraining->project_score }}/{{ $astraTraining->total_score }}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="d-flex justify-content-center gap-2">
+                                                            <button class="btn btn-sm btn-light-warning"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#editAstraTrainingModal{{ $astraTraining->id }}">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button
+                                                                class="btn btn-sm btn-light-danger delete-experience-btn"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#deleteAstraTrainingModal{{ $astraTraining->id }}">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                @include('website.modal.astra_training.update', [
+                                                    'astraTraining' => $astraTraining,
+                                                ])
+
+                                                @include('website.modal.astra_training.delete', [
+                                                    'astraTraining' => $astraTraining,
+                                                ])
+                                            @empty
+                                                <tr>
+                                                    <td colspan="7" class="text-center">No data available</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+
+                                    </table>
+                                    <!--end::Table-->
+                                </div>
+                                <!--end::Table wrapper-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- astra_training modal --}}
+                @include('website.modal.astra_training.create', [
+                    'employee_id' => $employee->id,
+                ])
+                {{-- end of astra_training modal --}}
+
+                <div class="col-md-6">
+                    <div class="card mb-5">
+                        <div class="card-header border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
+                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
+                            <h3 class="fw-bolder m-0">External Training History</h3>
+                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
+                                data-bs-target="#addExternalTrainingModal">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+
+                        <div id="kt_account_settings_signin_method" class="collapse show">
+                            <div class="card-body border-top p-5">
+                                <!--begin::Table wrapper-->
+                                <div class="table-responsive">
+                                    <!--begin::Table-->
+                                    <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
+                                        <!--begin::Thead-->
+                                        <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
+                                            <tr>
+                                                <th class="text-center">Training</th>
+                                                <th class="text-center">Year</th>
+                                                <th class="text-center">Vendor</th>
+                                                <th class="text-center">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <!--end::Thead-->
+
+                                        <!--begin::Tbody-->
+                                        <tbody class="fw-6 fw-semibold text-gray-600">
+                                            @forelse ($externalTrainings as $externalTraining)
+                                                <tr>
+                                                    <td class="text-center">{{ $externalTraining->program }}</td>
+                                                    <td class="text-center">{{ $externalTraining->year }}</td>
+                                                    <td class="text-center">
+                                                        {{ $externalTraining->vendor }}
+                                                    </td>
+                                                    <td class="text-center">
+                                                        <div class="d-flex justify-content-center gap-2">
+                                                            <button class="btn btn-sm btn-light-warning"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#editExternalTrainingModal{{ $externalTraining->id }}">
+                                                                <i class="fas fa-edit"></i>
+                                                            </button>
+                                                            <button
+                                                                class="btn btn-sm btn-light-danger delete-experience-btn"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#deleteExternalTrainingModal{{ $externalTraining->id }}">
+                                                                <i class="fas fa-trash-alt"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+
+                                                @include('website.modal.external_training.update', [
+                                                    'externalTraining' => $externalTraining,
+                                                ])
+
+                                                @include('website.modal.external_training.delete', [
+                                                    'externalTraining' => $externalTraining,
+                                                ])
+                                            @empty
+                                                <tr>
+                                                    <td colspan="7" class="text-center">No data available</td>
+                                                </tr>
+                                            @endforelse
+                                        </tbody>
+
+                                    </table>
+                                    <!--end::Table-->
+                                </div>
+                                <!--end::Table wrapper-->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {{-- external_training modal --}}
+            @include('website.modal.external_training.create', [
+                'employee_id' => $employee->id,
+            ])
+            {{-- end of external_training modal --}}
+
 
             <div class="card mb-5 mb-xl-10">
                 <!--begin::Card header-->

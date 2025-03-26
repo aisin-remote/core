@@ -26,7 +26,7 @@ use App\Http\Controllers\GroupCompetencyController;
 */
 
 
-Route::resource('emp_competency', EmpCompetencyController::class);
+// Route::resource('emp_competency', EmpCompetencyController::class);
 Route::get('/create', [EmpCompetencyController::class, 'create'])->name('emp_competency.create');
 
 Route::resource('group_competency', GroupCompetencyController::class);
@@ -105,6 +105,20 @@ Route::middleware('auth')->group(function () {
             Route::post('/store', [EmployeeController::class, 'appraisalStore'])->name('appraisal.store');
             Route::put('/update/{id}', [EmployeeController::class, 'appraisalUpdate'])->name('appraisal.update');
             Route::delete('/delete/{id}', [EmployeeController::class, 'appraisalDestroy'])->name('appraisal.destroy');
+        });
+        
+        // astra_training
+        Route::prefix('astra_training')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'astraTrainingStore'])->name('astra_training.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'astraTrainingUpdate'])->name('astra_training.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'astraTrainingDestroy'])->name('astra_training.destroy');
+        });
+        
+        // external_training
+        Route::prefix('external_training')->group(function () {
+            Route::post('/store', [EmployeeController::class, 'externalTrainingStore'])->name('external_training.store');
+            Route::put('/update/{id}', [EmployeeController::class, 'externalTrainingUpdate'])->name('external_training.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'externalTrainingDestroy'])->name('external_training.destroy');
         });
 
         Route::prefix('profile')->group(function () {
