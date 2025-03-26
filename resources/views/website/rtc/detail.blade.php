@@ -178,7 +178,7 @@
             <!--begin::Content container-->
             <div id="kt_app_content_container" class="app-container  container-fluid ">
                 <div class="card">
-                    <img src="{{ asset('assets/media/website/rtc.png') }}" alt="" width="1000px">
+                    <img src="{{ asset('assets/media/website/rtc.png') }}" alt="" width="1200px">
                 </div>
             </div>
         </div>
