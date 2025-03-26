@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Models\Department;
+use App\Models\Employee;
+use App\Models\GroupCompetency;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -16,14 +19,13 @@ class Competency extends Model
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
 
-    public function departement()
+    public function department()
     {
-        return $this->belongsTo(Department::class, 'departement_id', 'id');
+        return $this->belongsTo(Department::class, 'department_id', 'id');
     }
 
     public function group_competency()
     {
-        return $this->belongsTo(Department::class, 'group_competency_id', 'id');
+        return $this->belongsTo(GroupCompetency::class, 'group_competency_id', 'id');
     }
-
 }

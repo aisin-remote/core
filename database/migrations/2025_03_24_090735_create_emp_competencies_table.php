@@ -13,8 +13,22 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('emp_competencies', function (Blueprint $table) {
-            $table->id();
+        Schema::create('employee_competency', function (Blueprint $table) {
+            $table->bigIncrements('id');
+            $table->unsignedBigInteger('employee_id');
+            $table->foreign('employee_id')
+                ->references('id')
+                ->on('employees')
+                ->onDelete('cascade');
+            $table->unsignedBigInteger('competency_id');
+            $table->foreign('competency_id')
+                ->references('id')
+                ->on('competency')
+                ->onDelete('cascade');
+            $table->string('progress');
+            $table->integer('weight');
+            $table->integer('plan');
+            $table->integer('act');
             $table->timestamps();
         });
     }
@@ -26,7 +40,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('emp_competencies');
+        Schema::dropIfExists('emp_competency');
     }
 };
-

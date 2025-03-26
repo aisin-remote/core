@@ -27,7 +27,7 @@ return new class extends Migration
                 ->references('id')
                 ->on('departments')
                 ->onDelete('cascade');
-            $table->enum('position', ['GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor']);
+            $table->enum('position', ['General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor','Act Leader', 'Act JP', 'Operator']);
 
             $table->timestamps();
         });

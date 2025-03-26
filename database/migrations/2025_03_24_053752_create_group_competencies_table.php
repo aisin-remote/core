@@ -13,25 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('competency', function (Blueprint $table) {
+        Schema::create('group_competency', function (Blueprint $table) {
             $table->bigIncrements('id');
             $table->string('name');
             $table->string('description')->nullable();
-            $table->unsignedBigInteger('group_competency_id');
-            $table->foreign('group_competency_id')
-                ->references('id')
-                ->on('group_competency')
-                ->onDelete('cascade');
-            $table->unsignedBigInteger('department_id');
-            $table->foreign('department_id')
-                ->references('id')
-                ->on('departments')
-                ->onDelete('cascade');
-            $table->unsignedBigInteger('employee_id');
-            $table->foreign('employee_id')
-                ->references('id')
-                ->on('employees')
-                ->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -43,6 +28,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('competency');
+        Schema::dropIfExists('group_competencies');
     }
 };
