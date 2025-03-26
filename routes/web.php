@@ -27,6 +27,8 @@ use App\Http\Controllers\GroupCompetencyController;
 
 
 Route::resource('emp_competency', EmpCompetencyController::class);
+Route::get('/create', [EmpCompetencyController::class, 'create'])->name('emp_competency.create');
+
 Route::resource('group_competency', GroupCompetencyController::class);
 
 Route::get('/competencies', [CompetencyController::class, 'index'])->name('competencies.index');
