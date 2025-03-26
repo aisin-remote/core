@@ -25,7 +25,7 @@ return new class extends Migration
                 ->references('id')
                 ->on('competency')
                 ->onDelete('cascade');
-            $table->string('progress');
+            $table->integer('progress');
             $table->integer('weight');
             $table->integer('plan');
             $table->integer('act');
@@ -40,6 +40,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('emp_competency');
+        Schema::dropIfExists('employee_competency');
     }
 };

@@ -25,14 +25,17 @@ use App\Http\Controllers\EmpCompetencyController;
 |
 */
 
-
+/* Employee Competency */
 Route::resource('emp_competency', EmpCompetencyController::class);
 Route::get('/create', [EmpCompetencyController::class, 'create'])->name('emp_competency.create');
+Route::get('/index', [EmpCompetencyController::class, 'index'])->name('index');
 
+/* Group Competency */
 Route::resource('group_competency', GroupCompetencyController::class);
-Route::get('/create', [GroupCompetencyController::class, 'create'])->name('group_competency.create');
 Route::resource('group_competency', GroupCompetencyController::class)->except(['show']);
+Route::get('/create', [GroupCompetencyController::class, 'create'])->name('group_competency.create');
 
+/* Competency */
 Route::resource('competency', CompetencyController::class);
 
 Route::middleware('guest')->group(function () {

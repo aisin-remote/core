@@ -162,7 +162,7 @@
                 </div>
 
                 <div class="d-flex justify-content-end mt-4">
-                    <button type="button" class="btn btn-light me-2">Cancel</button>
+                    <button type="button" class="btn btn-light me-2" onclick="window.location.href='{{ route('index') }}'">Cancel</button>
                     <button type="submit" class="btn btn-primary">Save</button>
                 </div>
             </form>
