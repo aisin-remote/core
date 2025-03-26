@@ -18,7 +18,8 @@ class EmpCompetencyController extends Controller
     // Tampilkan form untuk menambah data baru
     public function create()
     {
-    
+        $title = 'Add Employee Competency';
+        return view('website.emp_competency.create', compact('title'));
     }
 
     // Simulasi penyimpanan data baru (tidak tersimpan secara nyata)
