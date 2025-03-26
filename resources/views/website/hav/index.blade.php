@@ -66,6 +66,15 @@
                         $persen = $havList->count() > 0
                             ? number_format(($havList->count() / $orderedHavGrouped->flatten(1)->count()) * 100, 1) . '%'
                             : '0.0%';
+                            $jsonData = $havList->map(function ($h) {
+                                return [
+                                    'npk' => $h->employee->npk ?? '-',
+                                    'name' => $h->employee->name ?? '-',
+                                    'department' => $h->employee->departments[0]->name ?? '-',
+                                    'status' => $h->status,
+                                    'grade' => $h->employee->grade ?? '-',
+                                ];
+                            });
                     @endphp
                 
                     <div class="col-3">
@@ -73,11 +82,7 @@
                             class="open-modal"
                             data-id="{{ $i }}"
                             data-title="Quadrant {{ $i }} - {{ $title }}"
-                            data-hav='@json($havList->map(fn($h) => [
-                                'npk' => $h->employee->npk ?? '-',
-                                'name' => $h->employee->name ?? '-',
-                                'status' => $h->status
-                            ]))'
+                            data-hav='@json($jsonData)'
                             data-toggle="modal"
                             data-target="#tes">
                             <div class="card {{ $colorClass }} card-md-stretch mb-xl-6 card-clickable">
@@ -146,6 +151,8 @@
                             <tr>
                                 <th>NPK</th>
                                 <th>Nama</th>
+                                <th>Department</th>
+                                <th>Grade</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -157,6 +164,8 @@
                         <tr>
                             <td>${item.npk}</td>
                             <td>${item.name}</td>
+                            <td>${item.department}</td>
+                            <td>${item.grade}</td>
                             <td>${item.status}</td>
                         </tr>
                     `;
