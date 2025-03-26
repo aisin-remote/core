@@ -54,10 +54,10 @@
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8"
                     role="tablist" style="cursor:pointer">
                     @php
-                        $jobPositions = ['General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor'];
+                        $jobPositions = ['Director', 'General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
                     @endphp
 
                     @foreach ($jobPositions as $index => $position)
@@ -142,7 +142,7 @@
                                                             <i class="fas fa-eye"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-sm btn-success"
-                                                            onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
+                                                        onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
                                                             <i class="fas fa-file-export"></i>
                                                         </button>
                                                     </div>
@@ -285,34 +285,31 @@
                         <!-- Tab Content -->
                         <div class="tab-content mt-3">
                             <!-- MID YEAR TAB -->
-                            <div class="tab-pane fade show active" id="midYear-{{ $assessment->employee->id }}"
-                                role="tabpanel">
-                                <form
-                                    action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}"
-                                    method="POST">
+                            <div class="tab-pane fade show active" id="midYear-{{ $assessment->employee->id }}" role="tabpanel">
+                                <form action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
                                     <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
 
                                     <div id="programContainerMid_{{ $assessment->employee->id }}">
-                                        @if (!empty($assessment->recommendedPrograms))
-                                            @foreach ($assessment->recommendedPrograms as $index => $program)
+                                        @if (!empty($assessment->recommendedProgramsMidYear))
+                                            @foreach ($assessment->recommendedProgramsMidYear as $index => $program)
                                                 <div class="programItem">
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Development Program</label>
-                                                        <input type="text" class="form-control"
-                                                            name="development_program[]" value="{{ $program }}"
-                                                            readonly>
+                                                        <input type="text" class="form-control" name="development_program[]" value="{{ $program['program'] }}" readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Date</label>  <!-- Ganti label menjadi Date -->
+                                                        <input type="text" class="form-control" value="{{ $program['date'] }}" readonly>  <!-- Gunakan 'date' -->
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Development Achievement</label>
-                                                        <input type="text" class="form-control"
-                                                            name="development_achievement[]" placeholder="Enter achievement" required>
+                                                        <input type="text" class="form-control" name="development_achievement[]" placeholder="Enter achievement" required>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Next Action</label>
-                                                        <input type="text" class="form-control" name="next_action[]"
-                                                            placeholder="Enter next action" required>
+                                                        <input type="text" class="form-control" name="next_action[]" placeholder="Enter next action" required>
                                                     </div>
                                                     <hr>
                                                 </div>
@@ -328,45 +325,42 @@
 
                             <div class="tab-pane fade" id="oneYear-{{ $assessment->employee->id }}" role="tabpanel">
                                 <form id="reviewForm2-{{ $assessment->employee->id }}"
-                                    action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}"
-                                    method="POST">
+                                      action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}"
+                                      method="POST">
                                     @csrf
                                     <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
 
-                                    <div id="programContainerOne_{{ $assessment->employee->id }}"
-                                        class="programContainer">
-                                        <div class="programItem">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Development Program</label>
-                                                <select class="form-select"
-                                                    name="development_program[{{ $assessment->employee->id }}][]"
-                                                    required>
-                                                    <option value="">-- Select Development Program --</option>
-                                                    <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
-                                                    <option value="Book Reading">Book Reading</option>
-                                                    <option value="FIGURE LEADER">FIGURE LEADER</option>
-                                                    <option value="Team Leader">Team Leader</option>
-                                                    <option value="SR PROJECT">SR PROJECT</option>
-                                                    <option value="People Development Program">People Development Program
-                                                    </option>
-                                                    <option value="Leadership">Leadership</option>
-                                                    <option value="Developing Sub Ordinate">Developing Sub Ordinate
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Evaluation Result</label>
-                                                <input type="text" class="form-control"
-                                                    name="evaluation_result[{{ $assessment->employee->id }}][]"
-                                                    placeholder="Evaluation Result" required>
-                                            </div>
-                                        </div>
+                                    <div id="programContainerOne_{{ $assessment->employee->id }}" class="programContainer">
+                                        @if (!empty($assessment->recommendedProgramsOneYear))
+                                            @foreach ($assessment->recommendedProgramsOneYear as $index => $program)
+                                                <div class="programItem">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Development Program</label>
+                                                        <input type="text" class="form-control"
+                                                               name="development_program[{{ $assessment->employee->id }}][]"
+                                                               value="{{ $program['program'] }}" readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Date</label>
+                                                        <input type="text" class="form-control"
+                                                               name="date[{{ $assessment->employee->id }}][]"
+                                                               value="{{ $program['date'] }}" readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Evaluation Result</label>
+                                                        <input type="text" class="form-control"
+                                                               name="evaluation_result[{{ $assessment->employee->id }}][]"
+                                                               placeholder="Evaluation Result" required>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            <p class="text-center text-muted">No data available</p>
+                                        @endif
                                     </div>
 
                                     <div class="d-flex justify-content-between mt-2">
                                         <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                                        <button type="button" class="btn btn-success btn-sm addMore"
-                                            data-employee-id="{{ $assessment->employee->id }}">+ Add</button>
                                     </div>
                                 </form>
                             </div>
@@ -430,7 +424,7 @@
                                         <h3 class="card-title">II. Individual Development Program</h3>
                                     </div>
                                     <div class="card-body table-responsive">
-                                        <table class="table align-middle">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                             <thead>
                                                 <tr>
                                                     <tr class="text-start text-muted fw-bold fs-8 gs-0">
@@ -463,7 +457,7 @@
                                         <h3 class="card-title">III. Mid Year Review</h3>
                                     </div>
                                     <div class="card-body table-responsive">
-                                        <table class="table align-middle">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                             <thead>
                                                 <tr>
                                                     <tr class="text-start text-muted fw-bold fs-8 gs-0">
@@ -784,55 +778,6 @@
             dueDateInput.value = startDate;
             dueDateInput.min = startDate;
             dueDateInput.max = endDate;
-        });
-
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll(".addMore").forEach(button => {
-                button.addEventListener("click", function() {
-                    let employeeId = this.dataset.employeeId;
-                    let containerId = `programContainerOne_${employeeId}`;
-                    let container = document.getElementById(containerId);
-
-                    if (!container) {
-                        console.error("Container tidak ditemukan: " + containerId);
-                        return;
-                    }
-
-                    // Buat elemen baru
-                    let newProgram = document.createElement("div");
-                    newProgram.classList.add("programItem");
-                    newProgram.innerHTML = `
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Development Program</label>
-                    <select class="form-select" name="development_program[${employeeId}][]" required>
-                        <option value="">-- Select Development Program --</option>
-                        <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
-                        <option value="Book Reading">Book Reading</option>
-                        <option value="FIGURE LEADER">FIGURE LEADER</option>
-                        <option value="Team Leader">Team Leader</option>
-                        <option value="SR PROJECT">SR PROJECT</option>
-                        <option value="People Development Program">People Development Program</option>
-                        <option value="Leadership">Leadership</option>
-                        <option value="Developing Sub Ordinate">Developing Sub Ordinate</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Evaluation Result</label>
-                    <input type="text" class="form-control" name="evaluation_result[${employeeId}][]" placeholder="Evaluation Result" required>
-                </div>
-                <button type="button" class="btn btn-danger btn-sm removeProgram">Remove</button>
-                <hr>
-            `;
-
-                    container.appendChild(newProgram);
-
-                    // Event listener untuk menghapus program
-                    newProgram.querySelector(".removeProgram").addEventListener("click",
-                        function() {
-                            newProgram.remove();
-                        });
-                });
-            });
         });
 
         document.addEventListener("DOMContentLoaded", function() {
