@@ -57,7 +57,7 @@
                 <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8"
                     role="tablist" style="cursor:pointer">
                     @php
-                        $jobPositions = ['Director', 'General Manager', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
+                        $jobPositions = ['Director', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
                     @endphp
 
                     @foreach ($jobPositions as $index => $position)
@@ -300,8 +300,8 @@
                                                         <input type="text" class="form-control" name="development_program[]" value="{{ $program['program'] }}" readonly>
                                                     </div>
                                                     <div class="mb-3">
-                                                        <label class="form-label fw-bold">Date</label>  <!-- Ganti label menjadi Date -->
-                                                        <input type="text" class="form-control" value="{{ $program['date'] }}" readonly>  <!-- Gunakan 'date' -->
+                                                        <label class="form-label fw-bold">Date</label>
+                                                        <input type="text" class="form-control" value="{{ $program['date'] }}" readonly>
                                                     </div>
                                                     <div class="mb-3">
                                                         <label class="form-label fw-bold">Development Achievement</label>
