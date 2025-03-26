@@ -346,7 +346,7 @@
 
                             <!-- Menu Item: FAQ Extended -->
                             <div class="menu-item">
-                                <a class="menu-link" href="/competency">
+                                <a class="menu-link" href="/competencies">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
