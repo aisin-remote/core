@@ -60,13 +60,13 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('hav')->group(function () {
-        Route::get('/', function () {
-            return view('website.hav.index');
-        })->name('dashboard.index');
+        Route::get('/', [HavController::class, 'index'])->name('hav.index'); // Menampilkan form create
         Route::get('/list-create', [HavController::class, 'listCreate'])->name('hav.list-create'); // Menampilkan form create
+        Route::get('/list', [HavController::class, 'list'])->name('hav.list'); // Menampilkan form create
         Route::get('/generate-create/{id}', [HavController::class, 'generateCreate'])->name('hav.generate-create'); // Menampilkan form create
         Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update'); // Menampilkan form create
         Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');
+        Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
     });
 
     Route::prefix('employee')->group(function () {
@@ -140,11 +140,10 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
-
     });
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/{company?}', function (){
+        Route::get('/{company?}', function () {
             return view('website.rtc.index');
         });
     });
@@ -197,9 +196,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/store', [MasterController::class, 'gradeStore'])->name('grade.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'gradeDestroy'])->name('grade.master.destroy');
         });
-
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
 });
-

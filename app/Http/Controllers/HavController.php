@@ -10,6 +10,7 @@ use App\Models\HavDetail;
 use App\Models\HavDetailKeyBehavior;
 use App\Models\KeyBehavior;
 use Illuminate\Database\Events\TransactionBeginning;
+use Yajra\DataTables\Facades\DataTables;
 
 class HavController extends Controller
 {
@@ -20,7 +21,57 @@ class HavController extends Controller
      */
     public function index()
     {
-        //
+        $havGrouped = Hav::with('employee')->get()->groupBy('quadrant');
+
+        // Quadrant ID => Judul
+        $titles = [
+            13 => 'Maximal Contributor',
+            7  => 'Top Performer',
+            3  => 'Future Star',
+            1  => 'Star',
+            14 => 'Contributor',
+            8  => 'Strong Performer',
+            4  => 'Potential Candidate',
+            2  => 'Future Star',
+            15 => 'Minimal Contributor',
+            9  => 'Career Person',
+            6  => 'Candidate',
+            5  => 'Raw Diamond',
+            16 => 'Dead Wood',
+            12 => 'Problem Employee',
+            11 => 'Unfit Employee',
+            10 => 'Most Unfit Employee',
+        ];
+
+        $orderedHavGrouped = collect(array_keys($titles))->mapWithKeys(function ($quadrantId) use ($havGrouped) {
+            return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
+        });
+
+        return view('website.hav.index', compact('orderedHavGrouped', 'titles'));
+    }
+
+
+    /**
+     * Display a listing of the resource.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function list()
+    {
+        $title = 'Add Employee';
+        $employees = Employee::all();
+        return view('website.hav.list', compact('title', 'employees'));
+    }
+
+    public function ajaxList(Request $request)
+    {
+        $data = Hav::with('employee')->get(); // Pastikan relasi 'employee' ada
+
+        return DataTables::of($data)
+            ->addColumn('npk', fn($row) => $row->employee->npk ?? '-')
+            ->addColumn('nama', fn($row) => $row->employee->name ?? '-')
+            ->addColumn('status', fn($row) => $row->status)
+            ->make(true);
     }
 
     /**
