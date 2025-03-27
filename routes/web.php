@@ -57,7 +57,7 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         return view('website.dashboard.index');
-    });
+    })->name('dashboard.index');;
 
     Route::prefix('hav')->group(function () {
         Route::get('/', [HavController::class, 'index'])->name('hav.index'); // Menampilkan form create
@@ -106,14 +106,14 @@ Route::middleware('auth')->group(function () {
             Route::put('/update/{id}', [EmployeeController::class, 'appraisalUpdate'])->name('appraisal.update');
             Route::delete('/delete/{id}', [EmployeeController::class, 'appraisalDestroy'])->name('appraisal.destroy');
         });
-        
+
         // astra_training
         Route::prefix('astra_training')->group(function () {
             Route::post('/store', [EmployeeController::class, 'astraTrainingStore'])->name('astra_training.store');
             Route::put('/update/{id}', [EmployeeController::class, 'astraTrainingUpdate'])->name('astra_training.update');
             Route::delete('/delete/{id}', [EmployeeController::class, 'astraTrainingDestroy'])->name('astra_training.destroy');
         });
-        
+
         // external_training
         Route::prefix('external_training')->group(function () {
             Route::post('/store', [EmployeeController::class, 'externalTrainingStore'])->name('external_training.store');
@@ -146,7 +146,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/detail', function () {
             return view('website.rtc.detail');
         })->name('rtc.detail');
-        
+
         Route::get('/{company?}', function () {
             return view('website.rtc.index');
         });
@@ -181,13 +181,13 @@ Route::middleware('auth')->group(function () {
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
         });
-        
+
         Route::prefix('division')->group(function () {
             Route::get('/', [MasterController::class, 'division'])->name('division.master.index');
             Route::post('/store', [MasterController::class, 'divisionStore'])->name('division.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'divisionDestroy'])->name('division.master.destroy');
         });
-        
+
 
         Route::prefix('section')->group(function () {
             Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
