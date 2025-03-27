@@ -6,6 +6,7 @@ use DataTables;
 use App\Models\Alc;
 use App\Models\Employee;
 use App\Models\Assessment;
+use App\Models\Department;
 use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 
@@ -39,7 +40,7 @@ class AssessmentController extends Controller
 
         return $subordinates;
     }
-    
+
     public function index(Request $request, $company = null)
     {
         $user = auth()->user();
@@ -60,7 +61,10 @@ class AssessmentController extends Controller
                     ->where('company_name', $employee->company_name);
             }
         }
-        
+
+        // Ambil daftar department unik dari semua employee
+        $departments = Department::pluck('name');
+
         // Dapatkan employee yang memiliki assessment
         $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());
         $alcs = Alc::all();
@@ -82,8 +86,8 @@ class AssessmentController extends Controller
                     ->groupBy('employee_id');
             })
             ->paginate(10);
-        
-        return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments', 'title'));
+
+        return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments', 'title', 'departments'));
     }
 
     // public function history_ajax(Request $request)

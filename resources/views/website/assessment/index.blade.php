@@ -20,6 +20,12 @@
                         <button type="button" class="btn btn-primary me-3" id="searchButton">
                             <i class="fas fa-search"></i> Search
                         </button>
+                        <select id="departmentFilter" class="form-select me-2"  style="width: 200px;">
+                            <option value="">All Department</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department }}">{{ $department }}</option>
+                            @endforeach
+                        </select>
 
                         <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                             data-bs-target="#addAssessmentModal">Add</a>
@@ -676,5 +682,69 @@
 
                 });
             });
+
+            document.addEventListener("DOMContentLoaded", function() {
+            const tabs = document.querySelectorAll(".filter-tab");
+            const rows = document.querySelectorAll("#kt_table_users tbody tr");
+            const searchInput = document.getElementById("searchInput");
+            const departmentFilter = document.getElementById("departmentFilter");
+
+            let currentPositionFilter = 'all';
+            let currentDepartmentFilter = '';
+            let currentSearchValue = '';
+
+            // Event listener untuk tabs position
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function(e) {
+                    e.preventDefault();
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+                    currentPositionFilter = this.getAttribute("data-filter").toLowerCase();
+                    applyFilters();
+                });
+            });
+
+            // Event listener untuk department dropdown
+            departmentFilter.addEventListener("change", function() {
+                currentDepartmentFilter = this.value.toLowerCase();
+                applyFilters();
+            });
+
+            // Event listener untuk search input
+            searchInput.addEventListener("keyup", function() {
+                currentSearchValue = this.value.toLowerCase();
+                applyFilters();
+            });
+
+            function applyFilters() {
+                rows.forEach(row => {
+                    const position = row.getAttribute("data-position").toLowerCase();
+                    const departmentCell = row.querySelector("td:nth-child(3)");
+                    const department = departmentCell ? departmentCell.textContent.toLowerCase() : '';
+                    const departments = department.split(', ').map(d => d.trim());
+
+                    const name = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+                    const npk = row.querySelector("td:nth-child(5)").textContent.toLowerCase();
+                    const age = row.querySelector("td:nth-child(6)").textContent.toLowerCase();
+
+                    const matchesPosition = currentPositionFilter === 'all' ||
+                                        position.includes(currentPositionFilter);
+
+                    const matchesDepartment = currentDepartmentFilter === '' ||
+                                            departments.includes(currentDepartmentFilter);
+
+                    const matchesSearch = currentSearchValue === '' ||
+                                        name.includes(currentSearchValue) ||
+                                        npk.includes(currentSearchValue) ||
+                                        age.includes(currentSearchValue);
+
+                    if (matchesPosition && matchesDepartment && matchesSearch) {
+                        row.style.display = "";
+                    } else {
+                        row.style.display = "none";
+                    }
+                });
+            }
+        });
         </script>
     @endpush
