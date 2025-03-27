@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IdpController extends Controller
 {
+
     public function getSubordinates($employeeId, $processedIds = [])
     {
         // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
@@ -39,6 +40,7 @@ class IdpController extends Controller
 
         return $subordinates;
     }
+    
     public function index($company = null, $reviewType = 'mid_year')
 {
     $user = auth()->user();

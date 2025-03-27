@@ -588,66 +588,37 @@
         //     });
         // });
 
-        document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
-        button.addEventListener('click', function() {
-            let alc = this.getAttribute('data-alc');
+        document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function (button) {
+        button.addEventListener('click', function () {
             let assessmentId = this.getAttribute('data-assessment');
-            let modalTarget = this.getAttribute('data-bs-target');
-            var title = this.getAttribute('data-title');
-            const modalTitle = document.querySelector(modalTarget + ' .modal-header h2');
+            let modalTarget = `#kt_modal_warning_${assessmentId}`;
 
-            if (title && modalTitle) {
-                modalTitle.textContent = title;
+            console.log("Modal Target:", modalTarget);
+
+            if (!document.querySelector(modalTarget)) {
+                console.error("Modal tidak ditemukan untuk ID:", modalTarget);
+                return;
             }
-            document.querySelector(`${modalTarget} input[name="alc_id"]`).value = alc;
 
-            console.log("Fetching IDP data...");
+            document.querySelector(modalTarget).classList.add("show");
+            document.querySelector(modalTarget).style.display = "block";
 
-            // Fetch data IDP via AJAX untuk mengisi form modal
-            $.ajax({
-                url: '/idp/getData',
-                method: 'GET',
-                data: {
-                    assessment_id: assessmentId,
-                    alc_id: alc
-                },
-                success: function(response) {
-                    console.log("Data IDP diterima:", response);
-
-                    if (response.idp) {
-                        $(`${modalTarget} select[name="idp"]`).val(response.idp.category).trigger('change');
-                        $(`${modalTarget} select[id^="program_select_"]`).val(response.idp.development_program).trigger('change');
-                        $(`${modalTarget} textarea[name="development_target"]`).val(response.idp.development_target);
-                        $(`${modalTarget} input[name="due_date"]`).val(response.idp.date);
-                    } else {
-                        $(`${modalTarget} select`).val(null).trigger('change');
-                        $(`${modalTarget} textarea[name="development_target"]`).val('');
-                        $(`${modalTarget} input[name="due_date"]`).val('');
-                    }
-
-                    console.log("Modal masih terlihat?", $(modalTarget).is(":visible"));
-                },
-                error: function(xhr, status, error) {
-                    console.error("Error fetching IDP data:", error);
-                }
-            });
+            console.log("Modal seharusnya tampil:", modalTarget);
         });
     });
-});
 
-document.addEventListener("DOMContentLoaded", function() {
-    document.querySelectorAll('#btn-create-idp').forEach(button => {
-        button.addEventListener('click', function() {
-            const modalBody = this.closest('.modal-body');
-            const assessmentId = modalBody.querySelector('input[name="assessment_id"]').value;
-            const alcId = modalBody.querySelector('input[name="alc_id"]').value;
-            const category = modalBody.querySelector(`#category_select_${assessmentId}`).value;
-            const program = modalBody.querySelector(`#program_select_${assessmentId}`).value;
-            const target = modalBody.querySelector(`#target_${assessmentId}`).value;
-            const dueDate = modalBody.querySelector(`#due_date_${assessmentId}`).value;
+    document.querySelectorAll("#btn-create-idp").forEach(button => {
+        button.addEventListener("click", function () {
+            const modal = this.closest(".modal");
+            const assessmentId = modal.querySelector("input[name='assessment_id']").value;
+            const alcId = modal.querySelector("input[name='alc_id']").value;
+            const category = modal.querySelector(`#category_select_${assessmentId}`).value;
+            const program = modal.querySelector(`#program_select_${assessmentId}`).value;
+            const target = modal.querySelector(`#target_${assessmentId}`).value;
+            const dueDate = modal.querySelector(`#due_date_${assessmentId}`).value;
 
-            console.log("Mengirim data IDP...");
+            console.log("Mengirim data:", { assessmentId, alcId, category, program, target, dueDate });
 
             $.ajax({
                 url: "{{ route('idp.store') }}",
@@ -661,29 +632,27 @@ document.addEventListener("DOMContentLoaded", function() {
                     date: dueDate,
                     '_token': "{{ csrf_token() }}",
                 },
-                success: function(response) {
-                    console.log("IDP berhasil disimpan:", response);
+                success: function (response) {
+                    console.log("Sukses:", response);
 
                     Swal.fire({
                         title: "Berhasil!",
-                        text: assessmentId ? "IDP berhasil diperbarui!" : "IDP berhasil ditambahkan!",
+                        text: "IDP berhasil diperbarui!",
                         icon: "success",
                         confirmButtonText: "OK"
                     }).then(() => {
-                        console.log("Menutup modal setelah delay...");
-                        setTimeout(() => {
-                            $(`#kt_modal_warning_${assessmentId}`).modal('hide');
-                        }, 1500); // Modal ditutup setelah 1.5 detik
+                        $(`#kt_modal_warning_${assessmentId}`).modal('hide');
                     });
                 },
-                error: function(xhr, status, error) {
-                    console.error("Error menyimpan IDP:", error);
-                    alert("Terjadi kesalahan. Coba lagi.");
+                error: function (xhr, status, error) {
+                    console.error("Error:", error);
+                    Swal.fire("Gagal!", "Terjadi kesalahan, coba lagi.", "error");
                 }
             });
         });
     });
 });
+
 
 
 
