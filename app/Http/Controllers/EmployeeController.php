@@ -324,9 +324,49 @@ class EmployeeController extends Controller
 
     public function edit($npk)
     {
+        $promotionHistories = PromotionHistory::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })->get();
+                                
+        $astraTrainings = AstraTraining::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })->get();
+                                
+        $externalTrainings = ExternalTraining::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })->get();
+                                
+        $educations = EducationalBackground::with('employee')
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+            ->limit(3) // Ambil hanya 3 data terbaru
+            ->get();
+        
+        $workExperiences = WorkingExperience::with('employee')
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+            ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
+            ->limit(3) // Ambil hanya 3 data terbaru
+            ->get();
+        
+        $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
+            ->limit(3) // Ambil hanya 3 data terbaru
+            ->get();
+                            
+        $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
-        $employee = Employee::where('npk', $npk)->firstOrFail(); // Cari berdasarkan npk
-        return view('website.employee.update', compact('employee', 'departments'));
+        return view('website.employee.update', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings'));
     }
 
     public function update(Request $request, $npk)
@@ -930,6 +970,7 @@ class EmployeeController extends Controller
         }
     }
 
+
     public function externalTrainingDestroy($id)
     {
         try {
@@ -949,4 +990,5 @@ class EmployeeController extends Controller
             return redirect()->back()->with('error', 'Gagal menghapus data External Training: ' . $th->getMessage());
         }
     }
+
 }

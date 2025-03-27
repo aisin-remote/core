@@ -48,13 +48,19 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    <td class="text-center">1.</td>
-                                    <td class="text-center">Engineering & Production</td>
-                                    <td class="text-center">
-                                        <a href="{{ route('rtc.detail') }}" class="btn btn-primary btn-sm">Detail</a>
-                                    </td>
-                                </tr>
+                                @if (request()->path() == 'rtc/aii')
+                                    <tr>
+                                        <td class="text-center">1.</td>
+                                        <td class="text-center">Engineering & Production</td>
+                                        <td class="text-center">
+                                            <a href="{{ route('rtc.detail') }}" class="btn btn-primary btn-sm">Detail</a>
+                                        </td>
+                                    </tr>
+                                @else
+                                    <tr>
+                                        <td colspan="3" class="text-center text-muted">No data available</td>
+                                    </tr>
+                                @endif
                             </tbody>
                         </table>
                     </div>
