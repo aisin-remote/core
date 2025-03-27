@@ -120,7 +120,7 @@ class HavController extends Controller
     public function listCreate()
     {
         $title = 'Add Employee';
-        $employees = Employee::all();
+        $employees = Employee::where('company_name', 'AII')->get();
         return view('website.hav.list-create', compact('title', 'employees'));
     }
 
