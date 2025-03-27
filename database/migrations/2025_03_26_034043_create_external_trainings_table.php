@@ -13,10 +13,12 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('group_competency', function (Blueprint $table) {
+        Schema::create('external_trainings', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->string('name');
-            $table->string('description')->nullable();
+            $table->bigInteger('employee_id')->unsigned();
+            $table->string('year')->nullable();
+            $table->string('vendor')->nullable();
+            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
             $table->timestamps();
         });
     }
@@ -28,6 +30,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('group_competency');
+        Schema::dropIfExists('external_trainings');
     }
 };

@@ -39,8 +39,10 @@ class MasterController extends Controller
         if ($user->role === 'HRD') {
             $employee = Employee::with('departments')
                 ->when($company, fn($query) => $query->where('company_name', $company))
-                ->where('user_id', '!=', auth()->id()) // Mengecualikan user yang sedang login
-                ->orWhere('user_id', null)
+                ->where(function ($query) {
+                    $query->where('user_id', '!=', auth()->id())
+                        ->orWhereNull('user_id');
+                })
                 ->get();
         } else {
             // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
@@ -88,4 +90,16 @@ class MasterController extends Controller
         }
     }
 
+    public function division()
+    {
+        return view('website.master.division.index');
+    }
+    public function section()
+    {
+        return view('website.master.section.index');
+    }
+    public function grade()
+    {
+        return view('website.master.grade.index');
+    }
 }

@@ -189,11 +189,21 @@
                             style="display: none; overflow: hidden;">
                             <!-- Menu Item: FAQ Classic -->
                             <div class="menu-item">
-                                <a class="menu-link" href="/hav/list-create">
+                                <a class="menu-link  {{ request()->is('hav/list-create') ? 'active' : '' }}" href="/hav/list-create">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
                                     <span class="menu-title">HAV Entry</span>
+                                </a>
+                            </div>
+
+                            <!-- Menu Item: FAQ Extended -->
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->is('hav/list') ? 'active' : '' }}" href="/hav/list">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">HAV List</span>
                                 </a>
                             </div>
 
@@ -331,7 +341,6 @@
                         </span>
                         <!-- End: Menu Link -->
 
-
                         <!-- Begin: Menu Sub -->
                         <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
                             style="display: none; overflow: hidden;">
@@ -421,7 +430,7 @@
 
                     <div class="menu-item">
                         <!--begin:Menu link-->
-                        <a class="menu-link" href="/master/department">
+                        <a class="menu-link" href="/master/grade">
                             <span class="menu-icon">
                                 <i class="fas fa-layer-group"></i>
                             </span>
@@ -444,7 +453,19 @@
 
                     <div class="menu-item">
                         <!--begin:Menu link-->
-                        <a class="menu-link" href="/master/department">
+                        <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                            href="/master/division">
+                            <span class="menu-icon">
+                                <i class="fas fa-network-wired"></i>
+                            </span>
+                            <span class="menu-title ps-1">Division</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link" href="/master/section">
                             <span class="menu-icon">
                                 <i class="fas fa-users"></i>
                             </span>

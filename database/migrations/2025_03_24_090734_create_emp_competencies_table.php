@@ -1,8 +1,8 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Migrations\Migration;
 
 return new class extends Migration
 {
@@ -13,22 +13,10 @@ return new class extends Migration
      */
     public function up()
     {
-        Schema::create('employee_competency', function (Blueprint $table) {
+        Schema::create('group_competency', function (Blueprint $table) {
             $table->bigIncrements('id');
-            $table->unsignedBigInteger('employee_id');
-            $table->foreign('employee_id')
-                ->references('id')
-                ->on('employees')
-                ->onDelete('cascade');
-            $table->unsignedBigInteger('competency_id');
-            $table->foreign('competency_id')
-                ->references('id')
-                ->on('competency')
-                ->onDelete('cascade');
-            $table->string('progress');
-            $table->integer('weight');
-            $table->integer('plan');
-            $table->integer('act');
+            $table->string('name');
+            $table->string('description')->nullable();
             $table->timestamps();
         });
     }
@@ -40,6 +28,6 @@ return new class extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('emp_competency');
+        Schema::dropIfExists('group_competencies');
     }
 };

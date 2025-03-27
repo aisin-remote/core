@@ -53,83 +53,114 @@
                 </div>
             </div>
 
-            <div class="card-body table-responsive">
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                    <thead>
-                        <tr class="text-start text-muted fw-bold fs-7 gs-0">
-                            <th style="width: 20px">No</th>
-                            <th class="text-center" style="width: 100px">Employee Name</th>
+            <div class="card-body">
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8"
+                    role="tablist" style="cursor:pointer">
+                    @php
+                        $jobPositions = ['Director', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
+                    @endphp
 
-                            @foreach ($alcs as $id => $title)
-                                <th class="text-center" style="width: 100px">{{ $title }}</th>
-                            @endforeach
+                    @foreach ($jobPositions as $index => $position)
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $index === 0 ? 'active' : '' }}"
+                               data-bs-toggle="tab"
+                               data-bs-target="#{{ Str::slug($position) }}"
+                               role="tab"
+                               aria-controls="{{ Str::slug($position) }}">
+                                {{ $position }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
 
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
+                <div class="tab-content mt-3" id="employeeTabsContent">
+                    @foreach ($jobPositions as $index => $position)
+                        <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}"
+                             id="{{ Str::slug($position) }}" role="tabpanel"
+                            aria-labelledby="{{ Str::slug($position) }}-tab">
 
-                    <tbody>
-                        @forelse ($assessments as $index => $assessment)
-                            <tr>
-                                <td class="text-center">
-                                    {{ ($assessments->currentPage() - 1) * $assessments->perPage() + $index + 1 }}
-                                </td>
-                                <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
+                            <div class="table-responsive">
+                                <table class="table align-middle table-row-dashed fs-6 gy-5">
+                                    <thead>
+                                        <tr class="text-start text-muted fw-bold fs-7 gs-0">
+                                            <th style="width: 20px">No</th>
+                                            <th class="text-center" style="width: 150px">Employee Name</th>
+                                            @foreach ($alcs as $id => $title)
+                                                <th class="text-center" style="width: 100px">{{ $title }}</th>
+                                            @endforeach
+                                            <th class="text-center">Actions</th>
+                                        </tr>
+                                    </thead>
 
-                                @foreach ($alcs as $id => $title)
-                                    @php
-                                        $score = $assessment->details->where('alc_id', $id)->first()->score ?? '-';
-                                    @endphp
-                                    <td class="text-center">
-                                        <span
-                                            class="badge badge-lg {{ $score >= 3 ? 'badge-success' : 'badge-danger' }} score d-block w-100"
-                                            @if ($score < 3 && $score !== '-') data-bs-toggle="modal"
-                                            data-bs-target="#kt_modal_warning_{{ $assessment->id }}"
-                                            data-title="Update IDP - {{ $title }}"
-                                            data-assessment="{{ $assessment->id }}"
-                                            data-alc="{{ $id }}"
-                                            style="cursor: pointer;" @endif>
-                                            {{ $score }}
-                                            @if ($score < 3 && $score !== '-')
-                                                <i class="fas fa-exclamation-triangle ps-2"></i>
-                                            @endif
-                                        </span>
-                                    </td>
-                                @endforeach
+                                    <tbody>
+                                        @php
+                                            $filteredEmployees = $assessments->where('employee.position', $position)->groupBy('employee_id')->map(function ($group) {
+                                                return $group->sortByDesc('created_at')->first();
+                                            });
+                                        @endphp
 
-                                <td class="text-center" style="width: 50px">
-                                    <div class="d-flex gap-2 justify-content-center">
-                                        <div class="d-flex gap-2">
-                                            <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#notes_{{ $assessment->employee->id }}">
-                                                <i class="fas fa-eye"></i>
-                                            </button>
+                                        @forelse ($filteredEmployees as $index => $assessment)
+                                            <tr>
+                                                <td class="text-center">{{ $loop->iteration }}</td>
+                                                <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
 
-                                            <button type="button" class="btn btn-sm btn-success"
-                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                <i class="fas fa-file-export"></i>
-                                            </button>
-                                            {{-- <a type="button" class="btn btn-sm btn-success"
-                                                href="{{ asset('assets/file/IDP_Tegar_2024.xlsx') }}" download>
-                                                <i class="fas fa-file-export"></i>
-                                            </a> --}}
-                                        </div>
-                                    </div>
-                                </td>
-                            </tr>
-                        @empty
-                            <tr>
-                                <td colspan="{{ count($alcs) + 3 }}" class="text-center text-muted py-4">
-                                    No employees found
-                                </td>
-                            </tr>
-                        @endforelse
-                    </tbody>
-                </table>
+                                                @foreach ($alcs as $id => $title)
+                                                    @php
+                                                        $detail = $assessment->details->where('alc_id', $id)->first();
+                                                        $score = $detail->score ?? '-';
+                                                        $idpExists = DB::table('idp')->where('assessment_id', $assessment->id)->where('alc_id', $id)->exists();
+                                                    @endphp
+                                                    <td class="text-center">
+                                                        @if ($score >= 3 || $score === '-')
+                                                            <span class="badge badge-lg badge-success d-block w-100">
+                                                                {{ $score }}
+                                                            </span>
+                                                        @else
+                                                            <span
+                                                                class="badge badge-lg badge-danger d-block w-100"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#kt_modal_warning_{{ $assessment->id }}"
+                                                                data-title="Update IDP - {{ $title }}"
+                                                                data-assessment="{{ $assessment->id }}"
+                                                                data-alc="{{ $id }}"
+                                                                style="cursor: pointer;">
+                                                                {{ $score }}
+                                                                <i class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                @endforeach
+
+                                                <td class="text-center" style="width: 50px">
+                                                    <div class="d-flex gap-2 justify-content-center">
+                                                        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                            data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
+                                                            <i class="fas fa-pencil-alt"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                            data-bs-target="#notes_{{ $assessment->employee->id }}">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-success"
+                                                        onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
+                                                            <i class="fas fa-file-export"></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="{{ count($alcs) + 3 }}" class="text-center text-muted py-4">
+                                                    No employees found
+                                                </td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
                 <div class="d-flex align-items-center gap-4 mt-3">
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
@@ -254,39 +285,39 @@
                         <!-- Tab Content -->
                         <div class="tab-content mt-3">
                             <!-- MID YEAR TAB -->
-                            <div class="tab-pane fade show active" id="midYear-{{ $assessment->employee->id }}"
-                                role="tabpanel">
-                                <form
-                                    action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}"
-                                    method="POST">
+                            <div class="tab-pane fade show active" id="midYear-{{ $assessment->employee->id }}" role="tabpanel">
+                                <form action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}" method="POST">
                                     @csrf
                                     <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
                                     <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
 
                                     <div id="programContainerMid_{{ $assessment->employee->id }}">
-                                        @foreach ($assessment->recommendedPrograms as $index => $program)
-                                            <div class="programItem">
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Development Program</label>
-                                                    <input type="text" class="form-control"
-                                                        name="development_program[]" value="{{ $program }}"
-                                                        readonly>
+                                        @if (!empty($assessment->recommendedProgramsMidYear))
+                                            @foreach ($assessment->recommendedProgramsMidYear as $index => $program)
+                                                <div class="programItem">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Development Program</label>
+                                                        <input type="text" class="form-control" name="development_program[]" value="{{ $program['program'] }}" readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Date</label>
+                                                        <input type="text" class="form-control" value="{{ $program['date'] }}" readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Development Achievement</label>
+                                                        <input type="text" class="form-control" name="development_achievement[]" placeholder="Enter achievement" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Next Action</label>
+                                                        <input type="text" class="form-control" name="next_action[]" placeholder="Enter next action" required>
+                                                    </div>
+                                                    <hr>
                                                 </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Development Achievement</label>
-                                                    <input type="text" class="form-control"
-                                                        name="development_achievement[]" placeholder="Enter achievement">
-                                                </div>
-                                                <div class="mb-3">
-                                                    <label class="form-label fw-bold">Next Action</label>
-                                                    <input type="text" class="form-control" name="next_action[]"
-                                                        placeholder="Enter next action">
-                                                </div>
-                                                <hr>
-                                            </div>
-                                        @endforeach
+                                            @endforeach
+                                        @else
+                                            <p class="text-center text-muted">No data available</p>
+                                        @endif
                                     </div>
-
                                     <button type="submit" class="btn btn-primary">Save</button>
                                 </form>
                             </div>
@@ -294,45 +325,42 @@
 
                             <div class="tab-pane fade" id="oneYear-{{ $assessment->employee->id }}" role="tabpanel">
                                 <form id="reviewForm2-{{ $assessment->employee->id }}"
-                                    action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}"
-                                    method="POST">
+                                      action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}"
+                                      method="POST">
                                     @csrf
                                     <input type="hidden" name="employee_id" value="{{ $assessment->employee->id }}">
 
-                                    <div id="programContainerOne_{{ $assessment->employee->id }}"
-                                        class="programContainer">
-                                        <div class="programItem">
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Development Program</label>
-                                                <select class="form-select"
-                                                    name="development_program[{{ $assessment->employee->id }}][]"
-                                                    required>
-                                                    <option value="">-- Select Development Program --</option>
-                                                    <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
-                                                    <option value="Book Reading">Book Reading</option>
-                                                    <option value="FIGURE LEADER">FIGURE LEADER</option>
-                                                    <option value="Team Leader">Team Leader</option>
-                                                    <option value="SR PROJECT">SR PROJECT</option>
-                                                    <option value="People Development Program">People Development Program
-                                                    </option>
-                                                    <option value="Leadership">Leadership</option>
-                                                    <option value="Developing Sub Ordinate">Developing Sub Ordinate
-                                                    </option>
-                                                </select>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label fw-bold">Evaluation Result</label>
-                                                <input type="text" class="form-control"
-                                                    name="evaluation_result[{{ $assessment->employee->id }}][]"
-                                                    placeholder="Evaluation Result" required>
-                                            </div>
-                                        </div>
+                                    <div id="programContainerOne_{{ $assessment->employee->id }}" class="programContainer">
+                                        @if (!empty($assessment->recommendedProgramsOneYear))
+                                            @foreach ($assessment->recommendedProgramsOneYear as $index => $program)
+                                                <div class="programItem">
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Development Program</label>
+                                                        <input type="text" class="form-control"
+                                                               name="development_program[{{ $assessment->employee->id }}][]"
+                                                               value="{{ $program['program'] }}" readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Date</label>
+                                                        <input type="text" class="form-control"
+                                                               name="date[{{ $assessment->employee->id }}][]"
+                                                               value="{{ $program['date'] }}" readonly>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label fw-bold">Evaluation Result</label>
+                                                        <input type="text" class="form-control"
+                                                               name="evaluation_result[{{ $assessment->employee->id }}][]"
+                                                               placeholder="Evaluation Result" required>
+                                                    </div>
+                                                </div>
+                                            @endforeach
+                                        @else
+                                            <p class="text-center text-muted">No data available</p>
+                                        @endif
                                     </div>
 
                                     <div class="d-flex justify-content-between mt-2">
                                         <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                                        <button type="button" class="btn btn-success btn-sm addMore"
-                                            data-employee-id="{{ $assessment->employee->id }}">+ Add</button>
                                     </div>
                                 </form>
                             </div>
@@ -369,9 +397,10 @@
                                     <div class="card-body table-responsive">
                                         <table class="table align-middle">
                                             <thead>
-                                                <tr class="text-start text-gray-500 fw-bold">
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
                                                     <th class="text-center">Strength</th>
                                                     <th class="text-center">Weakness</th>
+                                                </tr>
                                             </thead>
                                             <tbody>
                                                 @foreach ($assessment->details as $detail)
@@ -395,10 +424,10 @@
                                         <h3 class="card-title">II. Individual Development Program</h3>
                                     </div>
                                     <div class="card-body table-responsive">
-                                        <table class="table align-middle">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                             <thead>
                                                 <tr>
-                                                <tr class="text-start text-gray-500 fw-bold">
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
                                                     <th class="text-center">Development Area</th>
                                                     <th class="text-center">Development Program</th>
                                                     <th class="text-center">Development Target</th>
@@ -428,10 +457,10 @@
                                         <h3 class="card-title">III. Mid Year Review</h3>
                                     </div>
                                     <div class="card-body table-responsive">
-                                        <table class="table align-middle">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                             <thead>
                                                 <tr>
-                                                <tr class="text-start text-gray-500 fw-bold">
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
                                                     <th class="text-center">Development Program</th>
                                                     <th class="text-center">Development Achievement</th>
                                                     <th class="text-center">Next Action</th>
@@ -620,6 +649,7 @@
             });
         });
 
+
         // document.addEventListener("DOMContentLoaded", function() {
         //     document.querySelectorAll("form").forEach(form => {
         //         form.addEventListener("submit", function(e) {
@@ -748,126 +778,6 @@
             dueDateInput.value = startDate;
             dueDateInput.min = startDate;
             dueDateInput.max = endDate;
-        });
-
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll(".addMore").forEach(button => {
-                button.addEventListener("click", function() {
-                    let employeeId = this.dataset.employeeId;
-                    let containerId = `programContainerOne_${employeeId}`;
-                    let container = document.getElementById(containerId);
-
-                    if (!container) {
-                        console.error("Container tidak ditemukan: " + containerId);
-                        return;
-                    }
-
-                    // Buat elemen baru
-                    let newProgram = document.createElement("div");
-                    newProgram.classList.add("programItem");
-                    newProgram.innerHTML = `
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Development Program</label>
-                    <select class="form-select" name="development_program[${employeeId}][]" required>
-                        <option value="">-- Select Development Program --</option>
-                        <option value="Superior (DGM & GM)">Superior (DGM & GM)</option>
-                        <option value="Book Reading">Book Reading</option>
-                        <option value="FIGURE LEADER">FIGURE LEADER</option>
-                        <option value="Team Leader">Team Leader</option>
-                        <option value="SR PROJECT">SR PROJECT</option>
-                        <option value="People Development Program">People Development Program</option>
-                        <option value="Leadership">Leadership</option>
-                        <option value="Developing Sub Ordinate">Developing Sub Ordinate</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Evaluation Result</label>
-                    <input type="text" class="form-control" name="evaluation_result[${employeeId}][]" placeholder="Evaluation Result" required>
-                </div>
-                <button type="button" class="btn btn-danger btn-sm removeProgram">Remove</button>
-                <hr>
-            `;
-
-                    container.appendChild(newProgram);
-
-                    // Event listener untuk menghapus program
-                    newProgram.querySelector(".removeProgram").addEventListener("click",
-                        function() {
-                            newProgram.remove();
-                        });
-                });
-            });
-        });
-
-
-
-
-        document.addEventListener("DOMContentLoaded", function() {
-            Highcharts.chart('stackedGroupedChart', {
-                chart: {
-                    type: 'column'
-                },
-                title: {
-                    text: 'Assessment Score [Actual vs Target]'
-                },
-                xAxis: {
-                    categories: ['Vision & Business Sense', 'Customer Focus', 'Interpersonal Skill',
-                        'Analysis & Judgment', 'Planning & Driving Action', 'Leading & Motivating',
-                        'Teamwork', 'Drive & Courage'
-                    ],
-                    title: {
-                        text: 'Competencies'
-                    }
-                },
-                yAxis: {
-                    min: 0,
-                    max: 5,
-                    title: {
-                        text: 'Score'
-                    },
-                    stackLabels: {
-                        enabled: true
-                    }
-                },
-                tooltip: {
-                    shared: true
-                },
-                plotOptions: {
-                    column: {
-                        stacking: 'normal',
-                        dataLabels: {
-                            enabled: true
-                        }
-                    },
-                    line: {
-                        dataLabels: {
-                            enabled: true, // Show labels for target values
-                            format: '{y}', // Display the target score
-                            style: {
-                                fontWeight: 'bold',
-                                color: '#ff6347'
-                            }
-                        },
-                        marker: {
-                            symbol: 'circle',
-                            radius: 5
-                        }
-                    }
-                },
-                series: [{
-                        name: 'Actual Score',
-                        type: 'column',
-                        data: [4.5, 3, 2.5, 3.1, 2, 4.8, 3.7, 2.7],
-                        color: '#007bff'
-                    },
-                    {
-                        name: 'Target Score',
-                        type: 'line', // Line for target scores
-                        data: [4, 4.5, 4, 3.5, 4.5, 5, 3.5, 4.2],
-                        color: '#ff6347'
-                    }
-                ]
-            });
         });
 
         document.addEventListener("DOMContentLoaded", function() {

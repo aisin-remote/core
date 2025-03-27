@@ -7,7 +7,9 @@ use App\Models\User;
 use App\Models\Employee;
 use App\Models\Department;
 use Illuminate\Http\Request;
+use App\Models\AstraTraining;
 use App\Imports\EmployeeImport;
+use App\Models\ExternalTraining;
 use App\Models\PromotionHistory;
 use App\Models\WorkingExperience;
 use Illuminate\Support\Facades\DB;
@@ -280,6 +282,16 @@ class EmployeeController extends Controller
                                     $query->where('npk', $npk);
                                 })->get();
                                 
+        $astraTrainings = AstraTraining::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })->get();
+                                
+        $externalTrainings = ExternalTraining::with('employee')
+                                ->whereHas('employee', function ($query) use ($npk) {
+                                    $query->where('npk', $npk);
+                                })->get();
+                                
         $educations = EducationalBackground::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -307,7 +319,7 @@ class EmployeeController extends Controller
                             
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
-        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments'));
+        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings'));
     }
 
     public function edit($npk)
@@ -729,6 +741,212 @@ class EmployeeController extends Controller
         } catch (\Throwable $th) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Promotion history gagal dihapus.');
+        }
+    }
+
+    public function astraTrainingStore(Request $request)
+    {
+        try {
+            // Cek apakah employee_id ada di database
+            $employeeExists = DB::table('employees')->where('id', $request->employee_id)->exists();
+            if (!$employeeExists) {
+                return back()->with('error', 'Employee tidak ditemukan!');
+            }
+    
+            // Validasi input
+            $validatedData = $request->validate([
+                'year'           => 'required|digits:4|integer',
+                'program'        => 'required|string|max:255',
+                'ict_score'      => 'required',
+                'project_score'  => 'required',
+                'total_score'    => 'required',
+            ]);
+    
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->validator)->withInput();
+        }
+    
+        try {
+            DB::beginTransaction();
+    
+            // Simpan data ke AstraTraining
+            AstraTraining::create([
+                'employee_id'   => $request->employee_id,
+                'year'          => $validatedData['year'],
+                'program'       => $validatedData['program'],
+                'ict_score'     => $validatedData['ict_score'],
+                'project_score' => $validatedData['project_score'],
+                'total_score'   => $validatedData['total_score'],
+            ]);
+    
+            DB::commit();
+            return redirect()->back()->with('success', 'Data Astra Training berhasil ditambahkan.');
+    
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal menambahkan data Astra Training: ' . $th->getMessage());
+        }
+    }
+
+    public function astraTrainingUpdate(Request $request, $id)
+    {
+        try {
+            // Cek apakah data AstraTraining dengan ID yang diberikan ada
+            $astraTraining = AstraTraining::find($id);
+            if (!$astraTraining) {
+                return back()->with('error', 'Data Astra Training tidak ditemukan!');
+            }
+
+            // Validasi input
+            $validatedData = $request->validate([
+                'year'           => 'required|digits:4|integer',
+                'program'        => 'required|string|max:255',
+                'ict_score'      => 'required',
+                'project_score'  => 'required',
+                'total_score'    => 'required',
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->validator)->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Update data AstraTraining
+            $astraTraining->update([
+                'year'          => $validatedData['year'],
+                'program'       => $validatedData['program'],
+                'ict_score'     => $validatedData['ict_score'],
+                'project_score' => $validatedData['project_score'],
+                'total_score'   => $validatedData['total_score'],
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Data Astra Training berhasil diperbarui.');
+
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal memperbarui data Astra Training: ' . $th->getMessage());
+        }
+    }
+
+    public function astraTrainingDestroy($id)
+    {
+        try {
+            // Cek apakah data AstraTraining dengan ID yang diberikan ada
+            $astraTraining = AstraTraining::find($id);
+            if (!$astraTraining) {
+                return back()->with('error', 'Data Astra Training tidak ditemukan!');
+            }
+
+            DB::beginTransaction();
+
+            // Hapus data AstraTraining
+            $astraTraining->delete();
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Data Astra Training berhasil dihapus.');
+
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal menghapus data Astra Training: ' . $th->getMessage());
+        }
+    }
+
+    public function externalTrainingStore(Request $request)
+    {
+        try {
+            // Cek apakah employee_id ada di database
+            $employeeExists = DB::table('employees')->where('id', $request->employee_id)->exists();
+            if (!$employeeExists) {
+                return back()->with('error', 'Employee tidak ditemukan!');
+            }
+
+            // Validasi input
+            $validatedData = $request->validate([
+                'program' => 'required|string|max:255',
+                'year'    => 'required|digits:4|integer',
+                'vendor'  => 'required|string|max:255',
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->validator)->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Simpan data ke ExternalTraining
+            ExternalTraining::create([
+                'employee_id' => $request->employee_id,
+                'year'        => $validatedData['year'],
+                'program'     => $validatedData['program'],
+                'vendor'      => $validatedData['vendor'],
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Data External Training berhasil ditambahkan.');
+
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal menambahkan data External Training: ' . $th->getMessage());
+        }
+    }
+
+    public function externalTrainingUpdate(Request $request, $id)
+    {
+        try {
+            // Cek apakah data training dengan ID tersebut ada
+            $externalTraining = ExternalTraining::findOrFail($id);
+
+            // Validasi input
+            $validatedData = $request->validate([
+                'program' => 'required|string|max:255',
+                'year'    => 'required|digits:4|integer',
+                'vendor'  => 'required|string|max:255',
+            ]);
+
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return redirect()->back()->withErrors($e->validator)->withInput();
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Update data di database
+            $externalTraining->update([
+                'year'    => $validatedData['year'],
+                'program' => $validatedData['program'],
+                'vendor'  => $validatedData['vendor'],
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Data External Training berhasil diperbarui.');
+
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal memperbarui data External Training: ' . $th->getMessage());
+        }
+    }
+
+    public function externalTrainingDestroy($id)
+    {
+        try {
+            // Cek apakah data training dengan ID tersebut ada
+            $externalTraining = ExternalTraining::findOrFail($id);
+
+            DB::beginTransaction();
+
+            // Hapus data dari database
+            $externalTraining->delete();
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Data External Training berhasil dihapus.');
+
+        } catch (\Throwable $th) {
+            DB::rollback();
+            return redirect()->back()->with('error', 'Gagal menghapus data External Training: ' . $th->getMessage());
         }
     }
 }
