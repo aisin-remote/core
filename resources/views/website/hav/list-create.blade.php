@@ -36,7 +36,7 @@
                 <a href="{{url('hav/generate-create',['id' => $item->id])}}" class="text-gray-900 fw-bold text-hover-primary fs-3">
                     <div class="col text-center mb-9">
                         <!--begin::Photo-->
-                        <div class="octagon mx-auto mb-2 d-flex w-150px h-150px bgi-no-repeat bgi-size-contain bgi-position-center" style="background-image:url('{{ asset('assets/media/avatars/300-1.jpg') }}')">
+                        <div class="octagon mx-auto mb-2 d-flex w-150px h-150px bgi-no-repeat bgi-size-contain bgi-position-center" style="background-image:url('{{ asset('storage/' . $item->photo) }}')">
                         </div>
                         <!--end::Photo-->
         
