@@ -57,7 +57,7 @@
                 <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8"
                     role="tablist" style="cursor:pointer">
                     @php
-                        $jobPositions = ['Director', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
+                        $jobPositions = ['Show All', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
                     @endphp
 
                     @foreach ($jobPositions as $index => $position)
@@ -77,7 +77,7 @@
                     @foreach ($jobPositions as $index => $position)
                         <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}"
                              id="{{ Str::slug($position) }}" role="tabpanel"
-                            aria-labelledby="{{ Str::slug($position) }}-tab">
+                             aria-labelledby="{{ Str::slug($position) }}-tab">
 
                             <div class="table-responsive">
                                 <table class="table align-middle table-row-dashed fs-6 gy-5">
@@ -94,9 +94,9 @@
 
                                     <tbody>
                                         @php
-                                            $filteredEmployees = $assessments->where('employee.position', $position)->groupBy('employee_id')->map(function ($group) {
-                                                return $group->sortByDesc('created_at')->first();
-                                            });
+                                            $filteredEmployees = ($position == 'Show All')
+                                                ? $assessments->groupBy('employee_id')->map(fn($group) => $group->sortByDesc('created_at')->first())
+                                                : $assessments->where('employee.position', $position)->groupBy('employee_id')->map(fn($group) => $group->sortByDesc('created_at')->first());
                                         @endphp
 
                                         @forelse ($filteredEmployees as $index => $assessment)
@@ -188,9 +188,10 @@
 
                                 @php
                                     $idp = DB::table('idp')
-                                        ->where('assessment_id', $assessment->id)
-                                        ->select('id', 'category', 'development_program', 'development_target', 'date')
-                                        ->first();
+                                     ->where('employee_id', $assessment->employee->id)
+                                     ->select('id', 'category', 'development_program', 'development_target', 'date')
+                                     ->first();
+
 
                                 @endphp
                                 <div class="modal-body scroll-y mx-2 mt-5">
@@ -399,18 +400,50 @@
                                             <thead>
                                                 <tr class="text-start text-muted fw-bold fs-8 gs-0">
                                                     <th class="text-center">Strength</th>
-                                                    <th class="text-center">Weakness</th>
+                                                    <th class="text-center">Description</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach ($assessment->details as $detail)
-                                                    @if (!empty($detail->strength) || !empty($detail->weakness))
-                                                        <tr>
-                                                            <td class="text-center">{{ $detail->strength ?? '-' }}</td>
-                                                            <td class="text-center">{{ $detail->weakness ?? '-' }}</td>
-                                                        </tr>
-                                                    @endif
-                                                @endforeach
+                                                @php
+                                                $strengths = $assessment->details->filter(fn($item) => !empty($item->strength))->values();
+                                            @endphp
+
+                                            @foreach ($strengths as $detail)
+                                                <tr>
+                                                    <td class="text-justify px-3">{{ $detail->alc->name ?? '-' }}</td>
+                                                    <td class="text-justify px-3">{{ $detail->strength ?? '-' }}</td>
+                                                </tr>
+                                            @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="row mt-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                    </div>
+                                    <div class="card-body table-responsive">
+                                        <table class="table align-middle">
+                                            <thead>
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                    <th class="text-center">Weakness</th>
+                                                    <th class="text-center">Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @php
+                                                $weakness = $assessment->details->filter(fn($item) => !empty($item->weakness))->values();
+                                            @endphp
+
+                                            @foreach ($weakness as $detail)
+                                                <tr>
+                                                    <td class="text-justify px-3">{{ $detail->alc->name ?? '-' }}</td>
+                                                    <td class="text-justify px-3">{{ $detail->weakness ?? '-' }}</td>
+                                                </tr>
+                                            @endforeach
                                             </tbody>
                                         </table>
                                     </div>
@@ -437,10 +470,10 @@
                                             <tbody>
                                                 @foreach ($idps->where('employee_id', $assessment->employee->id) as $idp)
                                                     <tr>
-                                                        <td class="text-center">{{ $idp->category }}</td>
-                                                        <td class="text-center">{{ $idp->development_program }}</td>
-                                                        <td class="text-center">{{ $idp->development_target }}</td>
-                                                        <td class="text-center">
+                                                        <td class="text-justify px-3">{{ $idp->category }}</td>
+                                                        <td class="text-justify px-3">{{ $idp->development_program }}</td>
+                                                        <td class="text-justify px-3">{{ $idp->development_target }}</td>
+                                                        <td class="text-justify px-3">
                                                             {{ \Carbon\Carbon::parse($idp->date)->format('d-m-Y') }}</td>
                                                     </tr>
                                                 @endforeach
@@ -469,9 +502,10 @@
                                             <tbody>
                                                 @foreach ($mid->where('employee_id', $assessment->employee->id) as $items)
                                                     <tr>
-                                                        <td>{{ $items->development_program }}</td>
-                                                        <td>{{ $items->development_achievement }}</td>
-                                                        <td>{{ $items->next_action }}</td>
+                                                        <td class="text-justify px-3">{{ $items->development_program }}</td>
+                                                        <td class="text-justify px-3">{{ $items->development_program }}</td>
+                                                        <td class="text-justify px-3">{{ $items->development_achievement }}</td>
+                                                        <td class="text-justify px-3">{{ $items->next_action }}</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
@@ -503,8 +537,8 @@
                                             <tbody>
                                                 @foreach ($details->where('employee_id', $assessment->employee->id) as $item)
                                                     <tr>
-                                                        <td>{{ $item->development_program }}</td>
-                                                        <td>{{ $item->evaluation_result }}</td>
+                                                        <td class="text-justify px-3">{{ $item->development_program }}</td>
+                                                        <td class="text-justify px-3">{{ $item->evaluation_result }}</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
@@ -555,99 +589,102 @@
         // });
 
         document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
-                button.addEventListener('click', function() {
-                    let alc = this.getAttribute('data-alc');
-                    let assessmentId = this.getAttribute('data-assessment');
-                    let modalTarget = this.getAttribute('data-bs-target');
-                    var title = this.getAttribute('data-title');
-                    const modalTitle = document.querySelector(modalTarget + ' .modal-header h2');
-                    if (title && modalTitle) {
-                        modalTitle.textContent = title;
+    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            let alc = this.getAttribute('data-alc');
+            let assessmentId = this.getAttribute('data-assessment');
+            let modalTarget = this.getAttribute('data-bs-target');
+            var title = this.getAttribute('data-title');
+            const modalTitle = document.querySelector(modalTarget + ' .modal-header h2');
+
+            if (title && modalTitle) {
+                modalTitle.textContent = title;
+            }
+            document.querySelector(`${modalTarget} input[name="alc_id"]`).value = alc;
+
+            console.log("Fetching IDP data...");
+
+            // Fetch data IDP via AJAX untuk mengisi form modal
+            $.ajax({
+                url: '/idp/getData',
+                method: 'GET',
+                data: {
+                    assessment_id: assessmentId,
+                    alc_id: alc
+                },
+                success: function(response) {
+                    console.log("Data IDP diterima:", response);
+
+                    if (response.idp) {
+                        $(`${modalTarget} select[name="idp"]`).val(response.idp.category).trigger('change');
+                        $(`${modalTarget} select[id^="program_select_"]`).val(response.idp.development_program).trigger('change');
+                        $(`${modalTarget} textarea[name="development_target"]`).val(response.idp.development_target);
+                        $(`${modalTarget} input[name="due_date"]`).val(response.idp.date);
+                    } else {
+                        $(`${modalTarget} select`).val(null).trigger('change');
+                        $(`${modalTarget} textarea[name="development_target"]`).val('');
+                        $(`${modalTarget} input[name="due_date"]`).val('');
                     }
-                    document.querySelector(`${modalTarget} input[name="alc_id"]`).value = alc;
 
-                    // Fetch data IDP via AJAX untuk mengisi form modal
-                    $.ajax({
-                        url: '/idp/getData',
-                        method: 'GET',
-                        data: {
-                            assessment_id: assessmentId,
-                            alc_id: alc
-                        },
-                        success: function(response) {
-                            if (response.idp) {
-                                $(`${modalTarget} select[name="idp"]`).val(response.idp
-                                    .category).trigger('change');
-                                $(`${modalTarget} select[id^="program_select_"]`).val(
-                                    response.idp.development_program).trigger(
-                                    'change');
-                                $(`${modalTarget} textarea[name="development_target"]`)
-                                    .val(response.idp.development_target);
-                                $(`${modalTarget} input[name="due_date"]`).val(response
-                                    .idp.date);
-                            } else {
-                                $(`${modalTarget} select`).val(null).trigger('change');
-                                $(`${modalTarget} textarea[name="development_target"]`)
-                                    .val('');
-                                $(`${modalTarget} input[name="due_date"]`).val('');
-                            }
-                        }
-                    });
-                });
+                    console.log("Modal masih terlihat?", $(modalTarget).is(":visible"));
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error fetching IDP data:", error);
+                }
             });
         });
+    });
+});
 
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('#btn-create-idp').forEach(button => {
+        button.addEventListener('click', function() {
+            const modalBody = this.closest('.modal-body');
+            const assessmentId = modalBody.querySelector('input[name="assessment_id"]').value;
+            const alcId = modalBody.querySelector('input[name="alc_id"]').value;
+            const category = modalBody.querySelector(`#category_select_${assessmentId}`).value;
+            const program = modalBody.querySelector(`#program_select_${assessmentId}`).value;
+            const target = modalBody.querySelector(`#target_${assessmentId}`).value;
+            const dueDate = modalBody.querySelector(`#due_date_${assessmentId}`).value;
 
-        document.addEventListener("DOMContentLoaded", function() {
-            document.querySelectorAll('#btn-create-idp').forEach(button => {
-                button.addEventListener('click', function() {
-                    const modalBody = this.closest('.modal-body');
-                    const assessmentId = modalBody.querySelector('input[name="assessment_id"]')
-                        .value;
-                    const alcId = modalBody.querySelector('input[name="alc_id"]')
-                        .value;
-                    const category = modalBody.querySelector(`#category_select_${assessmentId}`)
-                        .value;
-                    const program = modalBody.querySelector(`#program_select_${assessmentId}`)
-                        .value;
-                    const target = modalBody.querySelector(`#target_${assessmentId}`).value;
-                    const dueDate = modalBody.querySelector(`#due_date_${assessmentId}`).value;
+            console.log("Mengirim data IDP...");
 
-                    $.ajax({
-                        url: "{{ route('idp.store') }}",
-                        type: "POST",
-                        data: {
-                            alc_id: alcId,
-                            assessment_id: assessmentId,
-                            development_program: program,
-                            category: category,
-                            development_target: target,
-                            date: dueDate,
-                            '_token': "{{ csrf_token() }}",
-                        },
-                        success: function(response) {
-                            Swal.fire({
-                                title: "Berhasil!",
-                                text: assessmentId ?
-                                    "IDP berhasil diperbarui!" :
-                                    "IDP berhasil ditambahkan!",
-                                icon: "success",
-                                confirmButtonText: "OK"
-                            }).then(() => {
-                                $(`#kt_modal_warning_${assessmentId}`).modal(
-                                    'hide');
-                                location
-                                    .reload(); // Refresh halaman setelah sukses
-                            });
-                        },
-                        error: function(xhr, status, error) {
-                            alert(error);
-                        }
+            $.ajax({
+                url: "{{ route('idp.store') }}",
+                type: "POST",
+                data: {
+                    alc_id: alcId,
+                    assessment_id: assessmentId,
+                    development_program: program,
+                    category: category,
+                    development_target: target,
+                    date: dueDate,
+                    '_token': "{{ csrf_token() }}",
+                },
+                success: function(response) {
+                    console.log("IDP berhasil disimpan:", response);
+
+                    Swal.fire({
+                        title: "Berhasil!",
+                        text: assessmentId ? "IDP berhasil diperbarui!" : "IDP berhasil ditambahkan!",
+                        icon: "success",
+                        confirmButtonText: "OK"
+                    }).then(() => {
+                        console.log("Menutup modal setelah delay...");
+                        setTimeout(() => {
+                            $(`#kt_modal_warning_${assessmentId}`).modal('hide');
+                        }, 1500); // Modal ditutup setelah 1.5 detik
                     });
-                });
+                },
+                error: function(xhr, status, error) {
+                    console.error("Error menyimpan IDP:", error);
+                    alert("Terjadi kesalahan. Coba lagi.");
+                }
             });
         });
+    });
+});
+
 
 
         // document.addEventListener("DOMContentLoaded", function() {

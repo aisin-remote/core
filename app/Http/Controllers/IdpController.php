@@ -151,7 +151,7 @@ class IdpController extends Controller
         'details',
         'mid',
         'idps',
-        'company'
+        'company',
     ));
 }
 
@@ -314,19 +314,23 @@ $assessmentDetails = DB::table('detail_assessments')
     ->select('detail_assessments.*', 'alc.name as alc_name')
     ->get();
 
+// Inisialisasi baris awal dalam sheet
 foreach ($assessmentDetails as $detail) {
-    if (!empty($detail->strength)) {
-        $sheet->setCellValue('B' . $startRow, $detail->alc_name . " - " . $detail->strength);
-    }
-
-    if (!empty($detail->weakness)) {
-        $sheet->setCellValue('F' . $startRow, $detail->alc_name . " - " . $detail->weakness);
-    }
-
+    // Hanya tambahkan baris jika memiliki strength atau weakness
     if (!empty($detail->strength) || !empty($detail->weakness)) {
+        if (!empty($detail->strength)) {
+            $sheet->setCellValue('B' . $startRow, $detail->alc_name . " - " . $detail->strength);
+        }
+
+        if (!empty($detail->weakness)) {
+            $sheet->setCellValue('F' . $startRow, $detail->alc_name . " - " . $detail->weakness);
+        }
+
+        // Pindah ke baris berikutnya hanya jika ada data yang ditulis
         $startRow++;
     }
 }
+
 
     $startRow = 33;
 
