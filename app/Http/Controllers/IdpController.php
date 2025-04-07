@@ -320,10 +320,10 @@ $weaknesses = [];
 
 foreach ($assessmentDetails as $detail) {
     if (!empty($detail->strength)) {
-        $strengths[] = $detail->alc_name . " - " . $detail->strength;
+        $strengths[] =  " - " . $detail->alc_name ;
     }
     if (!empty($detail->weakness)) {
-        $weaknesses[] = $detail->alc_name . " - " . $detail->weakness;
+        $weaknesses[] = " - " . $detail->alc_name ;
     }
 }
 
@@ -361,6 +361,15 @@ $sheet->setCellValue('F' . $startRow, $weaknessText);
 
     $startRow = 33;
 
+   foreach ($assessmentDetails as $detail) {
+       if (!empty($detail->weakness)) {
+           $sheet->setCellValue('C' . $startRow, $detail->alc_name);
+           $startRow += 2;
+        }
+    }
+
+    $startRow = 33;
+
     $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
 
     if (!$assessment_id) {
@@ -371,7 +380,6 @@ $sheet->setCellValue('F' . $startRow, $weaknessText);
     $idpRecords = Idp::where('assessment_id', $assessment_id)->get();
 
     foreach ($idpRecords as $idp) {
-        $sheet->setCellValue('C' . $startRow, $detail->alc_name . " - " . ($detail->weakness ?? "-"));
         $sheet->setCellValue('E' . $startRow, $idp->development_program ?? "-");
         $sheet->setCellValue('D' . $startRow, $idp->category ?? "-");
         $sheet->setCellValue('H' . $startRow, $idp->development_target ?? "-");
