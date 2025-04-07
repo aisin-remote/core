@@ -40,7 +40,7 @@ class IdpController extends Controller
 
         return $subordinates;
     }
-    
+
     public function index($company = null, $reviewType = 'mid_year')
 {
     $user = auth()->user();
@@ -300,7 +300,7 @@ class IdpController extends Controller
 
     $startRow = 13;
 
-    $latestAssessment = DB::table('assessments')
+$latestAssessment = DB::table('assessments')
     ->where('employee_id', $employee_id)
     ->latest('created_at')
     ->first();
@@ -309,29 +309,30 @@ if (!$latestAssessment) {
     return back()->with('error', 'Assessment tidak ditemukan untuk employee ini.');
 }
 
-
 $assessmentDetails = DB::table('detail_assessments')
     ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
     ->where('detail_assessments.assessment_id', $latestAssessment->id)
     ->select('detail_assessments.*', 'alc.name as alc_name')
     ->get();
 
-// Inisialisasi baris awal dalam sheet
+$strengths = [];
+$weaknesses = [];
+
 foreach ($assessmentDetails as $detail) {
-    // Hanya tambahkan baris jika memiliki strength atau weakness
-    if (!empty($detail->strength) || !empty($detail->weakness)) {
-        if (!empty($detail->strength)) {
-            $sheet->setCellValue('B' . $startRow, $detail->alc_name . " - " . $detail->strength);
-        }
-
-        if (!empty($detail->weakness)) {
-            $sheet->setCellValue('F' . $startRow, $detail->alc_name . " - " . $detail->weakness);
-        }
-
-        // Pindah ke baris berikutnya hanya jika ada data yang ditulis
-        $startRow++;
+    if (!empty($detail->strength)) {
+        $strengths[] = $detail->alc_name . " - " . $detail->strength;
+    }
+    if (!empty($detail->weakness)) {
+        $weaknesses[] = $detail->alc_name . " - " . $detail->weakness;
     }
 }
+
+$strengthText = implode("\n", $strengths);
+$weaknessText = implode("\n", $weaknesses);
+
+$sheet->setCellValue('B' . $startRow, $strengthText);
+$sheet->setCellValue('F' . $startRow, $weaknessText);
+
 
 
     $startRow = 33;
