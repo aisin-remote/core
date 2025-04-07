@@ -588,37 +588,65 @@
         //     });
         // });
 
-        document.addEventListener("DOMContentLoaded", function () {
-    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function (button) {
-        button.addEventListener('click', function () {
+        document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
+        button.addEventListener('click', function() {
+            let alc = this.getAttribute('data-alc');
             let assessmentId = this.getAttribute('data-assessment');
-            let modalTarget = `#kt_modal_warning_${assessmentId}`;
-
-            console.log("Modal Target:", modalTarget);
-
-            if (!document.querySelector(modalTarget)) {
-                console.error("Modal tidak ditemukan untuk ID:", modalTarget);
-                return;
+            let modalTarget = this.getAttribute('data-bs-target');
+            var title = this.getAttribute('data-title');
+            const modalTitle = document.querySelector(modalTarget + ' .modal-header h2');
+            if (title && modalTitle) {
+                modalTitle.textContent = title;
             }
+            document.querySelector(`${modalTarget} input[name="alc_id"]`).value = alc;
 
-            document.querySelector(modalTarget).classList.add("show");
-            document.querySelector(modalTarget).style.display = "block";
-
-            console.log("Modal seharusnya tampil:", modalTarget);
+            // Fetch data IDP via AJAX untuk mengisi form modal
+            $.ajax({
+                url: '/idp/getData',
+                method: 'GET',
+                data: {
+                    assessment_id: assessmentId,
+                    alc_id: alc
+                },
+                success: function(response) {
+                    if (response.idp) {
+                        $(`${modalTarget} select[name="idp"]`).val(response.idp
+                            .category).trigger('change');
+                        $(`${modalTarget} select[id^="program_select_"]`).val(
+                            response.idp.development_program).trigger(
+                            'change');
+                        $(`${modalTarget} textarea[name="development_target"]`)
+                            .val(response.idp.development_target);
+                        $(`${modalTarget} input[name="due_date"]`).val(response
+                            .idp.date);
+                    } else {
+                        $(`${modalTarget} select`).val(null).trigger('change');
+                        $(`${modalTarget} textarea[name="development_target"]`)
+                            .val('');
+                        $(`${modalTarget} input[name="due_date"]`).val('');
+                    }
+                }
+            });
         });
     });
+});
 
-    document.querySelectorAll("#btn-create-idp").forEach(button => {
-        button.addEventListener("click", function () {
-            const modal = this.closest(".modal");
-            const assessmentId = modal.querySelector("input[name='assessment_id']").value;
-            const alcId = modal.querySelector("input[name='alc_id']").value;
-            const category = modal.querySelector(`#category_select_${assessmentId}`).value;
-            const program = modal.querySelector(`#program_select_${assessmentId}`).value;
-            const target = modal.querySelector(`#target_${assessmentId}`).value;
-            const dueDate = modal.querySelector(`#due_date_${assessmentId}`).value;
 
-            console.log("Mengirim data:", { assessmentId, alcId, category, program, target, dueDate });
+document.addEventListener("DOMContentLoaded", function() {
+    document.querySelectorAll('#btn-create-idp').forEach(button => {
+        button.addEventListener('click', function() {
+            const modalBody = this.closest('.modal-body');
+            const assessmentId = modalBody.querySelector('input[name="assessment_id"]')
+                .value;
+            const alcId = modalBody.querySelector('input[name="alc_id"]')
+                .value;
+            const category = modalBody.querySelector(`#category_select_${assessmentId}`)
+                .value;
+            const program = modalBody.querySelector(`#program_select_${assessmentId}`)
+                .value;
+            const target = modalBody.querySelector(`#target_${assessmentId}`).value;
+            const dueDate = modalBody.querySelector(`#due_date_${assessmentId}`).value;
 
             $.ajax({
                 url: "{{ route('idp.store') }}",
@@ -632,27 +660,28 @@
                     date: dueDate,
                     '_token': "{{ csrf_token() }}",
                 },
-                success: function (response) {
-                    console.log("Sukses:", response);
-
+                success: function(response) {
                     Swal.fire({
                         title: "Berhasil!",
-                        text: "IDP berhasil diperbarui!",
+                        text: assessmentId ?
+                            "IDP berhasil diperbarui!" :
+                            "IDP berhasil ditambahkan!",
                         icon: "success",
                         confirmButtonText: "OK"
                     }).then(() => {
-                        $(`#kt_modal_warning_${assessmentId}`).modal('hide');
+                        $(`#kt_modal_warning_${assessmentId}`).modal(
+                            'hide');
+                        location
+                            .reload(); // Refresh halaman setelah sukses
                     });
                 },
-                error: function (xhr, status, error) {
-                    console.error("Error:", error);
-                    Swal.fire("Gagal!", "Terjadi kesalahan, coba lagi.", "error");
+                error: function(xhr, status, error) {
+                    alert(error);
                 }
             });
         });
     });
 });
-
 
 
 
