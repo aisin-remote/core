@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\User;
 use App\Models\Employee;
+use App\Models\Assessment;
 use App\Models\Department;
 use Illuminate\Http\Request;
 use App\Models\AstraTraining;
@@ -316,10 +317,17 @@ class EmployeeController extends Controller
             ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
+        
+        $assessment = Assessment::with('details.alc','employee')
+                            ->whereHas('employee', function ($query) use ($npk) {
+                                $query->where('npk', $npk);
+                            })
+                            ->latest()
+                            ->first();
                             
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
-        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings'));
+        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment'));
     }
 
     public function edit($npk)
@@ -363,10 +371,17 @@ class EmployeeController extends Controller
             ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
+
+        $assessment = Assessment::with('details.alc','employee')
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->latest()
+            ->first();
                             
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
-        return view('website.employee.update', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings'));
+        return view('website.employee.update', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment'));
     }
 
     public function update(Request $request, $npk)

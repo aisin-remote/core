@@ -38,7 +38,7 @@
             <div class="row">
                 <div class="col-4">
                     <div class="card mb-5 mb-xl-10" style="height: 1435px !important">
-                        <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
+                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                             data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
                             <div class="card-title m-0">
@@ -261,7 +261,8 @@
                     <div class="row">
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
-                                <div class="card-header border-0 d-flex justify-content-between align-items-center">
+                                <div
+                                    class="card-header bg-light-info border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Educational Background</h3>
                                 </div>
 
@@ -348,7 +349,8 @@
                         <!-- Working Experience -->
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
-                                <div class="card-header border-0 d-flex justify-content-between align-items-center">
+                                <div
+                                    class="card-header bg-light-info border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Working Experience</h3>
                                 </div>
 
@@ -462,7 +464,7 @@
                         <!-- Historical Performance Appraisal -->
                         <div class="col-md-12">
                             <div class="card mb-5">
-                                <div class="card-header border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                                <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
                                     role="button" data-bs-toggle="collapse"
                                     data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
                                     aria-controls="kt_account_connected_accounts">
@@ -552,9 +554,9 @@
                         <!-- Card 2: Historical Human Assets Value -->
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
-                                <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                                    data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
-                                    aria-controls="kt_account_connected_accounts">
+                                <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
+                                    data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
+                                    aria-expanded="true" aria-controls="kt_account_connected_accounts">
                                     <div class="card-title m-0">
                                         <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
                                     </div>
@@ -595,7 +597,7 @@
                 <!-- Historical Astra  -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                        <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
                             role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
                             aria-expanded="true" aria-controls="kt_account_connected_accounts">
                             <h3 class="fw-bolder m-0">Astra Training History</h3>
@@ -681,7 +683,7 @@
 
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                        <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
                             role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
                             aria-expanded="true" aria-controls="kt_account_connected_accounts">
                             <h3 class="fw-bolder m-0">External Training History</h3>
@@ -700,7 +702,7 @@
                                         <!--begin::Thead-->
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
-                                                <th class="text-center">Training</th>
+                                                <th>Training</th>
                                                 <th class="text-center">Year</th>
                                                 <th class="text-center">Vendor</th>
                                                 <th class="text-center">Action</th>
@@ -712,7 +714,7 @@
                                         <tbody class="fw-6 fw-semibold text-gray-600">
                                             @forelse ($externalTrainings as $externalTraining)
                                                 <tr>
-                                                    <td class="text-center">{{ $externalTraining->program }}</td>
+                                                    <td>{{ $externalTraining->program }}</td>
                                                     <td class="text-center">{{ $externalTraining->year }}</td>
                                                     <td class="text-center">
                                                         {{ $externalTraining->vendor }}
@@ -767,7 +769,7 @@
 
             <div class="card mb-5 mb-xl-10">
                 <!--begin::Card header-->
-                <div class="card-header">
+                <div class="card-header bg-light-info">
                     <!--begin::Heading-->
                     <div class="card-title">
                         <h3>Promotion History</h3>
@@ -867,64 +869,53 @@
             </div>
 
             <div class="row">
-                <!-- Strength & Weakness -->
+                <!-- Strength -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                            data-bs-target="#kt_account_signin_method">
+                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
+                            data-bs-toggle="collapse" data-bs-target="#strength_section">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
                             </div>
                         </div>
-
-                        <div id="kt_account_settings_signin_method" class="collapse show">
+                        <div id="strength_section" class="collapse show">
                             <div class="card-body border-top p-10">
-                                <div class="d-flex flex-wrap align-items-center">
-                                    <div id="kt_signin_email">
-                                        <div class="fs-6 fw-bold mb-1">
-                                            Vision & Business Sense
-                                        </div>
-                                        <div class="fw-semibold text-gray-600">
-                                            Konsisten memperlihatkan pemahaman akan fokus perusahaan, serta membuat beberapa
-                                            pertimbangan strategis yang cukup berimbang antara pengamatan kondisi internal
-                                            dan kondisi eksernal. Memerhatikan faktor penentu bisnis, dan memberi
-                                            rekomendasi strategi relevan misalkan untuk memanfaatkan kekuatan merek dan
-                                            produk.
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="separator separator-dashed my-4"></div>
-
-                                <div class="d-flex flex-wrap align-items-center mb-4">
-                                    <div id="kt_signin_password">
-                                        <div class="fs-6 fw-bold mb-1">
-                                            Leading & Motivating
-                                        </div>
-                                        <div class="fw-semibold text-gray-600">
-                                            Terbuka menyampaikan target, memberikan arahan tugas, serta mendorong
-                                            kolaborasi dalam tim untuk mencapai tujuan. Mengidentifikasi isu kinerja,
-                                            berusaha menggali minat dan kebutuhan individu, serta menyiapkan dukungan
-                                            pengembangan yang relevan.
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="separator separator-dashed my-4"></div>
-
-                                <div class="d-flex flex-wrap align-items-center mb-4">
-                                    <div id="kt_signin_password">
-                                        <div class="fs-6 fw-bold mb-1">
-                                            Drive & Courage
-                                        </div>
-                                        <div class="fw-semibold text-gray-600">
-                                            Menunjukkan usaha mengarahkan keputusan dan tindakannya agar tetap selaras
-                                            kepentingan dan tujuan perusahaan. Tidak ragu mengambil keputusan, dan di tugas
-                                            sehari hari menunjukkannya pada berbagai situasi, baik saat menghadapi situasi
-                                            baru, maupun ketika harus memutuskan pilihan yang sulit.
-                                        </div>
-                                    </div>
-                                </div>
+                                @if (!$assessment)
+                                    <p class="text-center text-muted">No data available</p>
+                                @elseif ($assessment->details->isEmpty() || !$assessment->details->where('strength', '!=', null)->count())
+                                    <p class="text-center text-muted">No data available</p>
+                                @else
+                                    @foreach ($assessment->details as $detail)
+                                        @if ($detail->strength)
+                                            <div class="d-flex flex-wrap align-items-center mb-4">
+                                                <div>
+                                                    <div class="fs-6 fw-bold mb-1">
+                                                        {{ $detail->alc->name ?? 'Unknown' }}
+                                                    </div>
+                                                    <div class="fw-semibold text-gray-600">
+                                                        <span class="text-content"
+                                                            data-fulltext="{!! htmlentities($detail->strength) !!}">
+                                                            {!! Str::limit($detail->strength, 200) !!}
+                                                        </span>
+                                                        <br>
+                                                        @if (strlen(strip_tags($detail->strength)) > 200)
+                                                            <span class="show-more text-primary cursor-pointer">Show
+                                                                More</span>
+                                                            <span class="show-less text-primary cursor-pointer d-none">Show
+                                                                Less</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="separator separator-dashed my-4"></div>
+                                        @endif
+                                    @endforeach
+                                @endif
+                            </div>
+                            <div class="card-footer">
+                                <a class="fw-semibold" href="{{ route('assessments.index', $employee->company_name) }}">
+                                    Go to assesment page
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -933,70 +924,59 @@
                 <!-- Areas for Development -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                            data-bs-target="#kt_account_signin_method">
+                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
+                            data-bs-toggle="collapse" data-bs-target="#weakness_section">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Areas for Development</h3>
                             </div>
                         </div>
-
-                        <div id="kt_account_settings_signin_method" class="collapse show">
+                        <div id="weakness_section" class="collapse show">
                             <div class="card-body border-top p-10">
-                                <div class="d-flex flex-wrap align-items-center">
-                                    <div id="kt_signin_email">
-                                        <div class="fs-6 fw-bold mb-1">
-                                            Planning & Driving Action
-                                        </div>
-                                        <div class="fw-semibold text-gray-600">
-                                            belum merincikan rencana secara terstruktur dan sistimatis. belum menentukan
-                                            sasaran
-                                            yang jelas untuk setiap penugasan, serta belum menetapkan aktivitas untuk
-                                            evaluasi atau
-                                            pemantauan kerja demi memastikan implementasi tuntas.
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="separator separator-dashed my-4"></div>
-
-                                <div class="d-flex flex-wrap align-items-center mb-4">
-                                    <div id="kt_signin_password">
-                                        <div class="fs-6 fw-bold mb-1">
-                                            Analysis & Judgment
-                                        </div>
-                                        <div class="fw-semibold text-gray-600">
-                                            belum konsisten mengembangkan beberapa alternatif solusi yang akan dapat
-                                            membantunya menghasilkan solusi yang paling relevan guna menyelesaikan berbagai
-                                            isu operasional ataupun strategis. Pendekatannya juga lebih mengandalkan pada
-                                            keputusan manajemen saja.
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="separator separator-dashed my-4"></div>
-
-                                <div class="d-flex flex-wrap align-items-center mb-4">
-                                    <div id="kt_signin_password">
-                                        <div class="fs-6 fw-bold mb-1">
-                                            Customer Focus
-                                        </div>
-                                        <div class="fw-semibold text-gray-600">
-                                            Belum memberikan ide ide baru yang kreatif demi meningkatkan standar dan
-                                            kualitas layanan. Selain itu, ia juga perlu menerapkan metode/pendekatan yang
-                                            terstruktur untuk menggali kebutuhan dan mendapatkan umpan balik dari pelanggan.
-                                        </div>
-                                    </div>
-                                </div>
+                                @if (!$assessment)
+                                    <p class="text-center text-muted">No data available</p>
+                                @elseif ($assessment->details->isEmpty() || !$assessment->details->where('weakness', '!=', null)->count())
+                                    <p class="text-center text-muted">No data available</p>
+                                @else
+                                    @foreach ($assessment->details as $detail)
+                                        @if ($detail->weakness)
+                                            <div class="d-flex flex-wrap align-items-center mb-4">
+                                                <div>
+                                                    <div class="fs-6 fw-bold mb-1">
+                                                        {{ $detail->alc->name ?? 'Unknown' }}
+                                                    </div>
+                                                    <div class="fw-semibold text-gray-600">
+                                                        <span class="text-content"
+                                                            data-fulltext="{!! htmlentities($detail->weakness) !!}">
+                                                            {!! Str::limit($detail->weakness, 200) !!}
+                                                        </span>
+                                                        <br>
+                                                        @if (strlen(strip_tags($detail->weakness)) > 200)
+                                                            <span class="show-more text-primary cursor-pointer">Show
+                                                                More</span>
+                                                            <span class="show-less text-primary cursor-pointer d-none">Show
+                                                                Less</span>
+                                                        @endif
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="separator separator-dashed my-4"></div>
+                                        @endif
+                                    @endforeach
+                                @endif
+                            </div>
+                            <div class="card-footer">
+                                <a class="fw-semibold" href="{{ route('assessments.index', $employee->company_name) }}">
+                                    Go to assesment page
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
-                <div class="card-header border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
+                <div class="card-header bg-light-info border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                     data-bs-target="#kt_account_signin_method">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
@@ -1061,6 +1041,24 @@
                 } else {
                     $('input[name="working_period"]').val(0);
                 }
+            });
+
+            $(".show-more").click(function() {
+                var textContainer = $(this).siblings(".text-content");
+                var fullText = textContainer.attr("data-fulltext");
+
+                textContainer.html(fullText);
+                $(this).addClass("d-none");
+                $(this).siblings(".show-less").removeClass("d-none");
+            });
+
+            $(".show-less").click(function() {
+                var textContainer = $(this).siblings(".text-content");
+                var shortText = textContainer.text().substring(0, 200) + "...";
+
+                textContainer.html(shortText);
+                $(this).addClass("d-none");
+                $(this).siblings(".show-more").removeClass("d-none");
             });
         });
     </script>
