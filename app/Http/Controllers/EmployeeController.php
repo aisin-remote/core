@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\Idp;
 use App\Models\User;
 use App\Models\Employee;
 use App\Models\Assessment;
@@ -319,15 +320,21 @@ class EmployeeController extends Controller
             ->get();
         
         $assessment = Assessment::with('details.alc','employee')
-                            ->whereHas('employee', function ($query) use ($npk) {
-                                $query->where('npk', $npk);
-                            })
-                            ->latest()
-                            ->first();
+                        ->whereHas('employee', function ($query) use ($npk) {
+                            $query->where('npk', $npk);
+                        })
+                        ->latest()
+                        ->first();
+        
+        $idps = Idp::with('alc', 'employee')
+                ->whereHas('employee', function ($query) use ($npk) {
+                    $query->where('npk', $npk);
+                })
+                ->get();
                             
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
-        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment'));
+        return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps'));
     }
 
     public function edit($npk)
@@ -378,10 +385,16 @@ class EmployeeController extends Controller
             })
             ->latest()
             ->first();
+        
+        $idps = Idp::with('alc', 'employee')
+            ->whereHas('employee', function ($query) use ($npk) {
+                $query->where('npk', $npk);
+            })
+            ->get();
                             
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
-        return view('website.employee.update', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment'));
+        return view('website.employee.update', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment','idps'));
     }
 
     public function update(Request $request, $npk)

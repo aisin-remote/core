@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Alc extends Model
 {
@@ -17,6 +17,10 @@ class Alc extends Model
 
     // Relasi ke Assessment
     public function assessments()
+    {
+        return $this->hasMany(Assessment::class);
+    }
+    public function idp()
     {
         return $this->hasMany(Assessment::class);
     }

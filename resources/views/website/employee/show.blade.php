@@ -664,23 +664,23 @@
                             <tr class="text-muted fw-bold fs-7 text-uppercase gs-0">
                                 <th>Development Area</th>
                                 <th>Development Program</th>
-                                <th>Development Target</th>
-                                <th>Due Date</th>
+                                <th class="text-center">Development Target</th>
+                                <th class="text-center">Due Date</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-                                <td>Leading & Motivating</td>
-                                <td>Job Assignment</td>
-                                <td>Meningkatnya pemahaman peran sebagai pemimpin yang
-                                    memahami kebutuhan & perasaan bawahan/orang lain</td>
-                                <td>Smt-1 2024</td>
-                            </tr>
+                            @foreach ($idps as $idp)
+                                <tr>
+                                    <td>{{ $idp->alc->name }}</td>
+                                    <td>{{ $idp->development_program }}</td>
+                                    <td class="text-center">{{ $idp->development_target }}</td>
+                                    <td class="text-center">{{ Carbon\Carbon::parse($idp->date)->format('j F Y') }}</td>
+                                </tr>
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
             </div>
-
 
             <!-- Tombol Back di bagian bawah card -->
             <div class="card-footer text-end mt-4">
