@@ -12,57 +12,59 @@
     <div id="kt_app_content" class="app-content  flex-column-fluid ">
         <!--begin::Content container-->
         <div id="kt_app_content_container" class="app-container  container-fluid ">
-            
-            
+
+
 
 
             <!--begin::Timeline-->
-<div class="card">
-    
-    <div class="mb-18">        
-        <!--begin::Heading-->
-        <div class="text-center mb-17 mt-8">
-            <!--begin::Title-->
-            <h3 class="fs-2hx text-gray-900 mb-5">Choose Employee</h3>
-            <!--end::Title-->
+            <div class="card">
 
-        </div>  
-        <!--end::Heading-->    
-        
-        <!--begin::Wrapper-->
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 gy-10">
-                        <!--begin::Item-->
-                @foreach ($employees as $item)
-                <a href="{{url('hav/generate-create',['id' => $item->id])}}" class="text-gray-900 fw-bold text-hover-primary fs-3">
-                    <div class="col text-center mb-9">
-                        <!--begin::Photo-->
-                        <div class="mx-auto mb-2 d-flex w-150px h-150px bgi-no-repeat bgi-size-contain bgi-position-center rounded mb-3" style="background-image:url('{{ asset('storage/' . $item->photo) }}')">
-                        </div>
-                        <!--end::Photo-->
-        
-                        <!--begin::Person-->
-                        <div class="mb-0">
-                            <!--begin::Name-->
-                            <h3> {{$item->name}}   </h3>      
-                            <!--end::Name-->
-                            
-                            <!--begin::Position-->
-                            <div class="text-muted fs-6 fw-semibold">{{$item->npk}}</div> 
-                            <!--begin::Position-->                 
-                        </div>
-                        <!--end::Person-->                
+                <div class="mb-18">
+                    <!--begin::Heading-->
+                    <div class="text-center mb-17 mt-8">
+                        <!--begin::Title-->
+                        <h3 class="fs-2hx text-gray-900 mb-5">Choose Employee</h3>
+                        <!--end::Title-->
+
                     </div>
-                </a>  
-                @endforeach
-                 
-        </div>
-        <!--end::Wrapper-->    
-    </div>
-    <!--end::Team-->
+                    <!--end::Heading-->
+
+                    <!--begin::Wrapper-->
+                    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 gy-10">
+                        <!--begin::Item-->
+                        @foreach ($employees as $item)
+                            <a href="{{ url('hav/generate-create', ['id' => $item->employee_id]) }}"
+                                class="text-gray-900 fw-bold text-hover-primary fs-3">
+                                <div class="col text-center mb-9">
+                                    <!--begin::Photo-->
+                                    <div class="mx-auto mb-2 d-flex w-150px h-150px bgi-no-repeat bgi-size-contain bgi-position-center rounded mb-3"
+                                        style="background-image:url('{{ asset('storage/' . $item->employee->photo) }}')">
+                                    </div>
+                                    <!--end::Photo-->
+
+                                    <!--begin::Person-->
+                                    <div class="mb-0">
+                                        <!--begin::Name-->
+                                        <h3> {{ $item->employee->name }} </h3>
+                                        <!--end::Name-->
+
+                                        <!--begin::Position-->
+                                        <div class="text-muted fs-6 fw-semibold">{{ $item->employee->npk }}</div>
+                                        <!--begin::Position-->
+                                    </div>
+                                    <!--end::Person-->
+                                </div>
+                            </a>
+                        @endforeach
+
+                    </div>
+                    <!--end::Wrapper-->
+                </div>
+                <!--end::Team-->
 
 
-</div>
-<!--end::Timeline-->
+            </div>
+            <!--end::Timeline-->
 
 
 
@@ -168,4 +170,4 @@
     </script>
 @endsection
 
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>

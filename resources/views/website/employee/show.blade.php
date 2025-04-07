@@ -36,7 +36,7 @@
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="container mt-4">
             <div class="row">
-                <div class="col-4">
+                <div class="col-md-4 col-sm-12">
                     <div class="card mb-5 mb-xl-10" style="height: 1410px !important">
                         <div class="card-header bg-light-info border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
                             data-bs-target="#kt_account_profile_details" aria-expanded="true"
@@ -168,7 +168,7 @@
                     </div>
                 </div>
                 <!-- Card 1: Educational Background -->
-                <div class="col-8">
+                <div class="col-md-8 col-sm-12">
                     <div class="row">
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
