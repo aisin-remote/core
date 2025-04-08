@@ -57,7 +57,15 @@ Route::middleware('guest')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         return view('website.dashboard.index');
-    })->name('dashboard.index');;
+    })->name('dashboard.index');
+    
+    Route::get('/master_schedule', function () {
+        return view('website.dashboard.master');
+    })->name('master_schedule.index');
+    
+    Route::get('/people', function () {
+        return view('website.dashboard.people');
+    })->name('people.index');
 
     Route::prefix('hav')->group(function () {
         Route::get('/', [HavController::class, 'index'])->name('hav.index'); // Menampilkan form create

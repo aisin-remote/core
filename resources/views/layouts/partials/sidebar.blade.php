@@ -62,6 +62,27 @@
                     <!--begin:Menu item-->
                     <div class="menu-item">
                         <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('master_schedule') ? 'active' : '' }}"
+                            href="/master_schedule">
+                            <span class="menu-icon">
+                                <i class="fas fa-calendar"></i>
+                            </span>
+                            <span class="menu-title ps-1">Master Schedule</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
+                        <a class="menu-link {{ request()->is('people') ? 'active' : '' }}" href="/people">
+                            <span class="menu-icon">
+                                <i class="fas fa-user-friends"></i>
+                            </span>
+                            <span class="menu-title ps-1">People Review</span>
+                        </a>
+                        <!--end:Menu link-->
+                    </div>
+                    <div class="menu-item">
+                        <!--begin:Menu link-->
                         <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
                             <span class="menu-icon">
                                 <i class="fas fa-dashboard"></i>
