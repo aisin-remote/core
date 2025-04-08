@@ -7,6 +7,7 @@
 @section('breadcrumbs')
     {{ $title ?? 'Employee' }}
 @endsection
+
 @section('main')
     @if (session()->has('success'))
         <script>
@@ -20,10 +21,22 @@
             });
         </script>
     @endif
+    @if (session()->has('error'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Error!",
+                    text: "{{ session('error') }}",
+                    icon: "error",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Employee List</h3>
+                <h3 class="card-title">Department List</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                         style="width: 200px;">
@@ -34,71 +47,39 @@
                         data-kt-menu-placement="bottom-end">
                         <i class="fas fa-filter"></i> Filter
                     </button>
+                    <button type="button" class="btn btn-primary me-3" data-bs-toggle="modal"
+                        data-bs-target="#addDepartmentModal">
+                        <i class="fas fa-plus"></i> Add
+                    </button>
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-upload"></i>
+                        Import
+                    </button>
                 </div>
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist" style="cursor:pointer">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 active filter-tab"" data-filter="all">Show All</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
-                    </li>
-                </ul>
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Photo</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Company</th>
-                            <th>Position</th>
-                            <th>Department</th>
-                            <th>Grade</th>
-                            <th>Age</th>
+                            <th>Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($employees as $index => $employee)
-                            <tr data-position="{{ $employee->position }}">
-                                <td>{{ $index + 1 }}</td>
+                        @forelse ($departments as $department)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $department->name }}</td>
                                 <td class="text-center">
-                                    <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
-                                        alt="Employee Photo" class="rounded" width="40" height="40"
-                                        style="object-fit: cover;">
-                                </td>
-                                <td>{{ $employee->npk }}</td>
-                                <td>{{ $employee->name }}</td>
-                                <td>{{ $employee->company_name }}</td>
-                                <td>{{ $employee->position }}</td>
-                                <td>{{ $employee->departments->first()->name }}</td>
-                                <td>{{ $employee->grade }}</td>
-                                <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
-                                <td class="text-center">
-                                    <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
-                                        <i class="bi bi-eye"></i> Summary
-                                    </a>
+                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                        data-id="{{ $department->id }}">Delete</button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted">No employees found</td>
+                                <td colspan="9" class="text-center text-muted">No employees found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -106,39 +87,63 @@
             </div>
         </div>
     </div>
+
+    <!-- Import Employee Modal -->
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">Import Employee Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="{{ route('employee.import') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="file" class="form-label">Select Excel File</label>
+                            <input type="file" name="file" id="file" class="form-control" required>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-info">Import</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Tambah Department -->
+    <div class="modal fade" id="addDepartmentModal" tabindex="-1" aria-labelledby="addDepartmentModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Department</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('department.master.store') }}" method="POST">
+                    @csrf
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Department Name</label>
+                            <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 @endsection
 
-
 @push('scripts')
+    <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const tabs = document.querySelectorAll(".filter-tab");
-            const rows = document.querySelectorAll("#kt_table_users tbody tr");
-
-            tabs.forEach(tab => {
-                tab.addEventListener("click", function(e) {
-                    e.preventDefault();
-
-                    // Hapus class active dari semua tab
-                    tabs.forEach(t => t.classList.remove("active"));
-                    this.classList.add("active");
-
-                    const filter = this.getAttribute("data-filter");
-
-                    rows.forEach(row => {
-                        const position = row.getAttribute("data-position");
-                        if (filter === "all" || position === filter) {
-                            row.style.display = "";
-                        } else {
-                            row.style.display = "none";
-                        }
-                    });
-                });
-            });
-        });
-
         document.addEventListener("DOMContentLoaded", function() {
             console.log("✅ Script Loaded!");
 
@@ -220,7 +225,7 @@
                         if (result.isConfirmed) {
                             let form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = `/employee/${employeeId}`;
+                            form.action = `/master/department/delete/${employeeId}`;
 
                             let csrfToken = document.createElement('input');
                             csrfToken.type = 'hidden';
@@ -242,5 +247,4 @@
             });
         });
     </script>
-    <!-- Tambahkan SweetAlert -->
 @endpush

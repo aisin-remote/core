@@ -26,7 +26,7 @@
     <meta property="og:url" content="https://keenthemes.com/metronic" />
     <meta property="og:site_name" content="Metronic by Keenthemes" />
     <link rel="canonical" href="sign-in.html" />
-    <link rel="shortcut icon" href="../../../assets/media/logos/favicon.ico" />
+    <link rel="shortcut icon" href="{{ asset('assets/media/logos/satu-aisin-final1.png') }}" />
 
     <!--begin::Fonts(mandatory for all pages)-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" /> <!--end::Fonts-->
@@ -99,7 +99,7 @@
 
                     <!--begin::Title-->
                     <h1 class="text-gray-800 fs-2qx fw-bold text-center mb-7">
-                        Fast, Efficient and Productive
+                        Fast & Efficient
                     </h1>
                     <!--end::Title-->
 
@@ -107,7 +107,7 @@
                     <div class="text-gray-600 fs-base text-center fw-semibold">
                         A Human Resource System (HR System) is a digital solution that focuses on people development by facilitating employee growth,
                         skill enhancement, performance tracking, and career progression to maximize workforce potential and organizational success.
-                        
+
                     </div>
                     <!--end::Text-->
                 </div>

@@ -16,6 +16,11 @@ class Employee extends Model
         return $this->hasMany(Assessment::class, 'employee_id', 'id');
     }
 
+     public function employeeCompetencies()
+    {
+        return $this->hasMany(EmployeeCompetency::class);
+    }
+
     public function departments()
     {
         return $this->belongsToMany(Department::class, 'employee_departments')->withTimestamps();

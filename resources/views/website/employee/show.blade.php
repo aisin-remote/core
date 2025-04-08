@@ -138,8 +138,8 @@
                                         <label class="form-label fw-bold fs-6">Position</label>
                                         <select name="position" class="form-select form-select-lg fw-semibold">
                                             <option value="">Select Position</option>
-                                            <option value="General Manager"
-                                                {{ old('position', $employee->position ?? '') == 'General Manager' ? 'selected' : '' }}>
+                                            <option value="GM"
+                                                {{ old('position', $employee->position ?? '') == 'GM' ? 'selected' : '' }}>
                                                 General Manager</option>
                                             <option value="Manager"
                                                 {{ old('position', $employee->position ?? '') == 'Manager' ? 'selected' : '' }}>

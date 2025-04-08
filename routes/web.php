@@ -12,7 +12,7 @@ use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\CompetencyController;
-use App\Http\Controllers\EmpCompetencyController;
+use App\Http\Controllers\EmployeeCompetencyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -26,17 +26,26 @@ use App\Http\Controllers\EmpCompetencyController;
 */
 
 /* Employee Competency */
-Route::resource('emp_competency', EmpCompetencyController::class);
-Route::get('/create', [EmpCompetencyController::class, 'create'])->name('emp_competency.create');
-Route::get('/index', [EmpCompetencyController::class, 'index'])->name('index');
+Route::get('/employeeCompetencies', [EmployeeCompetencyController::class, 'index'])->name('employeeCompetencies.index');
+Route::get('/employeeCompetencies/create', [EmployeeCompetencyController::class, 'create'])->name('employeeCompetencies.create');
+Route::put('employeeCompetencies/{employeeCompetency}', [EmployeeCompetencyController::class, 'update'])->name('employeeCompetencies.update');
+Route::delete('employeeCompetencies/{employeeCompetency}', [EmployeeCompetencyController::class, 'destroy'])->name('employeeCompetencies.destroy');
+Route::post('/employeeCompetencies/store', [EmployeeCompetencyController::class, 'store'])->name('employeeCompetencies.store');
+Route::get('/employee-competencies/get-employees', [EmployeeCompetencyController::class, 'getEmployees']);
+Route::get('/employee-competencies/get-competencies', [EmployeeCompetencyController::class, 'getCompetencies']);
+Route::get('/employeeCompetencies/employee/{employee}', [EmployeeCompetencyController::class, 'show'])->name('employeeCompetencies.show');
 
 /* Group Competency */
 Route::resource('group_competency', GroupCompetencyController::class);
-Route::resource('group_competency', GroupCompetencyController::class)->except(['show']);
-Route::get('/create', [GroupCompetencyController::class, 'create'])->name('group_competency.create');
+Route::resource('competency', CompetencyController::class);
 
 /* Competency */
-Route::resource('competency', CompetencyController::class);
+Route::get('/competencies', [CompetencyController::class, 'index'])->name('competencies.index');
+Route::get('/competencies/create', [CompetencyController::class, 'create'])->name('competencies.create');
+Route::post('/competencies/store', [CompetencyController::class, 'store'])->name('competencies.store');
+Route::get('/competencies/{competency}/edit', [CompetencyController::class, 'edit'])->name('competencies.edit');
+Route::put('/competencies/{competency}', [CompetencyController::class, 'update'])->name('competencies.update');
+Route::delete('/competencies/{competency}', [CompetencyController::class, 'destroy'])->name('competencies.destroy');
 
 Route::middleware('guest')->group(function () {
     Route::prefix('register')->group(function () {
@@ -99,7 +108,7 @@ Route::middleware('auth')->group(function () {
             Route::put('/update/{id}', [EmployeeController::class, 'educationUpdate'])->name('education.update');
             Route::delete('/delete/{id}', [EmployeeController::class, 'educationDestroy'])->name('education.destroy');
         });
-        
+
         // appraisal
         Route::prefix('appraisal')->group(function () {
             Route::post('/store', [EmployeeController::class, 'appraisalStore'])->name('appraisal.store');
@@ -154,15 +163,27 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
         ->name('idp.exportTemplate');
-        
+
     Route::prefix('master')->group(function () {
         Route::get('/employee/{company?}', [MasterController::class, 'employee'])->name('employee.master.index');
         Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
-        
+
         Route::prefix('department')->group(function () {
             Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
+        });
+
+        Route::prefix('section')->group(function () {
+            Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
+            Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
+            Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
+        });
+
+        Route::prefix('grade')->group(function () {
+            Route::get('/', [MasterController::class, 'grade'])->name('grade.master.index');
+            Route::post('/store', [MasterController::class, 'gradeStore'])->name('grade.master.store');
+            Route::delete('/delete/{id}', [MasterController::class, 'gradeDestroy'])->name('grade.master.destroy');
         });
 
     });
