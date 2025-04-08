@@ -21,7 +21,7 @@
                         <div class="me-4 mb-3">
                             <div class="position-relative shadow-sm rounded border">
                                 <img src="{{ asset('storage/' . $hav->employee->photo) }}" alt="Employee Image"
-                                    class="w-100 h-100 rounded">
+                                    class="w-100 h-100 rounded" height="150px" width="150px">
                             </div>
                         </div>
 
