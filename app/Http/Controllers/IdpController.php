@@ -131,11 +131,14 @@ class IdpController extends Controller
             $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
             $diffInMonths = $currentDate->diffInMonths($dueDate);
 
-            if ($diffInMonths <= 6) {
+            if ($diffInMonths >= 1 && $diffInMonths <= 12) {
                 $midYearPrograms[] = $program;
-            } else {
+            }
+
+            if ($diffInMonths > 6) {
                 $oneYearPrograms[] = $program;
             }
+
         }
 
         // Simpan ke objek assessment agar bisa diakses di Blade
