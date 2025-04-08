@@ -320,7 +320,8 @@
                         <!--end:Menu content-->
                     </div>
 
-                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
+                    {{-- training menu --}}
+                    {{-- <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
                         <!-- Begin: Menu Link -->
                         <span class="menu-link {{ request()->is('Competency') ? 'active' : '' }}">
                             <span class="menu-icon">
@@ -364,7 +365,7 @@
                             </div>
                         </div>
                         <!-- End: Menu Sub -->
-                    </div>
+                    </div> --}}
 
 
                     @if (auth()->user()->role == 'User')
