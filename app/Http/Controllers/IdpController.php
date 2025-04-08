@@ -204,6 +204,7 @@ class IdpController extends Controller
         }
     }
 
+
     public function storeMidYear(Request $request, $employee_id)
     {
         $request->validate([
@@ -326,7 +327,7 @@ foreach ($assessmentDetails as $detail) {
         $strengths[] =  " - " . $detail->alc_name ;
     }
     if (!empty($detail->weakness)) {
-        $weaknesses[] = " - " . $detail->alc_name ;
+        $weaknesses[] = " - "  . $detail->alc_name ;
     }
 }
 
@@ -364,12 +365,13 @@ $sheet->setCellValue('F' . $startRow, $weaknessText);
 
     $startRow = 33;
 
-   foreach ($assessmentDetails as $detail) {
-       if (!empty($detail->weakness)) {
-           $sheet->setCellValue('C' . $startRow, $detail->alc_name);
-           $startRow += 2;
-        }
+foreach ($assessmentDetails as $detail) {
+    if (!empty($detail->weakness)) {
+        $sheet->setCellValue('C' . $startRow, $detail->alc_name);
+        $startRow += 2;
     }
+}
+
 
     $startRow = 33;
 
