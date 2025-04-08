@@ -52,7 +52,6 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            {{-- <th>Photo</th> --}}
                             <th>NPK</th>
                             <th>Employee Name</th>
                             <th>Company</th>
@@ -64,53 +63,24 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="text-start">
-                            <td>1</td>
-                            {{-- <td class="text-center"> --}}
-                            {{-- <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
-                                alt="Employee Photo" class="rounded" width="40" height="40"
-                                style="object-fit: cover;"> --}}
-                            {{-- </td> --}}
-                            <td>4239</td>
-                            <td>Herizal Arfiansyah</td>
-                            <td>AII</td>
-                            <td>Manager</td>
-                            <td>MIS</td>
-                            <td>10A</td>
-                            <td><span class="badge badge-light-warning fs-7 fw-bold">Career Person</span></td>
-                            <td class="text-center">
-                                <a href="#" class="btn btn-info btn-sm" data-bs-toggle="modal"
-                                    data-bs-target="#kt_modal_create_app">
-                                    <i class="bi bi-eye"></i> Summary
-                                </a>
-                            </td>
-                        </tr>
-                        {{-- @forelse ($employees as $index => $employee)
-                        <tr data-position="{{ $employee->position }}">
-                            <td>{{ $index + 1 }}</td>
-                            <td class="text-center">
-                                <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
-                                    alt="Employee Photo" class="rounded" width="40" height="40"
-                                    style="object-fit: cover;">
-                            </td>
-                            <td>{{ $employee->npk }}</td>
-                            <td>{{ $employee->name }}</td>
-                            <td>{{ $employee->company_name }}</td>
-                            <td>{{ $employee->position }}</td>
-                            <td>{{ $employee->departments->first()->name }}</td>
-                            <td>{{ $employee->grade }}</td>
-                            <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
-                            <td class="text-center">
-                                <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
-                                    <i class="bi bi-eye"></i> Summary
-                                </a>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="10" class="text-center text-muted">No employees found</td>
-                        </tr>
-                    @endforelse --}}
+                        @foreach ($employees as $item)
+                            <tr class="text-start">
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $item->employee->npk }}</td>
+                                <td>{{ $item->employee->name }}</td>
+                                <td>{{ $item->employee->company_name }}</td>
+                                <td>{{ $item->employee->position }}</td>
+                                <td>{{ $item->employee->departments->first()->name }}</td>
+                                <td>{{ $item->employee->grade }}</td>
+                                <td><span class="badge badge-light-warning fs-7 fw-bold">Career Person</span></td>
+                                <td class="text-center">
+                                    <a href="{{ url('hav/generate-create', ['id' => $item->employee_id]) }}"
+                                        class="btn btn-info btn-sm">
+                                        <i class="bi bi-eye"></i> Summary
+                                    </a>
+                                </td>
+                            </tr>
+                        @endforeach
                     </tbody>
                 </table>
             </div>
