@@ -17,7 +17,7 @@
 
                     <div class="mb-3">
                         <label for="edit_description" class="form-label">Description</label>
-                        <textarea class="form-control" id="edit_description" required></textarea>
+                        <textarea class="form-control" id="edit_description"></textarea>
                     </div>
 
                     <div class="mb-3">

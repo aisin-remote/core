@@ -34,6 +34,7 @@ Route::post('/employeeCompetencies/store', [EmployeeCompetencyController::class,
 Route::get('/employee-competencies/get-employees', [EmployeeCompetencyController::class, 'getEmployees']);
 Route::get('/employee-competencies/get-competencies', [EmployeeCompetencyController::class, 'getCompetencies']);
 Route::get('/employeeCompetencies/employee/{employee}', [EmployeeCompetencyController::class, 'show'])->name('employeeCompetencies.show');
+Route::patch('/employeeCompetencies/{id}/approve', [EmployeeCompetencyController::class, 'approve'])->name('employeeCompetencies.approve');
 
 /* Group Competency */
 Route::resource('group_competency', GroupCompetencyController::class);

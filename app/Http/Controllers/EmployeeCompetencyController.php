@@ -7,6 +7,7 @@ use App\Models\Department;
 use App\Models\Competency;
 use App\Models\Employee;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class EmployeeCompetencyController extends Controller
 {
@@ -182,10 +183,46 @@ class EmployeeCompetencyController extends Controller
      */
     public function update(Request $request, $id)
     {
+        $request->validate([
+            'act' => 'required|integer',
+            'file' => 'nullable|file|max:2048',
+        ]);
+
         $employeeCompetency = EmployeeCompetency::findOrFail($id);
-        $employeeCompetency->update($request->all());
+        $data = $request->except('file');
+
+        // Handle file upload
+        if ($request->hasFile('file')) {
+            // Delete old file jika ada
+            if ($employeeCompetency->files) {
+                Storage::delete($employeeCompetency->files);
+            }
+            
+            // Simpan file dengan nama asli di direktori sesuai employee_id
+            $originalName = $request->file('file')->getClientOriginalName();
+            $directory = 'employee_competency_files/' . $employeeCompetency->employee_id;
+            $path = $request->file('file')->storeAs($directory, $originalName, 'public');
+            
+            $data['files'] = $path;
+            $data['status'] = 0;
+        }
+
+        $employeeCompetency->update($data);
 
         return response()->json(['message' => 'Competency updated successfully']);
+    }
+
+    public function approve($id)
+    {
+        $employeeCompetency = EmployeeCompetency::findOrFail($id);
+        
+        if(!$employeeCompetency->files) {
+            return response()->json(['error' => 'File belum diupload'], 400);
+        }
+
+        $employeeCompetency->update(['status' => 1]);
+
+        return response()->json(['message' => 'Competency approved successfully']);
     }
 
     /**

@@ -14,6 +14,17 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee Competency List</h3>
                 <div class="d-flex align-items-center">
+                    <select class="form-select me-2" id="positionFilter" style="width: 200px;">
+                        <option value="all">All Positions</option>
+                        <option value="General Manager">General Manager</option>
+                        <option value="Manager">Manager</option>
+                        <option value="Coordinator">Coordinator</option>
+                        <option value="Section Head">Section Head</option>
+                        <option value="Supervisor">Supervisor</option>
+                        <option value="Act Leader">Act Leader</option>
+                        <option value="Act JP">Act JP</option>
+                        <option value="Operator">Operator</option>
+                    </select>
                     <input type="text" style="width: 200px;" class="form-control me-2" id="searchInput"
                         placeholder="Search...">
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
@@ -29,17 +40,30 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Employee</th>
+                            <th>Name</th>
                             <th>NPK</th>
                             <th>Department</th>
                             <th>Position</th>
                             <th>Company</th>
-                            <th>Total Competencies</th>
+                            <th>Progress</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($employees as $employee)
+                            @php
+                                $completed = 0;
+                                $total = $employee->employeeCompetencies->count();
+                                
+                                foreach ($employee->employeeCompetencies as $competency) {
+                                    if ($competency->act >= $competency->plan) {
+                                        $completed++;
+                                    }
+                                }
+                                
+                                $progressPercentage = $total > 0 ? round(($completed / $total) * 100, 2) : 0;
+                                $progressClass = $completed == $total ? 'bg-success' : 'bg-warning';
+                            @endphp
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $employee->name }}</td>
@@ -47,7 +71,20 @@
                                 <td>{{ $employee->departments->first()->name ?? '-' }}</td>
                                 <td>{{ $employee->position }}</td>
                                 <td>{{ $employee->company_name }}</td>
-                                <td>{{ $employee->employeeCompetencies->count() }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="progress w-100" style="height: 20px;">
+                                            <div class="progress-bar progress-bar-striped {{ $progressClass }}" 
+                                                role="progressbar" 
+                                                style="width: {{ $progressPercentage }}%; min-width: 40px;"
+                                                aria-valuenow="{{ $completed }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="{{ $total }}">
+                                                {{ $completed }}/{{ $total }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
                                 <td class="text-center">
                                     <a href="{{ route('employeeCompetencies.show', $employee->id) }}" 
                                         class="btn btn-info btn-sm">
@@ -78,19 +115,29 @@
             });
 
             // Fungsi pencarian
+            const positionFilter = document.getElementById('positionFilter');
             const searchInput = document.getElementById('searchInput');
             const searchButton = document.getElementById('searchButton');
             const tableRows = document.querySelectorAll('#competencyTable tbody tr');
 
             const performSearch = () => {
                 const filter = searchInput.value.toLowerCase();
+                const selectedPosition = positionFilter.value;
+                
                 tableRows.forEach(row => {
+                    const position = row.children[4].textContent.trim();
                     const textContent = row.textContent.toLowerCase();
-                    row.style.display = textContent.includes(filter) ? '' : 'none';
+                    
+                    // Filter berdasarkan position dan search input
+                    const positionMatch = selectedPosition === 'all' || position === selectedPosition;
+                    const searchMatch = textContent.includes(filter);
+                    
+                    row.style.display = (positionMatch && searchMatch) ? '' : 'none';
                 });
             };
 
             // Event listeners untuk pencarian
+            positionFilter.addEventListener('change', performSearch);
             searchInput.addEventListener('keyup', performSearch);
             searchButton.addEventListener('click', performSearch);
 
