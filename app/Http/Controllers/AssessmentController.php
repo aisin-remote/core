@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use DataTables;
 use App\Models\Alc;
-use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\DetailAssessment;
-use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
+use DataTables;
+use Illuminate\Support\Facades\Auth;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\Request;
 
 class AssessmentController extends Controller
@@ -237,15 +239,48 @@ class AssessmentController extends Controller
                     ]
                 );
         }
+        $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
+
+        $user = Auth::user();
+        $employee = $user->employee; // ambil employee yang login
+        $rawNumber = $employee->phone_number ?? null;
+        $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
+
+        if (!$formattedNumber) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nomor HP Anda tidak tersedia.',
+            ]);
+        }
+
+        $message = sprintf(
+        "Hallo Apakah Benar ini Nomor?"
+            // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
+            // $assessment->id,
+            // $assessment->date,
+            // $assessment->name ?? 'Anda'
+        );
+
+        $whatsappResponse = Http::asForm()
+            ->withOptions(['verify' => false])
+            ->post('https://app.ruangwa.id/api/send_message', [
+                'token' => $token,
+                'number' => $formattedNumber,
+                'message' => $message
+            ]);
 
 
-        // Simpan batch data ke database
+
+        // Jika mau debug response dari API
+
         return response()->json([
             'success' => true,
             'message' => 'Data assessment berhasil disimpan.',
             'assessment' => $assessment,
             'assessment_details' => $assessmentDetails,
+            'whatsapp_response' => $whatsappResponse->body()
         ]);
+
     }
     public function getAssessmentDetail($employee_id)
     {

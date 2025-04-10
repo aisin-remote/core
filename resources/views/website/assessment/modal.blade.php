@@ -74,7 +74,7 @@
 
                             <div class="mb-3">
                                 <label>ALC</label>
-                                <select class="form-control alc-dropdown" name="alc_ids[]" required>
+                                <select class="form-control alc-dropdown" name="alc_ids[]">
                                     <option value="">Pilih ALC</option>
                                     @foreach ($alcs as $alc)
                                         <option value="{{ $alc->id }}">{{ $alc->name }}</option>
@@ -85,17 +85,14 @@
                                 <label>Description</label>
                                 <textarea class="form-control strength-textarea" name="strength[1]" rows="2"></textarea>
                             </div>
-                            <div class="d-flex justify-content-end">
-                                <button type="button" class="btn btn-success btn-sm add-assessment"
-                                    data-type="strength">Tambah Strength</button>
-                            </div>
+
                         </div>
                     </div>
                     <div class="section-title">Weakness</div>
                     <div id="weakness-container">
                         <div class="assessment-card weakness-card card p-3 mb-3">
                             <div class="mb-3">
-                                <select class="form-control alc-dropdown" name="alc_ids[]" required>
+                                <select class="form-control alc-dropdown" name="alc_ids[]">
                                     <option value="">Pilih ALC</option>
                                     @foreach ($alcs as $alc)
                                         <option value="{{ $alc->id }}">{{ $alc->name }}</option>
@@ -123,8 +120,7 @@
     </div>
 </div>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-
+    document.addEventListener('DOMContentLoaded', function() {
         function updateDescriptionName(selectElement, type) {
             const card = selectElement.closest('.assessment-card');
             const textarea = card.querySelector(`.${type}-textarea`);
@@ -149,17 +145,11 @@
                 if (select.value) selectedWeaknesses.add(select.value);
             });
 
-            document.querySelectorAll('#strength-container .alc-dropdown').forEach(select => {
+            document.querySelectorAll('.alc-dropdown').forEach(select => {
                 const currentValue = select.value;
                 select.querySelectorAll('option').forEach(option => {
-                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses.has(option.value)) && option.value !== currentValue;
-                });
-            });
-
-            document.querySelectorAll('#weakness-container .alc-dropdown').forEach(select => {
-                const currentValue = select.value;
-                select.querySelectorAll('option').forEach(option => {
-                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses.has(option.value)) && option.value !== currentValue;
+                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
+                        .has(option.value)) && option.value !== currentValue;
                 });
             });
         }
@@ -187,33 +177,30 @@
                     <label>Description</label>
                     <textarea class="form-control ${type}-textarea" name="${type}[]" rows="2"></textarea>
                 </div>
-                ${type !== 'weakness' ? `
                 <div class="d-flex justify-content-end button-group">
                     <button type="button" class="btn btn-danger btn-sm remove-card me-2">Hapus</button>
                     <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">
                         Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}
                     </button>
-                </div>` : ''}
+                </div>
             `;
 
             container.appendChild(newCard);
 
             const dropdown = newCard.querySelector('.alc-dropdown');
-            dropdown.addEventListener('change', function () {
+            dropdown.addEventListener('change', function() {
                 updateDescriptionName(this, type);
                 updateDropdownOptions();
             });
 
-            if (type !== 'weakness') {
-                newCard.querySelector('.remove-card').addEventListener('click', () => {
-                    newCard.remove();
-                    updateDropdownOptions();
-                });
+            newCard.querySelector('.remove-card').addEventListener('click', () => {
+                newCard.remove();
+                updateDropdownOptions();
+            });
 
-                newCard.querySelector('.add-assessment').addEventListener('click', () => {
-                    addAssessmentCard(type);
-                });
-            }
+            newCard.querySelector('.add-assessment').addEventListener('click', () => {
+                addAssessmentCard(type);
+            });
 
             updateDropdownOptions();
         }
@@ -264,7 +251,7 @@
                     container.appendChild(newCard);
 
                     const dropdown = newCard.querySelector('.alc-dropdown');
-                    dropdown.addEventListener('change', function () {
+                    dropdown.addEventListener('change', function() {
                         updateDescriptionName(this, 'weakness');
                         updateDropdownOptions();
                     });
@@ -274,33 +261,99 @@
             }
         }
 
-        // ✅ Fungsi untuk menghapus weakness jika score berubah >= 3
-        function removeWeaknessIfExists(alcId) {
-            const weaknessCards = document.querySelectorAll('#weakness-container .weakness-card');
+        function handleAutoStrength(alcId, alcName, score) {
+            if (score >= 3) {
+                const container = document.getElementById('strength-container');
+                const selects = container.querySelectorAll('.alc-dropdown');
 
-            weaknessCards.forEach(card => {
+                let exists = false;
+                let emptySelect = null;
+
+                selects.forEach(select => {
+                    if (select.value === alcId) {
+                        exists = true;
+                    } else if (!select.value && !emptySelect) {
+                        emptySelect = select;
+                    }
+                });
+
+                if (exists) return;
+
+                if (emptySelect) {
+                    const option = document.createElement('option');
+                    option.value = alcId;
+                    option.text = alcName;
+                    option.selected = true;
+                    emptySelect.appendChild(option);
+                    emptySelect.value = alcId;
+                    emptySelect.dispatchEvent(new Event('change'));
+                } else {
+                    const newCard = document.createElement('div');
+                    newCard.classList.add('card', 'p-3', 'mb-3', 'assessment-card', 'strength-card');
+
+                    newCard.innerHTML = `
+                        <div class="mb-3">
+                            <label>ALC</label>
+                            <select class="form-control alc-dropdown" name="strength_alc_ids[]" required>
+                                <option value="${alcId}" selected>${alcName}</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label>Description</label>
+                            <textarea class="form-control strength-textarea" name="strength[${alcId}]" rows="2"></textarea>
+                        </div>
+                    `;
+
+                    container.appendChild(newCard);
+
+                    const dropdown = newCard.querySelector('.alc-dropdown');
+                    dropdown.addEventListener('change', function() {
+                        updateDescriptionName(this, 'strength');
+                        updateDropdownOptions();
+                    });
+
+                    updateDropdownOptions();
+                }
+            }
+        }
+
+        function removeWeaknessIfExists(alcId) {
+            document.querySelectorAll('#weakness-container .weakness-card').forEach(card => {
                 const select = card.querySelector('.alc-dropdown');
                 if (select && select.value === alcId) {
                     card.remove();
                 }
             });
-
             updateDropdownOptions();
         }
 
+        function removeStrengthIfExists(alcId) {
+            document.querySelectorAll('#strength-container .strength-card').forEach(card => {
+                const select = card.querySelector('.alc-dropdown');
+                if (select && select.value === alcId) {
+                    card.remove();
+                }
+            });
+            updateDropdownOptions();
+        }
+
+        // ✅ Perbaikan utama ada di sini
         document.querySelectorAll('input[type=radio][name^="scores"]').forEach(radio => {
-            radio.addEventListener('change', function () {
+            radio.addEventListener('change', function() {
                 const match = this.name.match(/scores\[(\d+)\]/);
                 if (match) {
                     const alcId = match[1];
                     const score = parseInt(this.value);
-                    const alcName = document.querySelector(`input[name="alc_ids[]"][value="${alcId}"]`)
-                        ?.closest('.card')?.querySelector('h6')?.innerText;
+                    const alcName = document.querySelector(
+                            `input[name="alc_ids[]"][value="${alcId}"]`)?.closest('.card')
+                        ?.querySelector('h6')?.innerText;
 
                     if (alcName) {
                         if (score < 3) {
                             handleAutoWeakness(alcId, alcName, score);
+                            removeStrengthIfExists(alcId);
                         } else {
+                            handleAutoStrength(alcId, alcName, score);
                             removeWeaknessIfExists(alcId);
                         }
                     }
@@ -309,77 +362,63 @@
         });
 
         document.querySelectorAll('.alc-dropdown').forEach(dropdown => {
-            const type = dropdown.closest('.assessment-card').classList.contains('strength-card') ? 'strength' : 'weakness';
-            dropdown.addEventListener('change', function () {
+            const type = dropdown.closest('.assessment-card').classList.contains('strength-card') ?
+                'strength' : 'weakness';
+            dropdown.addEventListener('change', function() {
                 updateDescriptionName(this, type);
                 updateDropdownOptions();
             });
         });
 
         document.querySelectorAll('.add-assessment').forEach(button => {
-            button.addEventListener('click', function () {
+            button.addEventListener('click', function() {
                 const type = this.dataset.type;
                 addAssessmentCard(type);
             });
         });
 
-        updateDropdownOptions();
-
-        const modalElement = document.getElementById('addAssessmentModal');
-        modalElement.addEventListener('hidden.bs.modal', function () {
+        document.getElementById('addAssessmentModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('assessmentForm').reset();
 
-            const strengthContainer = document.getElementById('strength-container');
-            const weaknessContainer = document.getElementById('weakness-container');
+            ['strength', 'weakness'].forEach(type => {
+                const container = document.getElementById(`${type}-container`);
+                const cards = container.querySelectorAll(`.${type}-card`);
 
-            strengthContainer.innerHTML = `
-                <div class="assessment-card strength-card card p-3 mb-3">
-                    <div class="mb-3">
-                        <label>ALC</label>
-                        <select class="form-control alc-dropdown" name="alc_ids[]" required>
-                            <option value="">Pilih ALC</option>
-                            @foreach ($alcs as $alc)
-                                <option value="{{ $alc->id }}">{{ $alc->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label>Description</label>
-                        <textarea class="form-control strength-textarea" name="strength[1]" rows="2"></textarea>
-                    </div>
-                    <div class="d-flex justify-content-end">
-                        <button type="button" class="btn btn-success btn-sm add-assessment" data-type="strength">Tambah Strength</button>
-                    </div>
-                </div>
-            `;
-
-            weaknessContainer.innerHTML = `
-                <div class="assessment-card weakness-card card p-3 mb-3">
-                    <div class="mb-3">
-                        <select class="form-control alc-dropdown" name="alc_ids[]" required>
-                            <option value="">Pilih ALC</option>
-                            @foreach ($alcs as $alc)
-                                <option value="{{ $alc->id }}">{{ $alc->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label>Description</label>
-                        <textarea class="form-control weakness-textarea" name="weakness[1]" rows="2"></textarea>
-                    </div>
-                </div>
-            `;
-
-            document.querySelectorAll('.alc-dropdown').forEach(dropdown => {
-                const type = dropdown.closest('.assessment-card').classList.contains('strength-card') ? 'strength' : 'weakness';
-                dropdown.addEventListener('change', function () {
-                    updateDescriptionName(this, type);
-                    updateDropdownOptions();
+                // Hapus semua card kecuali yang pertama (default)
+                cards.forEach((card, index) => {
+                    if (index > 0) {
+                        card.remove();
+                    }
                 });
+
+                // Reset isi dari card default
+                const defaultCard = container.querySelector(`.${type}-card`);
+                const dropdown = defaultCard.querySelector('.alc-dropdown');
+                const textarea = defaultCard.querySelector(`.${type}-textarea`);
+
+                dropdown.innerHTML = `
+        <option value="">Pilih ALC</option>
+        @foreach ($alcs as $alc)
+            <option value="{{ $alc->id }}">{{ $alc->name }}</option>
+        @endforeach
+    `;
+                dropdown.value = '';
+                textarea.value = '';
+                textarea.removeAttribute('name');
+                dropdown.dispatchEvent(new Event('change'));
             });
+
+
+            document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                radio.checked = false;
+            });
+
+            document.getElementById('upload').value = '';
+            document.getElementById('assessment_id').value = '';
 
             updateDropdownOptions();
         });
+
+        updateDropdownOptions();
     });
 </script>
-
