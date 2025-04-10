@@ -11,6 +11,7 @@ use App\Models\KeyBehavior;
 use Illuminate\Http\Request;
 use App\Models\HavDetailKeyBehavior;
 use Yajra\DataTables\Facades\DataTables;
+use App\Models\PerformanceAppraisalHistory;
 use Illuminate\Database\Events\TransactionBeginning;
 
 class HavController extends Controller
@@ -60,7 +61,12 @@ class HavController extends Controller
     public function list()
     {
         $title = 'Add Employee';
-        $employees = Employee::all();
+        $employees = Assessment::with('employee')
+                    ->whereHas('employee', function($query){
+                        $query->where('company_name', 'AII');
+                    })
+                    ->get();
+
         return view('website.hav.list', compact('title', 'employees'));
     }
 
@@ -143,8 +149,16 @@ class HavController extends Controller
                 return $query->where('id', $id);
             })
             ->first();
+        
+        $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
+            ->whereHas('employee', function ($query) use ($id) {
+                $query->where('id', $id);
+            })
+            ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
+            ->limit(3) // Ambil hanya 3 data terbaru
+            ->get();
             
-        return view('website.hav.create', compact('title', 'hav'));
+        return view('website.hav.create', compact('title', 'hav', 'performanceAppraisals'));
     }
 
     /**
