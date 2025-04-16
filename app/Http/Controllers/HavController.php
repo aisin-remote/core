@@ -10,6 +10,7 @@ use App\Models\Assessment;
 use App\Models\KeyBehavior;
 use Illuminate\Http\Request;
 use App\Models\HavDetailKeyBehavior;
+use App\Models\HavQuadrant;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
 use Illuminate\Database\Events\TransactionBeginning;
@@ -23,7 +24,9 @@ class HavController extends Controller
      */
     public function index()
     {
-        $havGrouped = Hav::with('employee')->get()->groupBy('quadrant');
+        $title = 'Employee List';
+        // dd($assessments);
+        $havGrouped = HavQuadrant::with('employee')->get()->groupBy('quadrant');
 
         // Quadrant ID => Judul
         $titles = [
@@ -62,10 +65,10 @@ class HavController extends Controller
     {
         $title = 'Add Employee';
         $employees = Assessment::with('employee')
-                    ->whereHas('employee', function($query){
-                        $query->where('company_name', 'AII');
-                    })
-                    ->get();
+            ->whereHas('employee', function ($query) {
+                $query->where('company_name', 'AII');
+            })
+            ->get();
 
         return view('website.hav.list', compact('title', 'employees'));
     }
@@ -128,10 +131,10 @@ class HavController extends Controller
     {
         $title = 'Add Employee';
         $employees = Assessment::with('employee')
-                    ->whereHas('employee', function($query){
-                        $query->where('company_name', 'AII');
-                    })
-                    ->get();
+            ->whereHas('employee', function ($query) {
+                $query->where('company_name', 'AII');
+            })
+            ->get();
 
         return view('website.hav.list-create', compact('title', 'employees'));
     }
@@ -149,7 +152,7 @@ class HavController extends Controller
                 return $query->where('id', $id);
             })
             ->first();
-        
+
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
             ->whereHas('employee', function ($query) use ($id) {
                 $query->where('id', $id);
@@ -157,7 +160,7 @@ class HavController extends Controller
             ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
-            
+
         return view('website.hav.create', compact('title', 'hav', 'performanceAppraisals'));
     }
 
