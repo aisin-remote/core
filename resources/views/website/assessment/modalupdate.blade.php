@@ -25,6 +25,10 @@
                         <label for="update_date" class="form-label">Date Assessment</label>
                         <input type="date" class="form-control" id="update_date" name="date" required>
                     </div>
+                    <div class="mb-4">
+                        <label for="update_description" class="form-label">Description Assessment</label>
+                        <input type="text" class="form-control" id="update_description" name="description" required>
+                    </div>
 
                     <div class="mb-4">
                         <div class="section-title">Assessment Scores</div>
@@ -51,11 +55,9 @@
                     </div>
 
                     <div class="section-title">Strength</div>
-                    {{-- <div id="update-strength-container"></div> --}}
                     <div id="update-strengths-wrapper"></div>
 
                     <div class="section-title">Weakness</div>
-                    {{-- <div id="update-weakness-container"></div> --}}
                     <div id="update-weaknesses-wrapper"></div>
 
                     <div class="mb-4">
@@ -71,10 +73,12 @@
         </div>
     </div>
 </div>
+
 <script>
     document.addEventListener("DOMContentLoaded", function() {
         const updateForm = document.getElementById("updateAssessmentForm");
 
+        // Event listener untuk form submit
         updateForm.addEventListener("submit", function(event) {
             event.preventDefault(); // Mencegah halaman reload
 
@@ -82,9 +86,12 @@
 
             fetch("/assessment/update", {
                     method: "POST",
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
                 })
-                .then(response => response.json()) // Parsing JSON dari response
+                .then(response => response.json())
                 .then(data => {
                     if (data.message) { // Jika update berhasil
                         Swal.fire({
@@ -96,9 +103,8 @@
                             $('#updateAssessmentModal').modal('hide'); // Tutup modal
                             setTimeout(() => {
                                 $('#detailAssessmentModal').modal(
-                                    'show'
-                                    ); // Buka modal History setelah modal update tertutup
-                            }, 500); // Refresh halaman
+                                    'show'); // Buka modal History setelah update
+                            }, 500);
                         });
                     } else {
                         throw new Error("Gagal memperbarui assessment. Silakan coba lagi.");
@@ -113,7 +119,6 @@
                         confirmButtonText: "OK"
                     });
                 });
-
         });
 
         // Load data ke modal saat tombol update diklik
@@ -122,6 +127,7 @@
                 const id = this.dataset.id;
                 const employeeId = this.dataset.employeeId;
                 const date = this.dataset.date;
+                const description = this.dataset.description;
                 const upload = this.dataset.upload;
                 const scores = JSON.parse(this.dataset.scores);
                 const alcs = JSON.parse(this.dataset.alcs);
@@ -131,6 +137,7 @@
                 document.getElementById("update_assessment_id").value = id;
                 document.getElementById("update_employee_id").value = employeeId;
                 document.getElementById("update_date").value = date;
+                document.getElementById("update_description").value = description;
                 document.getElementById("update-upload-info").textContent = upload ?
                     `File: ${upload}` : "";
 
@@ -179,7 +186,7 @@
             });
         });
 
-        function addAssessmentCard(type, containerId, selectedAlc = "", description = "") {
+        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "") {
             let container = document.getElementById(containerId);
             if (!container) {
                 console.error(`Container '${containerId}' tidak ditemukan.`);
@@ -190,25 +197,25 @@
             templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
             templateCard.innerHTML = `
-                <div class="mb-3">
-                    <label>ALC</label>
-                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
-                        <option value="">Pilih ALC</option>
-                        @foreach ($alcs as $alc)
-                            <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
-                                {{ $alc->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label>Description</label>
-                    <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${description}</textarea>
-                </div>
-                <div class="d-flex justify-content-end button-group">
-                    <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
-                </div>
-            `;
+            <div class="mb-3">
+                <label>ALC</label>
+                <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                    <option value="">Pilih ALC</option>
+                    @foreach ($alcs as $alc)
+                        <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
+                            {{ $alc->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="mb-3">
+                <label>Description</label>
+                <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
+            </div>
+            <div class="d-flex justify-content-end button-group">
+                <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
+            </div>
+        `;
 
             let selectElement = templateCard.querySelector(".alc-dropdown");
             selectElement.addEventListener("change", function() {
@@ -264,6 +271,52 @@
                 });
             }
         }
+
+        $(document).on("change", "input[name^='update_score_']", function() {
+            const radio = $(this);
+            const idParts = radio.attr("id").split("_"); // e.g. update_score_1_2
+            const alcId = idParts[2];
+            const score = parseInt(idParts[3]);
+
+            const card = $(`#assessment_card_${alcId}`);
+            const textarea = card.find("textarea");
+            const select = card.find("select");
+
+            const type = score >= 3 ? "strength" : "weakness"; // Tentukan kategori berdasarkan score
+            const targetWrapper = $(`#update-${type}s-wrapper`);
+
+            // Update textarea name untuk kategori yang sesuai
+            textarea.attr("name", `${type}[${alcId}]`);
+
+            // Pindahkan card ke section strength atau weakness
+            card.appendTo(targetWrapper);
+
+            // Ubah class agar sesuai dengan kategori
+            card.removeClass("strength-card weakness-card").addClass(`${type}-card`);
+
+            // Update dropdown ALC sesuai kategori (strength/weakness)
+            updateDropdownOptions(card, type);
+        });
+
+        function updateDropdownOptions(card, type) {
+            // Memastikan bahwa dropdown ALC hanya bisa memilih ALC yang sesuai dengan kategori strength/weakness
+            const select = card.find("select");
+            const alcId = select.val();
+
+            // Contoh: Jika ALC untuk strength, dropdown hanya menampilkan ALC yang relevan
+            select.find("option").each(function() {
+                const option = $(this);
+                if (type === "strength" && option.val() !== alcId) {
+                    option.prop("disabled", false); // ALC yang boleh dipilih
+                } else if (type === "weakness" && option.val() !== alcId) {
+                    option.prop("disabled", false); // ALC yang boleh dipilih
+                } else {
+                    option.prop("disabled", true); // ALC yang tidak relevan, disable
+                }
+            });
+        }
+
+
     });
 </script>
 

@@ -2,14 +2,16 @@
 
 namespace App\Http\Controllers;
 
-use DataTables;
 use App\Models\Alc;
-use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\DetailAssessment;
-use Illuminate\Support\Facades\DB;
+use App\Models\Employee;
+use DataTables;
+use Illuminate\Support\Facades\Auth;
 
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\Request;
 
 class AssessmentController extends Controller
@@ -135,7 +137,7 @@ class AssessmentController extends Controller
         }
 
         $assessments = Assessment::where('employee_id', $employee_id)
-            ->select('id', 'date', 'employee_id', 'upload')
+            ->select('id', 'date',  'description','employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
                 $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
@@ -197,6 +199,7 @@ class AssessmentController extends Controller
         $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
+            'description' => 'required|string',
             'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
             'alc_ids' => 'required|array',
             'alc_ids.*' => 'exists:alc,id',
@@ -217,6 +220,7 @@ class AssessmentController extends Controller
         $assessment = Assessment::create([
             'employee_id' => $request->employee_id,
             'date' => $request->date,
+            'description' => $request->description,
             'upload' => $filePath,
         ]);
 
@@ -237,15 +241,48 @@ class AssessmentController extends Controller
                     ]
                 );
         }
+        // $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
+
+        // $user = Auth::user();
+        // $employee = $user->employee; // ambil employee yang login
+        // $rawNumber = $employee->phone_number ?? null;
+        // $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
+
+        // if (!$formattedNumber) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Nomor HP Anda tidak tersedia.',
+        //     ]);
+        // }
+
+        // $message = sprintf(
+        // "Hallo Apakah Benar ini Nomor?"
+        //     // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
+        //     // $assessment->id,
+        //     // $assessment->date,
+        //     // $assessment->name ?? 'Anda'
+        // );
+
+        // $whatsappResponse = Http::asForm()
+        //     ->withOptions(['verify' => false])
+        //     ->post('https://app.ruangwa.id/api/send_message', [
+        //         'token' => $token,
+        //         'number' => $formattedNumber,
+        //         'message' => $message
+        //     ]);
 
 
-        // Simpan batch data ke database
+
+        // Jika mau debug response dari API
+
         return response()->json([
             'success' => true,
             'message' => 'Data assessment berhasil disimpan.',
             'assessment' => $assessment,
             'assessment_details' => $assessmentDetails,
+            // 'whatsapp_response' => $whatsappResponse->body()
         ]);
+
     }
     public function getAssessmentDetail($employee_id)
     {
@@ -287,6 +324,7 @@ class AssessmentController extends Controller
             'id' => $assessment->id,
             'employee_id' => $assessment->employee_id,
             'date' => $assessment->date,
+            'description' => $assessment->description,
             'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
             'scores' => $assessment->details->map(fn($d) => [
                 'alc_id' => $d->alc_id,
@@ -294,11 +332,11 @@ class AssessmentController extends Controller
             ]),
             'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'description' => $d->strength
+                'descriptions' => $d->strength
             ])->values(),
             'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'description' => $d->weakness
+                'descriptions' => $d->weakness
             ])->values(),
             'alc_options' => Alc::select('id', 'name')->get()
         ]);
@@ -307,10 +345,12 @@ class AssessmentController extends Controller
 
     public function update(Request $request)
     {
+
         $validated = $request->validate([
             'assessment_id' => 'required|exists:assessments,id',
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
+           'description' => 'required|string|max:255',
             'scores' => 'required|array',
             'strength' => 'nullable|array',
             'weakness' => 'nullable|array',
@@ -321,6 +361,7 @@ class AssessmentController extends Controller
         $assessment = Assessment::findOrFail($request->assessment_id);
         $assessment->employee_id = $request->employee_id;
         $assessment->date = $request->date;
+        $assessment->description = $request->description;
 
         // **Handle File Upload**
         if ($request->hasFile('upload')) {
