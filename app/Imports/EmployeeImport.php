@@ -39,7 +39,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     // **3. Konversi tanggal**
                     $joinDate = $this->convertExcelDate($row['join_date']);
                     $lastPromoteDate = $this->convertExcelDate($row['last_promote_date']);
-
+                    $birthday = $this->convertExcelDate($row['birthday_date']);
                     // **4. Hitung Working Period (Tahun)**
                     $workingPeriod = $joinDate ? Carbon::parse($joinDate)->diffInYears(Carbon::now()) : null;
 
@@ -48,8 +48,10 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     $employee = Employee::create([
                         'npk'              => $row['npk'],
                         'name'             => $row['name'],
+                        'phone_number'             => $row['phone_number'],
+                        'birthday_date'             =>$birthday,
                         'gender'           => $row['gender'],
-                        'company_name'     => $row['company'],
+                        'company_name'     => $row['company_name'],
                         'function'         => $row['function'],
                         'company_group'    => $row['company_group'],
                         'aisin_entry_date' => $joinDate,

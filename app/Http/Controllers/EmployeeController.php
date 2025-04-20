@@ -2,27 +2,28 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
-use App\Models\Idp;
-use App\Models\User;
-use App\Models\Employee;
-use App\Models\Assessment;
-use App\Models\Department;
-use Illuminate\Http\Request;
-use App\Models\AstraTraining;
 use App\Imports\EmployeeImport;
-use App\Models\ExternalTraining;
-use App\Models\PromotionHistory;
-use App\Models\WorkingExperience;
-use Illuminate\Support\Facades\DB;
-use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\MasterImports;
+use App\Models\Assessment;
+use App\Models\AstraTraining;
+use App\Models\Department;
 use App\Models\EducationalBackground;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Employee;
+use App\Models\ExternalTraining;
+use App\Models\Idp;
 use App\Models\PerformanceAppraisalHistory;
+use App\Models\PromotionHistory;
+use App\Models\User;
+use App\Models\WorkingExperience;
+use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EmployeeController extends Controller
 {
-    
+
     public function getSubordinates($employeeId, $processedIds = [])
     {
         // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
@@ -44,7 +45,7 @@ class EmployeeController extends Controller
 
         return $subordinates;
     }
-    
+
     public function index($company = null)
     {
         $title = 'Employee';
@@ -96,8 +97,8 @@ class EmployeeController extends Controller
     public function store(Request $request)
     {
         DB::beginTransaction();
-        
-        // ambil department_id 
+
+        // ambil department_id
         $departmentId = auth()->user()->employee->departments->first()->id;
 
         try {
@@ -162,7 +163,7 @@ class EmployeeController extends Controller
                 })
                 ->where('position', 'LIKE', '%' . $validatedData['position'] . '%')
                 ->first();
-            
+
                 // Jika tidak ditemukan, kosongkan supervisor_id
                 $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
             } else {
@@ -283,17 +284,17 @@ class EmployeeController extends Controller
                                 ->whereHas('employee', function ($query) use ($npk) {
                                     $query->where('npk', $npk);
                                 })->get();
-                                
+
         $astraTrainings = AstraTraining::with('employee')
                                 ->whereHas('employee', function ($query) use ($npk) {
                                     $query->where('npk', $npk);
                                 })->get();
-                                
+
         $externalTrainings = ExternalTraining::with('employee')
                                 ->whereHas('employee', function ($query) use ($npk) {
                                     $query->where('npk', $npk);
                                 })->get();
-                                
+
         $educations = EducationalBackground::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -301,7 +302,7 @@ class EmployeeController extends Controller
             ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
-        
+
         $workExperiences = WorkingExperience::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -310,7 +311,7 @@ class EmployeeController extends Controller
             ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
-        
+
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -318,20 +319,20 @@ class EmployeeController extends Controller
             ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
-        
+
         $assessment = Assessment::with('details.alc','employee')
                         ->whereHas('employee', function ($query) use ($npk) {
                             $query->where('npk', $npk);
                         })
                         ->latest()
                         ->first();
-        
+
         $idps = Idp::with('alc', 'employee')
                 ->whereHas('employee', function ($query) use ($npk) {
                     $query->where('npk', $npk);
                 })
                 ->get();
-                            
+
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
         return view('website.employee.show', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps'));
@@ -343,17 +344,17 @@ class EmployeeController extends Controller
                                 ->whereHas('employee', function ($query) use ($npk) {
                                     $query->where('npk', $npk);
                                 })->get();
-                                
+
         $astraTrainings = AstraTraining::with('employee')
                                 ->whereHas('employee', function ($query) use ($npk) {
                                     $query->where('npk', $npk);
                                 })->get();
-                                
+
         $externalTrainings = ExternalTraining::with('employee')
                                 ->whereHas('employee', function ($query) use ($npk) {
                                     $query->where('npk', $npk);
                                 })->get();
-                                
+
         $educations = EducationalBackground::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -361,7 +362,7 @@ class EmployeeController extends Controller
             ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
-        
+
         $workExperiences = WorkingExperience::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -370,7 +371,7 @@ class EmployeeController extends Controller
             ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
             ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
-        
+
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -385,13 +386,13 @@ class EmployeeController extends Controller
             })
             ->latest()
             ->first();
-        
+
         $idps = Idp::with('alc', 'employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
             ->get();
-                            
+
         $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
         $departments = Department::all();
         return view('website.employee.update', compact('employee','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment','idps'));
@@ -496,13 +497,12 @@ class EmployeeController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,csv'
+            'file' => 'required|mimes:xlsx,csv',
         ]);
 
         try {
-            $import = Excel::import(new EmployeeImport, $request->file('file'));
-            // dd($import);
-            // session()->flash('success', 'Data karyawan berhasil diimport!');
+            Excel::import(new MasterImports, $request->file('file'));
+            session()->flash('success', 'Semua data berhasil diimport!');
         } catch (\Exception $e) {
             session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
@@ -517,7 +517,7 @@ class EmployeeController extends Controller
         if (!$employee) {
             return back()->with('error', 'Employee tidak ditemukan!');
         }
-        
+
         $request->validate([
             'position' => 'required|string|max:255',
             'company' => 'required|string|max:255',
@@ -587,7 +587,7 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $experience->delete();
-            
+
             DB::commit();
             return redirect()->back()->with('success', 'Pengalaman kerja berhasil dihapus.');
         } catch (\Throwable $th) {
@@ -600,11 +600,11 @@ class EmployeeController extends Controller
     {
         try {
             $employeeExists = DB::table('employees')->where('id', $request->employee_id)->exists();
-    
+
             if (!$employeeExists) {
                 return back()->with('error', 'Employee tidak ditemukan!');
             }
-    
+
             $request->validate([
                 'level' => 'required',
                 'major' => 'required',
@@ -612,13 +612,13 @@ class EmployeeController extends Controller
                 'start_date' => 'required|date',
                 'end_date' => 'nullable|date',
             ]);
-    
-            // Debugging setelah validasi berhasil    
+
+            // Debugging setelah validasi berhasil
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Tangkap error validasi dan tampilkan dengan back()
             return redirect()->back()->with('error', $e->getMessage());
         }
-        
+
         try {
             DB::beginTransaction();
 
@@ -678,7 +678,7 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $experience->delete();
-            
+
             DB::commit();
             return redirect()->back()->with('success', 'Riwayat pendidikan berhasil dihapus.');
         } catch (\Throwable $th) {
@@ -691,26 +691,26 @@ class EmployeeController extends Controller
     {
         try {
             $employeeExists = DB::table('employees')->where('id', $request->employee_id)->exists();
-    
+
             if (!$employeeExists) {
                 return back()->with('error', 'Employee tidak ditemukan!');
             }
-    
+
             $validatedData = $request->validate([
                 'score' => 'required',
                 'description' => 'required',
                 'date' => 'required|date',
             ]);
-    
-            // Debugging setelah validasi berhasil    
+
+            // Debugging setelah validasi berhasil
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Tangkap error validasi dan tampilkan dengan back()
             return redirect()->back()->with('error', $e->getMessage());
         }
-        
+
         try {
             DB::beginTransaction();
-    
+
             // Simpan data appraisal
             PerformanceAppraisalHistory::create([
                 'employee_id' => $request->employee_id,
@@ -718,7 +718,7 @@ class EmployeeController extends Controller
                 'description' => $validatedData['description'],
                 'date'        => Carbon::parse($validatedData['date']),
             ]);
-    
+
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil ditambahkan.');
         } catch (\Throwable $th) {
@@ -740,14 +740,14 @@ class EmployeeController extends Controller
 
         try {
             DB::beginTransaction();
-        
+
             // Update dengan field yang benar
             $appraisal->update([
                 'score'       => $validatedData['score'],
                 'description' => $validatedData['description'],
                 'date'        => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
             ]);
-        
+
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil diperbarui.');
         } catch (\Throwable $th) {
@@ -764,7 +764,7 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $appraisal->delete();
-            
+
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil dihapus.');
         } catch (\Throwable $th) {
@@ -772,7 +772,7 @@ class EmployeeController extends Controller
             return redirect()->back()->with('error', 'Performance appraisal gagal dihapus.');
         }
     }
-    
+
     public function promotionDestroy($id)
     {
         $promotion = PromotionHistory::findOrFail($id);
@@ -803,7 +803,7 @@ class EmployeeController extends Controller
 
             // Hapus promotion history
             $promotion->delete();
-            
+
             DB::commit();
             return redirect()->back()->with('success', 'Promotion history berhasil dihapus dan posisi/grade dikembalikan.');
         } catch (\Throwable $th) {
@@ -820,7 +820,7 @@ class EmployeeController extends Controller
             if (!$employeeExists) {
                 return back()->with('error', 'Employee tidak ditemukan!');
             }
-    
+
             // Validasi input
             $validatedData = $request->validate([
                 'year'           => 'required|digits:4|integer',
@@ -829,14 +829,14 @@ class EmployeeController extends Controller
                 'project_score'  => 'required',
                 'total_score'    => 'required',
             ]);
-    
+
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
         }
-    
+
         try {
             DB::beginTransaction();
-    
+
             // Simpan data ke AstraTraining
             AstraTraining::create([
                 'employee_id'   => $request->employee_id,
@@ -846,10 +846,10 @@ class EmployeeController extends Controller
                 'project_score' => $validatedData['project_score'],
                 'total_score'   => $validatedData['total_score'],
             ]);
-    
+
             DB::commit();
             return redirect()->back()->with('success', 'Data Astra Training berhasil ditambahkan.');
-    
+
         } catch (\Throwable $th) {
             DB::rollback();
             return redirect()->back()->with('error', 'Gagal menambahkan data Astra Training: ' . $th->getMessage());

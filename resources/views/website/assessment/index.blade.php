@@ -20,7 +20,7 @@
                         <button type="button" class="btn btn-primary me-3" id="searchButton">
                             <i class="fas fa-search"></i> Search
                         </button>
-                        <select id="departmentFilter" class="form-select me-2"  style="width: 200px;">
+                        <select id="departmentFilter" class="form-select me-2" style="width: 200px;">
                             <option value="">All Department</option>
                             @foreach ($departments as $department)
                                 <option value="{{ $department }}">{{ $department }}</option>
@@ -172,11 +172,11 @@
                         this.classList.add("active");
 
                         const filter = this.getAttribute("data-filter")
-                    .toLowerCase(); // Ambil filter dari tab
+                            .toLowerCase(); // Ambil filter dari tab
 
                         rows.forEach(row => {
                             const position = row.getAttribute("data-position")
-                        .toLowerCase(); // Ambil posisi dari row
+                                .toLowerCase(); // Ambil posisi dari row
                             if (filter === "all" || position.includes(filter)) {
                                 row.style.display = "";
                             } else {
@@ -223,14 +223,15 @@
                         <tr>
                             <td class="text-center">${index + 1}</td>
                             <td class="text-center">${assessment.date}</td>
+                            <td class="text-center">${assessment.description}</td>
                             <td class="text-center">
                                 <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
                                     Detail
                                 </a>
                                 ${assessment.upload ? `
-                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                            View PDF
-                                                                                                        </a>`
+                                                                                                                                                                <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                                                                                                    View PDF
+                                                                                                                                                                </a>`
                                     : '<span class="text-muted">No PDF Available</span>'
                                 }
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
@@ -238,6 +239,7 @@
                                 data-id="${assessment.id}"
                                 data-employee-id="${assessment.employee_id}"
                                 data-date="${assessment.date}"
+                                data-description="${assessment.description}"
                                 data-upload="${assessment.upload}"
                                 data-scores='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.score)))}'
                                 data-alcs='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
@@ -275,6 +277,7 @@
                     let assessmentId = $(this).data("id");
                     let employeeId = $(this).data("employee-id");
                     let date = $(this).data("date");
+                    let description = $(this).data("description");
                     let upload = $(this).data("upload");
 
                     let scores = JSON.parse(decodeURIComponent($(this).attr("data-scores")));
@@ -286,6 +289,7 @@
                     $("#update_assessment_id").val(assessmentId);
                     $("#update_employee_id").val(employeeId);
                     $("#update_date").val(date);
+                    $("#update_description").val(description);
                     $("#update_upload").attr("href", upload).text("Lihat File");
 
                     scores.forEach((score, index) => {
@@ -293,13 +297,11 @@
                         $(`#update_score_${alcId}_${score}`).prop("checked", true);
                     });
 
-                    populateAssessmentCards("strength", "update-strengths-wrapper", strengths, alcs, alcNames);
-                    populateAssessmentCards("weakness", "update-weaknesses-wrapper", weaknesses, alcs,
-                        alcNames);
+                    // Sinkronisasi dari skor ke strength dan weakness
+                    syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses);
+
                     const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
                     modal.show();
-
-                    $("#updateAssessmentModal").modal("show");
 
                     // Tutup modal History sebelum membuka modal Update
                     $("#detailAssessmentModal").modal("hide");
@@ -314,6 +316,32 @@
                         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
                     }, 300);
                 });
+
+                function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses) {
+                    let strengthContainer = document.getElementById("update-strengths-wrapper");
+                    let weaknessContainer = document.getElementById("update-weaknesses-wrapper");
+
+                    // Bersihkan kontainer strength dan weakness sebelum memperbarui
+                    strengthContainer.innerHTML = "";
+                    weaknessContainer.innerHTML = "";
+
+                    scores.forEach((score, index) => {
+                        let alcId = alcs[index];
+                        let alcName = alcNames[index];
+                        let description = (score >= 3) ? strengths[alcId] : weaknesses[
+                            alcId]; // Ambil deskripsi berdasarkan skor
+
+                        // Tentukan apakah ALC ini masuk ke strength atau weakness
+                        let type = score >= 3 ? "strength" : "weakness";
+                        let containerId = type === "strength" ? "update-strengths-wrapper" :
+                            "update-weaknesses-wrapper";
+
+                        // Tambahkan ALC sesuai dengan kategori yang sesuai
+                        addAssessmentCard(type, containerId, alcId, description, alcName);
+                    });
+
+                    updateDropdownOptions(); // Perbarui opsi dropdown ALC setelah sinkronisasi
+                }
 
                 function populateAssessmentCards(type, containerId, data, alcs, alcNames) {
                     let container = document.getElementById(containerId);
@@ -332,7 +360,7 @@
                     updateDropdownOptions();
                 }
 
-                function addAssessmentCard(type, containerId, selectedAlc = "", description = "", alcName = "") {
+                function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "") {
                     let container = document.getElementById(containerId);
                     let templateCard = document.createElement("div");
                     templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
@@ -351,10 +379,7 @@
         </div>
         <div class="mb-3">
             <label>Description</label>
-            <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${description}</textarea>
-        </div>
-        <div class="d-flex justify-content-end button-group">
-            <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
+            <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
         </div>
     `;
 
@@ -364,30 +389,48 @@
                         updateDropdownOptions();
                     });
 
-                    let buttonGroup = templateCard.querySelector(".button-group");
-
-                    if (container.children.length > 0) {
-                        let removeButton = document.createElement("button");
-                        removeButton.type = "button";
-                        removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card", "me-2");
-                        removeButton.textContent = "Hapus";
-
-                        removeButton.addEventListener("click", function() {
-                            templateCard.remove();
-                            updateDropdownOptions();
-                        });
-
-                        buttonGroup.insertBefore(removeButton, buttonGroup.firstChild);
-                    }
-
-                    templateCard.querySelector(".add-assessment").addEventListener("click", function() {
-                        addAssessmentCard(type, containerId);
-                        updateDropdownOptions();
-                    });
-
                     container.appendChild(templateCard);
-                    updateDropdownOptions();
+                    updateDropdownOptions(); // Pastikan dropdown diperbarui setelah menambahkan kartu
                 }
+
+                // Fungsi untuk memperbarui nama deskripsi berdasarkan ALC yang dipilih
+                function updateDescriptionName(selectElement, type) {
+                    let card = selectElement.closest(".assessment-card");
+                    let textarea = card.querySelector(`.${type}-textarea`);
+                    let alcId = selectElement.value;
+
+                    if (alcId) {
+                        textarea.setAttribute("name", `${type}[${alcId}]`);
+                    } else {
+                        textarea.removeAttribute("name");
+                    }
+                }
+
+                // Fungsi untuk menangani perubahan skor
+                $(document).on("change", "input[name^='update_score_']", function() {
+                    const radio = $(this);
+                    const idParts = radio.attr("id").split("_"); // e.g. update_score_1_2
+                    const alcId = idParts[2];
+                    const score = parseInt(idParts[3]);
+
+                    const card = $(`#assessment_card_${alcId}`);
+                    const textarea = card.find("textarea");
+                    const select = card.find("select");
+
+                    const type = score >= 3 ? "strength" : "weakness";
+                    const targetWrapper = $(`#update-${type}s-wrapper`);
+
+                    // Update textarea name
+                    textarea.attr("name", `${type}[${alcId}]`);
+
+                    // Pindahkan card ke section strength atau weakness
+                    card.appendTo(targetWrapper);
+
+                    // Ubah class agar sesuai
+                    card.removeClass("strength-card weakness-card").addClass(`${type}-card`);
+
+                    updateDropdownOptions(); // Perbarui dropdown setelah memindahkan kartu
+                });
 
                 function updateDescriptionName(selectElement, type) {
                     let card = selectElement.closest(".assessment-card");
@@ -405,14 +448,17 @@
                     let selectedStrengths = new Set();
                     let selectedWeaknesses = new Set();
 
+                    // Ambil ALC yang sudah dipilih di strength
                     document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
                         if (select.value) selectedStrengths.add(select.value);
                     });
 
+                    // Ambil ALC yang sudah dipilih di weakness
                     document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
                         if (select.value) selectedWeaknesses.add(select.value);
                     });
 
+                    // Update dropdown ALC di strength agar tidak ada ALC yang sudah dipilih di weakness
                     document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
                         let currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
@@ -421,6 +467,7 @@
                         });
                     });
 
+                    // Update dropdown ALC di weakness agar tidak ada ALC yang sudah dipilih di strength
                     document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
                         let currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
@@ -429,6 +476,8 @@
                         });
                     });
                 }
+
+
 
 
 
@@ -684,67 +733,67 @@
             });
 
             document.addEventListener("DOMContentLoaded", function() {
-            const tabs = document.querySelectorAll(".filter-tab");
-            const rows = document.querySelectorAll("#kt_table_users tbody tr");
-            const searchInput = document.getElementById("searchInput");
-            const departmentFilter = document.getElementById("departmentFilter");
+                const tabs = document.querySelectorAll(".filter-tab");
+                const rows = document.querySelectorAll("#kt_table_users tbody tr");
+                const searchInput = document.getElementById("searchInput");
+                const departmentFilter = document.getElementById("departmentFilter");
 
-            let currentPositionFilter = 'all';
-            let currentDepartmentFilter = '';
-            let currentSearchValue = '';
+                let currentPositionFilter = 'all';
+                let currentDepartmentFilter = '';
+                let currentSearchValue = '';
 
-            // Event listener untuk tabs position
-            tabs.forEach(tab => {
-                tab.addEventListener("click", function(e) {
-                    e.preventDefault();
-                    tabs.forEach(t => t.classList.remove("active"));
-                    this.classList.add("active");
-                    currentPositionFilter = this.getAttribute("data-filter").toLowerCase();
+                // Event listener untuk tabs position
+                tabs.forEach(tab => {
+                    tab.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        tabs.forEach(t => t.classList.remove("active"));
+                        this.classList.add("active");
+                        currentPositionFilter = this.getAttribute("data-filter").toLowerCase();
+                        applyFilters();
+                    });
+                });
+
+                // Event listener untuk department dropdown
+                departmentFilter.addEventListener("change", function() {
+                    currentDepartmentFilter = this.value.toLowerCase();
                     applyFilters();
                 });
-            });
 
-            // Event listener untuk department dropdown
-            departmentFilter.addEventListener("change", function() {
-                currentDepartmentFilter = this.value.toLowerCase();
-                applyFilters();
-            });
-
-            // Event listener untuk search input
-            searchInput.addEventListener("keyup", function() {
-                currentSearchValue = this.value.toLowerCase();
-                applyFilters();
-            });
-
-            function applyFilters() {
-                rows.forEach(row => {
-                    const position = row.getAttribute("data-position").toLowerCase();
-                    const departmentCell = row.querySelector("td:nth-child(3)");
-                    const department = departmentCell ? departmentCell.textContent.toLowerCase() : '';
-                    const departments = department.split(', ').map(d => d.trim());
-
-                    const name = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
-                    const npk = row.querySelector("td:nth-child(5)").textContent.toLowerCase();
-                    const age = row.querySelector("td:nth-child(6)").textContent.toLowerCase();
-
-                    const matchesPosition = currentPositionFilter === 'all' ||
-                                        position.includes(currentPositionFilter);
-
-                    const matchesDepartment = currentDepartmentFilter === '' ||
-                                            departments.includes(currentDepartmentFilter);
-
-                    const matchesSearch = currentSearchValue === '' ||
-                                        name.includes(currentSearchValue) ||
-                                        npk.includes(currentSearchValue) ||
-                                        age.includes(currentSearchValue);
-
-                    if (matchesPosition && matchesDepartment && matchesSearch) {
-                        row.style.display = "";
-                    } else {
-                        row.style.display = "none";
-                    }
+                // Event listener untuk search input
+                searchInput.addEventListener("keyup", function() {
+                    currentSearchValue = this.value.toLowerCase();
+                    applyFilters();
                 });
-            }
-        });
+
+                function applyFilters() {
+                    rows.forEach(row => {
+                        const position = row.getAttribute("data-position").toLowerCase();
+                        const departmentCell = row.querySelector("td:nth-child(3)");
+                        const department = departmentCell ? departmentCell.textContent.toLowerCase() : '';
+                        const departments = department.split(', ').map(d => d.trim());
+
+                        const name = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+                        const npk = row.querySelector("td:nth-child(5)").textContent.toLowerCase();
+                        const age = row.querySelector("td:nth-child(6)").textContent.toLowerCase();
+
+                        const matchesPosition = currentPositionFilter === 'all' ||
+                            position.includes(currentPositionFilter);
+
+                        const matchesDepartment = currentDepartmentFilter === '' ||
+                            departments.includes(currentDepartmentFilter);
+
+                        const matchesSearch = currentSearchValue === '' ||
+                            name.includes(currentSearchValue) ||
+                            npk.includes(currentSearchValue) ||
+                            age.includes(currentSearchValue);
+
+                        if (matchesPosition && matchesDepartment && matchesSearch) {
+                            row.style.display = "";
+                        } else {
+                            row.style.display = "none";
+                        }
+                    });
+                }
+            });
         </script>
     @endpush
