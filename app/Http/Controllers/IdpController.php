@@ -129,15 +129,9 @@ class IdpController extends Controller
 
         foreach ($savedPrograms as $program) {
             $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
-            $diffInMonths = $currentDate->diffInMonths($dueDate);
-
-            if ($diffInMonths >= 1 && $diffInMonths <= 12) {
                 $midYearPrograms[] = $program;
-            }
-
-            if ($diffInMonths > 6) {
                 $oneYearPrograms[] = $program;
-            }
+
 
         }
 

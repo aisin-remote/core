@@ -38,8 +38,21 @@
                             <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
                         </li>
                         <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Direktur">Direktur</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="GM">GM</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
                         </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Coordinator">Coordinator</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Section Head">Section Head</a>
+                        </li>
+
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
                         </li>

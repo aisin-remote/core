@@ -58,11 +58,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         return view('website.dashboard.index');
     })->name('dashboard.index');
-    
+
     Route::get('/master_schedule', function () {
         return view('website.dashboard.master');
     })->name('master_schedule.index');
-    
+
     Route::get('/people', function () {
         return view('website.dashboard.people');
     })->name('people.index');
@@ -168,6 +168,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
         Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
         Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
+        Route::get('/getData', [IdpController::class, 'getData'])->name('idp.getData');
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
         Route::get('/', function () {
             $employee = Employee::all(); // Ambil semua data karyawan
