@@ -20,7 +20,7 @@
         $isUser = auth()->user()->role == 'User';
     @endphp
 
-    <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo">
+    <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo" style="margin-top: 20px;">
         <div class="d-flex align-items-center">
             <img src="{{ asset('assets/media/logos/logo-putih.png') }}" alt="Logo" class="logo-img">
             <img alt="Logo" src="{{ asset('assets/media/logos/logo-putih-kecil.png') }}"
@@ -39,7 +39,7 @@
 
     <!--begin::sidebar menu-->
     <div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6" id="#kt_app_sidebar_menu"
-        data-kt-menu="true" data-kt-menu-expand="false">
+        data-kt-menu="true" style="margin-top: 40px;" data-kt-menu-expand="false">
 
 
 
@@ -214,7 +214,7 @@
 
         <!--begin:Master Section-->
         <!--begin:Master Menu Accordion-->
-        <div data-kt-menu-trigger="click" class="menu-item menu-accordion pt-5">
+        <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
             <span class="menu-link">
                 <span class="menu-icon">
                     <i class="fas fa-cogs"></i>
@@ -337,6 +337,22 @@
 
         <!--end:Master Section-->
     </div>
+    <!-- Sidebar User Panel -->
+    <!--begin::User info sidebar bottom-->
+    <div class="app-sidebar-user mt-auto px-3 pt-5 pb-5 border-top border-white border-opacity-25">
+        <div class="d-flex align-items-center">
+            <div class="symbol symbol-40px">
+                <img src="{{ asset('assets/media/avatars/user.jpg') }}" class="rounded-3" alt="user" />
+            </div>
+            <div class="ms-3">
+                <div class="fw-bold text-white">{{ auth()->user()->name }}</div>
+                <div class="text-muted fs-8">{{ auth()->user()->employee->position }}</div>
+            </div>
+        </div>
+    </div>
+    <!--end::User info sidebar bottom-->
+
+
 
     <!--end::sidebar menu-->
 </div>
