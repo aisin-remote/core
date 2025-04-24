@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use DataTables;
 use App\Models\Alc;
+use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\DetailAssessment;
-use App\Models\Employee;
-use DataTables;
-use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Support\Facades\DB;
+
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -50,12 +50,12 @@ class AssessmentController extends Controller
 
         // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
         if ($user->role === 'HRD') {
-            $employees = Employee::with('departments')
+            $employees = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
                 ->get();
         } else {
             // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
-            $employee = Employee::with('departments')->where('user_id', $user->id)->first();
+            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->where('user_id', $user->id)->first();
             if (!$employee) {
                 $employees = collect();
             } else {
@@ -72,7 +72,7 @@ class AssessmentController extends Controller
         $alcs = Alc::all();
 
         // Ambil assessment terbaru per employee
-        $assessments = Assessment::with(['employee.departments', 'alc'])
+        $assessments = Assessment::with(['employee', 'alc'])
             ->whereHas('employee', function ($query) use ($employees) {
                 return $query->whereIn('id', $employees->pluck('id'));
             })
@@ -160,7 +160,7 @@ class AssessmentController extends Controller
         $assessment = Assessment::findOrFail($assessment_id);
 
         // Ambil employee dari assessment (pastikan kolom employee_id ada di tabel assessments)
-        $employee = Employee::with('departments')->findOrFail($assessment->employee_id);
+        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->findOrFail($assessment->employee_id);
 
         // Ambil data detail_assessment dengan alc (menggunakan Eloquent)
         $assessments = DetailAssessment::with('alc')

@@ -15,9 +15,9 @@
         }
 
         span.menu-link.active {
-    background-color: #0E54DE !important;
-    color: white !important;
-}
+            background-color: #0E54DE !important;
+            color: white !important;
+        }
 
 
         a.menu-link.active {
@@ -341,6 +341,7 @@
 
                     <!-- Grade -->
 
+                    <!-- Grade -->
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
                             href="/master/grade">
@@ -349,12 +350,12 @@
                         </a>
                     </div>
 
-                    <!-- Department -->
+                    <!-- plant -->
                     <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
-                            href="/master/department">
-                            <span class="menu-icon"><i class="fas fa-building"></i></span>
-                            <span class="menu-title ps-1">Department</span>
+                        <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
+                            href="/master/plant">
+                            <span class="menu-icon"><i class="fas fa-industry"></i></span>
+                            <span class="menu-title ps-1">Plant</span>
                         </a>
                     </div>
 
@@ -367,12 +368,30 @@
                         </a>
                     </div>
 
+                    <!-- Department -->
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
+                            href="/master/department">
+                            <span class="menu-icon"><i class="fas fa-building"></i></span>
+                            <span class="menu-title ps-1">Department</span>
+                        </a>
+                    </div>
+
                     <!-- Section -->
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/section') ? 'active' : '' }}"
                             href="/master/section">
                             <span class="menu-icon"><i class="fas fa-users"></i></span>
                             <span class="menu-title ps-1">Section</span>
+                        </a>
+                    </div>
+
+                    {{-- sub section --}}
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('master/subSection') ? 'active' : '' }}"
+                            href="/master/subSection">
+                            <span class="menu-icon"><i class="fas fa-project-diagram"></i></span>
+                            <span class="menu-title ps-1">sub Section</span>
                         </a>
                     </div>
 
@@ -422,7 +441,7 @@
                         </a>
                     </div>
                 </div>
-                <!-- End: Menu Sub -->
+
             </div>
             <!--end:Master Menu Accordion-->
 

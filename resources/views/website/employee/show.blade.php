@@ -38,8 +38,8 @@
             <div class="row">
                 <div class="col-md-4 col-sm-12">
                     <div class="card mb-5 mb-xl-10" style="height: 1410px !important">
-                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                            data-bs-target="#kt_account_profile_details" aria-expanded="true"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
+                            data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Profile Details</h3>
@@ -62,7 +62,7 @@
                                         </div>
                                         <h4 class="mt-6 fw-bolder text-center">{{ $employee->name }}</h4>
                                         <p class="fw-bolder text-muted text-center">
-                                            {{ $employee->position }} - {{ $employee->departments->first()->name }}
+                                            {{ $employee->position }} - {{ $employee->department?->name }}
                                         </p>
                                     </div>
 
@@ -140,13 +140,12 @@
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Department</label>
                                                     <select disabled name="department_id" aria-label="Pilih Departemen"
-                                                        data-control="select2" data-placeholder="Pilih departemen"
+                                                        data-control="select2" data-placeholder="Pilih departement"
                                                         class="form-select form-select-sm fw-semibold">
                                                         <option value="">Pilih Departemen</option>
                                                         @foreach ($departments as $department)
-                                                            <option data-kt-flag="flags/afghanistan.svg"
-                                                                value="{{ $department->id }}"
-                                                                {{ old('department_id', $employee->departments->first()->id ?? '') == $department->id ? 'selected' : '' }}>
+                                                            <option value="{{ $department->id }}"
+                                                                {{ old('department_id', (int) $employee->leadingDepartment?->id ?? '') == (int) $department->id ? 'selected' : '' }}>
                                                                 {{ $department->name }}
                                                             </option>
                                                         @endforeach
@@ -173,7 +172,7 @@
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
                                 <div
-                                    class="card-header bg-light-info border-0 d-flex justify-content-between align-items-center">
+                                    class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Educational Background</h3>
                                 </div>
 
@@ -231,7 +230,7 @@
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
                                 <div
-                                    class="card-header bg-light-info border-0 d-flex justify-content-between align-items-center">
+                                    class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Working Experience</h3>
                                 </div>
 
@@ -301,7 +300,7 @@
                         <!-- Historical Performance Appraisal -->
                         <div class="col-md-12">
                             <div class="card mb-5">
-                                <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                                <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
                                     role="button" data-bs-toggle="collapse"
                                     data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
                                     aria-controls="kt_account_connected_accounts">
@@ -353,37 +352,67 @@
                         <!-- Card 2: Historical Human Assets Value -->
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
-                                <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
-                                    data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
-                                    aria-expanded="true" aria-controls="kt_account_connected_accounts">
+                                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
+                                    data-bs-toggle="collapse" data-bs-target="#kt_account_human_assets"
+                                    aria-expanded="true" aria-controls="kt_account_human_assets">
                                     <div class="card-title m-0">
                                         <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
                                     </div>
                                 </div>
 
-                                <div id="kt_account_settings_signin_method" class="collapse show">
+                                <div id="kt_account_human_assets" class="collapse show">
                                     <div class="card-body border-top p-10">
                                         <!-- Mengurangi padding agar card lebih kecil -->
-                                        <div class="d-flex flex-wrap align-items-center">
-                                            <div id="kt_signin_email">
-                                                <div class="fs-6 fw-bold mb-1">Future Star [2]
-                                                    <div class="text-muted fs-7">
-                                                        2024
+                                        @php
+                                            $humanAssets = [
+                                                ['title' => 'Future Star', 'count' => 2, 'year' => 2024],
+                                                ['title' => 'Potential Candidate', 'count' => 4, 'year' => 2023],
+                                            ];
+                                            $maxSlots = 3; // Set jumlah maksimum slot
+                                            $humanAssetsCount = count($humanAssets);
+                                        @endphp
+
+                                        @if ($humanAssetsCount === 0)
+                                            <div class="text-center text-muted">No data available</div>
+                                            <div class="separator separator-dashed my-4"></div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Empty slot</span>
+                                                <a class="fw-semibold text-primary"
+                                                    href="{{ route('employee.edit', $employee->npk) }}">
+                                                    Go to employee edit page
+                                                </a>
+                                            </div>
+                                        @else
+                                            @foreach ($humanAssets as $asset)
+                                                <div class="d-flex flex-wrap align-items-center">
+                                                    <div id="kt_signin_email">
+                                                        <div class="fs-6 fw-bold mb-1">{{ $asset['title'] }}
+                                                            [{{ $asset['count'] }}]
+                                                            <div class="text-muted fs-7">
+                                                                {{ $asset['year'] }}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
 
-                                        <div class="separator separator-dashed my-4"></div>
+                                                <div class="separator separator-dashed my-4"></div>
+                                            @endforeach
 
-                                        <div class="d-flex flex-wrap align-items-center">
-                                            <div id="kt_signin_password">
-                                                <div class="fs-6 fw-bold mb-1">Potential Candidate [4]</div>
-                                                <div class="text-muted fs-7">
-                                                    2023
+                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
+                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
+                                                        <a class="fw-semibold"
+                                                            href="{{ route('hav.index', $employee->npk) }}">
+                                                            Go to hav page
+                                                        </a>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
+                                                <div class="separator separator-dashed mt-4"></div>
+                                            @endfor
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -396,19 +425,16 @@
                 <!-- Historical Astra  -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
-                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
+                        <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_astra_trainings"
+                            aria-expanded="true" aria-controls="kt_account_astra_trainings">
                             <h3 class="fw-bolder m-0">Astra Training History</h3>
                         </div>
 
-                        <div id="kt_account_settings_signin_method" class="collapse show">
-                            <div class="card-body border-top p-5    ">
-                                <!--begin::Table wrapper-->
+                        <div id="kt_account_astra_trainings" class="collapse show">
+                            <div class="card-body border-top p-5">
                                 <div class="table-responsive">
-                                    <!--begin::Table-->
                                     <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
-                                        <!--begin::Thead-->
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
                                                 <th class="text-center">Year</th>
@@ -416,30 +442,60 @@
                                                 <th class="text-center">ICT/Project/Total</th>
                                             </tr>
                                         </thead>
-                                        <!--end::Thead-->
 
-                                        <!--begin::Tbody-->
                                         <tbody class="fw-6 fw-semibold text-gray-600">
-                                            @forelse ($astraTrainings as $astraTraining)
-                                                <tr>
-                                                    <td class="text-center">{{ $astraTraining->year }}</td>
-                                                    <td class="text-center">{{ $astraTraining->program }}
-                                                    </td>
-                                                    <td class="text-center">
-                                                        {{ $astraTraining->ict_score }}/{{ $astraTraining->project_score }}/{{ $astraTraining->total_score }}
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="7" class="text-center">No data available</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
+                                            @php
+                                                $maxSlots = 3;
+                                                $trainingCount = $astraTrainings->count();
+                                            @endphp
 
+                                            @if ($trainingCount === 0)
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted">No data available
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td colspan="3">
+                                                        <div
+                                                            class="d-flex justify-content-between align-items-center gap-3">
+                                                            <span class="text-muted">[Empty slot]</span>
+                                                            <a class="fw-semibold text-primary"
+                                                                href="{{ route('employee.edit', $employee->npk) }}">
+                                                                Go to employee edit page
+                                                            </a>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            @else
+                                                @for ($i = 0; $i < $maxSlots; $i++)
+                                                    @if (isset($astraTrainings[$i]))
+                                                        @php $training = $astraTrainings[$i]; @endphp
+                                                        <tr>
+                                                            <td class="text-center">{{ $training->year }}</td>
+                                                            <td class="text-center">{{ $training->program }}</td>
+                                                            <td class="text-center">
+                                                                {{ $training->ict_score }}/{{ $training->project_score }}/{{ $training->total_score }}
+                                                            </td>
+                                                        </tr>
+                                                    @else
+                                                        <tr>
+                                                            <td colspan="3">
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-center gap-3">
+                                                                    <span class="text-muted">[Empty slot]</span>
+                                                                    <a class="fw-semibold text-primary"
+                                                                        href="{{ route('employee.edit', $employee->npk) }}">
+                                                                        Go to employee edit page
+                                                                    </a>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @endfor
+                                            @endif
+                                        </tbody>
                                     </table>
-                                    <!--end::Table-->
                                 </div>
-                                <!--end::Table wrapper-->
                             </div>
                         </div>
                     </div>
@@ -447,49 +503,74 @@
 
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
-                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
+                        <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_external_trainings"
+                            aria-expanded="true" aria-controls="kt_account_external_trainings">
                             <h3 class="fw-bolder m-0">External Training History</h3>
                         </div>
 
-                        <div id="kt_account_settings_signin_method" class="collapse show">
+                        <div id="kt_account_external_trainings" class="collapse show">
                             <div class="card-body border-top p-5">
-                                <!--begin::Table wrapper-->
                                 <div class="table-responsive">
-                                    <!--begin::Table-->
                                     <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
-                                        <!--begin::Thead-->
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
-                                                <th>Training</th>
+                                                <th class="text-center">Training</th>
                                                 <th class="text-center">Year</th>
                                                 <th class="text-center">Vendor</th>
                                             </tr>
                                         </thead>
-                                        <!--end::Thead-->
-
-                                        <!--begin::Tbody-->
                                         <tbody class="fw-6 fw-semibold text-gray-600">
-                                            @forelse ($externalTrainings as $externalTraining)
+                                            @php
+                                                $maxSlots = 3;
+                                                $externalCount = $externalTrainings->count();
+                                            @endphp
+
+                                            @if ($externalCount === 0)
                                                 <tr>
-                                                    <td>{{ $externalTraining->program }}</td>
-                                                    <td class="text-center">{{ $externalTraining->year }}</td>
-                                                    <td class="text-center">
-                                                        {{ $externalTraining->vendor }}
+                                                    <td colspan="3" class="text-center text-muted">No data available
                                                     </td>
                                                 </tr>
-                                            @empty
                                                 <tr>
-                                                    <td colspan="7" class="text-center">No data available</td>
+                                                    <td colspan="3">
+                                                        <div
+                                                            class="d-flex justify-content-between align-items-center gap-3">
+                                                            <span class="text-muted">[Empty slot]</span>
+                                                            <a class="fw-semibold text-primary"
+                                                                href="{{ route('employee.edit', $employee->npk) }}">
+                                                                Go to employee edit page
+                                                            </a>
+                                                        </div>
+                                                    </td>
                                                 </tr>
-                                            @endforelse
+                                            @else
+                                                @for ($i = 0; $i < $maxSlots; $i++)
+                                                    @if (isset($externalTrainings[$i]))
+                                                        @php $training = $externalTrainings[$i]; @endphp
+                                                        <tr>
+                                                            <td class="text-center">{{ $training->program }}</td>
+                                                            <td class="text-center">{{ $training->year }}</td>
+                                                            <td class="text-center">{{ $training->vendor }}</td>
+                                                        </tr>
+                                                    @else
+                                                        <tr>
+                                                            <td colspan="3">
+                                                                <div
+                                                                    class="d-flex justify-content-between align-items-center gap-3">
+                                                                    <span class="text-muted">[Empty slot]</span>
+                                                                    <a class="fw-semibold text-primary"
+                                                                        href="{{ route('employee.edit', $employee->npk) }}">
+                                                                        Go to employee edit page
+                                                                    </a>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @endfor
+                                            @endif
                                         </tbody>
-
                                     </table>
-                                    <!--end::Table-->
                                 </div>
-                                <!--end::Table wrapper-->
                             </div>
                         </div>
                     </div>
@@ -498,7 +579,7 @@
 
             <div class="card mb-5 mb-xl-10">
                 <!--begin::Card header-->
-                <div class="card-header bg-light-info">
+                <div class="card-header bg-light-primary">
                     <!--begin::Heading-->
                     <div class="card-title">
                         <h3>Promotion History</h3>
@@ -541,7 +622,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="7" class="text-center">No data available</td>
+                                        <td colspan="7" class="text-center text-muted">No data available</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -557,7 +638,7 @@
                 <!-- Strength -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#strength_section">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
@@ -604,7 +685,7 @@
                 <!-- Areas for Development -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#weakness_section">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Areas for Development</h3>
@@ -651,8 +732,8 @@
 
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
-                <div class="card-header bg-light-info border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                    data-bs-target="#kt_account_signin_method">
+                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
+                    data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
                     </div>

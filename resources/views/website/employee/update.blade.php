@@ -38,8 +38,8 @@
             <div class="row">
                 <div class="col-4">
                     <div class="card mb-5 mb-xl-10" style="height: 1435px !important">
-                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                            data-bs-target="#kt_account_profile_details" aria-expanded="true"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
+                            data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Profile Details</h3>
@@ -184,48 +184,83 @@
                                                 </div>
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Position</label>
-                                                    <select name="position" class="form-select form-select-sm fw-semibold"
+                                                    <select name="position" id="position-select"
+                                                        class="form-select form-select-sm fw-semibold"
                                                         data-control="select2">
                                                         <option value="">Select Position</option>
-                                                        <option value="GM"
-                                                            {{ old('position', $employee->position ?? '') == 'GM' ? 'selected' : '' }}>
-                                                            General Manager</option>
-                                                        <option value="Manager"
-                                                            {{ old('position', $employee->position ?? '') == 'Manager' ? 'selected' : '' }}>
-                                                            Manager</option>
-                                                        <option value="Coordinator"
-                                                            {{ old('position', $employee->position ?? '') == 'Coordinator' ? 'selected' : '' }}>
-                                                            Coordinator</option>
-                                                        <option value="Section Head"
-                                                            {{ old('position', $employee->position ?? '') == 'Section Head' ? 'selected' : '' }}>
-                                                            Section Head</option>
-                                                        <option value="Supervisor"
-                                                            {{ old('position', $employee->position ?? '') == 'Supervisor' ? 'selected' : '' }}>
-                                                            Supervisor</option>
-                                                        <option value="Act Leader"
-                                                            {{ old('position', $employee->position ?? '') == 'Act Leader' ? 'selected' : '' }}>
-                                                            Act Leader</option>
-                                                        <option value="Act JP"
-                                                            {{ old('position', $employee->position ?? '') == 'Act JP' ? 'selected' : '' }}>
-                                                            Act JP</option>
-                                                        <option value="Operator"
-                                                            {{ old('position', $employee->position ?? '') == 'Operator' ? 'selected' : '' }}>
-                                                            Operator</option>
+                                                        @php
+                                                            $positions = [
+                                                                'GM' => 'General Manager',
+                                                                'Manager' => 'Manager',
+                                                                'Coordinator' => 'Coordinator',
+                                                                'Section Head' => 'Section Head',
+                                                                'Supervisor' => 'Supervisor',
+                                                                'Act Leader' => 'Act Leader',
+                                                                'Act JP' => 'Act JP',
+                                                                'Operator' => 'Operator',
+                                                                'Director' => 'Director',
+                                                            ];
+                                                        @endphp
+                                                        @foreach ($positions as $value => $label)
+                                                            <option value="{{ $value }}"
+                                                                {{ old('position', $employee->position ?? '') == $value ? 'selected' : '' }}>
+                                                                {{ $label }}
+                                                            </option>
+                                                        @endforeach
                                                     </select>
                                                     @error('position')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-                                                <div class="col-12 mb-8">
+
+                                                {{-- Sub Section --}}
+                                                <div id="subsection-group" class="col-12 mb-8 d-none">
+                                                    <label class="form-label fw-bold fs-6">Sub Section</label>
+                                                    <select name="sub_section_id"
+                                                        class="form-select form-select-sm fw-semibold"
+                                                        data-control="select2">
+                                                        <option value="">Pilih Sub Section</option>
+                                                        @foreach ($subSections as $subSection)
+                                                            <option value="{{ $subSection->id }}"
+                                                                {{ old('sub_section_id', $employee->subSection->id ?? '') == $subSection->id ? 'selected' : '' }}>
+                                                                {{ $subSection->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('sub_section_id')
+                                                        <div class="text-danger">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+
+                                                {{-- Section --}}
+                                                <div id="section-group" class="col-12 mb-8 d-none">
+                                                    <label class="form-label fw-bold fs-6">Section</label>
+                                                    <select name="section_id"
+                                                        class="form-select form-select-sm fw-semibold"
+                                                        data-control="select2">
+                                                        <option value="">Pilih Section</option>
+                                                        @foreach ($sections as $section)
+                                                            <option value="{{ $section->id }}"
+                                                                {{ old('department_id', (int) $employee->leadingSection?->id ?? '') == (int) $section->id ? 'selected' : '' }}>
+                                                                {{ $section->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('section_id')
+                                                        <div class="text-danger">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+
+                                                {{-- Department --}}
+                                                <div id="department-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Department</label>
-                                                    <select name="department_id" aria-label="Pilih Departemen"
-                                                        data-control="select2" data-placeholder="Pilih departemen"
-                                                        class="form-select form-select-sm fw-semibold">
-                                                        <option value="">Pilih Departemen</option>
+                                                    <select name="department_id"
+                                                        class="form-select form-select-sm fw-semibold"
+                                                        data-control="select2">
+                                                        <option value="">Pilih Department</option>
                                                         @foreach ($departments as $department)
-                                                            <option data-kt-flag="flags/afghanistan.svg"
-                                                                value="{{ $department->id }}"
-                                                                {{ old('department_id', $employee->departments->first()->id ?? '') == $department->id ? 'selected' : '' }}>
+                                                            <option value="{{ $department->id }}"
+                                                                {{ old('department_id', (int) $employee->leadingDepartment?->id ?? '') == (int) $department->id ? 'selected' : '' }}>
                                                                 {{ $department->name }}
                                                             </option>
                                                         @endforeach
@@ -234,6 +269,44 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
+                                                {{-- Division --}}
+                                                <div id="division-group" class="col-12 mb-8 d-none">
+                                                    <label class="form-label fw-bold fs-6">Division</label>
+                                                    <select name="division_id"
+                                                        class="form-select form-select-sm fw-semibold"
+                                                        data-control="select2">
+                                                        <option value="">Pilih Division</option>
+                                                        @foreach ($divisions as $division)
+                                                            <option value="{{ $division->id }}"
+                                                                {{ old('division_id', $employee->leadingDivision?->id ?? '') == $division->id ? 'selected' : '' }}>
+                                                                {{ $division->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('division_id')
+                                                        <div class="text-danger">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+
+                                                {{-- Plant --}}
+                                                <div id="plant-group" class="col-12 mb-8 d-none">
+                                                    <label class="form-label fw-bold fs-6">Plant</label>
+                                                    <select name="plant_id" class="form-select form-select-sm fw-semibold"
+                                                        data-control="select2">
+                                                        <option value="">Pilih Plant</option>
+                                                        @foreach ($plants as $plant)
+                                                            <option value="{{ $plant->id }}"
+                                                                {{ old('plant_id', $employee->plant->id ?? '') == $plant->id ? 'selected' : '' }}>
+                                                                {{ $plant->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
+                                                    @error('plant_id')
+                                                        <div class="text-danger">{{ $message }}</div>
+                                                    @enderror
+                                                </div>
+
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Grade</label>
                                                     <input type="text" name="grade"
@@ -262,7 +335,7 @@
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
                                 <div
-                                    class="card-header bg-light-info border-0 d-flex justify-content-between align-items-center">
+                                    class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Educational Background</h3>
                                 </div>
 
@@ -350,7 +423,7 @@
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
                                 <div
-                                    class="card-header bg-light-info border-0 d-flex justify-content-between align-items-center">
+                                    class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Working Experience</h3>
                                 </div>
 
@@ -464,7 +537,7 @@
                         <!-- Historical Performance Appraisal -->
                         <div class="col-md-12">
                             <div class="card mb-5">
-                                <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                                <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
                                     role="button" data-bs-toggle="collapse"
                                     data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
                                     aria-controls="kt_account_connected_accounts">
@@ -554,37 +627,67 @@
                         <!-- Card 2: Historical Human Assets Value -->
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
-                                <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
-                                    data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
-                                    aria-expanded="true" aria-controls="kt_account_connected_accounts">
+                                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
+                                    data-bs-toggle="collapse" data-bs-target="#kt_account_human_assets"
+                                    aria-expanded="true" aria-controls="kt_account_human_assets">
                                     <div class="card-title m-0">
                                         <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
                                     </div>
                                 </div>
 
-                                <div id="kt_account_settings_signin_method" class="collapse show">
+                                <div id="kt_account_human_assets" class="collapse show">
                                     <div class="card-body border-top p-10">
                                         <!-- Mengurangi padding agar card lebih kecil -->
-                                        <div class="d-flex flex-wrap align-items-center">
-                                            <div id="kt_signin_email">
-                                                <div class="fs-6 fw-bold mb-1">Future Star [2]
-                                                    <div class="text-muted fs-7">
-                                                        2024
+                                        @php
+                                            $humanAssets = [
+                                                ['title' => 'Future Star', 'count' => 2, 'year' => 2024],
+                                                ['title' => 'Potential Candidate', 'count' => 4, 'year' => 2023],
+                                            ];
+                                            $maxSlots = 3; // Set jumlah maksimum slot
+                                            $humanAssetsCount = count($humanAssets);
+                                        @endphp
+
+                                        @if ($humanAssetsCount === 0)
+                                            <div class="text-center text-muted">No data available</div>
+                                            <div class="separator separator-dashed my-4"></div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <span class="text-muted">Empty slot</span>
+                                                <a class="fw-semibold text-primary"
+                                                    href="{{ route('employee.edit', $employee->npk) }}">
+                                                    Go to employee edit page
+                                                </a>
+                                            </div>
+                                        @else
+                                            @foreach ($humanAssets as $asset)
+                                                <div class="d-flex flex-wrap align-items-center">
+                                                    <div id="kt_signin_email">
+                                                        <div class="fs-6 fw-bold mb-1">{{ $asset['title'] }}
+                                                            [{{ $asset['count'] }}]
+                                                            <div class="text-muted fs-7">
+                                                                {{ $asset['year'] }}
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </div>
 
-                                        <div class="separator separator-dashed my-4"></div>
+                                                <div class="separator separator-dashed my-4"></div>
+                                            @endforeach
 
-                                        <div class="d-flex flex-wrap align-items-center">
-                                            <div id="kt_signin_password">
-                                                <div class="fs-6 fw-bold mb-1">Potential Candidate [4]</div>
-                                                <div class="text-muted fs-7">
-                                                    2023
+                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
+                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
+                                                        <a class="fw-semibold"
+                                                            href="{{ route('hav.index', $employee->npk) }}">
+                                                            Go to hav page
+                                                        </a>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </div>
+                                                <div class="separator separator-dashed mt-4"></div>
+                                            @endfor
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -597,7 +700,7 @@
                 <!-- Historical Astra  -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
                             role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
                             aria-expanded="true" aria-controls="kt_account_connected_accounts">
                             <h3 class="fw-bolder m-0">Astra Training History</h3>
@@ -683,7 +786,7 @@
 
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
                             role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
                             aria-expanded="true" aria-controls="kt_account_connected_accounts">
                             <h3 class="fw-bolder m-0">External Training History</h3>
@@ -769,7 +872,7 @@
 
             <div class="card mb-5 mb-xl-10">
                 <!--begin::Card header-->
-                <div class="card-header bg-light-info">
+                <div class="card-header bg-light-primary">
                     <!--begin::Heading-->
                     <div class="card-title">
                         <h3>Promotion History</h3>
@@ -872,7 +975,7 @@
                 <!-- Strength -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#strength_section">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
@@ -924,7 +1027,7 @@
                 <!-- Areas for Development -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-info border-0 cursor-pointer" role="button"
+                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#weakness_section">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Areas for Development</h3>
@@ -976,8 +1079,8 @@
 
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
-                <div class="card-header bg-light-info border-0 cursor-pointer" role="button" data-bs-toggle="collapse"
-                    data-bs-target="#kt_account_signin_method">
+                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
+                    data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
                     </div>
@@ -1059,6 +1162,32 @@
                 textContainer.html(shortText);
                 $(this).addClass("d-none");
                 $(this).siblings(".show-more").removeClass("d-none");
+            });
+
+            function toggleHierarchySelects(position) {
+                $('#subsection-group, #section-group, #department-group, #division-group, #plant-group').addClass(
+                    'd-none');
+
+                if (['Operator', 'Act JP', 'Act Leader'].includes(position)) {
+                    $('#subsection-group').removeClass('d-none');
+                } else if (['Supervisor', 'Section Head'].includes(position)) {
+                    $('#section-group').removeClass('d-none');
+                } else if (['Manager', 'Coordinator'].includes(position)) {
+                    $('#department-group').removeClass('d-none');
+                } else if (position === 'GM') {
+                    $('#division-group').removeClass('d-none');
+                } else if (position === 'Director') {
+                    $('#plant-group').removeClass('d-none');
+                }
+            }
+
+            // Saat halaman pertama kali dimuat
+            toggleHierarchySelects($('#position-select').val());
+
+            // Saat pilihan posisi berubah
+            $('#position-select').on('change', function() {
+                const selectedPosition = $(this).val();
+                toggleHierarchySelects(selectedPosition);
             });
         });
     </script>

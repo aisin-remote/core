@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Plant;
+use App\Models\Section;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
+use App\Models\SubSection;
 use Illuminate\Http\Request;
 
 class MasterController extends Controller
@@ -37,7 +41,7 @@ class MasterController extends Controller
 
         // Jika HRD, bisa melihat semua karyawan
         if ($user->role === 'HRD') {
-            $employee = Employee::with('departments')
+            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
                 ->where(function ($query) {
                     $query->where('user_id', '!=', auth()->id())
@@ -46,7 +50,7 @@ class MasterController extends Controller
                 ->get();
         } else {
             // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
-            $emp = Employee::with('departments')->where('user_id', $user->id)->first();
+            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->where('user_id', $user->id)->first();
             if (!$emp) {
                 $employee = collect();
             } else {
@@ -92,14 +96,50 @@ class MasterController extends Controller
 
     public function division()
     {
-        return view('website.master.division.index');
+        $divisions = Division::all();
+        return view('website.master.division.index', compact('divisions'));
     }
     public function section()
     {
-        return view('website.master.section.index');
+        $sections = Section::all();
+        return view('website.master.section.index', compact('sections'));
     }
+
+    public function subSection()
+    {
+        $subSections = SubSection::all();
+        return view('website.master.subSection.index', compact('subSections'));
+    }
+    public function plant()
+    {
+        $plants = Plant::all();
+        return view('website.master.plant.index', compact('plants'));
+    }
+    
     public function grade()
     {
         return view('website.master.grade.index');
+    }
+
+    public function filter(Request $request)
+    {
+        $filter = $request->filter;
+
+        switch ($filter) {
+            case 'department':
+                $data = Department::all();
+                break;
+            case 'section':
+                $data = Section::all();
+                break;
+            case 'sub_section':
+                $data = SubSection::all();
+                break;
+            default:
+                $data = collect(); // kosong atau tampilkan semua
+                break;
+        }
+
+        return view('layouts.partials.filter', compact('data'))->render();
     }
 }

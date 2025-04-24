@@ -47,10 +47,12 @@
                             <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Coordinator">Coordinator</a>
+                            <a class="nav-link text-active-primary pb-4 filter-tab"
+                                data-filter="Coordinator">Coordinator</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Section Head">Section Head</a>
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Section Head">Section
+                                Head</a>
                         </li>
 
                         <li class="nav-item" role="presentation">
@@ -86,7 +88,7 @@
                                         <td>{{ $assessments->firstItem() + $index }}</td>
                                         <td>{{ $assessment->employee->name ?? '-' }}</td>
                                         <td>
-                                            @if ($assessment->employee->departments->isNotEmpty())
+                                            @if ($assessment->employee->department?->isNotEmpty())
                                                 {{ $assessment->employee->departments->pluck('name')->join(', ') }}
                                             @else
                                                 Tidak Ada Departemen
@@ -242,9 +244,9 @@
                                     Detail
                                 </a>
                                 ${assessment.upload ? `
-                                                                                                                                                                <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                                                                                    View PDF
-                                                                                                                                                                </a>`
+                                                                                                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                                                                                                                            View PDF
+                                                                                                                                                                                        </a>`
                                     : '<span class="text-muted">No PDF Available</span>'
                                 }
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"

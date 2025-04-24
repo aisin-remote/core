@@ -36,7 +36,7 @@
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Division List</h3>
+                <h3 class="card-title">Plant List</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                         style="width: 200px;">
@@ -68,13 +68,13 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($divisions as $division)
+                        @forelse ($plants as $plant)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $division->name }}</td>
+                                <td>{{ $plant->name }}</td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $division->id }}">Delete</button>
+                                        data-id="{{ $plant->id }}">Delete</button>
                                 </td>
                             </tr>
                         @empty
