@@ -15,14 +15,14 @@
         }
 
         span.menu-link.active {
-    background-color: #0E54DE !important;
-    color: white !important;
-}
+            background-color: #0E54DE !important;
+            color: white !important;
+        }
 
 
-        a.menu-link.active {
-            background-color: #1976D2;
-            color: white;
+        .menu-link.active {
+            background-color: #0E54DE !important;
+            color: white !important;
         }
     </style>
 
@@ -59,20 +59,24 @@
                 $currentPath = request()->path();
                 $currentMenu = explode('/', $currentPath)[0];
 
+                $isEmployee = str_starts_with($currentPath, 'dashboard');
                 $isEmployee = str_starts_with($currentPath, 'employee');
                 $isAssessment = str_starts_with($currentPath, 'assessment');
                 $isHav = str_starts_with($currentPath, 'hav');
                 $isIdp = str_starts_with($currentPath, 'idp');
                 $isRtc = str_starts_with($currentPath, 'rtc');
+                $isgrade = str_starts_with($currentPath, 'grade');
+                $isdivision = str_starts_with($currentPath, 'division');
+                $isdepartment = str_starts_with($currentPath, 'department');
+                $issection = str_starts_with($currentPath, 'section');
             @endphp
 
             <div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6" id="#kt_app_sidebar_menu"
                 data-kt-menu="true" style="margin-top: 40px;" data-kt-menu-expand="true">
 
-                <div class="menu-item menu-accordion {{ $isEmployee || $isAssessment || $isHav || $isIdp || $isRtc ? 'show' : '' }}"
-                    data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-people-development">
-                    <span
-                        class="menu-link {{ $isEmployee || $isAssessment || $isHav || $isIdp || $isRtc ? 'active' : '' }}">
+                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                    id="menu-people-development">
+                    <span class="menu-link">
                         <span class="menu-icon"><i class="fas fa-users-cog"></i></span>
                         <span class="menu-title ps-1">People Development</span>
                         <span class="menu-arrow"></span>
@@ -82,8 +86,9 @@
 
                         {{-- Dashboard --}}
                         <div class="menu-item">
-                            <a class="menu-link {{ $currentPath === 'dashboard' ? 'active' : '' }}" href="/dashboard">
-                                <span class="menu-icon"><i class="fas fa-dashboard"></i></span>
+                            <a class="menu-link {{ request()->is('master/dashboard') ? 'active' : '' }}"
+                                href="/dashboard">
+                                {{-- <span class="menu-icon"><i class="fas fa-building"></i></span> --}}
                                 <span class="menu-title ps-1">Development Plan</span>
                             </a>
                         </div>
@@ -92,7 +97,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'employee' ? 'active' : '' }}" href="/employee">
-                                    <span class="menu-icon"><i class="fas fa-user-tie"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-user-tie"></i></span> --}}
                                     <span class="menu-title ps-1">Employee Profile</span>
                                 </a>
                             </div>
@@ -100,7 +105,7 @@
                             <div class="menu-item menu-accordion {{ $isEmployee ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-employee-profile">
                                 <span class="menu-link {{ $isEmployee ? 'active' : '' }}">
-                                    <span class="menu-icon"><i class="fas fa-user-tie"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-user-tie"></i></span> --}}
                                     <span class="menu-title ps-1">Employee Profile</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -128,7 +133,7 @@
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'assessment' ? 'active' : '' }}"
                                     href="/assessment">
-                                    <span class="menu-icon"><i class="fas fa-chart-line"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-chart-line"></i></span> --}}
                                     <span class="menu-title ps-1">Assessment</span>
                                 </a>
                             </div>
@@ -136,7 +141,7 @@
                             <div class="menu-item menu-accordion {{ $isAssessment ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-assessment">
                                 <span class="menu-link {{ $isAssessment ? 'active' : '' }}">
-                                    <span class="menu-icon"><i class="fas fa-chart-line"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-chart-line"></i></span> --}}
                                     <span class="menu-title ps-1">Assessment</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -163,7 +168,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}" href="/hav">
-                                    <span class="menu-icon"><i class="fas fa-th-large fs-2"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-th-large fs-2"></i></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                 </a>
                             </div>
@@ -171,7 +176,7 @@
                             <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
                                 <span class="menu-link {{ $isHav ? 'active' : '' }}">
-                                    <span class="menu-icon"><i class="fas fa-th-large fs-2"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-th-large fs-2"></i></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -191,7 +196,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'idp' ? 'active' : '' }}" href="/idp">
-                                    <span class="menu-icon"><i class="fas fa-code-branch"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-code-branch"></i></span> --}}
                                     <span class="menu-title ps-1">IDP</span>
                                 </a>
                             </div>
@@ -199,7 +204,7 @@
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
-                                    <span class="menu-icon"><i class="fas fa-code-branch"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-code-branch"></i></span> --}}
                                     <span class="menu-title ps-1">IDP</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -226,7 +231,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
-                                    <span class="menu-icon"><i class="fas fa-sitemap"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-sitemap"></i></span> --}}
                                     <span class="menu-title ps-1">RTC</span>
                                 </a>
                             </div>
@@ -234,7 +239,7 @@
                             <div class="menu-item menu-accordion {{ $isRtc ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-rtc">
                                 <span class="menu-link {{ $isRtc ? 'active' : '' }}">
-                                    <span class="menu-icon"><i class="fas fa-sitemap"></i></span>
+                                    {{-- <span class="menu-icon"><i class="fas fa-sitemap"></i></span> --}}
                                     <span class="menu-title ps-1">RTC</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -290,7 +295,7 @@
                             id="menu-employee-profile">
                             <span
                                 class="menu-link {{ request()->is('master/employee/aii') || request()->is('master/employee/aiia') ? 'active' : '' }}">
-                                <span class="menu-icon"><i class="fas fa-user-tie"></i></span>
+                                {{-- <span class="menu-icon"><i class="fas fa-user-tie"></i></span> --}}
                                 <span class="menu-title ps-1">Employee</span>
                                 <span class="menu-arrow"></span>
                             </span>
@@ -344,16 +349,17 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
                             href="/master/grade">
-                            <span class="menu-icon"><i class="fas fa-layer-group"></i></span>
+                            {{-- <span class="menu-icon"><i class="fas fa-building"></i></span> --}}
                             <span class="menu-title ps-1">Grade</span>
                         </a>
                     </div>
+
 
                     <!-- Department -->
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
                             href="/master/department">
-                            <span class="menu-icon"><i class="fas fa-building"></i></span>
+                            {{-- <span class="menu-icon"><i class="fas fa-building"></i></span> --}}
                             <span class="menu-title ps-1">Department</span>
                         </a>
                     </div>
@@ -362,7 +368,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
                             href="/master/division">
-                            <span class="menu-icon"><i class="fas fa-network-wired"></i></span>
+                            {{-- <span class="menu-icon"><i class="fas fa-network-wired"></i></span> --}}
                             <span class="menu-title ps-1">Division</span>
                         </a>
                     </div>
@@ -371,7 +377,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/section') ? 'active' : '' }}"
                             href="/master/section">
-                            <span class="menu-icon"><i class="fas fa-users"></i></span>
+                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
                             <span class="menu-title ps-1">Section</span>
                         </a>
                     </div>
@@ -379,9 +385,9 @@
                 </div>
             </div>
 
-            <div data-kt-menu-trigger="click" data-kt-menu-expand="true" class="menu-item menu-accordion">
-                <!-- Begin: Menu Link -->
-                <span class="menu-link {{ request()->is('Competency') ? 'active' : '' }}">
+            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                id="menu-master">
+                <span class="menu-link">
                     <span class="menu-icon">
                         <i class="fas fa-chalkboard-teacher"></i>
                     </span>
@@ -391,34 +397,30 @@
                 <!-- End: Menu Link -->
 
                 <!-- Begin: Menu Sub -->
-                <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
-                    style="display: none; overflow: hidden;">
+                <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
                     <!-- Menu Item: FAQ Classic -->
                     <div class="menu-item">
-                        <a class="menu-link" href="/emp_competency">
-                            <span class="menu-bullet">
-                                <span class="bullet bullet-dot"></span>
-                            </span>
-                            <span class="menu-title">Employee Competency</span>
+                        <a class="menu-link {{ request()->is('/emp_competency') ? 'active' : '' }}"
+                            href="/emp_competency">
+                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
+                            <span class="menu-title ps-1">Section</span>
                         </a>
                     </div>
 
                     <!-- Menu Item: FAQ Extended -->
                     <div class="menu-item">
-                        <a class="menu-link" href="/competencies">
-                            <span class="menu-bullet">
-                                <span class="bullet bullet-dot"></span>
-                            </span>
-                            <span class="menu-title">Competency</span>
+                        <a class="menu-link {{ request()->is('/competencies') ? 'active' : '' }}"
+                            href="/competencies">
+                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
+                            <span class="menu-title ps-1">Competency</span>
                         </a>
                     </div>
 
                     <div class="menu-item">
-                        <a class="menu-link" href="/group_competency">
-                            <span class="menu-bullet">
-                                <span class="bullet bullet-dot"></span>
-                            </span>
-                            <span class="menu-title">Group Competency</span>
+                        <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
+                            href="/group_competency">
+                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
+                            <span class="menu-title ps-1">Group Competency</span>
                         </a>
                     </div>
                 </div>
@@ -480,7 +482,7 @@
         const currentPath = window.location.pathname;
 
         // Temukan semua link di sidebar
-        const links = document.querySelectorAll(".menu-link a");
+        const links = document.querySelectorAll("a.menu-link");
 
         links.forEach(link => {
             const linkPath = link.getAttribute("href");
