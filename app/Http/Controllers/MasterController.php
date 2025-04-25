@@ -63,18 +63,23 @@ class MasterController extends Controller
     }
     public function department()
     {
+        $division = Division::all();
         $departments = Department::all();
-        return view('website.master.department.index', compact('departments'));
+        return view('website.master.department.index', compact('departments','division'));
     }
 
     public function departmentStore(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:departments,name',
+            'division_id' => 'required|string|max:255|unique:departments,division_id',
         ]);
 
-        try {
-            Department::create(['name' => $request->name]);
+            try {
+                Department::create([
+                    'name' => $request->name,
+                    'division_id' => $request->division_id
+                ]);
 
             return redirect()->back()->with('success', 'Department berhasil ditambahkan.');
         } catch (\Exception $e) {
