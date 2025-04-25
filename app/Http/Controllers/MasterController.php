@@ -64,7 +64,7 @@ class MasterController extends Controller
     public function department()
     {
         $division = Division::all();
-        $departments = Department::all();
+        $departments = Department::paginate(10);
         return view('website.master.department.index', compact('departments','division'));
     }
 
@@ -204,14 +204,14 @@ class MasterController extends Controller
     public function section()
     {
         $department  = Department::all();
-        $sections = Section::all();
+        $sections = Section::paginate(10);
         return view('website.master.section.index', compact('sections','department'));
     }
 
     public function subSection()
     {
         $sections = Section::all();
-        $subSections = SubSection::all();
+        $subSections = SubSection::paginate(10);
         return view('website.master.subSection.index', compact('subSections','sections'));
     }
 

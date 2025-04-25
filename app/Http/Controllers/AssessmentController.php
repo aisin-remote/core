@@ -87,7 +87,7 @@ class AssessmentController extends Controller
                     ->from('assessments')
                     ->groupBy('employee_id');
             })
-            ->paginate(10);
+            ->paginate(5);
 
         return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments', 'title', 'departments'));
     }
