@@ -57,6 +57,9 @@
                     <div class="text-center mb-3 mt-3">
                         <h3 class="fs-2hx text-gray-900">HAV Quadrant</h3>
                     </div>
+                    <div>
+                        <a class="btn btn-success btn-sm history-btn" href="{{ route('hav.export') }}"> Download Summary </a>
+                    </div>
                 </div>
                 <div class="row mt-5 pr-10">
                     @foreach ($titles as $i => $title)

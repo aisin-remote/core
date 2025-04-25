@@ -58,11 +58,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', function () {
         return view('website.dashboard.index');
     })->name('dashboard.index');
-    
+
     Route::get('/master_schedule', function () {
         return view('website.dashboard.master');
     })->name('master_schedule.index');
-    
+
     Route::get('/people', function () {
         return view('website.dashboard.people');
     })->name('people.index');
@@ -75,6 +75,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update'); // Menampilkan form create
         Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');
         Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
+        Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
     });
 
     Route::prefix('employee')->group(function () {

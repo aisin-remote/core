@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Carbon\Carbon;
@@ -66,5 +67,19 @@ class Employee extends Model
         return $this->aisin_entry_date
             ? Carbon::parse($this->aisin_entry_date)->diffInYears(Carbon::now())
             : null;
+    }
+    public function havQuadrants()
+    {
+        return $this->hasMany(\App\Models\HavQuadrant::class);
+    }
+
+    public function latestHavQuadrant()
+    {
+        return $this->hasOne(\App\Models\HavQuadrant::class)->latestOfMany();
+    }
+
+    public function performanceAppraisalHistories()
+    {
+        return $this->hasMany(\App\Models\PerformanceAppraisalHistory::class);
     }
 }
