@@ -240,7 +240,7 @@
                         if (result.isConfirmed) {
                             let form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = `/master/department/delete/${employeeId}`;
+                            form.action = `/master/division/delete/${employeeId}`;
 
                             let csrfToken = document.createElement('input');
                             csrfToken.type = 'hidden';

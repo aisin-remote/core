@@ -72,7 +72,7 @@ class MasterController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:departments,name',
-            'division_id' => 'required|string|max:255|unique:departments,division_id',
+            'division_id' => 'required|string|max:255',
         ]);
 
             try {
@@ -90,7 +90,8 @@ class MasterController extends Controller
     public function departmentDestroy($id)
     {
         try {
-            $department = Department::findOrFail($id);
+            $department = Department::where('id', $id)->firstOrFail();
+
             $department->delete();
 
             return redirect()->back()->with('success', 'Department berhasil dihapus.');
@@ -103,7 +104,7 @@ class MasterController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:divisions,name',
-            'plant_id' => 'required|string|max:255|unique:divisions,plant_id',
+            'plant_id' => 'required|string|max:255',
         ]);
 
         try {
@@ -121,9 +122,9 @@ class MasterController extends Controller
     public function divisionDestroy($id)
     {
         try {
-            $department = Division::findOrFail($id);
-            $department->delete();
+            $department = Division::where('id', $id)->firstOrFail();
 
+            $department->delete();
             return redirect()->back()->with('success', 'Division berhasil dihapus.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal menghapus Division: ' . $e->getMessage());
@@ -134,7 +135,7 @@ class MasterController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:sections,name',
-            'department_id' => 'required|string|max:255|unique:sections,department_id',
+            'department_id' => 'required|string|max:255',
         ]);
 
         try {
@@ -152,7 +153,8 @@ class MasterController extends Controller
     public function sectionDestroy($id)
     {
         try {
-            $department = Section::findOrFail($id);
+            $department = Section::where('id', $id)->firstOrFail();
+
             $department->delete();
 
             return redirect()->back()->with('success', 'Section berhasil dihapus.');
@@ -166,7 +168,7 @@ class MasterController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:sub_sections,name',
-            'section_id' => 'required|string|max:255|unique:sub_sections,section_id',
+            'section_id' => 'required|string|max:255',
         ]);
 
         try {
@@ -184,7 +186,8 @@ class MasterController extends Controller
     public function subSectionDestroy($id)
     {
         try {
-            $department = SubSection::findOrFail($id);
+            $department = SubSection::where('id', $id)->firstOrFail();
+
             $department->delete();
 
             return redirect()->back()->with('success', 'Sub Section berhasil dihapus.');

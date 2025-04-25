@@ -225,7 +225,7 @@
                         if (result.isConfirmed) {
                             let form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = `/plant/delete/${employeeId}`;
+                            form.action = `/master/plant/delete/${employeeId}`;
 
                             let csrfToken = document.createElement('input');
                             csrfToken.type = 'hidden';

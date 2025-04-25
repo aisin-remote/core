@@ -30,9 +30,9 @@ class PlantController extends Controller
     public function plantDestroy($id)
     {
         try {
-            $plant = Plant::findOrFail($id);
-            $plant->delete();
+            $department = Plant::where('id', $id)->firstOrFail();
 
+            $department->delete();
             return redirect()->back()->with('success', 'Department berhasil dihapus.');
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Gagal menghapus department: ' . $e->getMessage());
