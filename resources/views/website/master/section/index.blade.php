@@ -68,9 +68,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td colspan="9" class="text-center text-muted">No section found</td>
-                        </tr>
+                        @forelse ($sections as $section)
+                            <tr>
+                                <td>{{ $loop->iteration }}</td>
+                                <td>{{ $section->name }}</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                        data-id="{{ $section->id }}">Delete</button>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="9" class="text-center text-muted">No employees found</td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>

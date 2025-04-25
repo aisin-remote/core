@@ -1,4 +1,3 @@
-
 @extends('layouts.root.main')
 
 @section('title')
@@ -16,8 +15,8 @@
                         </div>
                         <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Departemen:</strong>
-                                @if ($employee->departments->isNotEmpty())
-                                    {{ $employee->departments->pluck('name')->join(', ') }}
+                                @if ($employee->department?->isNotEmpty())
+                                    {{ $employee->department?->pluck('name')->join(', ') }}
                                 @else
                                     Tidak Ada Departemen
                                 @endif
@@ -119,59 +118,60 @@
     </div>
 @endsection
 @push('scripts')
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var canvas = document.getElementById('assessmentChart');
-        if (!canvas) {
-            console.error("Canvas 'assessmentChart' tidak ditemukan.");
-            return;
-        }
-        var ctx = canvas.getContext('2d');
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var canvas = document.getElementById('assessmentChart');
+            if (!canvas) {
+                console.error("Canvas 'assessmentChart' tidak ditemukan.");
+                return;
+            }
+            var ctx = canvas.getContext('2d');
 
-        // Ambil data dari backend
-        var labels = @json($assessments->pluck('alc.name'));
-        var scores = @json($assessments->pluck('score'));
+            // Ambil data dari backend
+            var labels = @json($assessments->pluck('alc.name'));
+            var scores = @json($assessments->pluck('score'));
 
-        console.log("Labels:", labels);
-        console.log("Scores:", scores);
+            console.log("Labels:", labels);
+            console.log("Scores:", scores);
 
-        if (!labels.length || !scores.length) {
-            console.warn("Data kosong, tidak menampilkan grafik.");
-            return;
-        }
+            if (!labels.length || !scores.length) {
+                console.warn("Data kosong, tidak menampilkan grafik.");
+                return;
+            }
 
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Scores ALC',
-                    data: scores,
-                    backgroundColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 0.6)' :
-                        'rgba(75, 192, 192, 0.6)'),
-                    borderColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 1)' :
-                        'rgba(75, 192, 192, 1)'),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Scores ALC',
+                        data: scores,
+                        backgroundColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 0.6)' :
+                            'rgba(75, 192, 192, 0.6)'),
+                        borderColor: scores.map(score => score < script 3 ?
+                            'rgba(255, 99, 132, 1)' :
+                            'rgba(75, 192, 192, 1)'),
+                        borderWidth: 1
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        suggestedMax: 5,
-                        ticks: {
-                            stepSize: 1
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 5,
+                            ticks: {
+                                stepSize: 1
+                            }
                         }
                     }
                 }
-            }
+            });
         });
-    });
-</script>
+    </script>

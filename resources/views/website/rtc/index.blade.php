@@ -50,10 +50,21 @@
                             <tbody>
                                 @if (request()->path() == 'rtc/aii')
                                     <tr>
-                                        <td class="text-center">1.</td>
+                                        <td>1</td>
                                         <td class="text-center">Engineering & Production</td>
                                         <td class="text-center">
-                                            <a href="{{ route('rtc.detail') }}" class="btn btn-primary btn-sm">Detail</a>
+                                            <a href="{{ route('rtc.list') }}" class="btn btn-sm btn-primary" title="Detail">
+                                                <i class="fas fa-info-circle"></i> Detail
+                                            </a>
+                                            <a href="#" class="btn btn-sm btn-info" title="View">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                            <a href="#" class="btn btn-sm btn-success" title="Add">
+                                                <i class="fas fa-plus-circle"></i> Add
+                                            </a>
+                                            <a href="#" class="btn btn-sm btn-warning" title="Export">
+                                                <i class="fas fa-upload"></i> Export
+                                            </a>
                                         </td>
                                     </tr>
                                 @else

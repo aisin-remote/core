@@ -62,7 +62,7 @@ class IdpController extends Controller
                         ->from('assessments as a')
                         ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM assessments WHERE employee_id = a.employee_id)');
                 })
-                ->with(['employee.departments', 'details', 'idp'])
+                ->with(['employee', 'details', 'idp'])
                 ->when($company, fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                     )

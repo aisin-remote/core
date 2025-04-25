@@ -87,7 +87,7 @@
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
                                 <td>{{ $employee->position }}</td>
-                                <td>{{ $employee->departments->first()->name }}</td>
+                                <td>{{ $employee->department?->name }}</td>
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-center">
