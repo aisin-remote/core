@@ -33,7 +33,7 @@ class MasterController extends Controller
 
         return $subordinates;
     }
-    
+
     public function employee($company = null)
     {
         $title = 'Employee';
@@ -94,28 +94,120 @@ class MasterController extends Controller
         }
     }
 
+    public function divisionStore(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:divisions,name',
+            'plant_id' => 'required|string|max:255|unique:divisions,plant_id',
+        ]);
+
+        try {
+            Division::create([
+                'name' => $request->name,
+                'plant_id' => $request->plant_id
+            ]);
+
+            return redirect()->back()->with('success', 'Division berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menambahkan Division: ' . $e->getMessage());
+        }
+    }
+
+    public function divisionDestroy($id)
+    {
+        try {
+            $department = Division::findOrFail($id);
+            $department->delete();
+
+            return redirect()->back()->with('success', 'Division berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus Division: ' . $e->getMessage());
+        }
+    }
+
+    public function sectionStore(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:sections,name',
+            'department_id' => 'required|string|max:255|unique:sections,department_id',
+        ]);
+
+        try {
+            Section::create([
+                'name' => $request->name,
+                'department_id' => $request->department_id
+            ]);
+
+            return redirect()->back()->with('success', 'Section berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menambahkan Section: ' . $e->getMessage());
+        }
+    }
+
+    public function sectionDestroy($id)
+    {
+        try {
+            $department = Section::findOrFail($id);
+            $department->delete();
+
+            return redirect()->back()->with('success', 'Section berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus Section: ' . $e->getMessage());
+        }
+    }
+
+
+    public function subSectionStore(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:sub_sections,name',
+            'section_id' => 'required|string|max:255|unique:sub_sections,section_id',
+        ]);
+
+        try {
+            SubSection::create([
+                'name' => $request->name,
+                'section_id' => $request->section_id
+            ]);
+
+            return redirect()->back()->with('success', 'Sub Section berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menambahkan Sub Section: ' . $e->getMessage());
+        }
+    }
+
+    public function subSectionDestroy($id)
+    {
+        try {
+            $department = SubSection::findOrFail($id);
+            $department->delete();
+
+            return redirect()->back()->with('success', 'Sub Section berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus Sub Section: ' . $e->getMessage());
+        }
+    }
     public function division()
     {
+        $plants =  Plant::all();
         $divisions = Division::all();
-        return view('website.master.division.index', compact('divisions'));
+        return view('website.master.division.index', compact('divisions','plants'));
     }
     public function section()
     {
+        $department  = Department::all();
         $sections = Section::all();
-        return view('website.master.section.index', compact('sections'));
+        return view('website.master.section.index', compact('sections','department'));
     }
 
     public function subSection()
     {
+        $sections = Section::all();
         $subSections = SubSection::all();
-        return view('website.master.subSection.index', compact('subSections'));
+        return view('website.master.subSection.index', compact('subSections','sections'));
     }
-    public function plant()
-    {
-        $plants = Plant::all();
-        return view('website.master.plant.index', compact('plants'));
-    }
-    
+
+
     public function grade()
     {
         return view('website.master.grade.index');

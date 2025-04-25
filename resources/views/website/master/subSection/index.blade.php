@@ -64,6 +64,7 @@
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
                             <th>Name</th>
+                            <th>Section</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -72,6 +73,7 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $subSection->name }}</td>
+                                <td>{{ $subSection->section->name }}</td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $subSection->id }}">Delete</button>
@@ -119,15 +121,27 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Department</h5>
+                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Sub Section</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('department.master.store') }}" method="POST">
+                <form action="{{ route('subSection.master.store') }}" method="POST">
                     @csrf
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="name" class="form-label">Department Name</label>
+                            <label for="name" class="form-label">Sub Section Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="section_id" class="form-label">Section</label>
+                            <select name="section_id" id="section_id" class="form-select" required>
+                                <option value="">Pilih Section</option>
+                                @foreach ($sections as $sections)
+                                    <option value="{{ $sections->id }}">{{ $sections->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                     <div class="modal-footer">

@@ -64,6 +64,7 @@
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
                             <th>Name</th>
+                            <th>Section</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -72,6 +73,7 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $section->name }}</td>
+                                <td>{{ $section->department->name }}</td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $section->id }}">Delete</button>
@@ -119,17 +121,30 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Department</h5>
+                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Section</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('department.master.store') }}" method="POST">
+                <form action="{{ route('section.master.store') }}" method="POST">
                     @csrf
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="name" class="form-label">Department Name</label>
+                            <label for="name" class="form-label">Section Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
                     </div>
+
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="department_id" class="form-label">Pilih Department</label>
+                            <select name="department_id" id="department_id" class="form-select" required>
+                                <option value="">Pilih Department</option>
+                                @foreach ($department as $department)
+                                    <option value="{{ $department->id }}">{{ $department->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type="submit" class="btn btn-primary">Save</button>

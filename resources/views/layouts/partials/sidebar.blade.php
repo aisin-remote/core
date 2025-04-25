@@ -350,7 +350,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
                             href="/master/grade">
-                            {{-- <span class="menu-icon"><i class="fas fa-building"></i></span> --}}
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                             <span class="menu-title ps-1">Grade</span>
                         </a>
                     </div>
@@ -358,18 +358,19 @@
 
                     <!-- plant -->
                     <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
-                            href="/master/department">
-                            <span class="menu-icon"><i class="fas fa-building"></i></span>
-                            <span class="menu-title ps-1">Department</span>
+                        <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
+                            href="/master/plant">
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                            <span class="menu-title ps-1">Plant</span>
                         </a>
                     </div>
+
 
                     <!-- Division -->
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
                             href="/master/division">
-                            {{-- <span class="menu-icon"><i class="fas fa-network-wired"></i></span> --}}
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                             <span class="menu-title ps-1">Division</span>
                         </a>
                     </div>
@@ -378,7 +379,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
                             href="/master/department">
-                            <span class="menu-icon"><i class="fas fa-building"></i></span>
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                             <span class="menu-title ps-1">Department</span>
                         </a>
                     </div>
@@ -387,7 +388,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/section') ? 'active' : '' }}"
                             href="/master/section">
-                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                             <span class="menu-title ps-1">Section</span>
                         </a>
                     </div>
@@ -396,8 +397,8 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('master/subSection') ? 'active' : '' }}"
                             href="/master/subSection">
-                            <span class="menu-icon"><i class="fas fa-project-diagram"></i></span>
-                            <span class="menu-title ps-1">sub Section</span>
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                            <span class="menu-title ps-1">Sub Section</span>
                         </a>
                     </div>
 
@@ -421,7 +422,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('/emp_competency') ? 'active' : '' }}"
                             href="/emp_competency">
-                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                             <span class="menu-title ps-1">Section</span>
                         </a>
                     </div>
@@ -430,7 +431,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('/competencies') ? 'active' : '' }}"
                             href="/competencies">
-                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                             <span class="menu-title ps-1">Competency</span>
                         </a>
                     </div>
@@ -438,7 +439,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
                             href="/group_competency">
-                            {{-- <span class="menu-icon"><i class="fas fa-users"></i></span> --}}
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                             <span class="menu-title ps-1">Group Competency</span>
                         </a>
                     </div>

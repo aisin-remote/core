@@ -1,18 +1,20 @@
 <?php
 
-use App\Models\Employee;
-use Illuminate\Auth\Events\Login;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\CompetencyController;
+use App\Http\Controllers\EmpCompetencyController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\HavController;
 use App\Http\Controllers\IdpController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\MasterController;
-use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\PlantController;
 use App\Http\Controllers\RegisterController;
-use App\Http\Controllers\AssessmentController;
-use App\Http\Controllers\CompetencyController;
-use App\Http\Controllers\EmpCompetencyController;
-use App\Http\Controllers\GroupCompetencyController;
+use App\Models\Employee;
+use Illuminate\Auth\Events\Login;
+use Illuminate\Support\Facades\Route;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -188,11 +190,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
 
         Route::prefix('plant')->group(function () {
-            Route::get('/', [MasterController::class, 'plant'])->name('plant.master.index');
-            Route::post('/store', [MasterController::class, 'plantStore'])->name('plant.master.store');
-            Route::delete('/delete/{id}', [MasterController::class, 'plantDestroy'])->name('plant.master.destroy');
+            Route::get('/', [PlantController::class, 'plant'])->name('plant.master.index');
+            Route::post('/store', [PlantController::class, 'Store'])->name('plant.master.store');
+            Route::delete('/delete/{id}', [PlantController::class, 'plantDestroy'])->name('plant.master.destroy');
         });
-        
+
         Route::prefix('department')->group(function () {
             Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
@@ -211,7 +213,7 @@ Route::middleware('auth')->group(function () {
             Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
         });
-        
+
         Route::prefix('subSection')->group(function () {
             Route::get('/', [MasterController::class, 'subSection'])->name('subSection.master.index');
             Route::post('/store', [MasterController::class, 'subSectionStore'])->name('subSection.master.store');

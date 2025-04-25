@@ -119,14 +119,14 @@
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Department</h5>
+                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Plant</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <form action="{{ route('department.master.store') }}" method="POST">
+                <form action="{{ route('plant.master.store') }}" method="POST">
                     @csrf
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="name" class="form-label">Department Name</label>
+                            <label for="name" class="form-label">Plant Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
                     </div>
@@ -225,7 +225,7 @@
                         if (result.isConfirmed) {
                             let form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = `/master/department/delete/${employeeId}`;
+                            form.action = `/plant/delete/${employeeId}`;
 
                             let csrfToken = document.createElement('input');
                             csrfToken.type = 'hidden';
