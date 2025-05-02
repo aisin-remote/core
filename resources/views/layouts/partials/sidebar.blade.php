@@ -88,7 +88,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/dashboard') ? 'active' : '' }}"
                                 href="/dashboard">
-                                {{-- <span class="menu-icon"><i class="fas fa-building"></i></span> --}}
+                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                 <span class="menu-title ps-1">Development Plan</span>
                             </a>
                         </div>
@@ -97,7 +97,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'employee' ? 'active' : '' }}" href="/employee">
-                                    {{-- <span class="menu-icon"><i class="fas fa-user-tie"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">Employee Profile</span>
                                 </a>
                             </div>
@@ -133,7 +133,7 @@
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'assessment' ? 'active' : '' }}"
                                     href="/assessment">
-                                    {{-- <span class="menu-icon"><i class="fas fa-chart-line"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">Assessment</span>
                                 </a>
                             </div>
@@ -168,7 +168,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}" href="/hav">
-                                    {{-- <span class="menu-icon"><i class="fas fa-th-large fs-2"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">HAV</span>
                                 </a>
                             </div>
@@ -176,7 +176,7 @@
                             <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
                                 <span class="menu-link {{ $isHav ? 'active' : '' }}">
-                                    {{-- <span class="menu-icon"><i class="fas fa-th-large fs-2"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -196,7 +196,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'idp' ? 'active' : '' }}" href="/idp">
-                                    {{-- <span class="menu-icon"><i class="fas fa-code-branch"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">IDP</span>
                                 </a>
                             </div>
@@ -204,7 +204,7 @@
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
-                                    {{-- <span class="menu-icon"><i class="fas fa-code-branch"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">IDP</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -231,7 +231,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
-                                    {{-- <span class="menu-icon"><i class="fas fa-sitemap"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">RTC</span>
                                 </a>
                             </div>
@@ -286,7 +286,7 @@
                     @if (auth()->user()->role == 'User')
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
-                                <span class="menu-icon"><i class="fas fa-user-tie"></i></span>
+                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                 <span class="menu-title ps-1">Employee</span>
                             </a>
                         </div>

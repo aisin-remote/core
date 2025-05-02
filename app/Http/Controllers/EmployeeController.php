@@ -29,53 +29,108 @@ use App\Models\PerformanceAppraisalHistory;
 class EmployeeController extends Controller
 {
 
-    public function getSubordinates($employeeId, $processedIds = [])
+    private function getSubordinatesFromStructure(Employee $employee)
     {
-        // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
-        if (in_array($employeeId, $processedIds)) {
-            return collect(); // Kembalikan collection kosong untuk menghindari loop
+        $subordinateIds = collect();
+    
+        if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
+            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
+    
+            $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
+            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
+            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
+            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+            $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id');
+    
+            $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
         }
-
-        // Tambahkan ID saat ini ke daftar yang sudah diproses
-        $processedIds[] = $employeeId;
-
-        // Ambil hanya bawahan langsung (bukan atasan)
-        $employees = Employee::where('supervisor_id', $employeeId)->get();
-        $subordinates = collect($employees);
-
-        // Lanjutkan rekursi untuk mendapatkan semua bawahan di level lebih dalam
-        foreach ($employees as $employee) {
-            $subordinates = $subordinates->merge($this->getSubordinates($employee->id, $processedIds));
+    
+        if ($subordinateIds->isEmpty()) {
+            return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
-
-        return $subordinates;
+    
+        return Employee::whereIn('id', $subordinateIds);
     }
+    
+    private function collectSubordinates($models, $field, $subordinateIds)
+    {
+        $ids = $models->pluck($field)->filter();
+        return $subordinateIds->merge($ids);
+    }
+    
+    private function collectOperators($subSections, $subordinateIds)
+    {
+        $subSectionIds = $subSections->pluck('id');
+        $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
+        return $subordinateIds->merge($operatorIds);
+    }       
 
     public function index($company = null)
     {
         $title = 'Employee';
         $user = auth()->user();
 
-        // Jika HRD, bisa melihat semua karyawan
         if ($user->role === 'HRD') {
             $employees = Employee::with([
-                            'subSection.section.department', 'leadingSection.department', 'leadingDepartment.division'
-                        ])->when($company, fn($query) => $query->where('company_name', $company))->get();
+                'subSection.section.department', 
+                'leadingSection.department', 
+                'leadingDepartment.division'
+            ])->when($company, fn($query) => $query->where('company_name', $company))->get();
         } else {
-            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
             $employee = Employee::with([
-                        'subSection.section.department', 'leadingSection.department', 'leadingDepartment.division'
-                    ])->where('user_id', $user->id)->first();
+                'subSection.section.department.division.plant',
+                'leadingSection.department.division.plant',
+                'leadingDepartment.division.plant'
+            ])->where('user_id', $user->id)->first();
+            
             if (!$employee) {
                 $employees = collect();
             } else {
-                $employees = $this->getSubordinates($employee->id)
-                    ->where('company_name', $employee->company_name);
+                $employees = $this->getSubordinatesFromStructure($employee)->get();
             }
         }
-        
+
         return view('website.employee.index', compact('employees', 'title'));
     }
+
 
     public function status($id)
     {
@@ -618,14 +673,49 @@ class EmployeeController extends Controller
 
     private function logLateralMutation(int $employeeId, string $position, int $fromId, int $toId, string $structureKey)
     {
-        MutationHistory::create([
-            'employee_id' => $employeeId,
-            'position' => $position,
-            'structure_type' => $this->getStructureTypeFromKey($structureKey),
-            'from_id' => $fromId,
-            'to_id' => $toId,
-            'mutation_date' => now(),
-        ]);
+        $lastMutation = MutationHistory::where('employee_id', $employeeId)
+            ->where('position', $position)
+            ->where('to_id', $fromId)
+            ->orderByDesc('mutation_date')
+            ->first();
+
+        $startDate = $lastMutation->mutation_date ?? $this->getApproximateEntryDate($employeeId, $position);
+        $durationMonths = Carbon::parse($startDate)->diffInMonths(now());
+        $durationText = $this->formatDuration($durationMonths);
+        try {
+            DB::beginTransaction();
+            // dd($durationText);
+
+            MutationHistory::create([
+                'employee_id' => $employeeId,
+                'position' => $position,
+                'structure_type' => $this->getStructureTypeFromKey($structureKey),
+                'from_id' => $fromId,
+                'to_id' => $toId,
+                'mutation_date' => now(),
+                'duration_in_previous_structure' => $durationMonths,
+                'duration_text' => $durationText,
+            ]);
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            dd('Error saat logLateralMutation:', $e->getMessage(), $e->getTraceAsString());
+        }
+    }
+    private function getApproximateEntryDate(int $employeeId, string $position)
+    {
+        return Employee::where('id', $employeeId)->value('aisin_entry_date');
+    }
+
+    private function formatDuration($months)
+    {
+        $years = floor($months / 12);
+        $remainingMonths = $months % 12;
+
+        $yearText = $years > 0 ? "$years tahun" : '';
+        $monthText = $remainingMonths > 0 ? "$remainingMonths bulan" : '';
+
+        return trim("$yearText $monthText");
     }
 
     private function getStructureTypeFromKey(string $key): string

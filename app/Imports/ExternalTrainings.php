@@ -1,13 +1,13 @@
 <?php
 namespace App\Imports;
 
+use Carbon\Carbon;
 use App\Models\Employee;
 use App\Models\ExternalTraining;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Log;
 
 class ExternalTrainings implements ToCollection, WithHeadingRow
 {
@@ -23,6 +23,7 @@ class ExternalTrainings implements ToCollection, WithHeadingRow
 
             ExternalTraining::create([
                 'employee_id'     => $employee->id,
+                'program'           => $row['program'],
                 'year' =>  $this->convertDate($row['year']),
                 'vendor'           => $row['vendor'],
 

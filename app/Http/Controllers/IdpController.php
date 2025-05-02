@@ -4,13 +4,18 @@ namespace App\Http\Controllers;
 
 use Carbon\Carbon;
 use App\Models\Idp;
+use App\Models\Section;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Assessment;
+use App\Models\Department;
+use App\Models\SubSection;
 use App\Models\Development;
 use Illuminate\Http\Request;
 use App\Models\DevelopmentOne;
 use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -19,27 +24,79 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class IdpController extends Controller
 {
 
-    public function getSubordinates($employeeId, $processedIds = [])
+    private function getSubordinatesFromStructure(Employee $employee)
     {
-        // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
-        if (in_array($employeeId, $processedIds)) {
-            return collect(); // Kembalikan collection kosong untuk menghindari loop
+        $subordinateIds = collect();
+    
+        if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
+            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
+    
+            $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
+            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
+            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
+            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+            $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id');
+    
+            $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
         }
-
-        // Tambahkan ID saat ini ke daftar yang sudah diproses
-        $processedIds[] = $employeeId;
-
-        // Ambil hanya bawahan langsung (bukan atasan)
-        $employees = Employee::where('supervisor_id', $employeeId)->get();
-        $subordinates = collect($employees);
-
-        // Lanjutkan rekursi untuk mendapatkan semua bawahan di level lebih dalam
-        foreach ($employees as $employee) {
-            $subordinates = $subordinates->merge($this->getSubordinates($employee->id, $processedIds));
+    
+        if ($subordinateIds->isEmpty()) {
+            return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
-
-        return $subordinates;
+    
+        return Employee::whereIn('id', $subordinateIds);
     }
+    
+    private function collectSubordinates($models, $field, $subordinateIds)
+    {
+        $ids = $models->pluck($field)->filter();
+        return $subordinateIds->merge($ids);
+    }
+    
+    private function collectOperators($subSections, $subordinateIds)
+    {
+        $subSectionIds = $subSections->pluck('id');
+        $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
+        return $subordinateIds->merge($operatorIds);
+    }  
 
     public function index($company = null, $reviewType = 'mid_year')
     {
@@ -64,8 +121,8 @@ class IdpController extends Controller
                 })
                 ->with(['employee', 'details', 'idp'])
                 ->when($company, fn($query) =>
-                        $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
-                    )
+                    $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                )
                 ->orderByDesc('created_at')
                 ->paginate(10);
         } else {
@@ -74,8 +131,8 @@ class IdpController extends Controller
             if (!$emp) {
                 $assessments = collect(); // Kosong jika tidak ada employee
             } else {
-                // Ambil semua bawahan
-                $subordinates = $this->getSubordinates($emp->id)->pluck('id')->toArray();
+                // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
+                $subordinates = $this->getSubordinatesFromStructure($emp)->pluck('id')->toArray();
 
                 // Ambil assessment terbaru hanya milik bawahannya
                 $assessments = Assessment::with(['employee', 'details', 'idp'])
@@ -113,36 +170,33 @@ class IdpController extends Controller
         $details = DevelopmentOne::all();
         $mid = Development::all();
 
-    foreach ($assessments as $assessment) {
-        // Ambil semua program IDP yang tersimpan
-        $savedPrograms = $assessment->idp->map(function ($idp) {
-            return [
-                'program' => $idp->development_program,
-                'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
-            ];
-        });
+        foreach ($assessments as $assessment) {
+            // Ambil semua program IDP yang tersimpan
+            $savedPrograms = $assessment->idp->map(function ($idp) {
+                return [
+                    'program' => $idp->development_program,
+                    'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
+                ];
+            });
 
-        // Pisahkan berdasarkan due date
-        $midYearPrograms = [];
-        $oneYearPrograms = [];
-        $currentDate = Carbon::now();
+            // Pisahkan berdasarkan due date
+            $midYearPrograms = [];
+            $oneYearPrograms = [];
+            $currentDate = Carbon::now();
 
-        foreach ($savedPrograms as $program) {
-            $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
-                $midYearPrograms[] = $program;
-                $oneYearPrograms[] = $program;
+            foreach ($savedPrograms as $program) {
+                $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
+                    $midYearPrograms[] = $program;
+                    $oneYearPrograms[] = $program;
+            }
 
+            // Simpan ke objek assessment agar bisa diakses di Blade
+            $assessment->recommendedProgramsMidYear = $midYearPrograms;
+            $assessment->recommendedProgramsOneYear = $oneYearPrograms;
 
-        }
-
-        // Simpan ke objek assessment agar bisa diakses di Blade
-        $assessment->recommendedProgramsMidYear = $midYearPrograms;
-        $assessment->recommendedProgramsOneYear = $oneYearPrograms;
-
-
-        // Tambahkan strengths & weaknesses
-        $assessment->strengths = $assessment->strength;
-        $assessment->weaknesses = $assessment->weakness;
+            // Tambahkan strengths & weaknesses
+            $assessment->strengths = $assessment->strength;
+            $assessment->weaknesses = $assessment->weakness;
         }
 
         return view('website.idp.index', compact(
@@ -156,8 +210,6 @@ class IdpController extends Controller
             'company',
         ));
     }
-
-
 
     public function store(Request $request)
     {

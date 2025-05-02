@@ -30,4 +30,17 @@ class Section extends Model
     {
         return $this->hasMany(SubSection::class);
     }
+
+    public function short()
+    {
+        return $this->belongsTo(Employee::class, 'short_term');
+    }
+    public function mid()
+    {
+        return $this->belongsTo(Employee::class, 'mid_term');
+    }
+    public function long()
+    {
+        return $this->belongsTo(Employee::class, 'long_term');
+    }
 }

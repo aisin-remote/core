@@ -48,7 +48,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @if (request()->path() == 'rtc/aii')
+                                @if (request()->path() == 'rtc/aiia')
                                     <tr>
                                         <td>1</td>
                                         <td class="text-center">Engineering & Production</td>

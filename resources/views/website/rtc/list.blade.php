@@ -9,6 +9,18 @@
 @endsection
 
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div class="d-flex flex-column flex-column-fluid">
         <!--begin::Content-->
         <div id="kt_app_content" class="app-content  flex-column-fluid ">
@@ -101,6 +113,7 @@
 @endsection
 
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function() {
             function loadTable(filter = 'Supervisor') {
@@ -136,25 +149,26 @@
                 loadTable(currentFilter);
             });
 
+
+            let currentId = null; // definisikan di global scope
             $(document).on('click', '.btn-show-modal', function() {
-                let targetPosition = [];
+                currentId = $(this).data('id'); // ID dari department / section / sub_section
 
-                if (currentFilter === 'department') {
-                    targetPosition = ['Manager'];
-                } else if (currentFilter === 'section') {
-                    targetPosition = ['Supervisor'];
-                } else if (currentFilter === 'sub_section') {
-                    targetPosition = ['JP', 'Leader', 'Act JP',
-                        'Act Leader'
-                    ]; // pakai lebih dari satu posisi di sini
-                }
+                // Mapping posisi berdasarkan filter
+                const positionMap = {
+                    department: ['Supervisor', 'Section Head'],
+                    section: ['Leader'],
+                    sub_section: ['JP', 'Act JP', 'Act Leader'],
+                };
 
+                const targetPosition = positionMap[currentFilter] || [];
+
+                // Filter karyawan berdasarkan posisi
                 const filtered = employees.filter(e =>
                     targetPosition.map(p => p.toLowerCase()).includes(e.position.toLowerCase())
                 );
 
-                console.log(filtered); // cek hasilnya
-
+                // Populate semua select dropdown
                 ['#short_term', '#mid_term', '#long_term'].forEach(id => {
                     const select = $(id);
                     select.empty().append('<option value="">-- Select --</option>');
@@ -162,7 +176,63 @@
                         select.append(`<option value="${e.id}">${e.name}</option>`);
                     });
                 });
+
+                // Cari karyawan yang jadi leader sesuai currentFilter dan currentId
+                const currentEmployee = employees.find(e => {
+                    const lead = e[`leading_${currentFilter}`];
+                    return lead && lead.id === currentId;
+                });
+
+                // Jika ditemukan, set default value dari dropdown-nya
+                if (currentEmployee) {
+                    const leadData = currentEmployee[`leading_${currentFilter}`];
+                    $('#short_term').val(leadData?.short_term || '');
+                    $('#mid_term').val(leadData?.mid_term || '');
+                    $('#long_term').val(leadData?.long_term || '');
+                }
             });
+
+
+            $(document).on('click', '.btn-view', function() {
+                const id = $(this).data('id');
+                const url = `/rtc/detail?filter=${currentFilter}&id=${id}`;
+                window.location.replace(url);
+            });
+
+            $('#addPlanForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const formData = {
+                    filter: currentFilter, // misalnya ambil dari global JS variable
+                    id: currentId, // id dari entity (division/department/etc)
+                    short_term: $('#short_term').val(),
+                    mid_term: $('#mid_term').val(),
+                    long_term: $('#long_term').val(),
+                };
+
+                $.ajax({
+                    url: '{{ route('rtc.update') }}',
+                    type: 'GET',
+                    data: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    success: function(response) {
+
+                        $('#addPlanModal').modal('hide');
+                        // optionally refresh the page or data
+                        window.location.reload()
+                    },
+                    error: function(xhr) {
+                        iziToast.error({
+                            title: 'Error',
+                            message: xhr.responseJSON?.message ||
+                                'Failed to update plan'
+                        });
+                    }
+                });
+            });
+
         });
     </script>
 @endpush

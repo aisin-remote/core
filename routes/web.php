@@ -1,20 +1,20 @@
 <?php
 
-use App\Http\Controllers\AssessmentController;
-use App\Http\Controllers\CompetencyController;
-use App\Http\Controllers\EmpCompetencyController;
-use App\Http\Controllers\EmployeeController;
-use App\Http\Controllers\GroupCompetencyController;
-use App\Http\Controllers\HavController;
-use App\Http\Controllers\IdpController;
-use App\Http\Controllers\LoginController;
-use App\Http\Controllers\MasterController;
-use App\Http\Controllers\PlantController;
-use App\Http\Controllers\RegisterController;
 use App\Models\Employee;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\HavController;
+use App\Http\Controllers\IdpController;
+use App\Http\Controllers\RtcController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\PlantController;
+use App\Http\Controllers\MasterController;
+use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\CompetencyController;
+use App\Http\Controllers\EmpCompetencyController;
+use App\Http\Controllers\GroupCompetencyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -153,14 +153,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/list', function () {
-            $employees = Employee::select('id', 'name', 'position')->get();
-            return view('website.rtc.list', compact('employees'));
-        })->name('rtc.list');
-
-        Route::get('/{company?}', function () {
-            return view('website.rtc.index');
-        });
+        Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
+        Route::get('/list', [RtcController::class, 'list'])->name('rtc.list');
+        Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
+        Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
     });
 
     Route::prefix('idp')->group(function () {

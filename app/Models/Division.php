@@ -24,4 +24,16 @@ class Division extends Model
     {
         return $this->belongsTo(Employee::class, 'gm_id');
     }
+    public function short()
+    {
+        return $this->belongsTo(Employee::class, 'short_term');
+    }
+    public function mid()
+    {
+        return $this->belongsTo(Employee::class, 'mid_term');
+    }
+    public function long()
+    {
+        return $this->belongsTo(Employee::class, 'long_term');
+    }
 }
