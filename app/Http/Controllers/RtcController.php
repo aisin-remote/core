@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Section;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\SubSection;
@@ -12,13 +13,15 @@ class RtcController extends Controller
 {
     public function index($company = null)
     {
-        return view('website.rtc.index');
+        $divisions = Division::where('company', $company)->get();
+        return view('website.rtc.index', compact('divisions'));
     }
 
-    public function list()
+    public function list(Request $request)
     {
+        $divisionId = $request->query()['id'];
         $employees = Employee::with('leadingDepartment', 'leadingSection', 'leadingSubSection')->select('id', 'name', 'position')->get();
-        return view('website.rtc.list', compact('employees'));
+        return view('website.rtc.list', compact('employees', 'divisionId'));
     }
 
     public function detail(Request $request)
@@ -52,6 +55,10 @@ class RtcController extends Controller
         // Jika data tidak ditemukan
         if (!$data) {
             return redirect()->route('rtc.index')->with('error', ucfirst($filter) . ' not found');
+        }
+
+        if ($request->ajax()) {
+            return view('website.modal.rtc.index', compact('data', 'filter'));
         }
 
         // Return view dengan data yang sesuai

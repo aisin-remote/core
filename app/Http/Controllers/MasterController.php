@@ -224,10 +224,11 @@ class MasterController extends Controller
     public function filter(Request $request)
     {
         $filter = $request->filter;
+        $division_id = $request->division_id;
 
         switch ($filter) {
             case 'department':
-                $data = Department::all();
+                $data = Department::where('division_id', $division_id)->get();
                 break;
             case 'section':
                 $data = Section::all();

@@ -48,12 +48,13 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @if (request()->path() == 'rtc/aiia')
+                                @forelse ($divisions as $division)
                                     <tr>
-                                        <td>1</td>
-                                        <td class="text-center">Engineering & Production</td>
+                                        <td>{{ $loop->iteration }}</td>
+                                        <td class="text-center">{{ $division->name }}</td>
                                         <td class="text-center">
-                                            <a href="{{ route('rtc.list') }}" class="btn btn-sm btn-primary" title="Detail">
+                                            <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
+                                                class="btn btn-sm btn-primary" title="Detail">
                                                 <i class="fas fa-info-circle"></i> Detail
                                             </a>
                                             <a href="#" class="btn btn-sm btn-info" title="View">
@@ -67,11 +68,11 @@
                                             </a>
                                         </td>
                                     </tr>
-                                @else
+                                @empty
                                     <tr>
                                         <td colspan="3" class="text-center text-muted">No data available</td>
                                     </tr>
-                                @endif
+                                @endforelse
                             </tbody>
                         </table>
                     </div>

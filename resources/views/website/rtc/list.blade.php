@@ -110,6 +110,28 @@
             </form>
         </div>
     </div>
+
+    {{-- modal detail --}}
+    <div class="modal fade" id="viewDetailModal" tabindex="-1" aria-labelledby="viewDetailLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="viewDetailLabel">Detail</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="viewDetailContent">
+                    <!-- Konten akan diisi lewat AJAX -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-3">Loading data...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {{-- end of modal --}}
 @endsection
 
 @push('scripts')
@@ -121,7 +143,8 @@
                     url: '{{ route('filter.master') }}',
                     type: 'GET',
                     data: {
-                        filter: filter
+                        filter: filter,
+                        division_id: @json($divisionId)
                     },
                     success: function(res) {
                         $('#kt_table_users tbody').html(res);
@@ -193,10 +216,36 @@
             });
 
 
+            // $(document).on('click', '.btn-view', function() {
+            //     const id = $(this).data('id');
+            //     const url = `/rtc/detail?filter=${currentFilter}&id=${id}`;
+            //     window.location.replace(url);
+            // });
+
             $(document).on('click', '.btn-view', function() {
                 const id = $(this).data('id');
-                const url = `/rtc/detail?filter=${currentFilter}&id=${id}`;
-                window.location.replace(url);
+                const filter = currentFilter;
+
+                $('#viewDetailModal').modal('show');
+                $('#viewDetailContent').html(
+                    '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-3">Loading data...</p></div>'
+                );
+
+                $.ajax({
+                    url: '{{ route('rtc.detail') }}',
+                    type: 'GET',
+                    data: {
+                        id: id,
+                        filter: filter
+                    },
+                    success: function(response) {
+                        $('#viewDetailContent').html(response);
+                    },
+                    error: function() {
+                        $('#viewDetailContent').html(
+                            '<p class="text-danger text-center">Failed to load data.</p>');
+                    }
+                });
             });
 
             $('#addPlanForm').on('submit', function(e) {
