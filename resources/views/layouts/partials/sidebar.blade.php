@@ -88,7 +88,6 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/dashboard') ? 'active' : '' }}"
                                 href="/dashboard">
-                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                 <span class="menu-title ps-1">Development Plan</span>
                             </a>
                         </div>
@@ -186,6 +185,15 @@
                                             href="/hav">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">HAV Quadran</span>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}"
+                                            href="/hav/list">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">HAV List</span>
                                         </a>
                                     </div>
                                 </div>
