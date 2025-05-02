@@ -2,8 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Plant;
+use App\Models\Section;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
+use App\Models\SubSection;
 use Illuminate\Http\Request;
 
 class MasterController extends Controller
@@ -29,7 +33,7 @@ class MasterController extends Controller
 
         return $subordinates;
     }
-    
+
     public function employee($company = null)
     {
         $title = 'Employee';
@@ -37,7 +41,7 @@ class MasterController extends Controller
 
         // Jika HRD, bisa melihat semua karyawan
         if ($user->role === 'HRD') {
-            $employee = Employee::with('departments')
+            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
                 ->where(function ($query) {
                     $query->where('user_id', '!=', auth()->id())
@@ -46,7 +50,7 @@ class MasterController extends Controller
                 ->get();
         } else {
             // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
-            $emp = Employee::with('departments')->where('user_id', $user->id)->first();
+            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->where('user_id', $user->id)->first();
             if (!$emp) {
                 $employee = collect();
             } else {
@@ -59,18 +63,23 @@ class MasterController extends Controller
     }
     public function department()
     {
-        $departments = Department::all();
-        return view('website.master.department.index', compact('departments'));
+        $division = Division::all();
+        $departments = Department::paginate(10);
+        return view('website.master.department.index', compact('departments','division'));
     }
 
     public function departmentStore(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255|unique:departments,name',
+            'division_id' => 'required|string|max:255',
         ]);
 
-        try {
-            Department::create(['name' => $request->name]);
+            try {
+                Department::create([
+                    'name' => $request->name,
+                    'division_id' => $request->division_id
+                ]);
 
             return redirect()->back()->with('success', 'Department berhasil ditambahkan.');
         } catch (\Exception $e) {
@@ -81,7 +90,8 @@ class MasterController extends Controller
     public function departmentDestroy($id)
     {
         try {
-            $department = Department::findOrFail($id);
+            $department = Department::where('id', $id)->firstOrFail();
+
             $department->delete();
 
             return redirect()->back()->with('success', 'Department berhasil dihapus.');
@@ -90,16 +100,147 @@ class MasterController extends Controller
         }
     }
 
+    public function divisionStore(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:divisions,name',
+            'plant_id' => 'required|string|max:255',
+        ]);
+
+        try {
+            Division::create([
+                'name' => $request->name,
+                'plant_id' => $request->plant_id
+            ]);
+
+            return redirect()->back()->with('success', 'Division berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menambahkan Division: ' . $e->getMessage());
+        }
+    }
+
+    public function divisionDestroy($id)
+    {
+        try {
+            $department = Division::where('id', $id)->firstOrFail();
+
+            $department->delete();
+            return redirect()->back()->with('success', 'Division berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus Division: ' . $e->getMessage());
+        }
+    }
+
+    public function sectionStore(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:sections,name',
+            'department_id' => 'required|string|max:255',
+        ]);
+
+        try {
+            Section::create([
+                'name' => $request->name,
+                'department_id' => $request->department_id
+            ]);
+
+            return redirect()->back()->with('success', 'Section berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menambahkan Section: ' . $e->getMessage());
+        }
+    }
+
+    public function sectionDestroy($id)
+    {
+        try {
+            $department = Section::where('id', $id)->firstOrFail();
+
+            $department->delete();
+
+            return redirect()->back()->with('success', 'Section berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus Section: ' . $e->getMessage());
+        }
+    }
+
+
+    public function subSectionStore(Request $request)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255|unique:sub_sections,name',
+            'section_id' => 'required|string|max:255',
+        ]);
+
+        try {
+            SubSection::create([
+                'name' => $request->name,
+                'section_id' => $request->section_id
+            ]);
+
+            return redirect()->back()->with('success', 'Sub Section berhasil ditambahkan.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menambahkan Sub Section: ' . $e->getMessage());
+        }
+    }
+
+    public function subSectionDestroy($id)
+    {
+        try {
+            $department = SubSection::where('id', $id)->firstOrFail();
+
+            $department->delete();
+
+            return redirect()->back()->with('success', 'Sub Section berhasil dihapus.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal menghapus Sub Section: ' . $e->getMessage());
+        }
+    }
     public function division()
     {
-        return view('website.master.division.index');
+        $plants =  Plant::all();
+        $divisions = Division::all();
+        return view('website.master.division.index', compact('divisions','plants'));
     }
     public function section()
     {
-        return view('website.master.section.index');
+        $department  = Department::all();
+        $sections = Section::paginate(10);
+        return view('website.master.section.index', compact('sections','department'));
     }
+
+    public function subSection()
+    {
+        $sections = Section::all();
+        $subSections = SubSection::paginate(10);
+        return view('website.master.subSection.index', compact('subSections','sections'));
+    }
+
+
     public function grade()
     {
         return view('website.master.grade.index');
+    }
+
+    public function filter(Request $request)
+    {
+        $filter = $request->filter;
+        $division_id = $request->division_id;
+
+        switch ($filter) {
+            case 'department':
+                $data = Department::where('division_id', $division_id)->get();
+                break;
+            case 'section':
+                $data = Section::all();
+                break;
+            case 'sub_section':
+                $data = SubSection::all();
+                break;
+            default:
+                $data = collect(); // kosong atau tampilkan semua
+                break;
+        }
+
+        return view('layouts.partials.filter', compact('data'))->render();
     }
 }

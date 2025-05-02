@@ -8,177 +8,115 @@
     {{ $title ?? 'RTC' }}
 @endsection
 
-<style>
-    .org-chart {
-        text-align: center;
-    }
-
-    .leader {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        padding: 20px;
-        width: 300px;
-        border-radius: 10px;
-        display: inline-block;
-        margin-bottom: 20px;
-        position: relative;
-    }
-
-    /* Garis ke bawah dari leader */
-    .leader::after {
-        content: "";
-        width: 2px;
-        height: 30px;
-        background: #dee2e6;
-        position: absolute;
-        bottom: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    .gm {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        padding: 20px;
-        width: 250px;
-        border-radius: 10px;
-        text-align: center;
-        position: relative;
-        /* Tambahkan ini */
-    }
-
-    /* Garis vertikal di bawah GM */
-    .gm::after {
-        content: "";
-        width: 2px;
-        height: 30px;
-        background: #dee2e6;
-        position: absolute;
-        bottom: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    .org-chart {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        /* Memastikan semua elemen di tengah */
-    }
-
-    .leader,
-    .gm {
-        background: #f8f9fa;
-        border: 2px solid #dee2e6;
-        padding: 20px;
-        width: 250px;
-        border-radius: 10px;
-        text-align: center;
-    }
-
-    /* Garis vertikal penghubung antara Director dan GM */
-    .connector {
-        width: 2px;
-        height: 30px;
-        background: #dee2e6;
-    }
-
-    /* Kontainer tim */
-    .team {
-        display: flex;
-        justify-content: center;
-        flex-wrap: wrap;
-        gap: 20px;
-        padding-top: 20px;
-        position: relative;
-    }
-
-    /* Garis horizontal penghubung antar tim */
-    .team::before {
-        content: "";
-        width: 100%;
-        height: 2px;
-        background: #dee2e6;
-        position: absolute;
-        top: 0;
-    }
-
-    /* Garis vertikal dari tiap tim ke anggotanya */
-    .team-title {
-        font-size: 14px;
-        font-weight: bold;
-        padding: 5px 10px;
-        border-radius: 5px;
-        display: inline-block;
-        margin-bottom: 10px;
-        position: relative;
-    }
-
-    .team-title::after {
-        content: "";
-        width: 2px;
-        height: 20px;
-        background: #dee2e6;
-        position: absolute;
-        bottom: -20px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
-
-    .member {
-        background: white;
-        border: 1px solid #dee2e6;
-        padding: 15px;
-        width: 300px;
-        border-radius: 10px;
-        text-align: center;
-        min-width: 150px;
-    }
-
-    /* Warna masing-masing tim */
-    .designers {
-        background: #fd7e14;
-        color: white;
-    }
-
-    .developers {
-        background: #0d6efd;
-        color: white;
-    }
-
-    .qa {
-        background: #6f42c1;
-        color: white;
-    }
-
-    .scrum {
-        background: #ffc107;
-        color: black;
-    }
-
-    /* Responsive */
-    @media (max-width: 768px) {
-        .team {
-            flex-direction: column;
-        }
-
-        .team::before {
-            display: none;
-        }
-    }
-</style>
-
 @section('main')
     <div class="d-flex flex-column flex-column-fluid">
-
         <!--begin::Content-->
-        <div id="kt_app_content" class="app-content  flex-column-fluid ">
-
+        <div id="kt_app_content" class="app-content flex-column-fluid ">
 
             <!--begin::Content container-->
-            <div id="kt_app_content_container" class="app-container  container-fluid ">
-                <div class="card">
-                    <img src="{{ asset('assets/media/website/rtc.png') }}" alt="" width="1200px">
+            <div id="kt_app_content_container" class="app-container container-fluid ">
+                <div class="d-flex justify-content-center align-items-center bg-light">
+                    <div class="card shadow-lg rounded-2 p-5 text-center"
+                        style="max-width: 600px; width: 100%; font-size: 18px;">
+                        <div class="mb-4 text-muted pb-3 border-bottom display-7">
+                            Dept : <strong class="text-dark">{{ $data->name ?? '-' }}</strong>
+                        </div>
+
+                        <!-- Dynamic section based on filter -->
+                        @php
+                            use Carbon\Carbon;
+
+                            // Mapped fields based on the filter type
+                            $field = match ($filter) {
+                                'department' => 'manager',
+                                'section' => 'supervisor',
+                                'sub_section' => 'leader',
+                                default => null,
+                            };
+
+                            // Accessing related model
+                            $person = $data->{$field} ?? null;
+
+                            // Prepare the fallback values
+                            $name = $person?->name ?? '-';
+                            $grade = $person?->grade ?? '-';
+
+                            // Calculate age from birthday
+                            $age = $person && $person->birthday_date ? Carbon::parse($person->birthday_date)->age : '-';
+
+                            // Hardcoded or calculated LOS & LCP if available
+                            $los = $person ? '13' : '-';
+                            $lcp = $person ? '-' : '-';
+
+                            // Candidate plans
+                            $shortPerson = $data?->short;
+                            $midPerson = $data?->mid;
+                            $longPerson = $data?->long;
+
+                            $shortTerm = $shortPerson?->name ?? '-';
+                            $shortGrade = $shortPerson?->grade ?? '-';
+                            $shortAge =
+                                $shortPerson && $shortPerson->birthday_date
+                                    ? Carbon::parse($shortPerson->birthday_date)->age
+                                    : '-';
+
+                            $midTerm = $midPerson?->name ?? '-';
+                            $midGrade = $midPerson?->grade ?? '-';
+                            $midAge =
+                                $midPerson && $midPerson->birthday_date
+                                    ? Carbon::parse($midPerson->birthday_date)->age
+                                    : '-';
+
+                            $longTerm = $longPerson?->name ?? '-';
+                            $longGrade = $longPerson?->grade ?? '-';
+                            $longAge =
+                                $longPerson && $longPerson->birthday_date
+                                    ? Carbon::parse($longPerson->birthday_date)->age
+                                    : '-';
+                        @endphp
+
+                        <div class="mb-5 pt-2" style="margin-bottom: 50px !important">
+                            <strong class="fs-2">{{ $name }}</strong> - <strong
+                                class="fs-2">[{{ $grade }}]</strong>
+                        </div>
+
+                        <div class="text-start mb-5" style="font-size: 20px;">
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="fw-semibold text-muted">Age</span>
+                                <span class="fw-bold">{{ $age }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="fw-semibold text-muted">LOS</span>
+                                <span class="fw-bold">{{ $los }}</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-semibold text-muted">LCP</span>
+                                <span class="fw-bold">{{ $lcp }}</span>
+                            </div>
+                        </div>
+
+                        <div class="text-start" style="font-size: 20px;">
+                            <div class="fw-bold mb-4 fs-2">Candidates:</div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="fw-semibold text-muted">S/T</span>
+                                <span class="fw-bold fs-3">{{ $shortTerm }} ({{ $shortGrade }},
+                                    {{ $shortAge }})</span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-3">
+                                <span class="fw-semibold text-muted">M/T</span>
+                                <span class="fw-bold fs-3">{{ $midTerm }} ({{ $midGrade }},
+                                    {{ $midAge }})</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-semibold text-muted">L/T</span>
+                                <span class="fw-bold fs-3">{{ $longTerm }} ({{ $longGrade }},
+                                    {{ $longAge }})</span>
+                            </div>
+                            <div class="mt-4 text-muted" style="font-size: 16px;">
+                                (gol, usia, HAV)
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

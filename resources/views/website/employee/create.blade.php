@@ -5,6 +5,18 @@
 @section('breadcrumbs', $title ?? 'Employee')
 
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     @if (session()->has('error'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
@@ -109,25 +121,6 @@
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
-                            @if (auth()->user()->role === 'HRD')
-                                <div class="mb-3">
-                                    <div class="col-lg-12 mb-3">
-                                        <label class="fs-5 fw-bold form-label mb-2">
-                                            <label class="form-label">Department</label>
-                                        </label>
-                                        <select name="department_id" aria-label="Pilih Departemen" data-control="select2"
-                                            data-placeholder="Pilih departemen"
-                                            class="form-select form-select-lg  fw-semibold">
-                                            <option value="">Pilih Departemen</option>
-                                            @foreach ($departments as $department)
-                                                <option data-kt-flag="flags/afghanistan.svg" value="{{ $department->id }}">
-                                                    {{ $department->name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                </div>
-                            @endif
                             <div class="mb-3">
                                 <div class="col-lg-12 mb-3">
                                     <label class="fs-5 fw-bold form-label mb-2">
@@ -137,6 +130,7 @@
                                         data-placeholder="Select Position..."
                                         class="form-select form-select-lg fw-semibold">
                                         <option value="">Select Position</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="GM">General
                                             Manager
                                         </option>
@@ -146,8 +140,8 @@
                                         <option data-kt-flag="flags/albania.svg" value="Section Head">Section Head
                                         </option>
                                         <option data-kt-flag="flags/algeria.svg" value="Supervisor">Supervisor</option>
-                                        <option data-kt-flag="flags/algeria.svg" value="Act Leader">Act Leader</option>
-                                        <option data-kt-flag="flags/algeria.svg" value="Act JP">Act JP</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Leader">Leader/Act Leader</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="JP">JP/Act JP</option>
                                         <option data-kt-flag="flags/algeria.svg" value="Operator">Operator</option>
                                     </select>
                                 </div>
@@ -155,6 +149,9 @@
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
+                            @if (auth()->user()->role === 'HRD')
+                                <div id="additional-fields" class="mb-5"></div>
+                            @endif
                             <div class="mb-3">
                                 <label class="form-label">Grade</label>
                                 <input type="text" name="grade" class="form-control" value="{{ old('grade') }}">
@@ -203,6 +200,96 @@
 @endsection
 
 @push('scripts')
+    <script>
+        $(document).ready(function() {
+            // Inisialisasi Select2
+            $('[name="position"]').select2({
+                placeholder: "Select Position...",
+                allowClear: true
+            });
+
+            // Variabel dari server
+            window.subSections = {!! json_encode($subSections) !!};
+            window.sections = {!! json_encode($sections) !!};
+            window.departments = {!! json_encode($departments) !!};
+            window.divisions = {!! json_encode($divisions) !!};
+            window.plants = {!! json_encode($plants) !!};
+
+            const positionSelect = $('[name="position"]');
+            const additionalFieldsContainer = $('#additional-fields');
+
+            positionSelect.on('change', function() {
+                const selectedPosition = $(this).val();
+                additionalFieldsContainer.html(''); // Clear
+
+                let label = '';
+                let name = '';
+                let options = [];
+
+                switch (selectedPosition) {
+                    case 'Leader':
+                        label = 'Sub Section (as Leader)';
+                        name = 'sub_section_id';
+                        options = subSections;
+                        break;
+                    case 'JP':
+                    case 'Operator':
+                        label = 'Sub Section';
+                        name = 'sub_section_id';
+                        options = subSections;
+                        break;
+                    case 'Section Head':
+                        label = 'Section';
+                        name = 'section_id';
+                        options = sections;
+                        break;
+                    case 'Supervisor':
+                        label = 'Section';
+                        name = 'section_id';
+                        options = sections;
+                        break;
+                    case 'Manager':
+                        label = 'Department';
+                        name = 'department_id';
+                        options = departments;
+                        break;
+                    case 'Coordinator':
+                        label = 'Department';
+                        name = 'department_id';
+                        options = departments;
+                        break;
+                    case 'GM':
+                        label = 'Division';
+                        name = 'division_id';
+                        options = divisions;
+                        break;
+                    case 'Director':
+                        label = 'Plant';
+                        name = 'plant_id';
+                        options = plants;
+                        break;
+                    default:
+                        return;
+                }
+
+                const selectHtml = `
+                <label class="form-label">${label}</label>
+                <select name="${name}" class="form-select form-select-lg fw-semibold">
+                    <option value="">Select ${label}</option>
+                    ${options.map(option => `<option value="${option.id}">${option.name}</option>`).join('')}
+                </select>
+            `;
+
+                additionalFieldsContainer.html(selectHtml);
+            });
+
+            // Trigger if sudah ada isinya saat load
+            if (positionSelect.val()) {
+                positionSelect.trigger('change');
+            }
+        });
+    </script>
+
     <script>
         function addEducation() {
             let container = document.getElementById("education-container");

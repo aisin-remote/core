@@ -64,6 +64,7 @@
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
                             <th>Name</th>
+                            <th>Division</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -72,6 +73,7 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $department->name }}</td>
+                                <td>{{ $department->division->name ?? '-'  }}</td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $department->id }}">Delete</button>
@@ -84,6 +86,9 @@
                         @endforelse
                     </tbody>
                 </table>
+                <div class="d-flex justify-content-end mt-4">
+                    {{ $departments->links('vendor.pagination.bootstrap-5') }}
+                </div>
             </div>
         </div>
     </div>
@@ -128,6 +133,17 @@
                         <div class="mb-3">
                             <label for="name" class="form-label">Department Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="division_id" class="form-label">Division</label>
+                            <select name="division_id" id="division_id" class="form-select" required>
+                                <option value="">Pilih Division</option>
+                                @foreach ($division as $division)
+                                    <option value="{{ $division->id }}">{{ $division->name }}</option>
+                                @endforeach
+                            </select>
                         </div>
                     </div>
                     <div class="modal-footer">

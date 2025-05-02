@@ -5,7 +5,9 @@ use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HavController;
 use App\Http\Controllers\IdpController;
+use App\Http\Controllers\RtcController;
 use App\Http\Controllers\LoginController;
+use App\Http\Controllers\PlantController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
@@ -152,13 +154,10 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/detail', function () {
-            return view('website.rtc.detail');
-        })->name('rtc.detail');
-
-        Route::get('/{company?}', function () {
-            return view('website.rtc.index');
-        });
+        Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
+        Route::get('/list', [RtcController::class, 'list'])->name('rtc.list');
+        Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
+        Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
     });
 
     Route::prefix('idp')->group(function () {
@@ -169,6 +168,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
         Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
         Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
+        Route::get('/getData', [IdpController::class, 'getData'])->name('idp.getData');
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
         Route::get('/', function () {
             $employee = Employee::all(); // Ambil semua data karyawan
@@ -182,8 +182,15 @@ Route::middleware('auth')->group(function () {
         ->name('idp.exportTemplate');
 
     Route::prefix('master')->group(function () {
+        Route::get('/filter', [MasterController::class, 'filter'])->name('filter.master');
         Route::get('/employee/{company?}', [MasterController::class, 'employee'])->name('employee.master.index');
         Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
+
+        Route::prefix('plant')->group(function () {
+            Route::get('/', [PlantController::class, 'plant'])->name('plant.master.index');
+            Route::post('/store', [PlantController::class, 'Store'])->name('plant.master.store');
+            Route::delete('/delete/{id}', [PlantController::class, 'plantDestroy'])->name('plant.master.destroy');
+        });
 
         Route::prefix('department')->group(function () {
             Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
@@ -202,6 +209,12 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
             Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
+        });
+
+        Route::prefix('subSection')->group(function () {
+            Route::get('/', [MasterController::class, 'subSection'])->name('subSection.master.index');
+            Route::post('/store', [MasterController::class, 'subSectionStore'])->name('subSection.master.store');
+            Route::delete('/delete/{id}', [MasterController::class, 'subSectionDestroy'])->name('subSection.master.destroy');
         });
 
         Route::prefix('grade')->group(function () {

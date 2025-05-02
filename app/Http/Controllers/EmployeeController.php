@@ -2,70 +2,135 @@
 
 namespace App\Http\Controllers;
 
-use App\Imports\EmployeeImport;
-use App\Imports\MasterImports;
-use App\Models\Assessment;
-use App\Models\AstraTraining;
-use App\Models\Department;
-use App\Models\EducationalBackground;
-use App\Models\Employee;
-use App\Models\ExternalTraining;
-use App\Models\Idp;
-use App\Models\PerformanceAppraisalHistory;
-use App\Models\PromotionHistory;
-use App\Models\User;
-use App\Models\WorkingExperience;
 use Carbon\Carbon;
+use App\Models\Idp;
+use App\Models\User;
+use App\Models\Plant;
+use App\Models\Section;
+use App\Models\Division;
+use App\Models\Employee;
+use App\Models\Assessment;
+use App\Models\Department;
+use App\Models\SubSection;
 use Illuminate\Http\Request;
+use App\Models\AstraTraining;
+use App\Imports\MasterImports;
+use App\Imports\EmployeeImport;
+use App\Models\MutationHistory;
+use App\Models\ExternalTraining;
+use App\Models\PromotionHistory;
+use App\Models\WorkingExperience;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\EducationalBackground;
+use Illuminate\Support\Facades\Storage;
+use App\Models\PerformanceAppraisalHistory;
 
 class EmployeeController extends Controller
 {
 
-    public function getSubordinates($employeeId, $processedIds = [])
+    private function getSubordinatesFromStructure(Employee $employee)
     {
-        // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
-        if (in_array($employeeId, $processedIds)) {
-            return collect(); // Kembalikan collection kosong untuk menghindari loop
+        $subordinateIds = collect();
+    
+        if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
+            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
+    
+            $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
+            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
+            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
+            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+            $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id');
+    
+            $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
         }
-
-        // Tambahkan ID saat ini ke daftar yang sudah diproses
-        $processedIds[] = $employeeId;
-
-        // Ambil hanya bawahan langsung (bukan atasan)
-        $employees = Employee::where('supervisor_id', $employeeId)->get();
-        $subordinates = collect($employees);
-
-        // Lanjutkan rekursi untuk mendapatkan semua bawahan di level lebih dalam
-        foreach ($employees as $employee) {
-            $subordinates = $subordinates->merge($this->getSubordinates($employee->id, $processedIds));
+    
+        if ($subordinateIds->isEmpty()) {
+            return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
-
-        return $subordinates;
+    
+        return Employee::whereIn('id', $subordinateIds);
     }
+    
+    private function collectSubordinates($models, $field, $subordinateIds)
+    {
+        $ids = $models->pluck($field)->filter();
+        return $subordinateIds->merge($ids);
+    }
+    
+    private function collectOperators($subSections, $subordinateIds)
+    {
+        $subSectionIds = $subSections->pluck('id');
+        $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
+        return $subordinateIds->merge($operatorIds);
+    }       
 
     public function index($company = null)
     {
         $title = 'Employee';
         $user = auth()->user();
 
-        // Jika HRD, bisa melihat semua karyawan
         if ($user->role === 'HRD') {
-            $employees = Employee::with('departments')->when($company, fn($query) => $query->where('company_name', $company))->get();
+            $employees = Employee::with([
+                'subSection.section.department', 
+                'leadingSection.department', 
+                'leadingDepartment.division'
+            ])->when($company, fn($query) => $query->where('company_name', $company))->get();
         } else {
-            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
-            $employee = Employee::with('departments')->where('user_id', $user->id)->first();
+            $employee = Employee::with([
+                'subSection.section.department.division.plant',
+                'leadingSection.department.division.plant',
+                'leadingDepartment.division.plant'
+            ])->where('user_id', $user->id)->first();
+            
             if (!$employee) {
                 $employees = collect();
             } else {
-                $employees = $this->getSubordinates($employee->id)
-                    ->where('company_name', $employee->company_name);
+                $employees = $this->getSubordinatesFromStructure($employee)->get();
             }
         }
+
         return view('website.employee.index', compact('employees', 'title'));
     }
+
 
     public function status($id)
     {
@@ -88,7 +153,11 @@ class EmployeeController extends Controller
     {
         $title = 'Add Employee';
         $departments = Department::all();
-        return view('website.employee.create', compact('title', 'departments'));
+        $divisions = Division::all();
+        $plants = Plant::all();
+        $sections = Section::all();
+        $subSections = SubSection::all();
+        return view('website.employee.create', compact('title', 'departments', 'divisions', 'plants', 'sections', 'subSections'));
     }
 
     /**
@@ -98,11 +167,8 @@ class EmployeeController extends Controller
     {
         DB::beginTransaction();
 
-        // ambil department_id
-        $departmentId = auth()->user()->employee->departments->first()->id;
-
         try {
-            // Validasi data utama karyawan
+            // Validasi
             $validatedData = $request->validate([
                 'npk' => 'required|string|max:255',
                 'name' => 'required|string|max:255',
@@ -114,139 +180,142 @@ class EmployeeController extends Controller
                 'position' => 'required|string',
                 'grade' => 'required|string',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
-                'department_id' => 'nullable|exists:departments,id', // Pastikan department_id valid
 
-                // Validasi Pendidikan
+                // Struktur organisasi
+                'plant_id' => 'nullable|exists:plants,id',
+                'division_id' => 'nullable|exists:divisions,id',
+                'department_id' => 'nullable|exists:departments,id',
+                'section_id' => 'nullable|exists:sections,id',
+                'sub_section_id' => 'nullable|exists:sub_sections,id',
+
+                // Pendidikan
                 'level' => 'array',
                 'level.*' => 'nullable|string|max:255',
-                'institute' => 'array',
+                'major.*' => 'nullable|string|max:255',
                 'institute.*' => 'nullable|string|max:255',
-                'start_date' => 'array',
                 'start_date.*' => 'nullable|string|max:255',
-                'end_date' => 'array',
                 'end_date.*' => 'nullable|string|max:255',
 
-                // Validasi Pengalaman Kerja
-                'company' => 'array',
+                // Pengalaman kerja
                 'company.*' => 'nullable|string|max:255',
-                'work_position' => 'array',
                 'work_position.*' => 'nullable|string|max:255',
-                'work_start_date' => 'array',
                 'work_start_date.*' => 'nullable|string|max:255',
-                'work_end_date' => 'array',
                 'work_end_date.*' => 'nullable|string|max:255',
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
 
-        try {
-            // Simpan foto jika ada
             if ($request->hasFile('photo')) {
                 $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
             }
 
-            // Hitung working period (jumlah tahun)
-            $joinDate = Carbon::parse($validatedData['aisin_entry_date']);
-            $now = Carbon::now();
-            $validatedData['working_period'] = $joinDate->diffInYears($now);
+            $validatedData['working_period'] = Carbon::parse($validatedData['aisin_entry_date'])->diffInYears(Carbon::now());
 
-            // Ambil user yang sedang login
-            $loggedInUser = auth()->user();
-            $loggedInEmployee = Employee::where('user_id', $loggedInUser->id)->first();
-
-            // Cek apakah department_id diisi
-            if (!empty($validatedData['department_id'])) {
-                // Cari supervisor berdasarkan department dan position
-                $supervisor = Employee::whereHas('departments', function ($query) use ($validatedData) {
-                    $query->where('department_id', $validatedData['department_id']);
-                })
-                    ->where('position', 'LIKE', '%' . $validatedData['position'] . '%')
-                    ->first();
-
-                // Jika tidak ditemukan, kosongkan supervisor_id
-                $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
-            } else {
-                // Jika department_id tidak ada, gunakan mekanisme supervisor lama
-                $supervisor = $this->findSupervisor($validatedData['position'], $departmentId);
-
-                // Jika tidak ditemukan, gunakan user yang login sebagai atasan
-                if (!$supervisor && $loggedInEmployee) {
-                    $supervisor = $loggedInEmployee;
-                }
-
-                $validatedData['supervisor_id'] = $supervisor ? $supervisor->id : null;
+            // Supervisor (atasan langsung) berdasarkan hirarki
+            $supervisorId = null;
+            if ($validatedData['sub_section_id'] ?? false) {
+                $supervisorId = DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])->value('leader_id');
+            } elseif ($validatedData['section_id'] ?? false) {
+                $supervisorId = DB::table('sections')->where('id', $validatedData['section_id'])->value('supervisor_id');
+            } elseif ($validatedData['department_id'] ?? false) {
+                $supervisorId = DB::table('departments')->where('id', $validatedData['department_id'])->value('manager_id');
+            } elseif ($validatedData['division_id'] ?? false) {
+                $supervisorId = DB::table('divisions')->where('id', $validatedData['division_id'])->value('gm_id');
+            } elseif ($validatedData['plant_id'] ?? false) {
+                $supervisorId = DB::table('plants')->where('id', $validatedData['plant_id'])->value('director_id');
             }
 
-            // Simpan employee ke database
+            $validatedData['supervisor_id'] = $supervisorId;
+
+            // Buat karyawan
             $employee = Employee::create($validatedData);
 
-            // Simpan data pendidikan
-            if ($request->filled('level')) {
-                foreach ($request->level as $key => $level) {
-                    if (!empty($level)) {
-                        EducationalBackground::create([
-                            'employee_id' => $employee->id,
-                            'educational_level' => $level,
-                            'major' => $request->major[$key] ?? null,
-                            'institute' => $request->institute[$key] ?? null,
-                            'start_date' => $request->start_date[$key] ?? null,
-                            'end_date' => $request->end_date[$key] ?? null,
-                        ]);
-                    }
-                }
-            }
-
-            // Simpan data pengalaman kerja
-            if ($request->filled('company')) {
-                foreach ($request->company as $key => $company) {
-                    if (!empty($company)) {
-                        WorkingExperience::create([
-                            'employee_id' => $employee->id,
-                            'company' => $company,
-                            'position' => $request->position[$key] ?? null,
-                            'start_date' => $request->work_start_date[$key] ?? null,
-                            'end_date' => $request->work_end_date[$key] ?? null,
-                        ]);
-                    }
-                }
-            }
-
-            // Simpan department jika tidak kosong
-            if (!empty($validatedData['department_id'])) {
-                DB::table('employee_departments')->insert([
-                    'employee_id' => $employee->id,
-                    'department_id' => $validatedData['department_id']
-                ]);
-            } elseif ($supervisor) {
-                // Jika department_id tidak diisi, ambil dari supervisor
-                $departments = DB::table('employee_departments')
-                    ->where('employee_id', $supervisor->id)
-                    ->pluck('department_id');
-
-                foreach ($departments as $deptId) {
-                    DB::table('employee_departments')->insert([
+            // Simpan pendidikan
+            foreach ($request->level ?? [] as $i => $level) {
+                if ($level) {
+                    EducationalBackground::create([
                         'employee_id' => $employee->id,
-                        'department_id' => $deptId
+                        'educational_level' => $level,
+                        'major' => $request->major[$i] ?? null,
+                        'institute' => $request->institute[$i] ?? null,
+                        'start_date' => $request->start_date[$i] ?? null,
+                        'end_date' => $request->end_date[$i] ?? null,
                     ]);
                 }
             }
 
-            // **Tambahkan User jika Posisi Manager**
-            if (strtolower($validatedData['position']) === 'manager') {
+            // Simpan pengalaman kerja
+            foreach ($request->company ?? [] as $i => $company) {
+                if ($company) {
+                    WorkingExperience::create([
+                        'employee_id' => $employee->id,
+                        'company' => $company,
+                        'position' => $request->work_position[$i] ?? null,
+                        'start_date' => $request->work_start_date[$i] ?? null,
+                        'end_date' => $request->work_end_date[$i] ?? null,
+                    ]);
+                }
+            }
+
+            // Simpan ke struktur sesuai posisi
+            $pos = strtolower($validatedData['position']);
+
+            switch ($pos) {
+                case 'operator':
+                case 'jp':
+                    $employee->update([
+                        'sub_section_id' => $validatedData['sub_section_id'] ?? null,
+                    ]);
+                    break;
+
+                case 'leader':
+                    if ($validatedData['sub_section_id']) {
+                        DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
+                            ->update(['leader_id' => $employee->id]);
+                    }
+                    break;
+
+                case 'supervisor':
+                case 'section head':
+                    if ($validatedData['section_id']) {
+                        DB::table('sections')->where('id', $validatedData['section_id'])
+                            ->update(['supervisor_id' => $employee->id]);
+                    }
+                    break;
+
+                case 'manager':
+                case 'coordinator':
+                    if ($validatedData['department_id']) {
+                        DB::table('departments')->where('id', $validatedData['department_id'])
+                            ->update(['manager_id' => $employee->id]);
+                    }
+                    break;
+
+                case 'gm':
+                    if ($validatedData['division_id']) {
+                        DB::table('divisions')->where('id', $validatedData['division_id'])
+                            ->update(['gm_id' => $employee->id]);
+                    }
+                    break;
+
+                case 'director':
+                    if ($validatedData['plant_id']) {
+                        DB::table('plants')->where('id', $validatedData['plant_id'])
+                            ->update(['director_id' => $employee->id]);
+                    }
+                    break;
+            }
+
+            // Buat user jika manager
+            if ($pos === 'manager') {
                 $user = User::create([
                     'name' => $validatedData['name'],
-                    'email' => strtolower($validatedData['name']) . '@aiia.co.id', // Gunakan NPK sebagai email
-                    'password' => bcrypt('aiia'), // Atur password default
+                    'email' => strtolower($validatedData['name']) . '@aiia.co.id',
+                    'password' => bcrypt('aiia'),
                 ]);
-
-                // Hubungkan Employee dengan User
                 $employee->update(['user_id' => $user->id]);
             }
 
             DB::commit();
-
-            return redirect()->route('employee.index')->with('success', 'Karyawan berhasil ditambahkan!');
+            return redirect()->back()->with('success', 'Karyawan berhasil ditambahkan!');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -283,7 +352,9 @@ class EmployeeController extends Controller
         $promotionHistories = PromotionHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
-            })->get();
+            })
+            ->take(3)
+            ->get();
 
         $astraTrainings = AstraTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
@@ -293,7 +364,9 @@ class EmployeeController extends Controller
         $externalTrainings = ExternalTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
-            })->get();
+            })
+            ->take(3)
+            ->get();
 
         $educations = EducationalBackground::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
@@ -333,7 +406,9 @@ class EmployeeController extends Controller
             })
             ->get();
 
-        $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
+        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+                        ->where('npk', $npk)
+                        ->firstOrFail();
         $departments = Department::all();
         return view('website.employee.show', compact('employee', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps'));
     }
@@ -392,10 +467,17 @@ class EmployeeController extends Controller
                 $query->where('npk', $npk);
             })
             ->get();
-
-        $employee = Employee::with('departments')->where('npk', $npk)->firstOrFail();
+        $employee = Employee::with([
+                'subSection.section.department', 'leadingSection.department', 'leadingDepartment.division'
+            ])
+            ->where('npk', $npk)
+            ->firstOrFail();
         $departments = Department::all();
-        return view('website.employee.update', compact('employee', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps'));
+        $divisions = Division::all();
+        $plants = Plant::all();
+        $sections = Section::all();
+        $subSections = SubSection::all();
+        return view('website.employee.update', compact('employee', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
     }
 
     public function update(Request $request, $npk)
@@ -403,55 +485,170 @@ class EmployeeController extends Controller
         try {
             $employee = Employee::where('npk', $npk)->firstOrFail();
 
-            // Simpan data sebelum update untuk perbandingan
             $oldGrade = $employee->grade;
             $oldPosition = $employee->position;
 
-            try {
-                $validatedData = $request->validate([
-                    'npk' => 'required|string|max:255|unique:employees,npk,' . $employee->id,
-                    'name' => 'required|string|max:255',
-                    'birthday_date' => 'required|date',
-                    'gender' => 'required|in:Male,Female',
-                    'company_name' => 'required|string',
-                    'aisin_entry_date' => 'required|date',
-                    'working_period' => 'required',
-                    'company_group' => 'required|string',
-                    'position' => 'required|string',
-                    'grade' => 'required|string',
-                    'department_id' => 'required|exists:departments,id',
-                    'last_promote_date' => 'nullable|date',
-                    'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048'
-                ]);
-            } catch (\Illuminate\Validation\ValidationException $e) {
-                return redirect()->route('employee.master.index')->with('error', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
-            }
+            $validatedData = $request->validate([
+                'npk' => 'required|string|max:255|unique:employees,npk,' . $employee->id,
+                'name' => 'required|string|max:255',
+                'birthday_date' => 'required|date',
+                'gender' => 'required|in:Male,Female',
+                'company_name' => 'required|string',
+                'aisin_entry_date' => 'required|date',
+                'company_group' => 'required|string',
+                'position' => 'required|string',
+                'grade' => 'required|string',
+                'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
-            DB::transaction(function () use ($validatedData, $employee, $request, $oldGrade, $oldPosition) {
-                // Update data employee kecuali `photo`
-                $employee->update(collect($validatedData)->except(['photo', 'department_id'])->toArray());
+                'plant_id' => 'nullable|exists:plants,id',
+                'division_id' => 'nullable|exists:divisions,id',
+                'department_id' => 'nullable|exists:departments,id',
+                'section_id' => 'nullable|exists:sections,id',
+                'sub_section_id' => 'nullable|exists:sub_sections,id',
+            ]);
 
-                // Update department di tabel pivot `employee_departments`
-                $employee->departments()->sync([$validatedData['department_id']]);
-
-                // Cari Supervisor berdasarkan department yang sama
-                $supervisor = Employee::whereHas('departments', function ($query) use ($validatedData) {
-                    $query->where('departments.id', $validatedData['department_id']);
-                })->where('position', 'Supervisor')->first();
-
-                // Update `supervisor_id`
-                $employee->update(['supervisor_id' => $supervisor ? $supervisor->id : null]);
-
-                // Jika ada file foto baru, hapus yang lama lalu simpan yang baru
+            DB::transaction(function () use ($request, $validatedData, $employee, $oldGrade, $oldPosition) {
                 if ($request->hasFile('photo')) {
                     if ($employee->photo) {
                         Storage::delete('public/' . $employee->photo);
                     }
-                    $newPhotoPath = $request->file('photo')->store('employee_photos', 'public');
-                    $employee->update(['photo' => $newPhotoPath]);
+                    $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
                 }
 
-                // Cek apakah ada perubahan pada grade atau position
+                $validatedData['working_period'] = Carbon::parse($validatedData['aisin_entry_date'])->diffInYears(Carbon::now());
+
+                $supervisorId = null;
+                if ($validatedData['sub_section_id'] ?? false) {
+                    $supervisorId = DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])->value('leader_id');
+                } elseif ($validatedData['section_id'] ?? false) {
+                    $supervisorId = DB::table('sections')->where('id', $validatedData['section_id'])->value('supervisor_id');
+                } elseif ($validatedData['department_id'] ?? false) {
+                    $supervisorId = DB::table('departments')->where('id', $validatedData['department_id'])->value('manager_id');
+                } elseif ($validatedData['division_id'] ?? false) {
+                    $supervisorId = DB::table('divisions')->where('id', $validatedData['division_id'])->value('gm_id');
+                } elseif ($validatedData['plant_id'] ?? false) {
+                    $supervisorId = DB::table('plants')->where('id', $validatedData['plant_id'])->value('director_id');
+                }
+
+                $validatedData['supervisor_id'] = $supervisorId;
+
+                $employee->update($validatedData);
+
+                $positionAliasMap = [
+                    'section head' => 'supervisor',
+                    'coordinator' => 'manager',
+                ];
+                
+                $promotionPaths = [
+                    'operator' => ['leader' => ['clear' => 'sub_section_id']],
+                    'jp' => ['leader' => ['clear' => 'sub_section_id']],
+                    'leader' => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
+                    'supervisor' => ['manager' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id']],
+                    'manager' => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
+                    'gm' => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
+                ];
+                
+                $normalizePosition = function ($position) use ($positionAliasMap) {
+                    $lower = strtolower($position);
+                    return $positionAliasMap[$lower] ?? $lower;
+                };
+                
+                $old = $normalizePosition($oldPosition);
+                $new = $normalizePosition($validatedData['position']);
+                
+                if (isset($promotionPaths[$old][$new])) {
+                    $action = $promotionPaths[$old][$new];
+                
+                    if (isset($action['clear'])) {
+                        $employee->update([$action['clear'] => null]);
+                    } elseif (isset($action['table'], $action['column'], $action['key'])) {
+                        $refId = DB::table($action['table'])->where($action['column'], $employee->id)->first();
+                        if ($refId) {
+                            DB::table($action['table'])->where('id', $refId->id)->update([$action['column'] => null]);
+                        }
+                    }
+                }                
+
+                // Update struktur sesuai jabatan baru
+                $pos = strtolower($validatedData['position']);
+
+                switch ($pos) {
+                    case 'operator':
+                    case 'jp':
+                        $employee->update([
+                            'sub_section_id' => $validatedData['sub_section_id'] ?? null,
+                        ]);
+                        break;
+
+                    case 'leader':
+                        if ($validatedData['sub_section_id']) {
+                            DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
+                                ->update(['leader_id' => $employee->id]);
+                        }
+                        break;
+
+                    case 'supervisor':
+                    case 'section head':
+                        if ($validatedData['section_id']) {
+                            DB::table('sections')->where('id', $validatedData['section_id'])
+                                ->update(['supervisor_id' => $employee->id]);
+                        }
+                        break;
+
+                    case 'manager':
+                    case 'coordinator':
+                        if ($validatedData['department_id']) {
+                            DB::table('departments')->where('id', $validatedData['department_id'])
+                                ->update(['manager_id' => $employee->id]);
+                        }
+                        break;
+
+                    case 'gm':
+                        if ($validatedData['division_id']) {
+                            DB::table('divisions')->where('id', $validatedData['division_id'])
+                                ->update(['gm_id' => $employee->id]);
+                        }
+                        break;
+
+                    case 'director':
+                        if ($validatedData['plant_id']) {
+                            DB::table('plants')->where('id', $validatedData['plant_id'])
+                                ->update(['director_id' => $employee->id]);
+                        }
+                        break;
+                }
+
+                $positionFieldMap = [
+                    'leader' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id'],
+                    'supervisor' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id'],
+                    'manager' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id'],
+                    'gm' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id'],
+                    'director' => ['table' => 'plants', 'column' => 'director_id', 'key' => 'plant_id'],
+                ];
+                
+                $oldPositionLower = strtolower($oldPosition);
+                $newPositionLower = strtolower($validatedData['position']);
+
+                
+                // Cek jika posisi tidak berubah tapi tempat berubah (mutasi struktural lateral)
+                if (
+                    isset($positionFieldMap[$oldPositionLower]) &&
+                    $oldPositionLower === $newPositionLower
+                ) {
+                    $config = $positionFieldMap[$oldPositionLower];
+                
+                    $oldRefId = DB::table($config['table'])->where($config['column'], $employee->id)->first(); // lokasi sebelum update
+                    $newRefId = $validatedData[$config['key']] ?? null; // lokasi setelah update
+
+                    if ($oldRefId && $oldRefId->id != (int) $newRefId) {
+                        DB::table($config['table'])->where('id', $oldRefId->id)->update([$config['column'] => null]);
+
+                        // Simpan riwayat mutasi lateral
+                        $this->logLateralMutation($employee->id, $oldPositionLower, $oldRefId->id, $newRefId, $config['key']);
+                    }
+                }
+
+                // Simpan riwayat promosi jika ada perubahan
                 if ($oldGrade !== $validatedData['grade'] || $oldPosition !== $validatedData['position']) {
                     PromotionHistory::create([
                         'employee_id' => $employee->id,
@@ -464,14 +661,73 @@ class EmployeeController extends Controller
                 }
             });
 
-            return redirect()->route('employee.master.index')->with('success', 'Data karyawan berhasil diperbarui!');
+            return redirect()->back()->with('success', 'Data karyawan berhasil diperbarui!');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return redirect()->route('employee.master.index')->with('error', 'Karyawan tidak ditemukan.');
+            return redirect()->back()->with('error', 'Karyawan tidak ditemukan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
-            return redirect()->route('employee.master.index')->with('error', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
         }
+    }
+
+    private function logLateralMutation(int $employeeId, string $position, int $fromId, int $toId, string $structureKey)
+    {
+        $lastMutation = MutationHistory::where('employee_id', $employeeId)
+            ->where('position', $position)
+            ->where('to_id', $fromId)
+            ->orderByDesc('mutation_date')
+            ->first();
+
+        $startDate = $lastMutation->mutation_date ?? $this->getApproximateEntryDate($employeeId, $position);
+        $durationMonths = Carbon::parse($startDate)->diffInMonths(now());
+        $durationText = $this->formatDuration($durationMonths);
+        try {
+            DB::beginTransaction();
+            // dd($durationText);
+
+            MutationHistory::create([
+                'employee_id' => $employeeId,
+                'position' => $position,
+                'structure_type' => $this->getStructureTypeFromKey($structureKey),
+                'from_id' => $fromId,
+                'to_id' => $toId,
+                'mutation_date' => now(),
+                'duration_in_previous_structure' => $durationMonths,
+                'duration_text' => $durationText,
+            ]);
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+            dd('Error saat logLateralMutation:', $e->getMessage(), $e->getTraceAsString());
+        }
+    }
+    private function getApproximateEntryDate(int $employeeId, string $position)
+    {
+        return Employee::where('id', $employeeId)->value('aisin_entry_date');
+    }
+
+    private function formatDuration($months)
+    {
+        $years = floor($months / 12);
+        $remainingMonths = $months % 12;
+
+        $yearText = $years > 0 ? "$years tahun" : '';
+        $monthText = $remainingMonths > 0 ? "$remainingMonths bulan" : '';
+
+        return trim("$yearText $monthText");
+    }
+
+    private function getStructureTypeFromKey(string $key): string
+    {
+        return match ($key) {
+            'sub_section_id' => 'sub_section',
+            'section_id' => 'section',
+            'department_id' => 'department',
+            'division_id' => 'division',
+            'plant_id' => 'plant',
+            default => 'unknown',
+        };
     }
 
     public function destroy($npk)
