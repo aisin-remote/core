@@ -41,8 +41,7 @@
                                         @for ($i = 1; $i <= 5; $i++)
                                             <div class="form-check">
                                                 <input class="form-check-input update-score" type="radio"
-                                                    name="scores[{{ $alc->id }}]"
-                                                    id="update_score_{{ $alc->id }}_{{ $i }}"
+                                                    name="scores[{{ $alc->id }}]" id="update_score_{{ $alc->id }}_{{ $i }}"
                                                     value="{{ $i }}" required>
                                                 <label class="form-check-label"
                                                     for="update_score_{{ $alc->id }}_{{ $i }}">{{ $i }}</label>
@@ -75,22 +74,22 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const updateForm = document.getElementById("updateAssessmentForm");
 
         // Event listener untuk form submit
-        updateForm.addEventListener("submit", function(event) {
+        updateForm.addEventListener("submit", function (event) {
             event.preventDefault(); // Mencegah halaman reload
 
             let formData = new FormData(updateForm); // Ambil semua data form
 
             fetch("/assessment/update", {
-                    method: "POST",
-                    body: formData,
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                })
+                method: "POST",
+                body: formData,
+                headers: {
+                    'Accept': 'application/json'
+                }
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.message) { // Jika update berhasil
@@ -100,11 +99,11 @@
                             icon: "success",
                             confirmButtonText: "OK"
                         }).then(() => {
-                            $('#updateAssessmentModal').modal('hide'); // Tutup modal
-                            setTimeout(() => {
-                                $('#detailAssessmentModal').modal(
-                                    'show'); // Buka modal History setelah update
-                            }, 500);
+                            $("#updateAssessmentModal").modal('hide');
+                            $("#detailAssessmentModal").modal('hide');
+
+                            $(".modal-backdrop").remove();
+                            $("body").removeClass("modal-open");
                         });
                     } else {
                         throw new Error("Gagal memperbarui assessment. Silakan coba lagi.");
@@ -123,7 +122,7 @@
 
         // Load data ke modal saat tombol update diklik
         document.querySelectorAll(".updateAssessment").forEach(button => {
-            button.addEventListener("click", function() {
+            button.addEventListener("click", function () {
                 const id = this.dataset.id;
                 const employeeId = this.dataset.employeeId;
                 const date = this.dataset.date;
@@ -186,15 +185,15 @@
             });
         });
 
-        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "") {
+        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "") {
             let container = document.getElementById(containerId);
-            if (!container) {
-                console.error(`Container '${containerId}' tidak ditemukan.`);
-                return;
-            }
-
             let templateCard = document.createElement("div");
             templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
+
+            // Tambahkan ID sesuai ALC
+            if (selectedAlc) {
+                templateCard.setAttribute("id", `assessment_card_${selectedAlc}`);
+            }
 
             templateCard.innerHTML = `
             <div class="mb-3">
@@ -212,27 +211,19 @@
                 <label>Description</label>
                 <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
             </div>
-            <div class="d-flex justify-content-end button-group">
-                <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
-            </div>
         `;
 
             let selectElement = templateCard.querySelector(".alc-dropdown");
-            selectElement.addEventListener("change", function() {
+            selectElement.addEventListener("change", function () {
                 updateDescriptionName(selectElement, type);
-            });
-
-            let buttonGroup = templateCard.querySelector(".button-group");
-
-            templateCard.querySelector(".add-assessment").addEventListener("click", function() {
-                addAssessmentCard(type, containerId);
-                updateRemoveButtons(container);
+                updateDropdownOptions();
             });
 
             container.appendChild(templateCard);
-            updateRemoveButtons(container);
+            updateDropdownOptions();
         }
 
+        // Fungsi untuk memperbarui nama deskripsi berdasarkan ALC yang dipilih
         function updateDescriptionName(selectElement, type) {
             let card = selectElement.closest(".assessment-card");
             let textarea = card.querySelector(`.${type}-textarea`);
@@ -244,6 +235,7 @@
                 textarea.removeAttribute("name");
             }
         }
+
 
         function updateRemoveButtons(container) {
             let cards = container.querySelectorAll(".assessment-card");
@@ -261,7 +253,7 @@
                             "me-2");
                         removeButton.textContent = "Hapus";
 
-                        removeButton.addEventListener("click", function() {
+                        removeButton.addEventListener("click", function () {
                             card.remove();
                             updateRemoveButtons(container);
                         });
@@ -272,31 +264,41 @@
             }
         }
 
-        $(document).on("change", "input[name^='update_score_']", function() {
+        $(document).on("change", ".update-score", function () {
             const radio = $(this);
-            const idParts = radio.attr("id").split("_"); // e.g. update_score_1_2
+            const idParts = radio.attr("id").split("_"); // e.g. update_score_3_4
             const alcId = idParts[2];
             const score = parseInt(idParts[3]);
 
-            const card = $(`#assessment_card_${alcId}`);
+            const newType = score >= 3 ? "strength" : "weakness";
+            const oldType = score >= 3 ? "weakness" : "strength";
+
+            let card = $(`#assessment_card_${alcId}`);
+            const newWrapper = $(`#update-${newType}s-wrapper`);
+
+            if (card.length === 0) {
+                // Card belum dibuat → buat ke wrapper yang sesuai
+                addAssessmentCard(newType, `update-${newType}s-wrapper`, alcId);
+                card = $(`#assessment_card_${alcId}`);
+            } else {
+                // Card sudah ada → pindahkan dari wrapper lama ke wrapper baru
+                const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`).detach();
+                newWrapper.append(detachedCard);
+                card = detachedCard;
+            }
+
+            // Update name attributes agar sesuai dengan posisi baru
             const textarea = card.find("textarea");
             const select = card.find("select");
 
-            const type = score >= 3 ? "strength" : "weakness"; // Tentukan kategori berdasarkan score
-            const targetWrapper = $(`#update-${type}s-wrapper`);
+            textarea.attr("name", `${newType}[${alcId}]`);
+            select.attr("name", `${newType}_alc_ids[]`);
 
-            // Update textarea name untuk kategori yang sesuai
-            textarea.attr("name", `${type}[${alcId}]`);
-
-            // Pindahkan card ke section strength atau weakness
-            card.appendTo(targetWrapper);
-
-            // Ubah class agar sesuai dengan kategori
-            card.removeClass("strength-card weakness-card").addClass(`${type}-card`);
-
-            // Update dropdown ALC sesuai kategori (strength/weakness)
-            updateDropdownOptions(card, type);
+            // Update class supaya style sesuai
+            card.removeClass("strength-card weakness-card").addClass(`${newType}-card`);
         });
+
+
 
         function updateDropdownOptions(card, type) {
             // Memastikan bahwa dropdown ALC hanya bisa memilih ALC yang sesuai dengan kategori strength/weakness
@@ -304,7 +306,7 @@
             const alcId = select.val();
 
             // Contoh: Jika ALC untuk strength, dropdown hanya menampilkan ALC yang relevan
-            select.find("option").each(function() {
+            select.find("option").each(function () {
                 const option = $(this);
                 if (type === "strength" && option.val() !== alcId) {
                     option.prop("disabled", false); // ALC yang boleh dipilih

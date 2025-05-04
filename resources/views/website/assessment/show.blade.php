@@ -45,7 +45,7 @@
                                         @if (!empty($assessment->upload))
                                             <a class="btn btn-primary btn-sm" target="_blank"
                                                 href="{{ asset('storage/' . $assessment->upload) }}">
-                                                View PDF
+                                                View
                                             </a>
                                         @else
                                             <span class="text-muted">No PDF Available</span>

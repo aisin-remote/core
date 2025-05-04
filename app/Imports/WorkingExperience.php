@@ -26,7 +26,8 @@ class WorkingExperience implements ToCollection, WithHeadingRow
                 'employee_id'   => $employee->id,
                 'company'       => $row['company'],
                 'position' => $row['position_name'],
-                'description'   => $row['description'],
+                // 'description'   => $row['description'],
+                'department' => $row['department_name'],
                 'start_date'    => $this->convertDate($row['start_date']),
                 'end_date'      => $this->convertDate($row['end_date']),
             ]);

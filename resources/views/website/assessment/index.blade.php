@@ -84,33 +84,33 @@
                             </thead>
                             <tbody>
                                 @foreach ($assessments as $index => $assessment)
-                                    <tr data-position="{{ $assessment->employee->position ?? '-' }}">
-                                        <td>{{ $assessments->firstItem() + $index }}</td>
-                                        <td>{{ $assessment->employee->name ?? '-' }}</td>
-                                        <td>
-                                            @if ($assessment->employee->department?->isNotEmpty())
-                                                {{ $assessment->employee->departments->pluck('name')->join(', ') }}
-                                            @else
-                                                Tidak Ada Departemen
-                                            @endif
-                                        </td>
-                                        <td>{{ $assessment->employee->position ?? '-' }}</td>
-                                        <td>{{ $assessment->employee->npk ?? '-' }}</td>
-                                        <td>
-                                            @php
-                                                $birthdate = $assessment->employee->birthday_date;
-                                                $age = $birthdate ? \Carbon\Carbon::parse($birthdate)->age : null;
-                                            @endphp
-                                            {{ $age ?? '-' }}
-                                        </td>
-                                        <td class="text-center">
-                                            <a class="btn btn-info btn-sm history-btn"
-                                                data-employee-id="{{ $assessment->employee->id }}" data-bs-toggle="modal"
-                                                data-bs-target="#detailAssessmentModal">
-                                                History
-                                            </a>
-                                        </td>
-                                    </tr>
+                                                            <tr data-position="{{ $assessment->employee->position ?? '-' }}">
+                                                                <td>{{ $assessments->firstItem() + $index }}</td>
+                                                                <td>{{ $assessment->employee->name ?? '-' }}</td>
+                                                                <td>
+                                                                    @if ($assessment->employee->department)
+                                                                        {{ $assessment->employee->department->name }}
+                                                                    @else
+                                                                        Tidak Ada Departemen
+                                                                    @endif
+                                                                </td>
+                                                                <td>{{ $assessment->employee->position ?? '-' }}</td>
+                                                                <td>{{ $assessment->employee->npk ?? '-' }}</td>
+                                                                <td>
+                                                                    @php
+                                                                        $birthdate = $assessment->employee->birthday_date;
+                                                                        $age = $birthdate ? \Carbon\Carbon::parse($birthdate)->age : null;
+                                                                    @endphp
+                                                                    {{ $age ?? '-' }}
+                                                                </td>
+                                                                <td class="text-center">
+                                                                    <a class="btn btn-info btn-sm history-btn"
+                                                                        data-employee-id="{{ $assessment->employee->id }}" data-bs-toggle="modal"
+                                                                        data-bs-target="#detailAssessmentModal">
+                                                                        History
+                                                                    </a>
+                                                                </td>
+                                                            </tr>
                                 @endforeach
                             </tbody>
 
@@ -128,7 +128,7 @@
         @include('website.assessment.modal')
         @include('website.assessment.modaldetail')
         @include('website.assessment.show')
-    @endsection
+@endsection
 
     @push('custom-css')
         <link rel="stylesheet" href="{{ asset('assets/plugins/custom/select2/css/select2.min.css') }}">
@@ -174,12 +174,12 @@
         <script src="{{ asset('assets/plugins/custom/select2/js/select2.min.js') }}"></script>
 
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
+            document.addEventListener("DOMContentLoaded", function () {
                 const tabs = document.querySelectorAll(".filter-tab");
                 const rows = document.querySelectorAll("#kt_table_users tbody tr");
 
                 tabs.forEach(tab => {
-                    tab.addEventListener("click", function(e) {
+                    tab.addEventListener("click", function (e) {
                         e.preventDefault();
 
                         // Hapus class active dari semua tab
@@ -201,8 +201,8 @@
                     });
                 });
             });
-            $(document).ready(function() {
-                $(document).on("click", ".history-btn", function(event) {
+            $(document).ready(function () {
+                $(document).on("click", ".history-btn", function (event) {
                     event.preventDefault();
 
                     let employeeId = $(this).data("employee-id");
@@ -216,7 +216,7 @@
                     $.ajax({
                         url: `/assessment/history/${employeeId}`,
                         type: "GET",
-                        success: function(response) {
+                        success: function (response) {
                             console.log("Response received:", response); // Debug respons
 
                             if (!response.employee) {
@@ -235,60 +235,61 @@
                             if (response.assessments.length > 0) {
                                 response.assessments.forEach((assessment, index) => {
                                     let row = `
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td class="text-center">${assessment.date}</td>
-                            <td class="text-center">${assessment.description}</td>
-                            <td class="text-center">
-                                <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
-                                    Detail
-                                </a>
-                                ${assessment.upload ? `
-                                                                                                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                                                                                                            View PDF
-                                                                                                                                                                                        </a>`
-                                    : '<span class="text-muted">No PDF Available</span>'
-                                }
-                                <button type="button" class="btn btn-warning btn-sm updateAssessment"
-                                data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
-                                data-id="${assessment.id}"
-                                data-employee-id="${assessment.employee_id}"
-                                data-date="${assessment.date}"
-                                data-description="${assessment.description}"
-                                data-upload="${assessment.upload}"
-                                data-scores='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.score)))}'
-                                data-alcs='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
-                                data-alc_name='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
-                                data-strengths='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
-                                data-weaknesses='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'>
-                                Edit
-                            </button>
+                                                                            <tr>
+                                                                                <td class="text-center">${index + 1}</td>
+                                                                                <td class="text-center">${assessment.date}</td>
+                                                                                <td class="text-center">${assessment.description}</td>
+                                                                                <td class="text-center">
+                                                                                    <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
+                                                                                        Detail
+                                                                                    </a>
+                                                                                    ${assessment.upload ? `
+                                                                                                                                                                                                                                            <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                                                                                                                                                                                View PDF
+                                                                                                                                                                                                                                            </a>`
+                                            : '<span class="text-muted">No PDF Available</span>'
+                                        }
+                                                                                    <button type="button" class="btn btn-warning btn-sm updateAssessment"
+                                                                                    data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
+                                                                                    data-id="${assessment.id}"
+                                                                                    data-employee-id="${assessment.employee_id}"
+                                                                                    data-date="${assessment.date}"
+                                                                                    data-description="${assessment.description}"
+                                                                                    data-upload="${assessment.upload}"
+                                                                                    data-scores='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.score)))}'
+                                                                                    data-alcs='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
+                                                                                    data-alc_name='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
+                                                                                   data-strengths='${encodeURIComponent(JSON.stringify(Object.fromEntries(assessment.details.map(d => [d.alc_id, d.strength || ""]))))}'
+                                                    data-weaknesses='${encodeURIComponent(JSON.stringify(Object.fromEntries(assessment.details.map(d => [d.alc_id, d.weakness || ""]))))}'
+                                                    >
+                                                                                    Edit
+                                                                                </button>
 
-                                <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                    data-id="${assessment.id}">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                                                                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                                                                        data-id="${assessment.id}">Delete</button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        `;
                                     $("#kt_table_assessments tbody").append(row);
                                 });
                             } else {
                                 $("#kt_table_assessments tbody").append(`
-                    <tr>
-                        <td colspan="3" class="text-center text-muted">No assessment found</td>
-                    </tr>
-                `);
+                                                                        <tr>
+                                                                            <td colspan="3" class="text-center text-muted">No assessment found</td>
+                                                                        </tr>
+                                                                    `);
                             }
 
                             // Tampilkan modal setelah data dimuat
                             $("#detailAssessmentModal").modal("show");
                         },
-                        error: function(error) {
+                        error: function (error) {
                             console.error("Error fetching data:", error);
                             alert("Failed to load assessment data!");
                         }
                     });
                 });
-                $(document).on("click", ".updateAssessment", function() {
+                $(document).on("click", ".updateAssessment", function () {
                     let assessmentId = $(this).data("id");
                     let employeeId = $(this).data("employee-id");
                     let date = $(this).data("date");
@@ -343,13 +344,11 @@
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];
                         let alcName = alcNames[index];
-                        let description = (score >= 3) ? strengths[alcId] : weaknesses[
-                            alcId]; // Ambil deskripsi berdasarkan skor
+                        let description = (score >= 3) ? strengths[alcId] : weaknesses[alcId]; // Ambil deskripsi berdasarkan skor
 
                         // Tentukan apakah ALC ini masuk ke strength atau weakness
                         let type = score >= 3 ? "strength" : "weakness";
-                        let containerId = type === "strength" ? "update-strengths-wrapper" :
-                            "update-weaknesses-wrapper";
+                        let containerId = type === "strength" ? "update-strengths-wrapper" : "update-weaknesses-wrapper";
 
                         // Tambahkan ALC sesuai dengan kategori yang sesuai
                         addAssessmentCard(type, containerId, alcId, description, alcName);
@@ -375,37 +374,42 @@
                     updateDropdownOptions();
                 }
 
-                function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "") {
+                function addAssessmentCard(type, containerId, alcId = "", descriptions = "", alcName = "") {
                     let container = document.getElementById(containerId);
                     let templateCard = document.createElement("div");
                     templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
+                    // Tentukan ID untuk card berdasarkan ALC
+                    if (alcId) {
+                        templateCard.setAttribute("id", `assessment_card_${alcId}`);
+                    }
+
                     templateCard.innerHTML = `
-        <div class="mb-3">
-            <label>ALC</label>
-            <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
-                <option value="">Pilih ALC</option>
-                @foreach ($alcs as $alc)
-                    <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
-                        {{ $alc->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="mb-3">
-            <label>Description</label>
-            <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
-        </div>
-    `;
+                                <div class="mb-3">
+                                    <label>ALC</label>
+                                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                                        <option value="">Pilih ALC</option>
+                                        @foreach ($alcs as $alc)
+                                            <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
+                                                {{ $alc->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label>Description</label>
+                                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${descriptions}</textarea>
+                                </div>
+                            `;
 
                     let selectElement = templateCard.querySelector(".alc-dropdown");
-                    selectElement.addEventListener("change", function() {
+                    selectElement.addEventListener("change", function () {
                         updateDescriptionName(selectElement, type);
                         updateDropdownOptions();
                     });
 
                     container.appendChild(templateCard);
-                    updateDropdownOptions(); // Pastikan dropdown diperbarui setelah menambahkan kartu
+                    updateDropdownOptions();
                 }
 
                 // Fungsi untuk memperbarui nama deskripsi berdasarkan ALC yang dipilih
@@ -422,43 +426,47 @@
                 }
 
                 // Fungsi untuk menangani perubahan skor
-                $(document).on("change", "input[name^='update_score_']", function() {
+                $(document).on("change", "input[name^='update_score_']", function () {
                     const radio = $(this);
                     const idParts = radio.attr("id").split("_"); // e.g. update_score_1_2
                     const alcId = idParts[2];
                     const score = parseInt(idParts[3]);
 
-                    const card = $(`#assessment_card_${alcId}`);
+                    // Tentukan kategori berdasarkan skor (strength jika >= 3, weakness jika < 3)
+                    const newType = score >= 3 ? "strength" : "weakness";
+                    const oldType = score >= 3 ? "weakness" : "strength";
+
+                    // Dapatkan card yang sesuai
+                    let card = $(`#assessment_card_${alcId}`);
+                    const newWrapper = $(`#update-${newType}s-wrapper`);
+                    const oldWrapper = $(`#update-${oldType}s-wrapper`);
+
+                    // Jika card belum ada, buat card baru
+                    if (card.length === 0) {
+                        addAssessmentCard(newType, `update-${newType}s-wrapper`, alcId);
+                        card = $(`#assessment_card_${alcId}`);
+                    } else {
+                        // Pindahkan card dari wrapper lama ke wrapper baru
+                        const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`).detach();
+                        newWrapper.append(detachedCard);
+                        card = detachedCard;
+                    }
+
+                    // Update nama untuk textarea dan select agar sesuai dengan kategori
                     const textarea = card.find("textarea");
                     const select = card.find("select");
 
-                    const type = score >= 3 ? "strength" : "weakness";
-                    const targetWrapper = $(`#update-${type}s-wrapper`);
+                    textarea.attr("name", `${newType}[${alcId}]`);
+                    select.attr("name", `${newType}_alc_ids[]`);
 
-                    // Update textarea name
-                    textarea.attr("name", `${type}[${alcId}]`);
+                    // Update class card untuk memastikan gaya sesuai kategori
+                    card.removeClass("strength-card weakness-card").addClass(`${newType}-card`);
 
-                    // Pindahkan card ke section strength atau weakness
-                    card.appendTo(targetWrapper);
-
-                    // Ubah class agar sesuai
-                    card.removeClass("strength-card weakness-card").addClass(`${type}-card`);
-
-                    updateDropdownOptions(); // Perbarui dropdown setelah memindahkan kartu
+                    // Memperbarui dropdown options agar tidak ada ALC yang sama di kategori lain
+                    updateDropdownOptions();
                 });
 
-                function updateDescriptionName(selectElement, type) {
-                    let card = selectElement.closest(".assessment-card");
-                    let textarea = card.querySelector(`.${type}-textarea`);
-                    let alcId = selectElement.value;
-
-                    if (alcId) {
-                        textarea.setAttribute("name", `${type}[${alcId}]`);
-                    } else {
-                        textarea.removeAttribute("name");
-                    }
-                }
-
+                // Fungsi untuk memperbarui dropdown ALC agar tidak ada pilihan yang tumpang tindih
                 function updateDropdownOptions() {
                     let selectedStrengths = new Set();
                     let selectedWeaknesses = new Set();
@@ -477,8 +485,7 @@
                     document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
                         let currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
-                            option.hidden = (selectedWeaknesses.has(option.value) || selectedStrengths
-                                .has(option.value)) && option.value !== currentValue;
+                            option.hidden = (selectedWeaknesses.has(option.value) || selectedStrengths.has(option.value)) && option.value !== currentValue;
                         });
                     });
 
@@ -486,8 +493,7 @@
                     document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
                         let currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
-                            option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
-                                .has(option.value)) && option.value !== currentValue;
+                            option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses.has(option.value)) && option.value !== currentValue;
                         });
                     });
                 }
@@ -498,8 +504,9 @@
 
 
 
+
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
-                $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                $("#updateAssessmentModal").on("hidden.bs.modal", function () {
                     setTimeout(() => {
                         $(".modal-backdrop").remove(); // Hapus overlay modal update
                         $("body").removeClass("modal-open");
@@ -513,7 +520,7 @@
 
 
                 // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
-                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+                $("#detailAssessmentModal").on("hidden.bs.modal", function () {
                     setTimeout(() => {
                         if (!$("#updateAssessmentModal").hasClass("show")) {
                             $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
@@ -523,7 +530,7 @@
                 });
 
                 // ===== CEGAH OVERLAY BERLAPIS =====
-                $(".modal").on("shown.bs.modal", function() {
+                $(".modal").on("shown.bs.modal", function () {
                     $(".modal-backdrop").last().css("z-index",
                         1050); // Atur overlay agar tidak bertumpuk terlalu tebal
                 });
@@ -551,7 +558,7 @@
                     var searchValue = searchInput.val().toLowerCase();
                     var isMatchFound = false;
 
-                    rows.each(function() {
+                    rows.each(function () {
                         var row = $(this);
                         var cells = row.find("td");
 
@@ -579,7 +586,7 @@
 
                 }
 
-                searchInput.on("keyup", function() {
+                searchInput.on("keyup", function () {
                     filterTable();
                 });
 
@@ -650,14 +657,14 @@
                     });
                 }
 
-                filterItems.on("click", function(event) {
+                filterItems.on("click", function (event) {
                     event.preventDefault();
                     var selectedDepartment = $(this).data("department").toLowerCase();
                     console.log("🔍 Filter dipilih: ", selectedDepartment);
                     filterTable(selectedDepartment);
                 });
 
-                $('#addAssessmentModal').on('show.bs.modal', function(event) {
+                $('#addAssessmentModal').on('show.bs.modal', function (event) {
                     // $('#employee_id').select2({
                     //     dropdownParent: $('#addAssessmentModal')
                     // });
@@ -704,7 +711,7 @@
                     }
                 });
 
-                $('#assessmentForm').submit(function(e) {
+                $('#assessmentForm').submit(function (e) {
                     e.preventDefault();
                     let assessment_id = $('#assessment_id').val();
                     let formData = new FormData(this);
@@ -717,7 +724,7 @@
                         data: formData,
                         processData: false,
                         contentType: false,
-                        success: function(response) {
+                        success: function (response) {
                             Swal.fire({
                                 title: "Berhasil!",
                                 text: assessment_id ? "Assessment berhasil diperbarui!" :
@@ -729,7 +736,7 @@
                                 location.reload(); // Refresh halaman setelah sukses
                             });
                         },
-                        error: function(xhr, status, error) {
+                        error: function (xhr, status, error) {
                             let errorMessage = "Terjadi kesalahan!";
                             if (xhr.responseJSON && xhr.responseJSON.message) {
                                 errorMessage = xhr.responseJSON.message;
@@ -747,7 +754,7 @@
                 });
             });
 
-            document.addEventListener("DOMContentLoaded", function() {
+            document.addEventListener("DOMContentLoaded", function () {
                 const tabs = document.querySelectorAll(".filter-tab");
                 const rows = document.querySelectorAll("#kt_table_users tbody tr");
                 const searchInput = document.getElementById("searchInput");
@@ -759,7 +766,7 @@
 
                 // Event listener untuk tabs position
                 tabs.forEach(tab => {
-                    tab.addEventListener("click", function(e) {
+                    tab.addEventListener("click", function (e) {
                         e.preventDefault();
                         tabs.forEach(t => t.classList.remove("active"));
                         this.classList.add("active");
@@ -769,13 +776,13 @@
                 });
 
                 // Event listener untuk department dropdown
-                departmentFilter.addEventListener("change", function() {
+                departmentFilter.addEventListener("change", function () {
                     currentDepartmentFilter = this.value.toLowerCase();
                     applyFilters();
                 });
 
                 // Event listener untuk search input
-                searchInput.addEventListener("keyup", function() {
+                searchInput.addEventListener("keyup", function () {
                     currentSearchValue = this.value.toLowerCase();
                     applyFilters();
                 });

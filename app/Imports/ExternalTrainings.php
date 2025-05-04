@@ -23,10 +23,12 @@ class ExternalTrainings implements ToCollection, WithHeadingRow
 
             ExternalTraining::create([
                 'employee_id'     => $employee->id,
-                'year' =>  $this->convertDate($row['year']),
-                'vendor'           => $row['vendor'],
+                'program'           => $row['materi_training'],
+                'date_start'           =>$this->convertDate($row['tanggal_start_training']),
+                'date_end'           => $this->convertDate($row['tanggal_end_training']),
+                'vendor'           => $row['institusi'],
 
-            ]);
+            ]); 
         }
     }
 
