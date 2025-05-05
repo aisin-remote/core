@@ -15,8 +15,10 @@
                         </div>
                         <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Departemen:</strong>
-                                @if ($employee->department)
-                                    {{ $employee->department->name }}
+                                @if ($employee->departments->isNotEmpty())
+                                    @foreach ($employee->departments as $dept)
+                                        {{ $dept->name }}@if (!$loop->last), @endif
+                                    @endforeach
                                 @else
                                     Tidak Ada Departemen
                                 @endif
@@ -45,34 +47,27 @@
                         </thead>
                         <tbody>
                             @php
-                                // Ambil hanya yang memiliki strength atau weakness
                                 $strengths = $details->filter(fn($item) => !empty($item->strength))->values();
-                                $weaknesses = $details->filter(fn($item) => !empty($item->weakness))->values();
-                                $maxRows = max($strengths->count(), $weaknesses->count()); // Menyesuaikan jumlah baris maksimum
                             @endphp
 
-                            @for ($i = 0; $i < $maxRows; $i++)
+                            @foreach ($strengths as $index => $strength)
                                 <tr>
-                                    <td class="text-center">{{ $i + 1 }}</td>
+                                    <td class="text-center">{{ $index + 1 }}</td>
                                     <td>
-                                        @if (isset($strengths[$i]))
-                                            <strong>{{ $strengths[$i]->alc_name }}</strong>
-                                        @endif
+                                        <strong>{{ $strength->alc_name }}</strong>
                                     </td>
-
                                     <td>
-                                        @if (isset($strengths[$i]))
-                                            {{ $strengths[$i]->strength }}
-                                        @endif
+                                        {{ $strength->strength }}
                                     </td>
                                 </tr>
-                            @endfor
-
-
+                            @endforeach
                         </tbody>
                     </table>
+                </div>
+
+                <div class="card mt-4 p-3">
+                    <h4 class="text-center">Weaknesses</h4>
                     <table class="table table-bordered">
-                        <h4 class="text-center">Weakness</h4>
                         <thead class="table-dark">
                             <tr>
                                 <th class="text-center" style="width: 5%;">#</th>
@@ -82,30 +77,20 @@
                         </thead>
                         <tbody>
                             @php
-                                // Ambil hanya yang memiliki strength atau weakness
-
                                 $weaknesses = $details->filter(fn($item) => !empty($item->weakness))->values();
-                                $maxRows = max($strengths->count(), $weaknesses->count()); // Menyesuaikan jumlah baris maksimum
                             @endphp
 
-                            @for ($i = 0; $i < $maxRows; $i++)
+                            @foreach ($weaknesses as $index => $weakness)
                                 <tr>
-                                    <td class="text-center">{{ $i + 1 }}</td>
+                                    <td class="text-center">{{ $index + 1 }}</td>
                                     <td>
-                                        @if (isset($weaknesses[$i]))
-                                            <strong>{{ $weaknesses[$i]->alc_name }}</strong>
-                                        @endif
+                                        <strong>{{ $weakness->alc_name }}</strong>
                                     </td>
-
                                     <td>
-                                        @if (isset($weaknesses[$i]))
-                                            {{ $weaknesses[$i]->weakness }}
-                                        @endif
+                                        {{ $weakness->weakness }}
                                     </td>
                                 </tr>
-                            @endfor
-
-
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
@@ -117,7 +102,9 @@
         </div>
     </div>
 @endsection
+
 @push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             var canvas = document.getElementById('assessmentChart');
@@ -146,11 +133,12 @@
                     datasets: [{
                         label: 'Scores ALC',
                         data: scores,
-                        backgroundColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 0.6)' :
-                            'rgba(75, 192, 192, 0.6)'),
-                        borderColor: scores.map(score => score < script 3 ?
-                            'rgba(255, 99, 132, 1)' :
-                            'rgba(75, 192, 192, 1)'),
+                        backgroundColor: scores.map(score => score < 3
+                            ? 'rgba(255, 99, 132, 0.6)'
+                            : 'rgba(75, 192, 192, 0.6)'),
+                        borderColor: scores.map(score => score < 3
+                            ? 'rgba(255, 99, 132, 1)'
+                            : 'rgba(75, 192, 192, 1)'),
                         borderWidth: 1
                     }]
                 },
@@ -175,3 +163,4 @@
             });
         });
     </script>
+@endpush

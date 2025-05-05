@@ -13,6 +13,17 @@ class Employee extends Model
     protected $guarded = ['id'];
 
     // === RELATIONSHIPS ===
+    // In Employee model
+    public function departments()
+{
+    return $this->belongsToMany(
+        Department::class,
+        'employee_departments',   // ← nama pivot table yang benar
+        'employee_id',            // ← foreign key utk model Employee di pivot
+        'department_id'           // ← foreign key utk model Department di pivot
+    )->withTimestamps();
+}
+
 
     public function assessments()
     {

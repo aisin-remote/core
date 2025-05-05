@@ -23,11 +23,12 @@ class AstraTrainings implements ToCollection, WithHeadingRow
 
             AstraTraining::create([
                 'employee_id'     => $employee->id,
-                'year' =>\Carbon\Carbon::parse($row['year'])->format('Y'),
-                'program'           => $row['program'],
-                'ict_score'       => $row['ict_score'],
-                'project_score'      => $row['project_score'],
-                'total_score'        => $row['total_score'],
+                'program'           => $row['materi_training'],
+                'date_start'           =>$this->convertDate($row['tanggal_start_training']),
+                'date_end'           => $this->convertDate($row['tanggal_end_training']),
+                'institusi'           => $row['institusi'],
+               
+               
             ]);
         }
     }

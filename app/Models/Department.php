@@ -11,10 +11,16 @@ class Department extends Model
 
     protected $guarded = ['id'];
 
-    public function employee()
-    {
-        return $this->belongsToMany(Employee::class, 'employee_departments')->withTimestamps();
-    }
+    public function employees()
+{
+    return $this->belongsToMany(
+        Employee::class,
+        'employee_departments',   // ← nama pivot table yang sama
+        'department_id',          // ← foreign key utk model Department di pivot
+        'employee_id'             // ← foreign key utk model Employee di pivot
+    )->withTimestamps();
+}
+
 
     public function division()
     {

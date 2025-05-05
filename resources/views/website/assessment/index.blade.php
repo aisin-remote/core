@@ -75,7 +75,7 @@
 
                     <div class="card-body">
                         <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                            <thead> 
+                            <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
                                     <th>Employee Name</th>
@@ -92,8 +92,12 @@
                                         <td>{{ $assessments->firstItem() + $index }}</td>
                                         <td>{{ $assessment->employee->name ?? '-' }}</td>
                                         <td>
-                                            @if ($assessment->employee->department)
-                                                {{ $assessment->employee->department->name }}
+                                            @if ($assessment->employee->departments->isNotEmpty())
+                                                @foreach ($assessment->employee->departments as $department)
+                                                    {{ $department->name }}@if (!$loop->last)
+                                                        ,
+                                                    @endif
+                                                @endforeach
                                             @else
                                                 Tidak Ada Departemen
                                             @endif
@@ -248,9 +252,9 @@
                                     Detail
                                 </a>
                                 ${assessment.upload ? `
-                                                                                                                                                                                                                                                                                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                                                                                                                                                                                                                                                                                            View PDF
-                                                                                                                                                                                                                                                                                                                                                                        </a>`
+                                                                                                                                                                                                                                                                                                                                                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                                                                                                                                                                                                                                                                                                                                                                            View PDF
+                                                                                                                                                                                                                                                                                                                                                                                                                                        </a>`
                                     : '<span class="text-muted">No PDF Available</span>'
                                 }
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
@@ -268,19 +272,19 @@
                                 Edit
                             </button>
 
-                                <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                    data-id="${assessment.id}">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                                                                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                                                                        data-id="${assessment.id}">Delete</button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        `;
                                     $("#kt_table_assessments tbody").append(row);
                                 });
                             } else {
                                 $("#kt_table_assessments tbody").append(`
-                    <tr>
-                        <td colspan="3" class="text-center text-muted">No assessment found</td>
-                    </tr>
-                `);
+                                                                        <tr>
+                                                                            <td colspan="3" class="text-center text-muted">No assessment found</td>
+                                                                        </tr>
+                                                                    `);
                             }
 
                             // Tampilkan modal setelah data dimuat
@@ -379,28 +383,33 @@
                     updateDropdownOptions();
                 }
 
-                function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "") {
+                function addAssessmentCard(type, containerId, alcId = "", descriptions = "", alcName = "") {
                     let container = document.getElementById(containerId);
                     let templateCard = document.createElement("div");
                     templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
+                    // Tentukan ID untuk card berdasarkan ALC
+                    if (alcId) {
+                        templateCard.setAttribute("id", `assessment_card_${alcId}`);
+                    }
+
                     templateCard.innerHTML = `
-        <div class="mb-3">
-            <label>ALC</label>
-            <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
-                <option value="">Pilih ALC</option>
-                @foreach ($alcs as $alc)
-                    <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
-                        {{ $alc->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="mb-3">
-            <label>Description</label>
-            <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
-        </div>
-    `;
+                                <div class="mb-3">
+                                    <label>ALC</label>
+                                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                                        <option value="">Pilih ALC</option>
+                                        @foreach ($alcs as $alc)
+                                            <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
+                                                {{ $alc->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label>Description</label>
+                                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${descriptions}</textarea>
+                                </div>
+                            `;
 
                     let selectElement = templateCard.querySelector(".alc-dropdown");
                     selectElement.addEventListener("change", function() {
@@ -409,7 +418,7 @@
                     });
 
                     container.appendChild(templateCard);
-                    updateDropdownOptions(); // Pastikan dropdown diperbarui setelah menambahkan kartu
+                    updateDropdownOptions();
                 }
 
                 // Fungsi untuk memperbarui nama deskripsi berdasarkan ALC yang dipilih
@@ -432,37 +441,42 @@
                     const alcId = idParts[2];
                     const score = parseInt(idParts[3]);
 
-                    const card = $(`#assessment_card_${alcId}`);
+                    // Tentukan kategori berdasarkan skor (strength jika >= 3, weakness jika < 3)
+                    const newType = score >= 3 ? "strength" : "weakness";
+                    const oldType = score >= 3 ? "weakness" : "strength";
+
+                    // Dapatkan card yang sesuai
+                    let card = $(`#assessment_card_${alcId}`);
+                    const newWrapper = $(`#update-${newType}s-wrapper`);
+                    const oldWrapper = $(`#update-${oldType}s-wrapper`);
+
+                    // Jika card belum ada, buat card baru
+                    if (card.length === 0) {
+                        addAssessmentCard(newType, `update-${newType}s-wrapper`, alcId);
+                        card = $(`#assessment_card_${alcId}`);
+                    } else {
+                        // Pindahkan card dari wrapper lama ke wrapper baru
+                        const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`)
+                            .detach();
+                        newWrapper.append(detachedCard);
+                        card = detachedCard;
+                    }
+
+                    // Update nama untuk textarea dan select agar sesuai dengan kategori
                     const textarea = card.find("textarea");
                     const select = card.find("select");
 
-                    const type = score >= 3 ? "strength" : "weakness";
-                    const targetWrapper = $(`#update-${type}s-wrapper`);
+                    textarea.attr("name", `${newType}[${alcId}]`);
+                    select.attr("name", `${newType}_alc_ids[]`);
 
-                    // Update textarea name
-                    textarea.attr("name", `${type}[${alcId}]`);
+                    // Update class card untuk memastikan gaya sesuai kategori
+                    card.removeClass("strength-card weakness-card").addClass(`${newType}-card`);
 
-                    // Pindahkan card ke section strength atau weakness
-                    card.appendTo(targetWrapper);
-
-                    // Ubah class agar sesuai
-                    card.removeClass("strength-card weakness-card").addClass(`${type}-card`);
-
-                    updateDropdownOptions(); // Perbarui dropdown setelah memindahkan kartu
+                    // Memperbarui dropdown options agar tidak ada ALC yang sama di kategori lain
+                    updateDropdownOptions();
                 });
 
-                function updateDescriptionName(selectElement, type) {
-                    let card = selectElement.closest(".assessment-card");
-                    let textarea = card.querySelector(`.${type}-textarea`);
-                    let alcId = selectElement.value;
-
-                    if (alcId) {
-                        textarea.setAttribute("name", `${type}[${alcId}]`);
-                    } else {
-                        textarea.removeAttribute("name");
-                    }
-                }
-
+                // Fungsi untuk memperbarui dropdown ALC agar tidak ada pilihan yang tumpang tindih
                 function updateDropdownOptions() {
                     let selectedStrengths = new Set();
                     let selectedWeaknesses = new Set();
@@ -495,6 +509,7 @@
                         });
                     });
                 }
+
 
 
 

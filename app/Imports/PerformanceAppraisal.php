@@ -16,22 +16,31 @@ class PerformanceAppraisal implements ToCollection, WithHeadingRow
     public function collection(Collection $rows)
     {
         foreach ($rows as $row) {
+            // Cek jika data kosong atau score tidak ada
+            if (empty($row['score']) || empty($row['npk'])) {
+                Log::warning("Data kosong atau tidak lengkap untuk NPK {$row['npk']}");
+                continue;  // Skip baris ini
+            }
+
+            // Proses selanjutnya
             $employee = Employee::where('npk', $row['npk'])->first();
 
             if (!$employee) {
                 Log::warning("NPK {$row['npk']} tidak ditemukan untuk Appraisal.");
-                continue;
+                continue;  // Skip baris ini
             }
 
+            // Proses penyimpanan data
             AppraisalModel::create([
                 'employee_id' => $employee->id,
                 'score'       => $row['score'],
-                'description'       => $row['description'],
-                'date'        => $this->convertDate($row['date']),
+                'date'        => \Carbon\Carbon::parse($row['date'])->startOfYear()->toDateString(), // hasil: "1970-01-01"
             ]);
 
-            (new HavQuadrant())->updateHavFromPerformance($employee->id);
+
+            // (new HavQuadrant())->updateHavFromPerformance($employee->id);
         }
+
     }
 
     private function convertDate($value)
