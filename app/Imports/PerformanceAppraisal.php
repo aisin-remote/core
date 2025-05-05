@@ -21,25 +21,26 @@ class PerformanceAppraisal implements ToCollection, WithHeadingRow
                 Log::warning("Data kosong atau tidak lengkap untuk NPK {$row['npk']}");
                 continue;  // Skip baris ini
             }
-        
+
             // Proses selanjutnya
             $employee = Employee::where('npk', $row['npk'])->first();
-        
+
             if (!$employee) {
                 Log::warning("NPK {$row['npk']} tidak ditemukan untuk Appraisal.");
                 continue;  // Skip baris ini
             }
-        
+
             // Proses penyimpanan data
             AppraisalModel::create([
                 'employee_id' => $employee->id,
                 'score'       => $row['score'],
-                'date'        => \Carbon\Carbon::parse($row['date'])->format('Y'),
+                'date'        => \Carbon\Carbon::parse($row['date'])->startOfYear()->toDateString(), // hasil: "1970-01-01"
             ]);
-        
+
+
             // (new HavQuadrant())->updateHavFromPerformance($employee->id);
         }
-        
+
     }
 
     private function convertDate($value)

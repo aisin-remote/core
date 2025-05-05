@@ -160,7 +160,13 @@ class AssessmentController extends Controller
         $assessment = Assessment::findOrFail($assessment_id);
 
         // Ambil employee dari assessment (pastikan kolom employee_id ada di tabel assessments)
-        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->findOrFail($assessment->employee_id);
+        $employee = Employee::with(
+            'departments', // ← tambahkan ini
+            'subSection.section.department',
+            'leadingSection.department',
+            'leadingDepartment.division'
+        )->findOrFail($assessment->employee_id);
+
 
         // Ambil data detail_assessment dengan alc (menggunakan Eloquent)
         $assessments = DetailAssessment::with('alc')

@@ -88,11 +88,13 @@
                                                                 <td>{{ $assessments->firstItem() + $index }}</td>
                                                                 <td>{{ $assessment->employee->name ?? '-' }}</td>
                                                                 <td>
-                                                                    @if ($assessment->employee->department)
-                                                                        {{ $assessment->employee->department->name }}
-                                                                    @else
-                                                                        Tidak Ada Departemen
-                                                                    @endif
+                                                                    @if ($assessment->employee->departments->isNotEmpty())
+                                                                    @foreach ($assessment->employee->departments as $department)
+                                                                        {{ $department->name }}@if (!$loop->last), @endif
+                                                                    @endforeach
+                                                                @else
+                                                                    Tidak Ada Departemen
+                                                                @endif
                                                                 </td>
                                                                 <td>{{ $assessment->employee->position ?? '-' }}</td>
                                                                 <td>{{ $assessment->employee->npk ?? '-' }}</td>
