@@ -1,4 +1,4 @@
-<div class="modal fade" id="alldetailExperienceModal" tabindex="-1" aria-labelledby="detailExperienceModalLabel"
+<div class="modal fade" id="allExperienceDetailModal" tabindex="-1" aria-labelledby="detailExperienceModalLabel"
     aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">

@@ -37,7 +37,7 @@
         <div class="container mt-4">
             <div class="row">
                 <div class="col-md-4 col-sm-12">
-                    <div class="card mb-5 mb-xl-10" style="height: 1410px !important">
+                    <div class="card mb-5 mb-xl-10" style="height: 1340px !important">
                         <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
@@ -234,9 +234,8 @@
                                     <h3 class="fw-bolder m-0">Working Experience</h3>
                                 </div>
 
-                                <div id="kt_activity_year" class="card-body ps-5 tab-pane fade show active border-top"
-                                    role="tabpanel">
-                                    <div class="timeline timeline-border-dashed">
+                                <div id="kt_account_settings_signin_method" class="collapse show">
+                                    <div class="card-body border-top p-10">
                                         @php
                                             $maxSlots = 3;
                                             $experienceCount = $workExperiences->count();
@@ -245,32 +244,19 @@
                                         @for ($i = 0; $i < $maxSlots; $i++)
                                             @if (isset($workExperiences[$i]))
                                                 @php $experience = $workExperiences[$i]; @endphp
-                                                <div class="timeline-item d-flex">
-                                                    <div class="timeline-line"></div>
-                                                    <div class="timeline-icon">
-                                                        <i class="ki-duotone ki-abstract-26 fs-2 text-gray-500">
-                                                            <span class="path1"></span><span class="path2"></span>
-                                                        </i>
-                                                    </div>
-                                                    <div class="timeline-content flex-grow-1">
-                                                        <div
-                                                            class="d-flex justify-content-between align-items-center mb-2">
-                                                            <a href="#"
-                                                                class="fs-5 fw-semibold text-gray-800 text-hover-primary mb-0">
-                                                                {{ $experience->position }}
-                                                            </a>
+                                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold">
+                                                            {{ $experience->position }}
                                                         </div>
-
-                                                        <!-- Tambahkan informasi Company -->
-                                                        <div class="text-gray-700 fw-semibold fs-6">
+                                                        <div class="fw-semibold text-gray-600">
                                                             {{ $experience->company }}
                                                         </div>
-
-                                                        <div class="text-muted fs-7">
-                                                            {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y') }}
-                                                            -
-                                                            {{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('Y') : 'Present' }}
-                                                        </div>
+                                                    </div>
+                                                    <div class="text-muted fs-7">
+                                                        {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y') }}
+                                                        -
+                                                        {{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('Y') : 'Present' }}
                                                     </div>
                                                 </div>
                                             @else

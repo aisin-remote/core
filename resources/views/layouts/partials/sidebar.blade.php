@@ -237,12 +237,14 @@
 
                         {{-- RTC --}}
                         @if (auth()->user()->role == 'User')
-                            <div class="menu-item">
-                                <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title ps-1">RTC</span>
-                                </a>
-                            </div>
+                            @if (auth()->user()->employee->position == 'GM' || auth()->user()->employee->position == 'Director')
+                                <div class="menu-item">
+                                    <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title ps-1">RTC</span>
+                                    </a>
+                                </div>
+                            @endif
                         @else
                             <div class="menu-item menu-accordion {{ $isRtc ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-rtc">
