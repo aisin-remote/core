@@ -15,6 +15,11 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
 use Illuminate\Database\Events\TransactionBeginning;
 
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
+
 class HavController extends Controller
 {
     /**
@@ -211,9 +216,121 @@ class HavController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function show($id)
+    public function export()
     {
-        //
+        // $path = storage_path('app/templates/HAV_Summary.xlsx');
+        // $spreadsheet = IOFactory::load($path);
+        // $sheet = $spreadsheet->getActiveSheet();
+
+        // $assessments = Assessment::with(['employee', 'details'])->get();
+        // $startRow = 13;
+
+        // foreach ($assessments as $i => $a) {
+        //     $row = $startRow + $i;
+        //     $details = $a->details->keyBy('alc_id');
+
+        //     $sheet->setCellValue("A{$row}", $a->employee->npk ?? '');
+        //     $sheet->setCellValue("B{$row}", $a->date);
+        //     $sheet->setCellValue("C{$row}", $a->description);
+
+        //     $col = 'D';
+        //     for ($j = 1; $j <= 8; $j++) {
+        //         $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '');
+        //         $col++;
+        //         $sheet->setCellValue("{$col}{$row}", $details[$j]->strength ?? '');
+        //         $col++;
+        //         $sheet->setCellValue("{$col}{$row}", $details[$j]->weakness ?? '');
+        //         $col++;
+        //     }
+        // }
+
+        // $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        // $filename = 'exported_hav_manual.xlsx';
+        // $writer->save(public_path($filename));
+
+        // return response()->download(public_path($filename))->deleteFileAfterSend(true);
+
+
+        $templatePath = storage_path('app/templates/HAV_Summary.xlsx');
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $employees = Employee::with([
+            'assessments.details',
+            'havQuadrants' => function ($q) {
+                $q->orderByDesc('created_at');
+            },
+            'performanceAppraisalHistories' => function ($q) {
+                $q->orderBy('date');
+            }
+        ])->whereHas('havQuadrants')->get();
+
+        $startRow = 13;
+
+        foreach ($employees as $i => $emp) {
+            $row = $startRow + $i;
+            $assessment = $emp->assessments->sortByDesc('created_at')->first();
+            $details = $assessment ? $assessment->details->keyBy('alc_id') : collect();
+
+            // Total Score
+            $totalScore = $details->sum(fn($d) => floatval($d->score ?? 0));
+            $totalScorePercent = $totalScore ? round(($totalScore / (8 * 5)) * 100, 1) . '%' : '0%';
+
+            // HAV Quadrant
+            $hav = $emp->havQuadrants->first();
+            $quadrant = $hav->quadrant ?? null;
+
+            // Performance Appraisal 3 tahun terakhir
+            $appraisals = $emp->performanceAppraisalHistories
+                ->sortByDesc('date')
+                ->take(3)
+                ->sortBy('date')
+                ->values();
+
+            // Mapping kolom (semua geser 1 ke kanan)
+            $sheet->setCellValue("B{$row}", $emp->npk);
+            $sheet->setCellValue("C{$row}", $emp->name);
+            $sheet->setCellValue("D{$row}", $emp->function);
+            $sheet->setCellValue("E{$row}", $emp->foundation_group); // Divisi
+            $sheet->setCellValue("F{$row}", $emp->company_group); // Departemen
+            $sheet->setCellValue("G{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia
+            $sheet->setCellValue("H{$row}", $emp->grade); // Sub Gol
+            $sheet->setCellValue("I{$row}", $emp->working_period); // Masa kerja
+
+            // ALCs
+            $col = 'J';
+            for ($j = 1; $j <= 8; $j++) {
+                $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '');
+                $col++;
+            }
+
+            $sheet->setCellValue("R{$row}", $totalScore);
+            $sheet->setCellValue("S{$row}", $totalScorePercent);
+
+            // Kolom Appraisal 3 Tahun (T, U, V)
+            $sheet->setCellValue("T{$row}", $appraisals[0]->score ?? '');
+            $sheet->setCellValue("U{$row}", $appraisals[1]->score ?? '');
+            $sheet->setCellValue("V{$row}", $appraisals[2]->score ?? '');
+
+            // HAV terakhir (W, X, Y)
+            $sheet->setCellValue("W{$row}", $hav->assessment_score ?? '');
+            $sheet->setCellValue("X{$row}", $hav->performance_score ?? '');
+            $sheet->setCellValue("Y{$row}", $quadrant);
+
+            // Breakdown score terbaru (Z - AG)
+            $breakdownCol = 'Z';
+            for ($j = 1; $j <= 8; $j++) {
+                $sheet->setCellValue("{$breakdownCol}{$row}", $details[$j]->score ?? '');
+                $breakdownCol++;
+            }
+        }
+
+
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $filename = 'HAV_Summary_Exported.xlsx';
+        $writer->save(public_path($filename));
+
+        return response()->download(public_path($filename))->deleteFileAfterSend(true);
     }
 
     /**

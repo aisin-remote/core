@@ -77,6 +77,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update'); // Menampilkan form create
         Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');
         Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
+        Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
     });
 
     Route::prefix('employee')->group(function () {
