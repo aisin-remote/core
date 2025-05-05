@@ -79,7 +79,8 @@
                     <tbody>
                         @forelse ($employees as $index => $employee)
                             <tr data-position="{{ $employee->position }}">
-                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $employees->firstItem() + $index }}</td>
+
                                 <td class="text-center">
                                     <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
@@ -108,8 +109,14 @@
                         @endforelse
                     </tbody>
                 </table>
+                <div class="d-flex justify-content-end mt-4">
+                    {{ $employees->links('pagination::bootstrap-5') }}
+                </div>
             </div>
+
         </div>
+
+
     </div>
 @endsection
 
