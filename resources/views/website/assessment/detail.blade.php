@@ -15,10 +15,8 @@
                         </div>
                         <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Departemen:</strong>
-                                @if ($employee->departments->isNotEmpty())
-                                    @foreach ($employee->departments as $dept)
-                                        {{ $dept->name }}@if (!$loop->last), @endif
-                                    @endforeach
+                                @if ($employee->department->name)
+                                    {{ $employee->department->name }}
                                 @else
                                     Tidak Ada Departemen
                                 @endif
@@ -133,12 +131,12 @@
                     datasets: [{
                         label: 'Scores ALC',
                         data: scores,
-                        backgroundColor: scores.map(score => score < 3
-                            ? 'rgba(255, 99, 132, 0.6)'
-                            : 'rgba(75, 192, 192, 0.6)'),
-                        borderColor: scores.map(score => score < 3
-                            ? 'rgba(255, 99, 132, 1)'
-                            : 'rgba(75, 192, 192, 1)'),
+                        backgroundColor: scores.map(score => score < 3 ?
+                            'rgba(255, 99, 132, 0.6)' :
+                            'rgba(75, 192, 192, 0.6)'),
+                        borderColor: scores.map(score => score < 3 ?
+                            'rgba(255, 99, 132, 1)' :
+                            'rgba(75, 192, 192, 1)'),
                         borderWidth: 1
                     }]
                 },

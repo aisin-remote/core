@@ -92,12 +92,8 @@
                                         <td>{{ $assessments->firstItem() + $index }}</td>
                                         <td>{{ $assessment->employee->name ?? '-' }}</td>
                                         <td>
-                                            @if ($assessment->employee->departments->isNotEmpty())
-                                                @foreach ($assessment->employee->departments as $department)
-                                                    {{ $department->name }}@if (!$loop->last)
-                                                        ,
-                                                    @endif
-                                                @endforeach
+                                            @if ($assessment->employee->department)
+                                                {{ $assessment->employee->department->name }}
                                             @else
                                                 Tidak Ada Departemen
                                             @endif
@@ -252,9 +248,9 @@
                                     Detail
                                 </a>
                                 ${assessment.upload ? `
-                                                                                                                                                                                                                                                                                                                                                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                                                                                                                                                                                                                                                                                                                                                            View PDF
-                                                                                                                                                                                                                                                                                                                                                                                                                                        </a>`
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            View PDF
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </a>`
                                     : '<span class="text-muted">No PDF Available</span>'
                                 }
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
