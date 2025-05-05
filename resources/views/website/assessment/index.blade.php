@@ -26,9 +26,10 @@
                                 <option value="{{ $department }}">{{ $department }}</option>
                             @endforeach
                         </select>
-
-                        <a href="#" class="btn btn-primary" data-bs-toggle="modal"
-                            data-bs-target="#addAssessmentModal">Add</a>
+                        @if (auth()->user()->role == 'HRD')
+                            <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#addAssessmentModal">Add</a>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body">
@@ -248,9 +249,9 @@
                                     Detail
                                 </a>
                                 ${assessment.upload ? `
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            View PDF
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        </a>`
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    View PDF
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </a>`
                                     : '<span class="text-muted">No PDF Available</span>'
                                 }
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"

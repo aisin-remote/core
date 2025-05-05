@@ -96,7 +96,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'employee' ? 'active' : '' }}" href="/employee">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">Employee Profile</span>
                                 </a>
                             </div>
@@ -132,7 +132,7 @@
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'assessment' ? 'active' : '' }}"
                                     href="/assessment">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">Assessment</span>
                                 </a>
                             </div>
@@ -167,7 +167,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}" href="/hav">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                 </a>
                             </div>
@@ -175,7 +175,7 @@
                             <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
                                 <span class="menu-link {{ $isHav ? 'active' : '' }}">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -204,7 +204,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'idp' ? 'active' : '' }}" href="/idp">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">IDP</span>
                                 </a>
                             </div>
@@ -212,7 +212,7 @@
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">IDP</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -240,7 +240,7 @@
                             @if (auth()->user()->employee->position == 'GM' || auth()->user()->employee->position == 'Director')
                                 <div class="menu-item">
                                     <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                         <span class="menu-title ps-1">RTC</span>
                                     </a>
                                 </div>
@@ -282,7 +282,7 @@
 
             <!--begin:Master Section-->
             <!--begin:Master Menu Accordion-->
-
+            @if (auth()->user()->role == 'HRD')
             <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                 id="menu-master">
                 <span class="menu-link">
@@ -414,6 +414,7 @@
 
                 </div>
             </div>
+            @endif
 
             <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                 id="menu-master">

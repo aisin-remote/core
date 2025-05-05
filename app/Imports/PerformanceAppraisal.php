@@ -34,9 +34,8 @@ class PerformanceAppraisal implements ToCollection, WithHeadingRow
             AppraisalModel::create([
                 'employee_id' => $employee->id,
                 'score'       => $row['score'],
-                'date'        => \Carbon\Carbon::parse($row['date'])->startOfYear()->toDateString(), // hasil: "1970-01-01"
+                'date'           =>$this->convertDate($row['date']),
             ]);
-
 
             // (new HavQuadrant())->updateHavFromPerformance($employee->id);
         }
@@ -45,9 +44,18 @@ class PerformanceAppraisal implements ToCollection, WithHeadingRow
 
     private function convertDate($value)
     {
+        // Jika hanya 4 digit angka (tahun), jadikan awal tahun
+        if (preg_match('/^\d{4}$/', $value)) {
+            return $value . '-01-01'; // atau gunakan '-12-31' jika akhir tahun
+        }
+
+        // Jika Excel number (numeric), konversi ke tanggal dari Excel format
         if (is_numeric($value)) {
             return Carbon::createFromDate(1900, 1, 1)->addDays($value - 2)->format('Y-m-d');
         }
+
+        // Jika format tanggal biasa
         return $value ? Carbon::parse($value)->format('Y-m-d') : null;
     }
+
 }
