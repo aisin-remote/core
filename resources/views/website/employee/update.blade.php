@@ -550,12 +550,12 @@
                                                 data-bs-target="#addAppraisalModal">
                                                 <i class="fas fa-plus"></i> Add
                                             </button>
-                                        @endif
 
-                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                            data-bs-target="#alldetailAppraisalModal">
-                                            <i class="fas fa-info"></i> Detail
-                                        </button>
+                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                data-bs-target="#alldetailAppraisalModal">
+                                                <i class="fas fa-info"></i> Detail
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
 

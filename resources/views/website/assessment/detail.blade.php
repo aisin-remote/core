@@ -15,7 +15,7 @@
                         </div>
                         <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Departemen:</strong>
-                                @if ($employee->department->name)
+                                @if ($employee->department)
                                     {{ $employee->department->name }}
                                 @else
                                     Tidak Ada Departemen
