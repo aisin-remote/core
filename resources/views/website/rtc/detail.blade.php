@@ -9,116 +9,224 @@
 @endsection
 
 @section('main')
-    <div class="d-flex flex-column flex-column-fluid">
-        <!--begin::Content-->
-        <div id="kt_app_content" class="app-content flex-column-fluid ">
+    <div class="d-flex justify-content-center align-items-center flex-column">
+        {{-- Card utama --}}
+        <div class="card rounded-2 p-3 text-center mb-5 " style="max-width: 260px; width: 100%; font-size: 16px;">
+            <div class="mb-3 text-muted pb-2 border-bottom display-7">
+                <span class="text-muted">{{ $data->name ?? '-' }}</span>
+            </div>
 
-            <!--begin::Content container-->
-            <div id="kt_app_content_container" class="app-container container-fluid ">
-                <div class="d-flex justify-content-center align-items-center bg-light">
-                    <div class="card shadow-lg rounded-2 p-5 text-center"
-                        style="max-width: 600px; width: 100%; font-size: 18px;">
-                        <div class="mb-4 text-muted pb-3 border-bottom display-7">
-                            Dept : <strong class="text-dark">{{ $data->name ?? '-' }}</strong>
+            @php
+                use Carbon\Carbon;
+
+                $field = match ($filter) {
+                    'department' => 'manager',
+                    'section' => 'supervisor',
+                    'sub_section' => 'leader',
+                    default => null,
+                };
+
+                $person = $data->{$field} ?? null;
+
+                $name = $person?->name ?? '-';
+                $grade = $person?->grade ?? '-';
+                $age = $person && $person->birthday_date ? Carbon::parse($person->birthday_date)->age : '-';
+                $los = $person ? '13' : '-';
+                $lcp = $person ? '-' : '-';
+
+                $shortPerson = $data?->short;
+                $midPerson = $data?->mid;
+                $longPerson = $data?->long;
+
+                $shortTerm = $shortPerson?->name ?? '-';
+                $shortGrade = $shortPerson?->grade ?? '-';
+                $shortAge =
+                    $shortPerson && $shortPerson->birthday_date ? Carbon::parse($shortPerson->birthday_date)->age : '-';
+
+                $midTerm = $midPerson?->name ?? '-';
+                $midGrade = $midPerson?->grade ?? '-';
+                $midAge = $midPerson && $midPerson->birthday_date ? Carbon::parse($midPerson->birthday_date)->age : '-';
+
+                $longTerm = $longPerson?->name ?? '-';
+                $longGrade = $longPerson?->grade ?? '-';
+                $longAge =
+                    $longPerson && $longPerson->birthday_date ? Carbon::parse($longPerson->birthday_date)->age : '-';
+            @endphp
+
+            <div class="mb-4 pt-2">
+                <strong class="fs-4">{{ $name }}</strong> - <strong class="fs-5">[{{ $grade }}]</strong>
+            </div>
+
+            <div class="text-start mb-4" style="font-size: 16px;">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="fw-semibold text-muted">Age</span>
+                    <span class="fw-bold">{{ $age }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="fw-semibold text-muted">LOS</span>
+                    <span class="fw-bold">{{ $los }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="fw-semibold text-muted">LCP</span>
+                    <span class="fw-bold">{{ $lcp }}</span>
+                </div>
+            </div>
+
+            <div class="text-start" style="font-size: 16px;">
+                <div class="fw-bold mb-3 fs-4">Candidates:</div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="fw-semibold text-muted">S/T</span>
+                    <span class="fw-bold fs-5">{{ $shortTerm }} ({{ $shortGrade }}, {{ $shortAge }})</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="fw-semibold text-muted">M/T</span>
+                    <span class="fw-bold fs-5">{{ $midTerm }} ({{ $midGrade }}, {{ $midAge }})</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="fw-semibold text-muted">L/T</span>
+                    <span class="fw-bold fs-5">{{ $longTerm }} ({{ $longGrade }}, {{ $longAge }})</span>
+                </div>
+                <div class="mt-3 text-muted" style="font-size: 14px;">
+                    (gol, usia, HAV)
+                </div>
+            </div>
+        </div>
+
+        {{-- Struktur horizontal: Manager dan Supervisor --}}
+        <div class="d-flex flex-wrap justify-content-center gap-10">
+            @foreach ($bawahans as $manager)
+                <!-- Card Manager -->
+                @if (empty($manager->supervisors) || count($manager->supervisors) == 0)
+                    <div class="card p-3" style="width: 260px;">
+                        <div class="mb-2 text-muted border-bottom pb-2 text-center">{{ $manager->department->name }}</div>
+                        <div class="fw-bold fs-5 text-center">{{ $manager->name }} ({{ $manager->grade ?? '-' }})</div>
+
+                        <!-- Menampilkan Nama Department dan Section Manager -->
+                        <div class="mt-3">
+                            @if ($manager->section)
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Department</span>
+                                    <span class="fw-bold">{{ $manager->section->department->name ?? '-' }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span class="text-muted">Section</span>
+                                    <span class="fw-bold">{{ $manager->section->name ?? '-' }}</span>
+                                </div>
+                            @endif
                         </div>
 
-                        <!-- Dynamic section based on filter -->
-                        @php
-                            use Carbon\Carbon;
-
-                            // Mapped fields based on the filter type
-                            $field = match ($filter) {
-                                'department' => 'manager',
-                                'section' => 'supervisor',
-                                'sub_section' => 'leader',
-                                default => null,
-                            };
-
-                            // Accessing related model
-                            $person = $data->{$field} ?? null;
-
-                            // Prepare the fallback values
-                            $name = $person?->name ?? '-';
-                            $grade = $person?->grade ?? '-';
-
-                            // Calculate age from birthday
-                            $age = $person && $person->birthday_date ? Carbon::parse($person->birthday_date)->age : '-';
-
-                            // Hardcoded or calculated LOS & LCP if available
-                            $los = $person ? '13' : '-';
-                            $lcp = $person ? '-' : '-';
-
-                            // Candidate plans
-                            $shortPerson = $data?->short;
-                            $midPerson = $data?->mid;
-                            $longPerson = $data?->long;
-
-                            $shortTerm = $shortPerson?->name ?? '-';
-                            $shortGrade = $shortPerson?->grade ?? '-';
-                            $shortAge =
-                                $shortPerson && $shortPerson->birthday_date
-                                    ? Carbon::parse($shortPerson->birthday_date)->age
-                                    : '-';
-
-                            $midTerm = $midPerson?->name ?? '-';
-                            $midGrade = $midPerson?->grade ?? '-';
-                            $midAge =
-                                $midPerson && $midPerson->birthday_date
-                                    ? Carbon::parse($midPerson->birthday_date)->age
-                                    : '-';
-
-                            $longTerm = $longPerson?->name ?? '-';
-                            $longGrade = $longPerson?->grade ?? '-';
-                            $longAge =
-                                $longPerson && $longPerson->birthday_date
-                                    ? Carbon::parse($longPerson->birthday_date)->age
-                                    : '-';
-                        @endphp
-
-                        <div class="mb-5 pt-2" style="margin-bottom: 50px !important">
-                            <strong class="fs-2">{{ $name }}</strong> - <strong
-                                class="fs-2">[{{ $grade }}]</strong>
-                        </div>
-
-                        <div class="text-start mb-5" style="font-size: 20px;">
-                            <div class="d-flex justify-content-between mb-3">
-                                <span class="fw-semibold text-muted">Age</span>
-                                <span class="fw-bold">{{ $age }}</span>
+                        <div class="text-start mt-3 mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">Age</span>
+                                <span class="fw-bold">
+                                    {{ $manager->birthday_date ? \Carbon\Carbon::parse($manager->birthday_date)->age : '-' }}
+                                </span>
                             </div>
-                            <div class="d-flex justify-content-between mb-3">
-                                <span class="fw-semibold text-muted">LOS</span>
-                                <span class="fw-bold">{{ $los }}</span>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="text-muted">LOS</span>
+                                <span class="fw-bold">-</span>
                             </div>
                             <div class="d-flex justify-content-between">
-                                <span class="fw-semibold text-muted">LCP</span>
-                                <span class="fw-bold">{{ $lcp }}</span>
+                                <span class="text-muted">LCP</span>
+                                <span class="fw-bold">-</span>
                             </div>
                         </div>
 
-                        <div class="text-start" style="font-size: 20px;">
-                            <div class="fw-bold mb-4 fs-2">Candidates:</div>
-                            <div class="d-flex justify-content-between mb-3">
+                        <div class="text-start">
+                            <div class="fw-bold mb-3">Candidates:</div>
+                            <div class="d-flex justify-content-between mb-2">
                                 <span class="fw-semibold text-muted">S/T</span>
-                                <span class="fw-bold fs-3">{{ $shortTerm }} ({{ $shortGrade }},
+                                <span class="fw-bold">{{ $shortTerm }} ({{ $shortGrade }},
                                     {{ $shortAge }})</span>
                             </div>
-                            <div class="d-flex justify-content-between mb-3">
+                            <div class="d-flex justify-content-between mb-2">
                                 <span class="fw-semibold text-muted">M/T</span>
-                                <span class="fw-bold fs-3">{{ $midTerm }} ({{ $midGrade }},
+                                <span class="fw-bold">{{ $midTerm }} ({{ $midGrade }},
                                     {{ $midAge }})</span>
                             </div>
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between mb-2">
                                 <span class="fw-semibold text-muted">L/T</span>
-                                <span class="fw-bold fs-3">{{ $longTerm }} ({{ $longGrade }},
+                                <span class="fw-bold">{{ $longTerm }} ({{ $longGrade }},
                                     {{ $longAge }})</span>
                             </div>
-                            <div class="mt-4 text-muted" style="font-size: 16px;">
+                            <div class="mt-3 text-muted" style="font-size: 14px;">
                                 (gol, usia, HAV)
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
+                @endif
+
+                <!-- Card Supervisor/Section Head -->
+                @if ($manager->supervisors && count($manager->supervisors))
+                    <div class="mt-4">
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            @foreach ($manager->supervisors as $spv)
+                                <div class="card p-3" style="width: 260px;">
+                                    <div class="mb-2 text-muted border-bottom pb-2 text-center">
+                                        {{ $spv->leadingSection->name }}
+                                    </div>
+                                    <div class="fw-bold fs-5 text-center">{{ $spv->name }}
+                                        ({{ $spv->grade ?? '-' }})
+                                    </div>
+
+                                    <!-- Menampilkan Nama Department dan Section Supervisor -->
+                                    <div class="mt-3">
+                                        @if ($spv->section)
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-muted">Department</span>
+                                                <span class="fw-bold">{{ $spv->section->department->name ?? '-' }}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between">
+                                                <span class="text-muted">Section</span>
+                                                <span class="fw-bold">{{ $spv->section->name ?? '-' }}</span>
+                                            </div>
+                                        @endif
+                                    </div>
+
+                                    <div class="text-start mt-3 mb-3">
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted">Age</span>
+                                            <span class="fw-bold">
+                                                {{ $spv->birthday_date ? \Carbon\Carbon::parse($spv->birthday_date)->age : '-' }}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="text-muted">LOS</span>
+                                            <span class="fw-bold">-</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="text-muted">LCP</span>
+                                            <span class="fw-bold">-</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="text-start">
+                                        <div class="fw-bold mb-3">Candidates:</div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-semibold text-muted">S/T</span>
+                                            <span class="fw-bold">{{ $shortTerm }} ({{ $shortGrade }},
+                                                {{ $shortAge }})</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-semibold text-muted">M/T</span>
+                                            <span class="fw-bold">{{ $midTerm }} ({{ $midGrade }},
+                                                {{ $midAge }})</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-2">
+                                            <span class="fw-semibold text-muted">L/T</span>
+                                            <span class="fw-bold">{{ $longTerm }} ({{ $longGrade }},
+                                                {{ $longAge }})</span>
+                                        </div>
+                                        <div class="mt-3 text-muted" style="font-size: 14px;">
+                                            (gol, usia, HAV)
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            @endforeach
         </div>
     </div>
 @endsection

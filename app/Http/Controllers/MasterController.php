@@ -230,14 +230,21 @@ class MasterController extends Controller
             case 'department':
                 $data = Department::where('division_id', $division_id)->get();
                 break;
+
             case 'section':
-                $data = Section::all();
+                $data = Section::whereHas('department', function ($q) use ($division_id) {
+                    $q->where('division_id', $division_id);
+                })->get();
                 break;
+
             case 'sub_section':
-                $data = SubSection::all();
+                $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                    $q->where('division_id', $division_id);
+                })->get();
                 break;
+
             default:
-                $data = collect(); // kosong atau tampilkan semua
+                $data = collect(); // kosong
                 break;
         }
 

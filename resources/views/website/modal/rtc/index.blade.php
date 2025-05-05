@@ -1,5 +1,6 @@
-<div class="d-flex justify-content-center align-items-center">
-    <div class="card rounded-2 p-5 text-center" style="max-width: 600px; width: 100%; font-size: 18px;">
+<div class="d-flex justify-content-center align-items-center flex-column">
+    {{-- Card utama --}}
+    <div class="card rounded-2 p-5 text-center mb-5" style="max-width: 600px; width: 100%; font-size: 18px;">
         <div class="mb-4 text-muted pb-3 border-bottom display-7">
             Dept : <strong class="text-dark">{{ $data->name ?? '-' }}</strong>
         </div>

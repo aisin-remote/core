@@ -37,7 +37,7 @@
         <div class="container mt-4">
             <div class="row">
                 <div class="col-4">
-                    <div class="card mb-5 mb-xl-10" style="height: 1435px !important">
+                    <div class="card mb-5 mb-xl-10" style="height: 1370px !important">
                         <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
@@ -88,8 +88,7 @@
                                                     <label class="form-label fw-bold fs-6">Name</label>
                                                     <input type="text" name="name"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->name) }}">
+                                                        placeholder="Full Name" value="{{ old('name', $employee->name) }}">
                                                     @error('name')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -98,7 +97,7 @@
                                                     <label class="form-label fw-bold fs-6">NPK</label>
                                                     <input type="text" name="npk"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap" value="{{ old('npk', $employee->npk) }}">
+                                                        placeholder="Npk" value="{{ old('npk', $employee->npk) }}">
                                                     @error('npk')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -107,8 +106,7 @@
                                                     <label class="form-label fw-bold fs-6">Gender</label>
                                                     <input type="text" name="gender"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->gender) }}">
+                                                        placeholder="Gender" value="{{ old('name', $employee->gender) }}">
                                                     @error('gender')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -117,7 +115,7 @@
                                                     <label class="form-label fw-bold fs-6">Birthday Date</label>
                                                     <input type="date" name="birthday_date"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Birthday Date"
                                                         value="{{ old('name', $employee->birthday_date) }}">
                                                     @error('birthday_date')
                                                         <div class="text-danger">{{ $message }}</div>
@@ -127,14 +125,13 @@
                                                     <label class="form-label fw-bold fs-6">Email</label>
                                                     <input type="text" name=""
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="arief.widodo@aisin-indonesia.co.id">
+                                                        placeholder="Email" value="arief.widodo@aisin-indonesia.co.id">
                                                 </div>
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Phone Number</label>
                                                     <input type="text" name="email"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap" value="-">
+                                                        placeholder="Phone Number" value="-">
                                                 </div>
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Name</label>
@@ -156,7 +153,7 @@
                                                     <label class="form-label fw-bold fs-6">Company Group</label>
                                                     <input type="text" name="company_group"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Company Group"
                                                         value="{{ old('name', $employee->company_group) }}">
                                                     @error('company_group')
                                                         <div class="text-danger">{{ $message }}</div>
@@ -166,7 +163,7 @@
                                                     <label class="form-label fw-bold fs-6">Join Date</label>
                                                     <input type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Join Date"
                                                         value="{{ old('name', $employee->aisin_entry_date) }}">
                                                     @error('aisin_entry_date')
                                                         <div class="text-danger">{{ $message }}</div>
@@ -176,7 +173,7 @@
                                                     <label class="form-label fw-bold fs-6">Working Period</label>
                                                     <input type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Wokring Period"
                                                         value="{{ old('name', $employee->working_period) }}">
                                                     @error('working_period')
                                                         <div class="text-danger">{{ $message }}</div>
@@ -311,8 +308,7 @@
                                                     <label class="form-label fw-bold fs-6">Grade</label>
                                                     <input type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->grade) }}">
+                                                        placeholder="Grade" value="{{ old('name', $employee->grade) }}">
                                                     @error('grade')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -320,11 +316,9 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-save"></i> Save
+                                        Changes</button>
                                 </div>
-                            </div>
-                            <div class="card-footer d-flex justify-content-end pt-10 px-9">
-                                <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save
-                                    Changes</button>
                             </div>
                         </form>
                     </div>
@@ -337,6 +331,20 @@
                                 <div
                                     class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Educational Background</h3>
+
+                                    <div class="d-flex gap-2">
+                                        @if ($educations->count() >= 3)
+                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                data-bs-target="#addEducationModal">
+                                                <i class="fas fa-plus"></i> Add
+                                            </button>
+
+                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                data-bs-target="#detailEducationModal">
+                                                <i class="fas fa-info"></i> Detail
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
@@ -351,19 +359,20 @@
                                                 @php $education = $educations[$i]; @endphp
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
-                                                        <div class="fs-6 fw-bold">
+                                                        <div class="fs-6 fw-bold mb-2">
                                                             {{ $education->educational_level }} - {{ $education->major }}
                                                         </div>
-                                                        <div class="fw-semibold text-gray-600">
-                                                            {{ $education->institute }}
+                                                        <div
+                                                            class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
+                                                            <span>{{ $education->institute }}</span>
+                                                            <span class="text-muted fs-7">
+                                                                [{{ \Carbon\Carbon::parse($education->start_date)->format('Y') }}
+                                                                -
+                                                                {{ \Carbon\Carbon::parse($education->end_date)->format('Y') }}]
+                                                            </span>
                                                         </div>
                                                     </div>
-                                                    <div class="text-muted fs-7">
-                                                        {{ \Illuminate\Support\Carbon::parse($education->start_date)->format('Y') }}
-                                                        -
-                                                        {{ \Illuminate\Support\Carbon::parse($education->end_date)->format('Y') }}
-                                                    </div>
-                                                    <div>
+                                                    <div class="d-flex gap-2">
                                                         <button class="btn btn-sm btn-light-warning edit-education-btn"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#editEducationModal{{ $education->id }}"
@@ -378,10 +387,10 @@
                                                     </div>
                                                 </div>
 
+                                                @include('website.modal.education.detail')
                                                 @include('website.modal.education.update', [
                                                     'education' => $education,
                                                 ])
-
                                                 @include('website.modal.education.delete', [
                                                     'education' => $education,
                                                 ])
@@ -424,12 +433,25 @@
                             <div class="card mb-5 mb-xl-10">
                                 <div
                                     class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
-                                    <h3 class="fw-bolder m-0">Working Experience</h3>
+                                    <h3 class="fw-bolder m-0">Work Experience</h3>
+
+                                    <div class="d-flex gap-2">
+                                        @if ($workExperiences->count() >= 3)
+                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                data-bs-target="#addExperienceModal">
+                                                <i class="fas fa-plus"></i> Add
+                                            </button>
+
+                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                data-bs-target="#allExperienceDetailModal">
+                                                <i class="fas fa-info"></i> Detail
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
 
-                                <div id="kt_activity_year" class="card-body ps-5 tab-pane fade show active border-top"
-                                    role="tabpanel">
-                                    <div class="timeline timeline-border-dashed">
+                                <div id="kt_activity_year" class="collapse show">
+                                    <div class="card-body border-top p-10">
                                         @php
                                             $maxSlots = 3;
                                             $experienceCount = $workExperiences->count();
@@ -438,64 +460,46 @@
                                         @for ($i = 0; $i < $maxSlots; $i++)
                                             @if (isset($workExperiences[$i]))
                                                 @php $experience = $workExperiences[$i]; @endphp
-                                                <div class="timeline-item d-flex">
-                                                    <div class="timeline-line"></div>
-                                                    <div class="timeline-icon">
-                                                        <i class="ki-duotone ki-abstract-26 fs-2 text-gray-500">
-                                                            <span class="path1"></span><span class="path2"></span>
-                                                        </i>
-                                                    </div>
-                                                    <div class="timeline-content flex-grow-1">
+                                                <div class="d-flex justify-content-between align-items-center gap-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold mb-2">{{ $experience->position }}</div>
                                                         <div
-                                                            class="d-flex justify-content-between align-items-center mb-2">
-                                                            <a href="#"
-                                                                class="fs-5 fw-semibold text-gray-800 text-hover-primary mb-0">
-                                                                {{ $experience->position }}
-                                                            </a>
-                                                            <div>
-                                                                <button class="btn btn-sm btn-light-primary"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#experienceModal{{ $experience->id }}">
-                                                                    <i class="fas fa-eye"></i>
-                                                                </button>
-                                                                <button
-                                                                    class="btn btn-sm btn-light-warning edit-experience-btn"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#editExperienceModal{{ $experience->id }}"
-                                                                    data-experience-id="{{ $experience->id }}">
-                                                                    <i class="fas fa-edit"></i>
-                                                                </button>
-                                                                <button
-                                                                    class="btn btn-sm btn-light-danger delete-experience-btn"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#deleteExperienceModal{{ $experience->id }}">
-                                                                    <i class="fas fa-trash-alt"></i>
-                                                                </button>
-                                                            </div>
+                                                            class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
+                                                            <span>{{ $experience->company }}</span>
+                                                            <span class="text-muted fs-7">
+                                                                [{{ \Carbon\Carbon::parse($experience->start_date)->format('Y') }}
+                                                                -
+                                                                {{ $experience->end_date ? \Carbon\Carbon::parse($experience->end_date)->format('Y') : 'Present' }}]
+                                                            </span>
                                                         </div>
-
-                                                        <!-- Tambahkan informasi Company -->
-                                                        <div class="text-gray-700 fw-semibold fs-6">
-                                                            {{ $experience->company }}
-                                                        </div>
-
-                                                        <div class="text-muted fs-7">
-                                                            {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y') }}
-                                                            -
-                                                            {{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('Y') : 'Present' }}
-                                                        </div>
+                                                    </div>
+                                                    <div class="d-flex gap-2">
+                                                        <button class="btn btn-sm btn-light-primary"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#experienceModal{{ $experience->id }}">
+                                                            <i class="fas fa-eye"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-light-warning edit-experience-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#editExperienceModal{{ $experience->id }}"
+                                                            data-experience-id="{{ $experience->id }}">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                        <button class="btn btn-sm btn-light-danger delete-experience-btn"
+                                                            data-bs-toggle="modal"
+                                                            data-bs-target="#deleteExperienceModal{{ $experience->id }}">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
                                                     </div>
                                                 </div>
 
+                                                @include('website.modal.work.all_detail')
                                                 @include('website.modal.work.detail', [
                                                     'experience' => $experience,
                                                 ])
-
-
                                                 @include('website.modal.work.update', [
                                                     'experience' => $experience,
                                                 ])
-
                                                 @include('website.modal.work.delete', [
                                                     'experience' => $experience,
                                                 ])
@@ -524,7 +528,6 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
 
                         {{-- work experience modal input --}}
@@ -537,11 +540,23 @@
                         <!-- Historical Performance Appraisal -->
                         <div class="col-md-12">
                             <div class="card mb-5">
-                                <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                                    role="button" data-bs-toggle="collapse"
-                                    data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
-                                    aria-controls="kt_account_connected_accounts">
+                                <div
+                                    class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Historical Performance Appraisal</h3>
+
+                                    <div class="d-flex gap-3">
+                                        @if ($educations->count() >= 3)
+                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                data-bs-target="#addAppraisalModal">
+                                                <i class="fas fa-plus"></i> Add
+                                            </button>
+                                        @endif
+
+                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#alldetailAppraisalModal">
+                                            <i class="fas fa-info"></i> Detail
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
@@ -578,6 +593,8 @@
                                                         </button>
                                                     </div>
                                                 </div>
+
+                                                @include('website.modal.appraisal.all_detail')
 
                                                 @include('website.modal.appraisal.detail', [
                                                     'appraisal' => $appraisal,
@@ -696,6 +713,10 @@
                 </div>
             </div>
 
+            @php
+                $totalAstraTrainings = $astraTrainings->count();
+            @endphp
+
             <div class="row">
                 <!-- Historical Astra  -->
                 <div class="col-md-6">
@@ -703,12 +724,22 @@
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
                             role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
                             aria-expanded="true" aria-controls="kt_account_connected_accounts">
+
                             <h3 class="fw-bolder m-0">Astra Training History</h3>
-                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                data-bs-target="#addAstraTrainingModal">
-                                <i class="fas
-                                fa-plus"></i>
-                            </button>
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                    data-bs-target="#addAstraTrainingModal">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+
+                                @if ($totalAstraTrainings >= 3)
+                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                        data-bs-target="#detailAstraTrainingModal">
+                                        <i class="fas fa-info"></i> Detail
+                                    </button>
+                                @endif
+                            </div>
                         </div>
 
                         <div id="kt_account_settings_signin_method" class="collapse show">
@@ -730,7 +761,7 @@
 
                                         <!--begin::Tbody-->
                                         <tbody class="fw-6 fw-semibold text-gray-600">
-                                            @forelse ($astraTrainings as $astraTraining)
+                                            @forelse ($astraTrainings->take(3) as $astraTraining)
                                                 <tr>
                                                     <td class="text-center">{{ $astraTraining->year }}</td>
                                                     <td class="text-center">{{ $astraTraining->program }}
@@ -779,21 +810,38 @@
                 </div>
 
                 {{-- astra_training modal --}}
+                @include('website.modal.astra_training.detail')
+
                 @include('website.modal.astra_training.create', [
                     'employee_id' => $employee->id,
                 ])
                 {{-- end of astra_training modal --}}
+
+                @php
+                    $totalExternalTrainings = $externalTrainings->count();
+                @endphp
 
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
                             role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
                             aria-expanded="true" aria-controls="kt_account_connected_accounts">
+
                             <h3 class="fw-bolder m-0">External Training History</h3>
-                            <button class="btn btn-sm btn-success" data-bs-toggle="modal"
-                                data-bs-target="#addExternalTrainingModal">
-                                <i class="fas fa-plus"></i>
-                            </button>
+
+                            <div class="d-flex gap-2">
+                                <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                    data-bs-target="#addExternalTrainingModal">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+
+                                @if ($totalExternalTrainings >= 3)
+                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                        data-bs-target="#detailExternalTrainingModal">
+                                        <i class="fas fa-info"></i> Detail
+                                    </button>
+                                @endif
+                            </div>
                         </div>
 
                         <div id="kt_account_settings_signin_method" class="collapse show">
@@ -815,13 +863,11 @@
 
                                         <!--begin::Tbody-->
                                         <tbody class="fw-6 fw-semibold text-gray-600">
-                                            @forelse ($externalTrainings as $externalTraining)
+                                            @forelse ($externalTrainings->take(3) as $externalTraining)
                                                 <tr>
                                                     <td>{{ $externalTraining->program }}</td>
                                                     <td class="text-center">{{ $externalTraining->year }}</td>
-                                                    <td class="text-center">
-                                                        {{ $externalTraining->vendor }}
-                                                    </td>
+                                                    <td class="text-center">{{ $externalTraining->vendor }}</td>
                                                     <td class="text-center">
                                                         <div class="d-flex justify-content-center gap-2">
                                                             <button class="btn btn-sm btn-light-warning"
@@ -864,6 +910,8 @@
             </div>
 
             {{-- external_training modal --}}
+            @include('website.modal.external_training.detail')
+
             @include('website.modal.external_training.create', [
                 'employee_id' => $employee->id,
             ])
@@ -921,48 +969,18 @@
                                             </button>
                                         </td>
                                     </tr>
+
+                                    {{-- delete modal --}}
+                                    @include('website.modal.promotion_history.delete', [
+                                        'promotionHistory' => $promotionHistory,
+                                    ])
+                                    {{-- end of modal --}}
                                 @empty
                                     <tr>
                                         <td colspan="7" class="text-center">No data available</td>
                                     </tr>
                                 @endforelse
                             </tbody>
-
-                            <!-- Modal dipindahkan ke luar tbody -->
-                            @foreach ($promotionHistories as $promotionHistory)
-                                <div class="modal fade" id="deletePromotionModal{{ $promotionHistory->id }}"
-                                    tabindex="-1" aria-labelledby="deletePromotionLabel{{ $promotionHistory->id }}"
-                                    aria-hidden="true">
-                                    <div class="modal-dialog">
-                                        <div class="modal-content">
-                                            <div class="modal-header">
-                                                <h5 class="modal-title"
-                                                    id="deletePromotionLabel{{ $promotionHistory->id }}">
-                                                    Hapus History Promotion
-                                                </h5>
-                                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                                    aria-label="Close"></button>
-                                            </div>
-                                            <form action="{{ route('promotion.destroy', $promotionHistory->id) }}"
-                                                method="POST">
-                                                @csrf
-                                                @method('DELETE')
-                                                <div class="modal-body">
-                                                    <p>Apakah Anda yakin ingin menghapus data
-                                                        <strong>{{ $promotionHistory->id }}</strong> dari riwayat ini?
-                                                    </p>
-                                                </div>
-                                                <div class="modal-footer">
-                                                    <button type="button" class="btn btn-secondary"
-                                                        data-bs-dismiss="modal">Batal</button>
-                                                    <button type="submit" class="btn btn-danger">Hapus</button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                            <!--end::Tbody-->
                         </table>
                         <!--end::Table-->
                     </div>

@@ -65,6 +65,45 @@ class RtcController extends Controller
         return view('website.rtc.detail', compact('data', 'filter'));
     }
 
+    public function summary(Request $request)
+    {
+        $filter = $request->query('filter'); // e.g. 'division'
+        $id = (int) $request->query('id');   // Division ID
+
+        $data = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
+
+        // Ambil semua departments berdasarkan division_id
+        $departments = Department::where('division_id', $data->id)->get();
+
+        // Ambil semua sections berdasarkan department_id
+        $departmentIds = $departments->pluck('id');
+        $sections = Section::whereIn('department_id', $departmentIds)->get();
+
+        // Ambil semua manager_id dari departments dan supervisor_id dari sections
+        $managerIds = $departments->pluck('manager_id')->filter()->unique();
+        $supervisorIds = $sections->pluck('supervisor_id')->filter()->unique();
+
+        // Gabungkan dan ambil data karyawan dari ID tersebut
+        $employeeIds = $managerIds->merge($supervisorIds)->unique();
+        $bawahans = Employee::whereIn('id', $employeeIds)->get();
+
+        foreach ($bawahans as $manager) {
+            // Cari section yang berhubungan dengan manager
+            $sections = Section::where('supervisor_id', $manager->id)->get();
+            
+            // Ambil supervisor dari setiap section yang berhubungan dengan manager
+            $supervisors = $sections->map(function ($section) {
+                return $section->supervisor; // Mengambil relasi supervisor di section
+            });
+        
+            // Simpan supervisor (section head) pada manager
+            $manager->supervisors = $supervisors->unique('id')->filter();
+        }               
+
+        return view('website.rtc.detail', compact('data', 'filter', 'bawahans'));
+    }
+
+
     public function update(Request $request)
     {
         $request->validate([

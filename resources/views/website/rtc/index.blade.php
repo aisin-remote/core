@@ -57,8 +57,9 @@
                                                 class="btn btn-sm btn-primary" title="Detail">
                                                 <i class="fas fa-info-circle"></i> Detail
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-info" title="View">
-                                                <i class="fas fa-eye"></i> View
+                                            <a href="{{ route('rtc.summary', ['id' => $division->id]) }}"
+                                                class="btn btn-sm btn-info" title="View">
+                                                <i class="fas fa-eye"></i> Summary
                                             </a>
                                             <a href="#" class="btn btn-sm btn-success" title="Add">
                                                 <i class="fas fa-plus-circle"></i> Add
