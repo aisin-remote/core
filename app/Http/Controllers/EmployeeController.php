@@ -364,7 +364,6 @@ class EmployeeController extends Controller
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->take(3)
             ->get();
 
         $educations = EducationalBackground::with('employee')
@@ -372,7 +371,6 @@ class EmployeeController extends Controller
                 $query->where('npk', $npk);
             })
             ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
-            ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
 
         $workExperiences = WorkingExperience::with('employee')
@@ -381,7 +379,6 @@ class EmployeeController extends Controller
             })
             ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
             ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
-            ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
 
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
@@ -389,7 +386,6 @@ class EmployeeController extends Controller
                 $query->where('npk', $npk);
             })
             ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
-            ->limit(3) // Ambil hanya 3 data terbaru
             ->get();
 
         $assessment = Assessment::with('details.alc', 'employee')

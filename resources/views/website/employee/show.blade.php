@@ -176,12 +176,10 @@
                                     <h3 class="fw-bolder m-0">Educational Background</h3>
 
                                     <div class="d-flex gap-2">
-                                        @if ($educations->count() >= 3)
-                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#detailEducationModal">
-                                                <i class="fas fa-info"></i> Detail
-                                            </button>
-                                        @endif
+                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#detailEducationModal">
+                                            <i class="fas fa-info"></i> Detail
+                                        </button>
                                     </div>
                                 </div>
 
@@ -231,9 +229,11 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
+
+                    @include('website.modal.education.detail')
+
                     <div class="row">
                         <!-- Working Experience -->
                         <div class="col-md-12">
@@ -243,12 +243,10 @@
                                     <h3 class="fw-bolder m-0">Work Experience</h3>
 
                                     <div class="d-flex gap-2">
-                                        @if ($workExperiences->count() >= 3)
-                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#allExperienceDetailModal">
-                                                <i class="fas fa-info"></i> Detail
-                                            </button>
-                                        @endif
+                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#allExperienceDetailModal">
+                                            <i class="fas fa-info"></i> Detail
+                                        </button>
                                     </div>
                                 </div>
 
@@ -312,12 +310,10 @@
                                     <h3 class="fw-bolder m-0">Historical Performance Appraisal</h3>
 
                                     <div class="d-flex gap-3">
-                                        @if ($performanceAppraisals->count() >= 3)
-                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#alldetailAppraisalModal">
-                                                <i class="fas fa-info"></i> Detail
-                                            </button>
-                                        @endif
+                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#alldetailAppraisalModal">
+                                            <i class="fas fa-info"></i> Detail
+                                        </button>
                                     </div>
                                 </div>
 
@@ -438,10 +434,6 @@
                 </div>
             </div>
 
-            @php
-                $totalAstraTrainings = $astraTrainings->count();
-            @endphp
-
             <div class="row">
                 <!-- Historical Astra  -->
                 <div class="col-md-6">
@@ -452,12 +444,10 @@
                             <h3 class="fw-bolder m-0">Astra Training History</h3>
 
                             <div class="d-flex gap-2">
-                                @if ($totalAstraTrainings >= 3)
-                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                        data-bs-target="#detailAstraTrainingModal">
-                                        <i class="fas fa-info"></i> Detail
-                                    </button>
-                                @endif
+                                <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                    data-bs-target="#detailAstraTrainingModal">
+                                    <i class="fas fa-info"></i> Detail
+                                </button>
                             </div>
                         </div>
 
@@ -533,10 +523,6 @@
 
                 @include('website.modal.astra_training.detail')
 
-                @php
-                    $totalExternalTrainings = $externalTrainings->count();
-                @endphp
-
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
@@ -546,12 +532,10 @@
                             <h3 class="fw-bolder m-0">External Training History</h3>
 
                             <div class="d-flex gap-2">
-                                @if ($totalExternalTrainings >= 3)
-                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                        data-bs-target="#detailExternalTrainingModal">
-                                        <i class="fas fa-info"></i> Detail
-                                    </button>
-                                @endif
+                                <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                    data-bs-target="#detailExternalTrainingModal">
+                                    <i class="fas fa-info"></i> Detail
+                                </button>
                             </div>
                         </div>
 
@@ -632,12 +616,10 @@
                         <h3>Promotion History</h3>
                     </div>
 
-                    @if ($promotionHistories->count() >= 3)
-                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                            data-bs-target="#detailPromotionHistoryModal">
-                            <i class="fas fa-info"></i> Detail
-                        </button>
-                    @endif
+                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                        data-bs-target="#detailPromotionHistoryModal">
+                        <i class="fas fa-info"></i> Detail
+                    </button>
                 </div>
                 <!--end::Card header-->
 

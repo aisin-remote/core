@@ -338,12 +338,12 @@
                                                 data-bs-target="#addEducationModal">
                                                 <i class="fas fa-plus"></i> Add
                                             </button>
-
-                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#detailEducationModal">
-                                                <i class="fas fa-info"></i> Detail
-                                            </button>
                                         @endif
+
+                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#detailEducationModal">
+                                            <i class="fas fa-info"></i> Detail
+                                        </button>
                                     </div>
                                 </div>
 
@@ -441,12 +441,12 @@
                                                 data-bs-target="#addExperienceModal">
                                                 <i class="fas fa-plus"></i> Add
                                             </button>
-
-                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#allExperienceDetailModal">
-                                                <i class="fas fa-info"></i> Detail
-                                            </button>
                                         @endif
+
+                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#allExperienceDetailModal">
+                                            <i class="fas fa-info"></i> Detail
+                                        </button>
                                     </div>
                                 </div>
 
@@ -550,12 +550,12 @@
                                                 data-bs-target="#addAppraisalModal">
                                                 <i class="fas fa-plus"></i> Add
                                             </button>
-
-                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                                data-bs-target="#alldetailAppraisalModal">
-                                                <i class="fas fa-info"></i> Detail
-                                            </button>
                                         @endif
+
+                                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                            data-bs-target="#alldetailAppraisalModal">
+                                            <i class="fas fa-info"></i> Detail
+                                        </button>
                                     </div>
                                 </div>
 
@@ -713,10 +713,6 @@
                 </div>
             </div>
 
-            @php
-                $totalAstraTrainings = $astraTrainings->count();
-            @endphp
-
             <div class="row">
                 <!-- Historical Astra  -->
                 <div class="col-md-6">
@@ -733,12 +729,10 @@
                                     <i class="fas fa-plus"></i> Add
                                 </button>
 
-                                @if ($totalAstraTrainings >= 3)
-                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                        data-bs-target="#detailAstraTrainingModal">
-                                        <i class="fas fa-info"></i> Detail
-                                    </button>
-                                @endif
+                                <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                    data-bs-target="#detailAstraTrainingModal">
+                                    <i class="fas fa-info"></i> Detail
+                                </button>
                             </div>
                         </div>
 
@@ -817,10 +811,6 @@
                 ])
                 {{-- end of astra_training modal --}}
 
-                @php
-                    $totalExternalTrainings = $externalTrainings->count();
-                @endphp
-
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
@@ -835,12 +825,10 @@
                                     <i class="fas fa-plus"></i> Add
                                 </button>
 
-                                @if ($totalExternalTrainings >= 3)
-                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                                        data-bs-target="#detailExternalTrainingModal">
-                                        <i class="fas fa-info"></i> Detail
-                                    </button>
-                                @endif
+                                <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                    data-bs-target="#detailExternalTrainingModal">
+                                    <i class="fas fa-info"></i> Detail
+                                </button>
                             </div>
                         </div>
 
@@ -925,12 +913,10 @@
                         <h3>Promotion History</h3>
                     </div>
 
-                    @if ($promotionHistories->count() > 3)
-                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                            data-bs-target="#detailPromotionHistoryModal">
-                            <i class="fas fa-info"></i> Detail
-                        </button>
-                    @endif
+                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                        data-bs-target="#detailPromotionHistoryModal">
+                        <i class="fas fa-info"></i> Detail
+                    </button>
                 </div>
                 <!--end::Card header-->
 
