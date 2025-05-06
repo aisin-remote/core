@@ -151,21 +151,37 @@
 
                                                 <td class="text-center" style="width: 50px">
                                                     <div class="d-flex gap-2 justify-content-center">
-                                                        <button type="button" class="btn btn-sm btn-primary"
+                                                        {{-- <button type="button" class="btn btn-sm btn-primary"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
                                                             <i class="fas fa-pencil-alt"></i>
-                                                        </button>
+                                                        </button> --}}
                                                         <button type="button" class="btn btn-sm btn-info"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#notes_{{ $assessment->employee->id }}">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
+                                                        @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
+                                                            <button type="button" class="btn btn-sm btn-success"
+                                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
+                                                                <i class="fas fa-file-export"></i>
+                                                            </button>
+                                                        @endif
+                                                        {{-- <button type="button" class="btn btn-sm btn-warning"
+                                                            onclick="sendDataConfirmation()">
+                                                            <i class="fas fa-paper-plane"></i>
+                                                        </button> --}}
+
                                                         <button type="button" class="btn btn-sm btn-success"
-                                                            onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                            <i class="fas fa-file-export"></i>
+                                                            onclick="approveAction()">
+                                                            <i class="fas fa-check-circle"></i>
+                                                        </button>
+                                                        <button type="button" class="btn btn-sm btn-danger"
+                                                            onclick="rejectAction()">
+                                                            <i class="fas fa-times-circle"></i>
                                                         </button>
                                                     </div>
+
                                                 </td>
                                             </tr>
                                         @empty
@@ -745,6 +761,7 @@
                         });
                     });
 
+
                     document.querySelectorAll('.btn-create-idp').forEach(button => {
                         button.addEventListener('click', function() {
                             const assessmentId = this.getAttribute('data-assessment');
@@ -872,6 +889,7 @@
                     });
 
 
+
                     // SweetAlert untuk tombol delete
                     document.querySelectorAll('.delete-btn').forEach(button => {
                         button.addEventListener('click', function() {
@@ -943,5 +961,72 @@
                         });
                     });
                 });
+
+                function sendDataConfirmation() {
+                    Swal.fire({
+                        title: 'Kirim Data?',
+                        text: "Data akan dikirim ke atasan untuk ditindaklanjuti.",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Ya, Kirim!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            Swal.fire(
+                                'Terkirim!',
+                                'Data berhasil dikirim ke atasan.',
+                                'success'
+                            )
+                            // TODO: Tambahkan AJAX atau redirect ke route pengiriman di sini
+                        }
+                    })
+                }
+
+                    function approveAction() {
+                        Swal.fire({
+                            title: 'Setujui Data?',
+                            icon: 'success',
+                            text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
+                            showCancelButton: true,
+                            confirmButtonText: 'Ya, Setujui',
+                            cancelButtonText: 'Batal'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
+                                // TODO: Kirim ke server via AJAX atau redirect di sini
+                            }
+                        });
+                    }
+
+                    function rejectAction() {
+                        Swal.fire({
+                            title: 'Revisi Data?',
+                            input: 'textarea',
+                            inputLabel: 'Alasan Revisi',
+                            inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                            inputAttributes: {
+                                'aria-label': 'Catatan Revisi'
+                            },
+                            showCancelButton: true,
+                            confirmButtonText: 'Revisi',
+                            cancelButtonText: 'Batal',
+                            inputValidator: (value) => {
+                                if (!value) {
+                                    return 'Catatan wajib diisi untuk Revisi!';
+                                }
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire(
+                                    'Revisi!',
+                                    'Note: ' + result.value,
+                                    'error'
+                                );
+                                // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                            }
+                        });
+                    }
             </script>
         @endpush
