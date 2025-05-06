@@ -174,6 +174,15 @@
                                 <div
                                     class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Educational Background</h3>
+
+                                    <div class="d-flex gap-2">
+                                        @if ($educations->count() >= 3)
+                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                data-bs-target="#detailEducationModal">
+                                                <i class="fas fa-info"></i> Detail
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
@@ -231,7 +240,16 @@
                             <div class="card mb-5 mb-xl-10">
                                 <div
                                     class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
-                                    <h3 class="fw-bolder m-0">Working Experience</h3>
+                                    <h3 class="fw-bolder m-0">Work Experience</h3>
+
+                                    <div class="d-flex gap-2">
+                                        @if ($workExperiences->count() >= 3)
+                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                data-bs-target="#allExperienceDetailModal">
+                                                <i class="fas fa-info"></i> Detail
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
@@ -282,6 +300,9 @@
                             </div>
                         </div>
                     </div>
+
+                    @include('website.modal.work.all_detail')
+
                     <div class="row">
                         <!-- Historical Performance Appraisal -->
                         <div class="col-md-12">
@@ -291,12 +312,7 @@
                                     <h3 class="fw-bolder m-0">Historical Performance Appraisal</h3>
 
                                     <div class="d-flex gap-3">
-                                        @if ($educations->count() >= 3)
-                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addAppraisalModal">
-                                                <i class="fas fa-plus"></i> Add
-                                            </button>
-
+                                        @if ($performanceAppraisals->count() >= 3)
                                             <button class="btn btn-sm btn-info" data-bs-toggle="modal"
                                                 data-bs-target="#alldetailAppraisalModal">
                                                 <i class="fas fa-info"></i> Detail
