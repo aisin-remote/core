@@ -9,13 +9,15 @@ use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\HavDetail;
+use App\Imports\HavImport;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
 use App\Models\HavQuadrant;
-use App\Models\KeyBehavior;
 
+use App\Models\KeyBehavior;
 use Illuminate\Http\Request;
+use Maatwebsite\Excel\Excel;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\HavDetailKeyBehavior;
@@ -30,110 +32,140 @@ class HavController extends Controller
     private function getSubordinatesFromStructure(Employee $employee)
     {
         $subordinateIds = collect();
-    
+
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
-    
+
             $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
-    
+
             $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-    
+
             $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
             $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
-    
+
             $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-    
+
             $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
             $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-    
+
             $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
             $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
             $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
                 ->where('id', '!=', $employee->id)
                 ->pluck('id');
-    
+
             $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
         }
-    
+
         if ($subordinateIds->isEmpty()) {
             return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
-    
+
         return Employee::whereIn('id', $subordinateIds);
     }
-    
+
     private function collectSubordinates($models, $field, $subordinateIds)
     {
         $ids = $models->pluck($field)->filter();
         return $subordinateIds->merge($ids);
     }
-    
+
     private function collectOperators($subSections, $subordinateIds)
     {
         $subSectionIds = $subSections->pluck('id');
         $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
-    }  
+    }
     /**
      * Display a listing of the resource.
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index($company = null)
     {
         $title = 'Employee List';
-        // dd($assessments);
-        $havGrouped = HavQuadrant::with('employee')->get()->groupBy('quadrant');
+        $user = auth()->user();
+        if ($user->role === 'HRD') {
+            $havGrouped = HavQuadrant::whereHas('employee', function ($query) use ($company) {
+                $query->where('company_name', $company);
+            })->with('employee')->get()->groupBy('quadrant');
 
-        // Quadrant ID => Judul
-        $titles = [
-            13 => 'Maximal Contributor',
-            7  => 'Top Performer',
-            3  => 'Future Star',
-            1  => 'Star',
-            14 => 'Contributor',
-            8  => 'Strong Performer',
-            4  => 'Potential Candidate',
-            2  => 'Future Star',
-            15 => 'Minimal Contributor',
-            9  => 'Career Person',
-            6  => 'Candidate',
-            5  => 'Raw Diamond',
-            16 => 'Dead Wood',
-            12 => 'Problem Employee',
-            11 => 'Unfit Employee',
-            10 => 'Most Unfit Employee',
-        ];
+            // Quadrant ID => Judul
+            $titles = [
+                13 => 'Maximal Contributor',
+                7  => 'Top Performer',
+                3  => 'Future Star',
+                1  => 'Star',
+                14 => 'Contributor',
+                8  => 'Strong Performer',
+                4  => 'Potential Candidate',
+                2  => 'Future Star',
+                15 => 'Minimal Contributor',
+                9  => 'Career Person',
+                6  => 'Candidate',
+                5  => 'Raw Diamond',
+                16 => 'Dead Wood',
+                12 => 'Problem Employee',
+                11 => 'Unfit Employee',
+                10 => 'Most Unfit Employee',
+            ];
 
-        $orderedHavGrouped = collect(array_keys($titles))->mapWithKeys(function ($quadrantId) use ($havGrouped) {
-            return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
-        });
+            $orderedHavGrouped = collect(array_keys($titles))->mapWithKeys(function ($quadrantId) use ($havGrouped) {
+                return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
+            });
+        } else {
+
+            $subordinates = auth()->user()->subordinate()->unique()->values();
+
+            $havGrouped = HavQuadrant::whereIn('employee_id', $subordinates)->with('employee')->get()->groupBy('quadrant');
+
+            // Quadrant ID => Judul
+            $titles = [
+                13 => 'Maximal Contributor',
+                7  => 'Top Performer',
+                3  => 'Future Star',
+                1  => 'Star',
+                14 => 'Contributor',
+                8  => 'Strong Performer',
+                4  => 'Potential Candidate',
+                2  => 'Future Star',
+                15 => 'Minimal Contributor',
+                9  => 'Career Person',
+                6  => 'Candidate',
+                5  => 'Raw Diamond',
+                16 => 'Dead Wood',
+                12 => 'Problem Employee',
+                11 => 'Unfit Employee',
+                10 => 'Most Unfit Employee',
+            ];
+
+            $orderedHavGrouped = collect(array_keys($titles))->mapWithKeys(function ($quadrantId) use ($havGrouped) {
+                return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
+            });
+        }
+
 
         return view('website.hav.index', compact('orderedHavGrouped', 'titles'));
     }
@@ -149,8 +181,8 @@ class HavController extends Controller
         $title = 'Add Employee';
         $user = auth()->user();
         if ($user->role === 'HRD') {
-            $employees = Assessment::with('employee')
-                ->whereHas('employee', function($query) use ($company){
+            $employees = Hav::with('employee')
+                ->whereHas('employee', function ($query) use ($company) {
                     $query->where('company_name', $company);
                 })
                 ->get()
@@ -159,21 +191,21 @@ class HavController extends Controller
         } else {
             // Cari employee berdasarkan user_id
             $employee = Employee::where('user_id', $user->id)->first();
-        
+
             if (!$employee) {
                 $employees = collect();
             } else {
                 // Ambil ID bawahan
                 $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
-        
+
                 // Ambil data assessment yang berkaitan dengan bawahan tersebut
-                $employees = Assessment::with('employee')
+                $employees = Hav::with('employee')
                     ->whereIn('employee_id', $subordinateIds)
                     ->get()
                     ->unique('employee_id')
                     ->values(); // reset indeks agar rapi
             }
-        }        
+        }
 
         return view('website.hav.list', compact('title', 'employees'));
     }
@@ -252,7 +284,7 @@ class HavController extends Controller
     public function update($id)
     {
         $title = 'Add Employee';
-        $hav = Assessment::with(['employee', 'alc', 'details'])
+        $hav = Hav::with(['employee', 'details'])
             ->whereHas('employee', function ($query) use ($id) {
                 return $query->where('id', $id);
             })
@@ -318,44 +350,11 @@ class HavController extends Controller
      */
     public function export()
     {
-        // $path = storage_path('app/templates/HAV_Summary.xlsx');
-        // $spreadsheet = IOFactory::load($path);
-        // $sheet = $spreadsheet->getActiveSheet();
-
-        // $assessments = Assessment::with(['employee', 'details'])->get();
-        // $startRow = 13;
-
-        // foreach ($assessments as $i => $a) {
-        //     $row = $startRow + $i;
-        //     $details = $a->details->keyBy('alc_id');
-
-        //     $sheet->setCellValue("A{$row}", $a->employee->npk ?? '');
-        //     $sheet->setCellValue("B{$row}", $a->date);
-        //     $sheet->setCellValue("C{$row}", $a->description);
-
-        //     $col = 'D';
-        //     for ($j = 1; $j <= 8; $j++) {
-        //         $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '');
-        //         $col++;
-        //         $sheet->setCellValue("{$col}{$row}", $details[$j]->strength ?? '');
-        //         $col++;
-        //         $sheet->setCellValue("{$col}{$row}", $details[$j]->weakness ?? '');
-        //         $col++;
-        //     }
-        // }
-
-        // $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        // $filename = 'exported_hav_manual.xlsx';
-        // $writer->save(public_path($filename));
-
-        // return response()->download(public_path($filename))->deleteFileAfterSend(true);
-
-
-        // $templatePath = storage_path('app/templates/HAV_Summary.xlsx');
         $templatePath = public_path('assets/file/HAV_Summary.xlsx');
         $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
+        $subordinates = auth()->user()->subordinate()->unique()->values();
         $employees = Employee::with([
             'assessments.details',
             'havQuadrants' => function ($q) {
@@ -364,7 +363,7 @@ class HavController extends Controller
             'performanceAppraisalHistories' => function ($q) {
                 $q->orderBy('date');
             }
-        ])->whereHas('havQuadrants')->get();
+        ])->whereHas('havQuadrants')->whereIn('id', $subordinates)->get();
 
         $startRow = 13;
 
@@ -432,6 +431,28 @@ class HavController extends Controller
         $writer->save(public_path($filename));
 
         return response()->download(public_path($filename))->deleteFileAfterSend(true);
+    }
+
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function import(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|mimes:xlsx,xls',
+        ]);
+
+        try {
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport, $request->file('file'));
+            return back()->with('success', 'Import HAV berhasil.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal import: ' . $e->getMessage());
+        }
+        return redirect()->back();
     }
 
     /**

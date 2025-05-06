@@ -76,12 +76,17 @@ Route::middleware('auth')->group(function () {
         Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');
         Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
-        
+        Route::post('/import', [HavController::class, 'import'])->name('hav.import');
+
+        Route::get('/hav/test-import', function () {
+            dd('Route OK');
+        });
+
         // Pindahkan ke atas
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
-    
+
 
     Route::prefix('employee')->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create

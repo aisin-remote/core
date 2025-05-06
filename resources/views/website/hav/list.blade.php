@@ -19,9 +19,9 @@
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
-                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                        data-kt-menu-placement="bottom-end">
-                        <i class="fas fa-filter"></i> Filter
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-upload"></i>
+                        Import
                     </button>
                 </div>
             </div>
@@ -118,31 +118,40 @@
     </div>
 
 
-    <!-- Modal Upload -->
-    <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="uploadModalLabel">Upload File</h5>
+                    <h5 class="modal-title" id="importModalLabel">Import HAV Employee Data</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+    
                 <div class="modal-body">
-                    <!-- Form untuk upload -->
-                    <form action="{{ url('your-upload-route') }}" method="POST" enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
+    
                         <div class="mb-3">
-                            <label for="fileUpload" class="form-label">Pilih File</label>
-                            <input type="file" class="form-control" id="fileUpload" name="file" required>
+                            <label for="importFile" class="form-label">Pilih File Excel</label>
+                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls" required>
+                            <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
-                        <div class="mb-3">
+    
+                        <div class="alert alert-info small">
+                            <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
+                            Download template format import:
+                            <a href="{{ asset('/file/Import-HAV.xlsx') }}" target="_blank" class="fw-bold text-primary text-decoration-underline">Download Template</a>
+                        </div>
+    
+                        <div class="text-end">
                             <button type="submit" class="btn btn-primary">Upload</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <div class="modal fade" id="kt_modal_create_app" tabindex="-1" aria-hidden="true">
         <!--begin::Modal dialog-->
         <div class="modal-dialog modal-dialog-centered mw-900px">
@@ -292,8 +301,11 @@
             </div>
         </div>
     </div>
+
+
 @endsection
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 @push('scripts')
     <!-- jQuery dulu -->
@@ -402,5 +414,53 @@
                 });
             });
         });
+
+        function rejectAction() {
+                        Swal.fire({
+                            title: 'Revisi Note?',
+                            input: 'textarea',
+                            inputLabel: 'Alasan Revisi',
+                            inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                            inputAttributes: {
+                                'aria-label': 'Catatan Revisi'
+                            },
+                            showCancelButton: true,
+                            confirmButtonText: 'Revisi',
+                            cancelButtonText: 'Batal',
+                            inputValidator: (value) => {
+                                if (!value) {
+                                    return 'Catatan wajib diisi untuk Revisi!';
+                                }
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire(
+                                    'Revisi!',
+                                    'Note: ' + result.value,
+                                    'error'
+                                );
+                                // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                            }
+                        });
+                    }
+        function approve() {
+            Swal.fire({
+                title: "Are you sure?",
+                text: "",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes, Approve it!"
+                }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                    title: "Approved!",
+                    text: "HAV has been approved.",
+                    icon: "success"
+                    });
+                }
+                });
+        }
     </script>
 @endpush
