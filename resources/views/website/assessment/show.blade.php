@@ -48,7 +48,7 @@
                                                 View
                                             </a>
                                         @else
-                                            <span class="text-muted">No PDF Available</span>
+                                            <span class="text-muted">No PDF</span>
                                         @endif
 
                                         <button type="button" class="btn btn-warning btn-sm updateAssessment"

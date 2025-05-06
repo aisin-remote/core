@@ -243,17 +243,21 @@
                         <tr>
                             <td class="text-center">${index + 1}</td>
                             <td class="text-center">${assessment.date}</td>
-                            <td class="text-center">${assessment.description}</td>
+                           <td class="text-center">${assessment.description || '-'}</td>
+
                             <td class="text-center">
                                 <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
                                     Detail
                                 </a>
-                                ${assessment.upload ? `
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    View PDF
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                </a>`
-                                    : '<span class="text-muted">No PDF Available</span>'
-                                }
+                              ${`
+                                                    <a class="btn btn-primary btn-sm"
+                                                        target="_blank"
+                                                        href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                                        onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                        View PDF
+                                                    </a>
+                                        `}
+
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
                                 data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
                                 data-id="${assessment.id}"

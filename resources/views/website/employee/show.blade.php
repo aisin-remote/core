@@ -56,7 +56,7 @@
                                         <div class="image-input image-input-outline" data-kt-image-input="true"
                                             style="background-image: url('/metronic8/demo1/assets/media/svg/avatars/blank.svg')">
                                             <div class="image-input-wrapper d-flex justify-content-center align-items-center"
-                                                style="background-image: url('{{ $employee->photo ? asset('storage/' . $employee->photo) : '/metronic8/demo1/assets/media/svg/avatars/blank.svg' }}'); 
+                                                style="background-image: url('{{ $employee->photo ? asset('storage/' . $employee->photo) : '/metronic8/demo1/assets/media/svg/avatars/blank.svg' }}');
                                                 height: 150px; width: 150px; background-size: cover;">
                                             </div>
                                         </div>
@@ -457,6 +457,7 @@
                                     <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
+
                                                 <th class="text-center">Year</th>
                                                 <th class="text-center">Program</th>
                                                 <th class="text-center">ICT/Project/Total</th>
@@ -491,7 +492,8 @@
                                                     @if (isset($astraTrainings[$i]))
                                                         @php $training = $astraTrainings[$i]; @endphp
                                                         <tr>
-                                                            <td class="text-center">{{ $training->year }}</td>
+
+                                                            <td class="text-center">{{ $training->date_end }}</td>
                                                             <td class="text-center">{{ $training->program }}</td>
                                                             <td class="text-center">
                                                                 {{ $training->ict_score }}/{{ $training->project_score }}/{{ $training->total_score }}
@@ -546,6 +548,7 @@
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
                                                 <th class="text-center">Training</th>
+
                                                 <th class="text-center">Year</th>
                                                 <th class="text-center">Vendor</th>
                                             </tr>
@@ -579,7 +582,8 @@
                                                         @php $training = $externalTrainings[$i]; @endphp
                                                         <tr>
                                                             <td class="text-center">{{ $training->program }}</td>
-                                                            <td class="text-center">{{ $training->year }}</td>
+
+                                                            <td class="text-center">{{ $training->date_end }}</td>
                                                             <td class="text-center">{{ $training->vendor }}</td>
                                                         </tr>
                                                     @else

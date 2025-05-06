@@ -21,7 +21,7 @@ class MasterImports implements WithMultipleSheets
             'Working Experience' => new WorkingExperience(),
             'Performance Appraisal History' => new PerformanceAppraisal(),
             'Astra Training' => new AstraTrainings(),
-            // 'Assessment' => new HavQuadrans(),
+            'Assessment' => new HavQuadrans(),
             'External Training' => new ExternalTrainings(),
             'Promotion History' => new PromotionHistorys(),
 
