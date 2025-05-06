@@ -9,6 +9,18 @@
 @endsection
 
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div class="d-flex flex-column flex-column-fluid">
         <!--begin::Content-->
         <div id="kt_app_content" class="app-content  flex-column-fluid ">
@@ -55,17 +67,19 @@
                                         <td class="text-center">
                                             <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
                                                 class="btn btn-sm btn-primary" title="Detail">
-                                                <i class="fas fa-info-circle"></i> Detail
+                                                <i class="fas fa-info-circle"></i>
                                             </a>
                                             <a href="{{ route('rtc.summary', ['id' => $division->id]) }}"
                                                 class="btn btn-sm btn-info" title="View">
-                                                <i class="fas fa-eye"></i> Summary
+                                                <i class="fas fa-eye"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-success" title="Add">
-                                                <i class="fas fa-plus-circle"></i> Add
+                                            <a href="#" class="btn btn-sm btn-success open-add-plan-modal"
+                                                title="Add" data-id="{{ $division->id }}" data-bs-toggle="modal"
+                                                data-bs-target="#addPlanModal">
+                                                <i class="fas fa-plus-circle"></i>
                                             </a>
                                             <a href="#" class="btn btn-sm btn-warning" title="Export">
-                                                <i class="fas fa-upload"></i> Export
+                                                <i class="fas fa-upload"></i>
                                             </a>
                                         </td>
                                     </tr>
@@ -81,4 +95,72 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="addPlanForm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add Plan</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="filter" value="division">
+                        @foreach (['short_term' => 'Short Term', 'mid_term' => 'Mid Term', 'long_term' => 'Long Term'] as $key => $label)
+                            <div class="mb-3">
+                                <label for="{{ $key }}" class="form-label">{{ $label }}</label>
+                                <select id="{{ $key }}" class="form-select" name="{{ $key }}">
+                                    <option value="">-- Select --</option>
+                                    @foreach ($employees as $employee)
+                                        <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        @endforeach
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" id="submitPlanBtn" class="btn btn-primary">Save</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
 @endsection
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        let currentDivisionId = null;
+
+        $(document).on('click', '.open-add-plan-modal', function() {
+            currentDivisionId = $(this).data('id');
+        });
+
+        $('#submitPlanBtn').on('click', function() {
+            const formData = {
+                filter: 'division',
+                id: currentDivisionId,
+                short_term: $('#short_term').val(),
+                mid_term: $('#mid_term').val(),
+                long_term: $('#long_term').val(),
+            };
+
+            $.ajax({
+                url: '{{ route('rtc.update') }}',
+                type: 'GET',
+                data: formData,
+                headers: {
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    $('#addPlanModal').modal('hide');
+                    window.location.reload();
+                },
+                error: function(xhr) {
+                    alert('Something went wrong!');
+                    console.log(xhr.responseText);
+                }
+            });
+        });
+    </script>
+@endpush

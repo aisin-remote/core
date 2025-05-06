@@ -59,7 +59,7 @@
                             <th>Department</th>
                             <th>Grade</th>
                             <th>Last HAV</th>
-                            <th class="text-center">Actions</th>
+                            <th class="text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,9 +74,22 @@
                                 <td>{{ $item->employee->grade }}</td>
                                 <td><span class="badge badge-light-warning fs-7 fw-bold">Career Person</span></td>
                                 <td class="text-center">
+                                    {{-- Upload --}}
+                                    <!-- Tombol Approve -->
+                                    <button class="btn btn-success btn-sm approve-btn" title="Approve"
+                                        data-bs-toggle="modal" data-bs-target="#commentHistoryModal">
+                                        <i class="fas fa-circle-check"></i>
+                                    </button>
+
+                                    <!-- Tombol Reject -->
+                                    <button class="btn btn-danger btn-sm" title="Reject" onclick="rejectAction()">
+                                        <i class="fas fa-circle-xmark"></i>
+                                    </button>
+
+                                    {{-- Summary --}}
                                     <a href="{{ url('hav/generate-create', ['id' => $item->employee_id]) }}"
                                         class="btn btn-info btn-sm">
-                                        <i class="bi bi-eye"></i> Summary
+                                        <i class="fas fa-eye"></i>
                                     </a>
                                 </td>
                             </tr>
@@ -87,6 +100,58 @@
         </div>
     </div>
 
+    <!-- Modal Riwayat Komentar -->
+    <div class="modal fade" id="commentHistoryModal" tabindex="-1" aria-labelledby="commentHistoryModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="commentHistoryModalLabel">Comment History</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Ganti bagian ini sesuai kebutuhan -->
+                    <ul class="list-group" id="commentList">
+                        <li class="list-group-item">
+                            <strong>Dedi:</strong> Dokumen kurang lengkap
+                            <br><small class="text-muted">01 Mei 2025 - 10:15</small>
+                        </li>
+                        <li class="list-group-item">
+                            <strong>Aristoni:</strong> Dokumen tidak terbaca.
+                            <br><small class="text-muted">02 Mei 2025 - 14:22</small>
+                        </li>
+                        <!-- Tambahan komentar lain -->
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal Upload -->
+    <div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="uploadModalLabel">Upload File</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form untuk upload -->
+                    <form action="{{ url('your-upload-route') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+                        <div class="mb-3">
+                            <label for="fileUpload" class="form-label">Pilih File</label>
+                            <input type="file" class="form-control" id="fileUpload" name="file" required>
+                        </div>
+                        <div class="mb-3">
+                            <button type="submit" class="btn btn-primary">Upload</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="modal fade" id="kt_modal_create_app" tabindex="-1" aria-hidden="true">
         <!--begin::Modal dialog-->
@@ -244,30 +309,81 @@
     <!-- jQuery dulu -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
 
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script>
-        $(document).ready(function() {
-            $('#hav-table').DataTable({
-                processing: true,
-                serverSide: true,
-                ajax: '{{ route('hav.ajax.list') }}',
-                columns: [{
-                        data: 'npk',
-                        name: 'npk'
-                    },
-                    {
-                        data: 'nama',
-                        name: 'nama'
-                    },
-                    {
-                        data: 'status',
-                        name: 'status'
+        function rejectAction() {
+            Swal.fire({
+                title: 'Revisi Data?',
+                input: 'textarea',
+                inputLabel: 'Alasan Revisi',
+                inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                inputAttributes: {
+                    'aria-label': 'Catatan Revisi'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Revisi',
+                cancelButtonText: 'Batal',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Catatan wajib diisi untuk Revisi!';
                     }
-                ]
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire(
+                        'Revisi!',
+                        'Note: ' + result.value,
+                        'error'
+                    );
+                    // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                }
+            });
+        }
+        $(document).ready(function() {
+            // $('#hav-table').DataTable({
+            //     processing: true,
+            //     serverSide: true,
+            //     ajax: '{{ route('hav.ajax.list') }}',
+            //     columns: [{
+            //             data: 'npk',
+            //             name: 'npk'
+            //         },
+            //         {
+            //             data: 'nama',
+            //             name: 'nama'
+            //         },
+            //         {
+            //             data: 'status',
+            //             name: 'status'
+            //         }
+            //     ]
+            // });
+
+            $('#submitBtn').click(function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Data berhasil disubmit.',
+                    confirmButtonText: 'Ok'
+                });
+            });
+
+            $(document).on('click', '.approve-btn', function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil Disetujui!',
+                    text: 'Data berhasil di-approve.',
+                    confirmButtonText: 'OK',
+                    timer: 2000,
+                    timerProgressBar: true
+                });
             });
         });
     </script>

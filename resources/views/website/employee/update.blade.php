@@ -545,7 +545,7 @@
                                     <h3 class="fw-bolder m-0">Historical Performance Appraisal</h3>
 
                                     <div class="d-flex gap-3">
-                                        @if ($educations->count() >= 3)
+                                        @if ($performanceAppraisals->count() >= 3)
                                             <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
                                                 data-bs-target="#addAppraisalModal">
                                                 <i class="fas fa-plus"></i> Add
@@ -920,12 +920,17 @@
 
             <div class="card mb-5 mb-xl-10">
                 <!--begin::Card header-->
-                <div class="card-header bg-light-primary">
-                    <!--begin::Heading-->
+                <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                     <div class="card-title">
                         <h3>Promotion History</h3>
                     </div>
-                    <!--end::Heading-->
+
+                    @if ($promotionHistories->count() > 3)
+                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                            data-bs-target="#detailPromotionHistoryModal">
+                            <i class="fas fa-info"></i> Detail
+                        </button>
+                    @endif
                 </div>
                 <!--end::Card header-->
 
@@ -951,7 +956,7 @@
 
                             <!--begin::Tbody-->
                             <tbody class="fw-6 fw-semibold text-gray-600">
-                                @forelse ($promotionHistories as $promotionHistory)
+                                @forelse ($promotionHistories->take(3) as $promotionHistory)
                                     <tr>
                                         <td class="text-center">{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $promotionHistory->previous_grade }}</td>
@@ -988,6 +993,8 @@
                 </div>
                 <!--end::Card body-->
             </div>
+
+            @include('website.modal.promotion_history.detail')
 
             <div class="row">
                 <!-- Strength -->

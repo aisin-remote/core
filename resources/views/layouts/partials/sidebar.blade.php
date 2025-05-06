@@ -476,8 +476,10 @@
                 <img src="{{ asset('assets/media/avatars/user.jpg') }}" class="rounded-3" alt="user" />
             </div>
             <div class="ms-3">
-                <div class="fw-bold text-white">{{ auth()->user()->name }}</div>
-                <div class="text-muted fs-8">{{ auth()->user()->employee->position }}</div>
+                <div class="fw-bold text-white">Dedi Irwanto</div>
+                <div class="text-muted fs-8">Director</div>
+                {{-- <div class="fw-bold text-white">{{ auth()->user()->name }}</div>
+                <div class="text-muted fs-8">{{ auth()->user()->employee->position }}</div> --}}
             </div>
         </div>
     </div>

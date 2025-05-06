@@ -14,7 +14,8 @@ class RtcController extends Controller
     public function index($company = null)
     {
         $divisions = Division::where('company', $company)->get();
-        return view('website.rtc.index', compact('divisions'));
+        $employees = Employee::whereIn('position', ['Manager','Section Head'])->get();
+        return view('website.rtc.index', compact('divisions', 'employees'));
     }
 
     public function list(Request $request)
@@ -90,7 +91,18 @@ class RtcController extends Controller
         foreach ($bawahans as $manager) {
             // Cari section yang berhubungan dengan manager
             $sections = Section::where('supervisor_id', $manager->id)->get();
-            
+
+            if($manager->position == 'Section Head' || $manager->position == 'Supervisor'){
+                $related = Section::with(['short', 'mid', 'long'])
+                    ->where('supervisor_id', $manager->id)
+                    ->first();
+            }else{
+                $related = Department::with(['short', 'mid', 'long'])
+                    ->where('manager_id', $manager->id)
+                    ->first();
+            }
+
+
             // Ambil supervisor dari setiap section yang berhubungan dengan manager
             $supervisors = $sections->map(function ($section) {
                 return $section->supervisor; // Mengambil relasi supervisor di section
@@ -98,11 +110,11 @@ class RtcController extends Controller
         
             // Simpan supervisor (section head) pada manager
             $manager->supervisors = $supervisors->unique('id')->filter();
+            $manager->planning = $related;
         }               
-
+        
         return view('website.rtc.detail', compact('data', 'filter', 'bawahans'));
     }
-
 
     public function update(Request $request)
     {

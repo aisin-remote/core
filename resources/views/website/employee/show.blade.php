@@ -286,11 +286,23 @@
                         <!-- Historical Performance Appraisal -->
                         <div class="col-md-12">
                             <div class="card mb-5">
-                                <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                                    role="button" data-bs-toggle="collapse"
-                                    data-bs-target="#kt_account_connected_accounts" aria-expanded="true"
-                                    aria-controls="kt_account_connected_accounts">
+                                <div
+                                    class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                     <h3 class="fw-bolder m-0">Historical Performance Appraisal</h3>
+
+                                    <div class="d-flex gap-3">
+                                        @if ($educations->count() >= 3)
+                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                                data-bs-target="#addAppraisalModal">
+                                                <i class="fas fa-plus"></i> Add
+                                            </button>
+
+                                            <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                                data-bs-target="#alldetailAppraisalModal">
+                                                <i class="fas fa-info"></i> Detail
+                                            </button>
+                                        @endif
+                                    </div>
                                 </div>
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
@@ -334,6 +346,9 @@
                             </div>
                         </div>
                     </div>
+
+                    @include('website.modal.appraisal.all_detail')
+
                     <div class="row">
                         <!-- Card 2: Historical Human Assets Value -->
                         <div class="col-md-12">
@@ -407,14 +422,27 @@
                 </div>
             </div>
 
+            @php
+                $totalAstraTrainings = $astraTrainings->count();
+            @endphp
+
             <div class="row">
                 <!-- Historical Astra  -->
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_astra_trainings"
-                            aria-expanded="true" aria-controls="kt_account_astra_trainings">
+                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
+                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
                             <h3 class="fw-bolder m-0">Astra Training History</h3>
+
+                            <div class="d-flex gap-2">
+                                @if ($totalAstraTrainings >= 3)
+                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                        data-bs-target="#detailAstraTrainingModal">
+                                        <i class="fas fa-info"></i> Detail
+                                    </button>
+                                @endif
+                            </div>
                         </div>
 
                         <div id="kt_account_astra_trainings" class="collapse show">
@@ -487,12 +515,28 @@
                     </div>
                 </div>
 
+                @include('website.modal.astra_training.detail')
+
+                @php
+                    $totalExternalTrainings = $externalTrainings->count();
+                @endphp
+
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_external_trainings"
-                            aria-expanded="true" aria-controls="kt_account_external_trainings">
+                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
+                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
+
                             <h3 class="fw-bolder m-0">External Training History</h3>
+
+                            <div class="d-flex gap-2">
+                                @if ($totalExternalTrainings >= 3)
+                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                                        data-bs-target="#detailExternalTrainingModal">
+                                        <i class="fas fa-info"></i> Detail
+                                    </button>
+                                @endif
+                            </div>
                         </div>
 
                         <div id="kt_account_external_trainings" class="collapse show">
@@ -563,14 +607,21 @@
                 </div>
             </div>
 
+            @include('website.modal.external_training.detail')
+
             <div class="card mb-5 mb-xl-10">
                 <!--begin::Card header-->
-                <div class="card-header bg-light-primary">
-                    <!--begin::Heading-->
+                <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                     <div class="card-title">
                         <h3>Promotion History</h3>
                     </div>
-                    <!--end::Heading-->
+
+                    @if ($promotionHistories->count() >= 3)
+                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                            data-bs-target="#detailPromotionHistoryModal">
+                            <i class="fas fa-info"></i> Detail
+                        </button>
+                    @endif
                 </div>
                 <!--end::Card header-->
 
@@ -619,6 +670,8 @@
                 </div>
                 <!--end::Card body-->
             </div>
+
+            @include('website.modal.promotion_history.detail')
 
             <div class="row">
                 <!-- Strength -->

@@ -2,23 +2,23 @@
 
 namespace App\Http\Controllers;
 
+use Carbon\Carbon;
 use App\Models\Alc;
 use App\Models\Hav;
 use App\Models\Employee;
 use App\Models\HavDetail;
 use App\Models\Assessment;
+use App\Models\HavQuadrant;
 use App\Models\KeyBehavior;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use App\Models\HavDetailKeyBehavior;
-use App\Models\HavQuadrant;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
-use Illuminate\Database\Events\TransactionBeginning;
-
-use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
-use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
+use Illuminate\Database\Events\TransactionBeginning;
 
 class HavController extends Controller
 {
@@ -71,9 +71,11 @@ class HavController extends Controller
         $title = 'Add Employee';
         $employees = Assessment::with('employee')
             ->whereHas('employee', function ($query) {
-                $query->where('company_name', 'AII');
+                $query->where('company_name', 'AIIA');
             })
-            ->get();
+            ->get()
+            ->unique('employee_id')
+            ->values(); // reset indeks agar rapi
 
         return view('website.hav.list', compact('title', 'employees'));
     }
@@ -251,7 +253,8 @@ class HavController extends Controller
         // return response()->download(public_path($filename))->deleteFileAfterSend(true);
 
 
-        $templatePath = storage_path('app/templates/HAV_Summary.xlsx');
+        // $templatePath = storage_path('app/templates/HAV_Summary.xlsx');
+        $templatePath = public_path('assets/file/HAV_Summary.xlsx');
         $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
