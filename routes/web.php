@@ -70,15 +70,18 @@ Route::middleware('auth')->group(function () {
     })->name('people.index');
 
     Route::prefix('hav')->group(function () {
-        Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index'); // Menampilkan form create
-        Route::get('/list-create', [HavController::class, 'listCreate'])->name('hav.list-create'); // Menampilkan form create
-        Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list'); // Menampilkan form create
-        Route::get('/generate-create/{id}', [HavController::class, 'generateCreate'])->name('hav.generate-create'); // Menampilkan form create
-        Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update'); // Menampilkan form create
+        Route::get('/list-create', [HavController::class, 'listCreate'])->name('hav.list-create');
+        Route::get('/generate-create/{id}', [HavController::class, 'generateCreate'])->name('hav.generate-create');
+        Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update');
         Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');
         Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
+        
+        // Pindahkan ke atas
+        Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
+        Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
+    
 
     Route::prefix('employee')->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create

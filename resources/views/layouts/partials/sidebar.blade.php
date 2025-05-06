@@ -165,11 +165,31 @@
 
                         {{-- HAV --}}
                         @if (auth()->user()->role == 'User')
-                            <div class="menu-item">
-                                <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}" href="/hav">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                            <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
+                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
+                                <span class="menu-link {{ $isHav ? 'active' : '' }}">
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
-                                </a>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}"
+                                            href="/hav">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">HAV Quadran</span>
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'hav/list' ? 'active' : '' }}"
+                                            href="/hav/list">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">HAV List</span>
+                                        </a>
+                                    </div>
+                                </div>
                             </div>
                         @else
                             <div class="menu-item menu-accordion {{ request()->is('hav*') ? 'show' : '' }}"
