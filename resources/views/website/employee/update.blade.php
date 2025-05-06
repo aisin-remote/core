@@ -751,7 +751,8 @@
                                         <!--begin::Thead-->
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
-                                                <th class="text-center">Year</th>
+
+                                                    <th class="text-center">Year</th>
                                                 <th class="text-center">Program</th>
                                                 <th class="text-center">ICT/Project/Total</th>
                                                 <th class="text-center">Action</th>
@@ -763,7 +764,8 @@
                                         <tbody class="fw-6 fw-semibold text-gray-600">
                                             @forelse ($astraTrainings->take(3) as $astraTraining)
                                                 <tr>
-                                                    <td class="text-center">{{ $astraTraining->year }}</td>
+
+                                                    <td class="text-center">{{ $astraTraining->date_end }}</td>
                                                     <td class="text-center">{{ $astraTraining->program }}
                                                     </td>
                                                     <td class="text-center">
@@ -854,7 +856,8 @@
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
                                                 <th>Training</th>
-                                                <th class="text-center">Year</th>
+
+                                                    <th class="text-center">Year</th>
                                                 <th class="text-center">Vendor</th>
                                                 <th class="text-center">Action</th>
                                             </tr>
@@ -866,7 +869,8 @@
                                             @forelse ($externalTrainings->take(3) as $externalTraining)
                                                 <tr>
                                                     <td>{{ $externalTraining->program }}</td>
-                                                    <td class="text-center">{{ $externalTraining->year }}</td>
+
+                                                    <td class="text-center">{{ $externalTraining->date_end }}</td>
                                                     <td class="text-center">{{ $externalTraining->vendor }}</td>
                                                     <td class="text-center">
                                                         <div class="d-flex justify-content-center gap-2">

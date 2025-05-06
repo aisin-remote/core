@@ -27,14 +27,14 @@ class HavQuadrans implements WithEvents
                     $description = $sheet->getCell("C{$row}")->getValue();
 
                     $fields = [
-                        1 => ['score' => $sheet->getCell("D{$row}")->getValue(), 'strength' => $sheet->getCell("E{$row}")->getValue(), 'weakness' => $sheet->getCell("F{$row}")->getValue()],
-                        2 => ['score' => $sheet->getCell("G{$row}")->getValue(), 'strength' => $sheet->getCell("H{$row}")->getValue(), 'weakness' => $sheet->getCell("I{$row}")->getValue()],
-                        3 => ['score' => $sheet->getCell("J{$row}")->getValue(), 'strength' => $sheet->getCell("K{$row}")->getValue(), 'weakness' => $sheet->getCell("L{$row}")->getValue()],
-                        4 => ['score' => $sheet->getCell("M{$row}")->getValue(), 'strength' => $sheet->getCell("N{$row}")->getValue(), 'weakness' => $sheet->getCell("O{$row}")->getValue()],
-                        5 => ['score' => $sheet->getCell("P{$row}")->getValue(), 'strength' => $sheet->getCell("Q{$row}")->getValue(), 'weakness' => $sheet->getCell("R{$row}")->getValue()],
-                        6 => ['score' => $sheet->getCell("S{$row}")->getValue(), 'strength' => $sheet->getCell("T{$row}")->getValue(), 'weakness' => $sheet->getCell("U{$row}")->getValue()],
-                        7 => ['score' => $sheet->getCell("V{$row}")->getValue(), 'strength' => $sheet->getCell("W{$row}")->getValue(), 'weakness' => $sheet->getCell("X{$row}")->getValue()],
-                        8 => ['score' => $sheet->getCell("Y{$row}")->getValue(), 'strength' => $sheet->getCell("Z{$row}")->getValue(), 'weakness' => $sheet->getCell("AA{$row}")->getValue()],
+                        1 => ['score' => $sheet->getCell("G{$row}")->getValue(), 'strength' => $sheet->getCell("H{$row}")->getValue(), 'weakness' => $sheet->getCell("I{$row}")->getValue()],
+                        2 => ['score' => $sheet->getCell("J{$row}")->getValue(), 'strength' => $sheet->getCell("K{$row}")->getValue(), 'weakness' => $sheet->getCell("L{$row}")->getValue()],
+                        3 => ['score' => $sheet->getCell("M{$row}")->getValue(), 'strength' => $sheet->getCell("N{$row}")->getValue(), 'weakness' => $sheet->getCell("O{$row}")->getValue()],
+                        4 => ['score' => $sheet->getCell("P{$row}")->getValue(), 'strength' => $sheet->getCell("Q{$row}")->getValue(), 'weakness' => $sheet->getCell("R{$row}")->getValue()],
+                        5 => ['score' => $sheet->getCell("S{$row}")->getValue(), 'strength' => $sheet->getCell("T{$row}")->getValue(), 'weakness' => $sheet->getCell("U{$row}")->getValue()],
+                        6 => ['score' => $sheet->getCell("V{$row}")->getValue(), 'strength' => $sheet->getCell("W{$row}")->getValue(), 'weakness' => $sheet->getCell("X{$row}")->getValue()],
+                        7 => ['score' => $sheet->getCell("Y{$row}")->getValue(), 'strength' => $sheet->getCell("Z{$row}")->getValue(), 'weakness' => $sheet->getCell("AA{$row}")->getValue()],
+                        8 => ['score' => $sheet->getCell("AB{$row}")->getValue(), 'strength' => $sheet->getCell("AC{$row}")->getValue(), 'weakness' => $sheet->getCell("AD{$row}")->getValue()],
                     ];
 
                     $employee = Employee::where('npk', $npk)->first();

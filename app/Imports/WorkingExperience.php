@@ -26,7 +26,7 @@ class WorkingExperience implements ToCollection, WithHeadingRow
                 'employee_id'   => $employee->id,
                 'company'       => $row['company'],
                 'position' => $row['position_name'],
-                // 'description'   => $row['description'],
+
                 'department' => $row['department_name'],
                 'start_date'    => $this->convertDate($row['start_date']),
                 'end_date'      => $this->convertDate($row['end_date']),
@@ -39,6 +39,17 @@ class WorkingExperience implements ToCollection, WithHeadingRow
         if (is_numeric($value)) {
             return Carbon::createFromDate(1900, 1, 1)->addDays($value - 2)->format('Y-m-d');
         }
-        return $value ? Carbon::parse($value)->format('Y-m-d') : null;
+
+        if ($value) {
+            try {
+                return Carbon::createFromFormat('d/m/Y', $value)->format('Y-m-d');
+            } catch (\Exception $e) {
+                Log::error("Gagal parsing tanggal: $value - " . $e->getMessage());
+                return null;
+            }
+        }
+
+        return null;
     }
+
 }
