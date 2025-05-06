@@ -164,7 +164,7 @@
                         @endif
 
                         {{-- HAV --}}
-
+                        @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}" href="/hav">
                                     <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
@@ -238,7 +238,7 @@
                                     </div>
                                 </div>
                             </div>
-
+                        @endif
 
                         {{-- IDP --}}
                         @if (auth()->user()->role == 'User')
@@ -455,7 +455,7 @@
                 </div>
             </div>
 
-            {{-- <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                 id="menu-master">
                 <span class="menu-link">
                     <span class="menu-icon">
@@ -495,7 +495,7 @@
                     </div>
                 </div>
 
-            </div> --}}
+            </div>
             <!--end:Master Menu Accordion-->
 
             <!--end:Master Section-->
