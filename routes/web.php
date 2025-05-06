@@ -70,9 +70,9 @@ Route::middleware('auth')->group(function () {
     })->name('people.index');
 
     Route::prefix('hav')->group(function () {
-        Route::get('/', [HavController::class, 'index'])->name('hav.index'); // Menampilkan form create
+        Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index'); // Menampilkan form create
         Route::get('/list-create', [HavController::class, 'listCreate'])->name('hav.list-create'); // Menampilkan form create
-        Route::get('/list', [HavController::class, 'list'])->name('hav.list'); // Menampilkan form create
+        Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list'); // Menampilkan form create
         Route::get('/generate-create/{id}', [HavController::class, 'generateCreate'])->name('hav.generate-create'); // Menampilkan form create
         Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update'); // Menampilkan form create
         Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');

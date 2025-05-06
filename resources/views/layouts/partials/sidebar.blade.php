@@ -172,29 +172,69 @@
                                 </a>
                             </div>
                         @else
-                            <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
-                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
-                                <span class="menu-link {{ $isHav ? 'active' : '' }}">
+                            <div class="menu-item menu-accordion {{ request()->is('hav*') ? 'show' : '' }}"
+                                data-kt-menu-trigger="click" data-kt-menu-expand="true">
+                                <span class="menu-link">
                                     <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title ps-1">HAV</span>
+                                    <span class="menu-title">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
+
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}"
-                                            href="/hav">
+                                    {{-- HAV Quadran --}}
+                                    <div class="menu-item menu-accordion {{ request()->is('hav/quadran*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">HAV Quadran</span>
-                                        </a>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('hav/aii') ? 'active' : '' }}"
+                                                    href="/hav/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('hav/aiia') ? 'active' : '' }}"
+                                                    href="/hav/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}"
-                                            href="/hav/list">
+
+                                    {{-- HAV List --}}
+                                    <div class="menu-item menu-accordion {{ request()->is('hav/list*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">HAV List</span>
-                                        </a>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('hav/list/aii') ? 'active' : '' }}"
+                                                    href="/hav/list/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('hav/list/aiia') ? 'active' : '' }}"
+                                                    href="/hav/list/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

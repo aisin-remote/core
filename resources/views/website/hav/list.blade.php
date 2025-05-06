@@ -27,27 +27,29 @@
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist" style="cursor:pointer">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 active filter-tab"" data-filter="all">Show All</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
-                    </li>
-                </ul>
+                @if (auth()->user()->role == 'HRD')
+                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                        role="tablist" style="cursor:pointer">
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
+                        </li>
+                    </ul>
+                @endif
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -64,7 +66,7 @@
                     </thead>
                     <tbody>
                         @foreach ($employees as $item)
-                            <tr class="text-start">
+                            <tr data-position="{{ $item->employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $item->employee->npk }}</td>
                                 <td>{{ $item->employee->name }}</td>
@@ -74,18 +76,6 @@
                                 <td>{{ $item->employee->grade }}</td>
                                 <td><span class="badge badge-light-warning fs-7 fw-bold">Career Person</span></td>
                                 <td class="text-center">
-                                    {{-- Upload --}}
-                                    <!-- Tombol Approve -->
-                                    <button class="btn btn-success btn-sm approve-btn" title="Approve"
-                                        data-bs-toggle="modal" data-bs-target="#commentHistoryModal">
-                                        <i class="fas fa-circle-check"></i>
-                                    </button>
-
-                                    <!-- Tombol Reject -->
-                                    <button class="btn btn-danger btn-sm" title="Reject" onclick="rejectAction()">
-                                        <i class="fas fa-circle-xmark"></i>
-                                    </button>
-
                                     {{-- Summary --}}
                                     <a href="{{ url('hav/generate-create', ['id' => $item->employee_id]) }}"
                                         class="btn btn-info btn-sm">
@@ -318,6 +308,32 @@
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const tabs = document.querySelectorAll(".filter-tab");
+            const rows = document.querySelectorAll("#kt_table_users tbody tr");
+
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function(e) {
+                    e.preventDefault();
+
+                    // Hapus class active dari semua tab
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
+
+                    const filter = this.getAttribute("data-filter");
+
+                    rows.forEach(row => {
+                        const position = row.getAttribute("data-position");
+                        if (filter === "all" || position === filter) {
+                            row.style.display = "";
+                        } else {
+                            row.style.display = "none";
+                        }
+                    });
+                });
+            });
+        });
+
         function rejectAction() {
             Swal.fire({
                 title: 'Revisi Data?',

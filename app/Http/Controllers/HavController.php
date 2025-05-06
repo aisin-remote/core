@@ -5,16 +5,21 @@ namespace App\Http\Controllers;
 use Carbon\Carbon;
 use App\Models\Alc;
 use App\Models\Hav;
+use App\Models\Section;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\HavDetail;
 use App\Models\Assessment;
+use App\Models\Department;
+use App\Models\SubSection;
 use App\Models\HavQuadrant;
 use App\Models\KeyBehavior;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use App\Http\Controllers\Controller;
 use App\Models\HavDetailKeyBehavior;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
@@ -22,6 +27,79 @@ use Illuminate\Database\Events\TransactionBeginning;
 
 class HavController extends Controller
 {
+    private function getSubordinatesFromStructure(Employee $employee)
+    {
+        $subordinateIds = collect();
+    
+        if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
+            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
+    
+            $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
+            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+    
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
+            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+    
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
+            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+    
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+    
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+            $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id');
+    
+            $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
+        }
+    
+        if ($subordinateIds->isEmpty()) {
+            return Employee::whereRaw('1=0'); // tidak ada bawahan
+        }
+    
+        return Employee::whereIn('id', $subordinateIds);
+    }
+    
+    private function collectSubordinates($models, $field, $subordinateIds)
+    {
+        $ids = $models->pluck($field)->filter();
+        return $subordinateIds->merge($ids);
+    }
+    
+    private function collectOperators($subSections, $subordinateIds)
+    {
+        $subSectionIds = $subSections->pluck('id');
+        $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
+        return $subordinateIds->merge($operatorIds);
+    }  
     /**
      * Display a listing of the resource.
      *
@@ -66,16 +144,36 @@ class HavController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function list()
+    public function list($company = null)
     {
         $title = 'Add Employee';
-        $employees = Assessment::with('employee')
-            ->whereHas('employee', function ($query) {
-                $query->where('company_name', 'AIIA');
-            })
-            ->get()
-            ->unique('employee_id')
-            ->values(); // reset indeks agar rapi
+        $user = auth()->user();
+        if ($user->role === 'HRD') {
+            $employees = Assessment::with('employee')
+                ->whereHas('employee', function($query) use ($company){
+                    $query->where('company_name', $company);
+                })
+                ->get()
+                ->unique('employee_id')
+                ->values(); // reset indeks agar rapi
+        } else {
+            // Cari employee berdasarkan user_id
+            $employee = Employee::where('user_id', $user->id)->first();
+        
+            if (!$employee) {
+                $employees = collect();
+            } else {
+                // Ambil ID bawahan
+                $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
+        
+                // Ambil data assessment yang berkaitan dengan bawahan tersebut
+                $employees = Assessment::with('employee')
+                    ->whereIn('employee_id', $subordinateIds)
+                    ->get()
+                    ->unique('employee_id')
+                    ->values(); // reset indeks agar rapi
+            }
+        }        
 
         return view('website.hav.list', compact('title', 'employees'));
     }
