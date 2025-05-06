@@ -28,7 +28,7 @@
             <div id="kt_app_content_container" class="app-container  container-fluid ">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="card-title">Division List</h3>
+                        <h3 class="card-title">{{ $table }} List</h3>
                         <div class="d-flex align-items-center">
                             <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                                 style="width: 200px;">
@@ -55,7 +55,7 @@
                             <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
-                                    <th class="text-center">Division</th>
+                                    <th class="text-center">{{ $table }}</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>

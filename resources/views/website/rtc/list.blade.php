@@ -28,7 +28,7 @@
             <div id="kt_app_content_container" class="app-container  container-fluid ">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="card-title">Division List</h3>
+                        <h3 class="card-title"></h3>
                         <div class="d-flex align-items-center">
                             <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                                 style="width: 200px;">
@@ -53,10 +53,12 @@
                     <div class="card-body">
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                             role="tablist" style="cursor:pointer">
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab active"
-                                    data-filter="department">Department</a>
-                            </li>
+                            @if (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Director')
+                                <li class="nav-item" role="presentation">
+                                    <a class="nav-link text-active-primary pb-4 filter-tab active"
+                                        data-filter="department">Department</a>
+                                </li>
+                            @endif
                             <li class="nav-item" role="presentation">
                                 <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="section">Section</a>
                             </li>
@@ -153,7 +155,6 @@
             }
 
             // initial load = Supervisor (Department)
-            loadTable('department');
 
             $('.filter-tab').on('click', function() {
                 $('.filter-tab').removeClass('active');
@@ -162,8 +163,18 @@
                 loadTable(filter);
             });
 
-            let currentFilter = 'department'; // default tab
             const employees = @json($employees);
+            const user = @json($user);
+
+
+            let currentFilter
+            if (user.employee.position == 'Director' || user.role == 'HRD') {
+                currentFilter = 'department'; // default tab
+            } else {
+                currentFilter = 'section'; // default tab
+            }
+
+            loadTable(currentFilter);
 
             $('.filter-tab').on('click', function() {
                 $('.filter-tab').removeClass('active');

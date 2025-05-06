@@ -226,26 +226,46 @@ class MasterController extends Controller
         $filter = $request->filter;
         $division_id = $request->division_id;
 
-        switch ($filter) {
-            case 'department':
-                $data = Department::where('division_id', $division_id)->get();
-                break;
-
-            case 'section':
-                $data = Section::whereHas('department', function ($q) use ($division_id) {
-                    $q->where('division_id', $division_id);
-                })->get();
-                break;
-
-            case 'sub_section':
-                $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
-                    $q->where('division_id', $division_id);
-                })->get();
-                break;
-
-            default:
-                $data = collect(); // kosong
-                break;
+        $user = auth()->user();
+        $employee = $user->employee;
+        
+        if($user->role === 'HRD' || $employee->position == 'Director'){     
+            switch ($filter) {
+                case 'department':
+                    $data = Department::where('division_id', $division_id)->get();
+                    break;
+    
+                case 'section':
+                    $data = Section::whereHas('department', function ($q) use ($division_id) {
+                        $q->where('division_id', $division_id);
+                    })->get();
+                    break;
+    
+                case 'sub_section':
+                    $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                        $q->where('division_id', $division_id);
+                    })->get();
+                    break;
+    
+                default:
+                    $data = collect(); // kosong
+                    break;
+            }
+        }else{
+            switch ($filter) {
+                case 'section':
+                    $data = Section::where('department_id', $division_id)->get();
+                    break;
+                case 'sub_section':
+                    $data = SubSection::with('section')->whereHas('section', function ($q) use ($division_id){
+                        $q->where('department_id', $division_id);
+                    })->get();
+                    break;
+    
+                default:
+                    $data = collect(); // kosong
+                    break;
+            }
         }
 
         return view('layouts.partials.filter', compact('data'))->render();

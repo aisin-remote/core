@@ -13,16 +13,32 @@ class RtcController extends Controller
 {
     public function index($company = null)
     {
-        $divisions = Division::where('company', $company)->get();
-        $employees = Employee::whereIn('position', ['Manager','Section Head'])->get();
-        return view('website.rtc.index', compact('divisions', 'employees'));
+        $user = auth()->user();
+        $employee = $user->employee;
+
+        // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
+        if ($user->role === 'HRD' || $employee->position == 'Director') {
+            $table = 'Division';
+            $divisions = Division::where('company', $company)->get();
+            $employees = Employee::whereIn('position', ['Manager','Coordinator'])->get();
+        } else {
+            $table = 'Department';
+            // Ambil data divisi yang dipegang user login
+            $data = Division::where('gm_id', $employee->id)->first();
+            $divisions = Department::where('division_id', $data->id)->get();
+            $employees = Employee::whereIn('position', ['Supervisor','Section Head'])->get();
+        }
+        
+        return view('website.rtc.index', compact('divisions', 'employees', 'table'));
     }
 
     public function list(Request $request)
     {
+        $user = auth()->user()->load('employee');
+        
         $divisionId = $request->query()['id'];
         $employees = Employee::with('leadingDepartment', 'leadingSection', 'leadingSubSection')->select('id', 'name', 'position')->get();
-        return view('website.rtc.list', compact('employees', 'divisionId'));
+        return view('website.rtc.list', compact('employees', 'divisionId', 'user'));
     }
 
     public function detail(Request $request)
