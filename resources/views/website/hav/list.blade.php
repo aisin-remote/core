@@ -30,23 +30,47 @@
                 @if (auth()->user()->role == 'HRD')
                     <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                         role="tablist" style="cursor:pointer">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                            href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            Show All
+                        </a>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                                Direktur
+                            </a>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                                Head</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company,'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
                         </li>
                     </ul>
                 @endif
@@ -125,23 +149,26 @@
                     <h5 class="modal-title" id="importModalLabel">Import HAV Employee Data</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-    
+
                 <div class="modal-body">
-                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST"
+                        enctype="multipart/form-data">
                         @csrf
-    
+
                         <div class="mb-3">
                             <label for="importFile" class="form-label">Pilih File Excel</label>
-                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls" required>
+                            <input type="file" name="file" id="importFile" class="form-control"
+                                accept=".xlsx, .xls" required>
                             <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
-    
+
                         <div class="alert alert-info small">
                             <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
                             Download template format import:
-                            <a href="{{ asset('/file/Import-HAV.xlsx') }}" target="_blank" class="fw-bold text-primary text-decoration-underline">Download Template</a>
+                            <a href="{{ asset('/file/Import-HAV.xlsx') }}" target="_blank"
+                                class="fw-bold text-primary text-decoration-underline">Download Template</a>
                         </div>
-    
+
                         <div class="text-end">
                             <button type="submit" class="btn btn-primary">Upload</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -151,7 +178,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="modal fade" id="kt_modal_create_app" tabindex="-1" aria-hidden="true">
         <!--begin::Modal dialog-->
         <div class="modal-dialog modal-dialog-centered mw-900px">
@@ -301,8 +328,6 @@
             </div>
         </div>
     </div>
-
-
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -416,33 +441,34 @@
         });
 
         function rejectAction() {
-                        Swal.fire({
-                            title: 'Revisi Note?',
-                            input: 'textarea',
-                            inputLabel: 'Alasan Revisi',
-                            inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
-                            inputAttributes: {
-                                'aria-label': 'Catatan Revisi'
-                            },
-                            showCancelButton: true,
-                            confirmButtonText: 'Revisi',
-                            cancelButtonText: 'Batal',
-                            inputValidator: (value) => {
-                                if (!value) {
-                                    return 'Catatan wajib diisi untuk Revisi!';
-                                }
-                            }
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                Swal.fire(
-                                    'Revisi!',
-                                    'Note: ' + result.value,
-                                    'error'
-                                );
-                                // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
-                            }
-                        });
+            Swal.fire({
+                title: 'Revisi Note?',
+                input: 'textarea',
+                inputLabel: 'Alasan Revisi',
+                inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                inputAttributes: {
+                    'aria-label': 'Catatan Revisi'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Revisi',
+                cancelButtonText: 'Batal',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Catatan wajib diisi untuk Revisi!';
                     }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire(
+                        'Revisi!',
+                        'Note: ' + result.value,
+                        'error'
+                    );
+                    // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                }
+            });
+        }
+
         function approve() {
             Swal.fire({
                 title: "Are you sure?",
@@ -452,15 +478,15 @@
                 confirmButtonColor: "#3085d6",
                 cancelButtonColor: "#d33",
                 confirmButtonText: "Yes, Approve it!"
-                }).then((result) => {
+            }).then((result) => {
                 if (result.isConfirmed) {
                     Swal.fire({
-                    title: "Approved!",
-                    text: "HAV has been approved.",
-                    icon: "success"
+                        title: "Approved!",
+                        text: "HAV has been approved.",
+                        icon: "success"
                     });
                 }
-                });
+            });
         }
     </script>
 @endpush

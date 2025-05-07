@@ -176,39 +176,49 @@ class HavController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function list($company = null)
+    public function list(Request $request, $company = null)
     {
         $title = 'Add Employee';
         $user = auth()->user();
+        $filter = $request->input('filter'); // Tambahan: ambil filter dari request
+
         if ($user->role === 'HRD') {
             $employees = Hav::with('employee')
-                ->whereHas('employee', function ($query) use ($company) {
-                    $query->where('company_name', $company);
+                ->whereHas('employee', function ($query) use ($company, $filter) {
+                    if ($company) {
+                        $query->where('company_name', $company);
+                    }
+                    if ($filter && $filter !== 'all') {
+                        $query->where('position', $filter);
+                    }
                 })
                 ->get()
                 ->unique('employee_id')
                 ->values(); // reset indeks agar rapi
         } else {
-            // Cari employee berdasarkan user_id
             $employee = Employee::where('user_id', $user->id)->first();
 
             if (!$employee) {
                 $employees = collect();
             } else {
-                // Ambil ID bawahan
                 $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
 
-                // Ambil data assessment yang berkaitan dengan bawahan tersebut
                 $employees = Hav::with('employee')
                     ->whereIn('employee_id', $subordinateIds)
+                    ->whereHas('employee', function ($query) use ($filter) {
+                        if ($filter && $filter !== 'all') {
+                            $query->where('position', $filter);
+                        }
+                    })
                     ->get()
                     ->unique('employee_id')
                     ->values(); // reset indeks agar rapi
             }
         }
 
-        return view('website.hav.list', compact('title', 'employees'));
+        return view('website.hav.list', compact('title', 'employees', 'filter','company'));
     }
+
 
     public function ajaxList(Request $request)
     {
@@ -453,6 +463,10 @@ class HavController extends Controller
             return back()->with('error', 'Gagal import: ' . $e->getMessage());
         }
         return redirect()->back();
+    }
+    public function approval(Request $request)
+    {
+        return view('website.approval.approvalhav');
     }
 
     /**

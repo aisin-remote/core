@@ -55,6 +55,53 @@
             </div>
 
             <div class="card-body">
+                @if (auth()->user()->role == 'HRD')
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                    role="tablist" style="cursor:pointer">
+                    <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                        href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                        Show All
+                    </a>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                            Direktur
+                        </a>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                            Head</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
+                    </li>
+                </ul>
+            @endif
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -111,6 +158,8 @@
                         @endforelse
                     </tbody>
                 </table>
+
+
             </div>
         </div>
     </div>

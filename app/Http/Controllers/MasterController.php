@@ -34,34 +34,44 @@ class MasterController extends Controller
         return $subordinates;
     }
 
-    public function employee($company = null)
-    {
-        $title = 'Employee';
-        $user = auth()->user();
+  public function employee(Request $request, $company = null)
+{
+    $title = 'Employee';
+    $user = auth()->user();
+    $filter = $request->input('filter', 'all'); // posisi (default: all)
 
-        // Jika HRD, bisa melihat semua karyawan
-        if ($user->role === 'HRD') {
-            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-                ->when($company, fn($query) => $query->where('company_name', $company))
-                ->where(function ($query) {
-                    $query->where('user_id', '!=', auth()->id())
-                        ->orWhereNull('user_id');
-                })
-                ->get();
+    if ($user->role === 'HRD') {
+        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+            ->when($company, fn($query) => $query->where('company_name', $company))
+            ->when($filter !== 'all', fn($query) => $query->where('position', $filter))
+            ->where(function ($query) {
+                $query->where('user_id', '!=', auth()->id())
+                      ->orWhereNull('user_id');
+            })
+            ->paginate(10)
+            ->appends(['filter' => $filter, 'company' => $company]); // Menambahkan filter dan company pada pagination
+    } else {
+        $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$emp) {
+            $employee = collect();
         } else {
-            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
-            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->where('user_id', $user->id)->first();
-            if (!$emp) {
-                $employee = collect();
-            } else {
-                $employee = $this->getSubordinates($emp->id)
-                    ->where('company_name', $emp->company_name);
-            }
-        }
+            $query = $this->getSubordinates($emp->id)->where('company_name', $emp->company_name);
 
-        return view('website.master.employee.index', compact('employee'));
+            if ($filter !== 'all') {
+                $query = $query->where('position', $filter);
+            }
+
+            $employee = $query->paginate($perPage)->appends(['filter' => $filter, 'company' => $company]); // Pagination
+        }
     }
-    
+
+    return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company'));
+}
+
+
     public function department()
     {
         $division = Division::all();
@@ -229,25 +239,25 @@ class MasterController extends Controller
 
         $user = auth()->user();
         $employee = $user->employee;
-        
-        if($user->role === 'HRD' || $employee->position == 'Director'){     
+
+        if($user->role === 'HRD' || $employee->position == 'Director'){
             switch ($filter) {
                 case 'department':
                     $data = Department::where('division_id', $division_id)->get();
                     break;
-    
+
                 case 'section':
                     $data = Section::whereHas('department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
                     })->get();
                     break;
-    
+
                 case 'sub_section':
                     $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
                     })->get();
                     break;
-    
+
                 default:
                     $data = collect(); // kosong
                     break;
@@ -262,7 +272,7 @@ class MasterController extends Controller
                         $q->where('department_id', $division_id);
                     })->get();
                     break;
-    
+
                 default:
                     $data = collect(); // kosong
                     break;

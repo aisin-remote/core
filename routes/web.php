@@ -79,14 +79,16 @@ Route::middleware('auth')->group(function () {
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
 
         Route::get('/hav/test-import', function () {
-            dd('Route OK');
         });
 
         // Pindahkan ke atas
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
-
+    Route::prefix('approval')->group(function () {
+        Route::get('/list-approval-HAV', [HavController::class, 'approval'])->name('hav.approval');
+        Route::get('/list-approval-IDP', [IdpController::class, 'approvalidp'])->name('idp.approvalidp');
+    });
 
     Route::prefix('employee')->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create

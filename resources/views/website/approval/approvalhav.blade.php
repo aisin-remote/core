@@ -23,7 +23,7 @@
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Approval IDP List</h3>
+                <h3 class="card-title">Approval HAV List</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                         style="width: 200px;">
@@ -104,7 +104,7 @@
                     </tbody>
                 </table>
                 <div class="d-flex justify-content-end mt-4">
-                    {{ $employees->links('pagination::bootstrap-5') }}
+                    {{-- {{ $employees->links('pagination::bootstrap-5') }} --}}
                 </div>
             </div>
 

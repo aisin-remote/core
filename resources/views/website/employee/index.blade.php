@@ -25,15 +25,19 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
+                    <form method="GET" action="{{ route('employee.index') }}" class="d-flex align-items-center">
+                        <input type="text" name="search" id="searchInput" class="form-control me-2"
+                            placeholder="Search Employee..." style="width: 200px;" value="{{ request('search') }}">
+
+                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+
                     <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
                         data-kt-menu-placement="bottom-end">
                         <i class="fas fa-filter"></i> Filter
                     </button>
+                    </form>
                 </div>
             </div>
 
@@ -41,26 +45,51 @@
                 @if (auth()->user()->role == 'HRD')
                     <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                         role="tablist" style="cursor:pointer">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            Show All
+                        </a>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                                Direktur
+                            </a>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                                Head</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company,'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
                         </li>
                     </ul>
                 @endif
+
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -194,9 +223,6 @@
             }
 
             // Event Pencarian
-            searchInput.addEventListener("keyup", function() {
-                filterTable();
-            });
 
             // Event Filter Dropdown
             filterItems.forEach(item => {
