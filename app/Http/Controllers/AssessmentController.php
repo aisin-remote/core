@@ -30,77 +30,73 @@ class AssessmentController extends Controller
     private function getSubordinatesFromStructure(Employee $employee)
     {
         $subordinateIds = collect();
-    
+
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
-    
+
             $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
-    
+
             $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-    
+
             $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
             $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
-    
+
             $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-    
+
             $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
             $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-    
+
             $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
             $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-    
+
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-    
         } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
             $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
                 ->where('id', '!=', $employee->id)
                 ->pluck('id');
-    
+
             $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
         }
-    
+
         if ($subordinateIds->isEmpty()) {
             return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
-    
+
         return Employee::whereIn('id', $subordinateIds);
     }
-    
+
     private function collectSubordinates($models, $field, $subordinateIds)
     {
         $ids = $models->pluck($field)->filter();
         return $subordinateIds->merge($ids);
     }
-    
+
     private function collectOperators($subSections, $subordinateIds)
     {
         $subSectionIds = $subSections->pluck('id');
         $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
-    }  
-    
+    }
+
     public function index(Request $request, $company = null)
     {
         $user = auth()->user();
@@ -130,7 +126,7 @@ class AssessmentController extends Controller
 
         // Dapatkan assessment untuk bawahan yang ditemukan
         $assessments = $this->getAssessmentsForSubordinates($employees, $request);
-        
+
         // Dapatkan employee yang memiliki assessment
         $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());;
 
@@ -210,7 +206,7 @@ class AssessmentController extends Controller
         }
 
         $assessments = Assessment::where('employee_id', $employee_id)
-            ->select('id', 'date',  'description','employee_id', 'upload')
+            ->select('id', 'date',  'description', 'employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
                 $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
@@ -320,35 +316,35 @@ class AssessmentController extends Controller
                     ]
                 );
         }
-        // $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
+        $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
 
-        // $user = Auth::user();
-        // $employee = $user->employee; // ambil employee yang login
-        // $rawNumber = $employee->phone_number ?? null;
-        // $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
+        $user = Auth::user();
+        $employee = $user->employee; // ambil employee yang login
+        $rawNumber = $employee->phone_number ?? null;
+        $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
 
-        // if (!$formattedNumber) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Nomor HP Anda tidak tersedia.',
-        //     ]);
-        // }
+        if (!$formattedNumber) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nomor HP Anda tidak tersedia.',
+            ]);
+        }
 
-        // $message = sprintf(
-        // "Hallo Apakah Benar ini Nomor?"
-        //     // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
-        //     // $assessment->id,
-        //     // $assessment->date,
-        //     // $assessment->name ?? 'Anda'
-        // );
+        $message = sprintf(
+            "Hallo Apakah Benar ini Nomor?"
+            // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
+            // $assessment->id,
+            // $assessment->date,
+            // $assessment->name ?? 'Anda'
+        );
 
-        // $whatsappResponse = Http::asForm()
-        //     ->withOptions(['verify' => false])
-        //     ->post('https://app.ruangwa.id/api/send_message', [
-        //         'token' => $token,
-        //         'number' => $formattedNumber,
-        //         'message' => $message
-        //     ]);
+        $whatsappResponse = Http::asForm()
+            ->withOptions(['verify' => false])
+            ->post('https://app.ruangwa.id/api/send_message', [
+                'token' => $token,
+                'number' => $formattedNumber,
+                'message' => $message
+            ]);
 
 
 
@@ -361,7 +357,6 @@ class AssessmentController extends Controller
             'assessment_details' => $assessmentDetails,
             // 'whatsapp_response' => $whatsappResponse->body()
         ]);
-
     }
     public function getAssessmentDetail($employee_id)
     {
@@ -429,7 +424,7 @@ class AssessmentController extends Controller
             'assessment_id' => 'required|exists:assessments,id',
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
-           'description' => 'required|string|max:255',
+            'description' => 'required|string|max:255',
             'scores' => 'required|array',
             'strength' => 'nullable|array',
             'weakness' => 'nullable|array',

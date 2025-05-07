@@ -20,6 +20,7 @@ class Hav extends Model
         return $this->hasMany(HavDetail::class, 'hav_id', 'id');
     }
 
+
     // Many-to-One: Hav -> Employee
     public function employee()
     {
