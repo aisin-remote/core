@@ -70,6 +70,20 @@
                 $isdepartment = str_starts_with($currentPath, 'department');
                 $issection = str_starts_with($currentPath, 'section');
             @endphp
+              @php
+              $jobPositions = [
+                  'Show All',
+                  'Direktur',
+                  'GM',
+                  'Manager',
+                  'Coordinator',
+                  'Section Head',
+                  'Supervisor',
+                  'Leader',
+                  'JP',
+                  'Operator',
+              ];
+          @endphp
 
             <div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6" id="#kt_app_sidebar_menu"
                 data-kt-menu="true" style="margin-top: 40px;" data-kt-menu-expand="true">
@@ -163,14 +177,14 @@
                             </div>
                         @endif
 
-                        {{-- HAV --}}
+                        {{-- HAV
 
-                            <div class="menu-item">
+                           <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'hav' ? 'active' : '' }}" href="/hav">
                                     {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
-                                    <span class="menu-title ps-1">HAV</span>
-                                </a>
-                            </div>
+                                    {{-- <span class="menu-title ps-1">HAV</span>
+                                </a> --}}
+                            {{-- </div> --}}
 
                             <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
@@ -414,6 +428,100 @@
 
                 </div>
             </div>
+            @endif
+
+            {{-- approve --}}
+            @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
+            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                id="menu-approval">
+                <span class="menu-link">
+                    <span class="menu-icon">
+                        <i class="fas fa-cog"></i>
+                    </span>
+                    <span class="menu-title ps-1">Approval</span>
+                    <span class="menu-arrow"></span>
+                </span>
+                <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
+                            href="#">
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                            <span class="menu-title ps-1">IDP</span>
+                        </a>
+                    </div>
+
+
+                    <!-- plant -->
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
+                            href="#">
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                            <span class="menu-title ps-1">HAV</span>
+                        </a>
+                    </div>
+
+
+                    <!-- Division -->
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                            href="#">
+                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                            <span class="menu-title ps-1">RTC</span>
+                        </a>
+                    </div>
+
+                    <!-- Department -->
+
+
+                </div>
+            </div>
+            @elseif (auth()->user()->role == 'HRD')
+            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+            id="menu-approval">
+            <span class="menu-link">
+                <span class="menu-icon">
+                    <i class="fas fa-cog"></i>
+                </span>
+                <span class="menu-title ps-1">Approval</span>
+                <span class="menu-arrow"></span>
+            </span>
+            <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
+                        href="#">
+                        <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                        <span class="menu-title ps-1">IDP</span>
+                    </a>
+                </div>
+
+
+                <!-- plant -->
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
+                        href="#">
+                        <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                        <span class="menu-title ps-1">HAV</span>
+                    </a>
+                </div>
+
+
+                <!-- Division -->
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                        href="#">
+                        <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                        <span class="menu-title ps-1">RTC</span>
+                    </a>
+                </div>
+
+                <!-- Department -->
+
+
+            </div>
+        </div>
+
             @endif
 
             {{-- <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
