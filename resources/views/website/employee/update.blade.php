@@ -657,24 +657,26 @@
                                     <div class="card-body border-top p-10">
                                         <!-- Mengurangi padding agar card lebih kecil -->
                                         @php
-                                            $humanAssets = [
-                                                ['title' => 'Future Star', 'count' => 2, 'year' => 2024],
-                                                ['title' => 'Potential Candidate', 'count' => 4, 'year' => 2023],
-                                            ];
+                                            $humanAssets = [];
                                             $maxSlots = 3; // Set jumlah maksimum slot
                                             $humanAssetsCount = count($humanAssets);
                                         @endphp
 
                                         @if ($humanAssetsCount === 0)
-                                            <div class="text-center text-muted">No data available</div>
-                                            <div class="separator separator-dashed my-4"></div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="text-muted">Empty slot</span>
-                                                <a class="fw-semibold text-primary"
-                                                    href="{{ route('employee.edit', $employee->npk) }}">
-                                                    Go to employee edit page
-                                                </a>
-                                            </div>
+                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
+                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
+                                                        <a class="fw-semibold"
+                                                            href="{{ route('hav.index', $employee->npk) }}">
+                                                            Go to hav page
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <div class="separator separator-dashed mt-4"></div>
+                                            @endfor
                                         @else
                                             @foreach ($humanAssets as $asset)
                                                 <div class="d-flex flex-wrap align-items-center">
@@ -690,21 +692,6 @@
 
                                                 <div class="separator separator-dashed my-4"></div>
                                             @endforeach
-
-                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
-                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <a class="fw-semibold"
-                                                            href="{{ route('hav.index', $employee->npk) }}">
-                                                            Go to hav page
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                <div class="separator separator-dashed mt-4"></div>
-                                            @endfor
                                         @endif
                                     </div>
                                 </div>
@@ -760,7 +747,9 @@
                                             @forelse ($astraTrainings->take(3) as $astraTraining)
                                                 <tr>
 
-                                                    <td class="text-center">{{ $astraTraining->date_end }}</td>
+                                                    <td class="text-center">
+                                                        {{ \Illuminate\Support\Carbon::parse($astraTraining->date_end)->format('Y') }}
+                                                    </td>
                                                     <td class="text-center">{{ $astraTraining->program }}
                                                     </td>
                                                     <td class="text-center">
@@ -859,7 +848,9 @@
                                                 <tr>
                                                     <td>{{ $externalTraining->program }}</td>
 
-                                                    <td class="text-center">{{ $externalTraining->date_end }}</td>
+                                                    <td class="text-center">
+                                                        {{ \Illuminate\Support\Carbon::parse($externalTraining->date_end)->format('Y') }}
+                                                    </td>
                                                     <td class="text-center">{{ $externalTraining->vendor }}</td>
                                                     <td class="text-center">
                                                         <div class="d-flex justify-content-center gap-2">

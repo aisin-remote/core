@@ -480,7 +480,9 @@
                                                         @php $training = $astraTrainings[$i]; @endphp
                                                         <tr>
 
-                                                            <td class="text-center">{{ $training->date_end }}</td>
+                                                            <td class="text-center">
+                                                                {{ \Illuminate\Support\Carbon::parse($training->date_end)->format('Y') }}
+                                                            </td>
                                                             <td class="text-center">{{ $training->program }}</td>
                                                             <td class="text-center">
                                                                 {{ $training->ict_score }}/{{ $training->project_score }}/{{ $training->total_score }}
@@ -534,7 +536,7 @@
                                     <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
-                                                <th class="text-center">Training</th>
+                                                <th>Training</th>
 
                                                 <th class="text-center">Year</th>
                                                 <th class="text-center">Vendor</th>
@@ -568,9 +570,11 @@
                                                     @if (isset($externalTrainings[$i]))
                                                         @php $training = $externalTrainings[$i]; @endphp
                                                         <tr>
-                                                            <td class="text-center">{{ $training->program }}</td>
+                                                            <td>{{ $training->program }}</td>
 
-                                                            <td class="text-center">{{ $training->date_end }}</td>
+                                                            <td class="text-center">
+                                                                {{ \Illuminate\Support\Carbon::parse($training->date_end)->format('Y') }}
+                                                            </td>
                                                             <td class="text-center">{{ $training->vendor }}</td>
                                                         </tr>
                                                     @else
