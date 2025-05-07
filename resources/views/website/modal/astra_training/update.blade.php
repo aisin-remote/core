@@ -14,9 +14,9 @@
                     <input type="hidden" name="employee_id" value="{{ $astraTraining->employee_id }}">
 
                     <div class="mb-3">
-                        <label class="form-label">Year</label>
-                        <input type="number" name="year" class="form-control" required placeholder="YYYY"
-                            value="{{ $astraTraining->year }}">
+                        <label class="form-label">Date</label>
+                        <input type="date" name="year" class="form-control" required
+                            value="{{ \Carbon\Carbon::parse($astraTraining->date_end)->format('Y-m-d') }}">
                     </div>
 
                     <div class="mb-3">

@@ -129,6 +129,19 @@
                                                             ->where('assessment_id', $assessment->id)
                                                             ->where('alc_id', $id)
                                                             ->exists();
+
+                                                        // Ambil level approval dari employee yang sedang di-assess
+                                                        $approvalLevel = $assessment->employee->getCreateAuth();
+
+                                                        // Ambil atasan dari employee tsb berdasarkan level approval
+                                                        $superiors = $assessment->employee->getSuperiorsByLevel(
+                                                            $approvalLevel,
+                                                        );
+
+                                                        $isSuperior = $superiors->contains(
+                                                            'id',
+                                                            auth()->user()->employee->id,
+                                                        );
                                                     @endphp
                                                     <td class="text-center">
                                                         @if ($score >= 3 || $score === '-')
@@ -136,16 +149,27 @@
                                                                 {{ $score }}
                                                             </span>
                                                         @else
-                                                            <span class="badge badge-lg badge-danger d-block w-100"
-                                                                data-bs-toggle="modal"
-                                                                data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
-                                                                data-title="Update IDP - {{ $title }}"
-                                                                data-assessment="{{ $assessment->id }}"
-                                                                data-alc="{{ $id }}" style="cursor: pointer;">
-                                                                {{ $score }}
-                                                                <i
-                                                                    class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
-                                                            </span>
+                                                            @if ($isSuperior)
+                                                                {{-- Boleh klik --}}
+                                                                <span class="badge badge-lg badge-danger d-block w-100"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
+                                                                    data-title="Update IDP - {{ $title }}"
+                                                                    data-assessment="{{ $assessment->id }}"
+                                                                    data-alc="{{ $id }}"
+                                                                    style="cursor: pointer;">
+                                                                    {{ $score }}
+                                                                    <i
+                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                                </span>
+                                                            @else
+                                                                {{-- Tidak boleh klik --}}
+                                                                <span class="badge badge-lg badge-danger d-block w-100">
+                                                                    {{ $score }}
+                                                                    <i
+                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                                </span>
+                                                            @endif
                                                         @endif
                                                     </td>
                                                 @endforeach
@@ -164,7 +188,7 @@
                                                     @elseif ($idp && $idp->status == 0)
                                                         <!-- IDP belum dikirim, status Pending -->
                                                         <span class="badge badge-lg badge-danger">Revisi</span>
-                                                        @elseif ($idp && $idp->status == 2)
+                                                    @elseif ($idp && $idp->status == 2)
                                                         <!-- IDP belum dikirim, status Pending -->
                                                         <span class="badge badge-lg badge-success">Approve</span>
                                                     @endif

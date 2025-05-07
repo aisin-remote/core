@@ -203,4 +203,133 @@ class Employee extends Model
     {
         return $this->subSection()->with('section')->first();
     }
+
+    // ambil bawahan
+    public function getSubordinatesByLevel(int $level = 1)
+    {
+        $currentEmployees = collect([$this]);
+
+        for ($i = 0; $i < $level; $i++) {
+            $nextEmployees = collect();
+
+            foreach ($currentEmployees as $emp) {
+                $nextEmployees = $nextEmployees->merge($this->getDirectSubordinatesOf($emp));
+            }
+
+            if ($nextEmployees->isEmpty()) {
+                break;
+            }
+
+            $currentEmployees = $nextEmployees;
+        }
+
+        return $currentEmployees;
+    }
+
+    private function getDirectSubordinatesOf(Employee $employee)
+    {
+        $subordinateIds = collect();
+
+        if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
+            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
+
+        } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
+            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+
+        } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
+            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+
+        } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
+            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+            $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id');
+
+            $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
+        }
+
+        if ($subordinateIds->isEmpty()) {
+            return collect();
+        }
+
+        return Employee::whereIn('id', $subordinateIds)->get();
+    }
+
+    private function collectSubordinates($entities, $foreignKey, $collector)
+    {
+        foreach ($entities as $entity) {
+            $employeeId = $entity->{$foreignKey};
+            if ($employeeId) {
+                $collector->push($employeeId);
+            }
+        }
+        return $collector;
+    }
+
+    // ambil atasan
+    public function getSuperiorsByLevel(int $level = 1)
+    {
+        $superiors = collect();
+        $current = $this;
+
+        for ($i = 0; $i < $level; $i++) {
+            $nextSuperior = $this->getDirectSuperiorOf($current);
+            if (!$nextSuperior) {
+                break;
+            }
+
+            $superiors->push($nextSuperior);
+            $current = $nextSuperior;
+        }
+
+        return $superiors;
+    }
+
+    private function getDirectSuperiorOf(Employee $employee)
+    {
+        // Jika dia bagian dari SubSection, cari leader
+        if ($employee->subSection && $employee->subSection->leader_id) {
+            return Employee::find($employee->subSection->leader_id);
+        }
+
+        // Jika dia leader di SubSection, cari supervisor dari Section
+        if ($employee->leadingSubSection && $employee->leadingSubSection->section && $employee->leadingSubSection->section->supervisor_id) {
+            return Employee::find($employee->leadingSubSection->section->supervisor_id);
+        }
+
+        // Jika dia supervisor di Section, cari manager dari Department
+        if ($employee->leadingSection && $employee->leadingSection->department && $employee->leadingSection->department->manager_id) {
+            return Employee::find($employee->leadingSection->department->manager_id);
+        }
+
+        // Jika dia manager di Department, cari GM dari Division
+        if ($employee->leadingDepartment && $employee->leadingDepartment->division && $employee->leadingDepartment->division->gm_id) {
+            return Employee::find($employee->leadingDepartment->division->gm_id);
+        }
+
+        // Jika dia GM di Division, cari Director dari Plant
+        if ($employee->leadingDivision && $employee->leadingDivision->plant && $employee->leadingDivision->plant->director_id) {
+            return Employee::find($employee->leadingDivision->plant->director_id);
+        }
+
+        // Jika dia Director, tidak ada atasan
+        return null;
+    }
+
+    // mapping create authorization
+    public function getCreateAuth()
+    {
+        return match (strtolower($this->position)) {
+            'jp', 'operator', 'leader' => 2,
+            'supervisor', 'manager', 'gm' => 1,
+            default => 0,
+        };
+    }
+    
 }

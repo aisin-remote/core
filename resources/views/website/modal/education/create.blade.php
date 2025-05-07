@@ -19,6 +19,7 @@
                             <option value="">Select Category</option>
                             <option data-kt-flag="flags/afghanistan.svg" value="SMK">SMK</option>
                             <option data-kt-flag="flags/afghanistan.svg" value="D3">D3</option>
+                            <option data-kt-flag="flags/afghanistan.svg" value="D4">D4</option>
                             <option data-kt-flag="flags/aland-islands.svg" value="S1">S1</option>
                             <option data-kt-flag="flags/albania.svg" value="S2">S2</option>
 

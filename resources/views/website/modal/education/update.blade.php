@@ -26,6 +26,9 @@
                             <option value="D3"
                                 {{ old('level', $education->educational_level) == 'D3' ? 'selected' : '' }}>
                                 D3</option>
+                            <option value="D4"
+                                {{ old('level', $education->educational_level) == 'D4' ? 'selected' : '' }}>
+                                D4</option>
                             <option value="S1"
                                 {{ old('level', $education->educational_level) == 'S1' ? 'selected' : '' }}>
                                 S1</option>

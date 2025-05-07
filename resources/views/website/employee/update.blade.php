@@ -388,6 +388,7 @@
                                                     </div>
                                                 </div>
 
+
                                                 @include('website.modal.education.detail')
                                                 @include('website.modal.education.update', [
                                                     'education' => $education,

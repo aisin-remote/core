@@ -14,9 +14,9 @@
                     <input type="hidden" name="employee_id" value="{{ $externalTraining->employee_id }}">
 
                     <div class="mb-3">
-                        <label class="form-label">Year</label>
-                        <input type="number" name="year" class="form-control" required placeholder="YYYY"
-                            value="{{ $externalTraining->year }}">
+                        <label class="form-label">Date</label>
+                        <input type="date" name="year" class="form-control" required
+                            value="{{ \Carbon\Carbon::parse($externalTraining->date_end)->format('Y-m-d') }}">
                     </div>
 
                     <div class="mb-3">
