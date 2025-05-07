@@ -9,7 +9,6 @@ use App\Models\Employee;
 use App\Models\Department;
 use App\Models\SubSection;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 
 class MasterController extends Controller
 {
@@ -35,88 +34,34 @@ class MasterController extends Controller
         return $subordinates;
     }
 
-    public function employee(Request $request, $company = null)
+    public function employee($company = null)
     {
         $title = 'Employee';
         $user = auth()->user();
-        $search = $request->get('search');
 
+        // Jika HRD, bisa melihat semua karyawan
         if ($user->role === 'HRD') {
-            $query = Employee::with(
-                    'subSection.section.department',
-                    'leadingSection.department',
-                    'leadingDepartment.division'
-                )
-                ->when($company, fn($q) => $q->where('company_name', $company))
-                ->where(function ($q) {
-                    $q->where('user_id', '!=', auth()->id())
-                    ->orWhereNull('user_id');
+            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+                ->when($company, fn($query) => $query->where('company_name', $company))
+                ->where(function ($query) {
+                    $query->where('user_id', '!=', auth()->id())
+                        ->orWhereNull('user_id');
                 })
-                ->when($search, function ($q) use ($search) {
-                    $q->where(function ($query) use ($search) {
-                        $query->where('name', 'like', "%{$search}%")
-                            ->orWhere('npk', 'like', "%{$search}%")
-                            ->orWhere('position', 'like', "%{$search}%");
-                    });
-                });
-
-            $employees = $query->paginate(10);
+                ->get();
         } else {
-            $emp = Employee::with(
-                        'subSection.section.department',
-                        'leadingSection.department',
-                        'leadingDepartment.division'
-                    )
-                    ->where('user_id', $user->id)
-                    ->first();
-
+            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
+            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->where('user_id', $user->id)->first();
             if (!$emp) {
-                // Jika tidak ada data, kita buat paginator kosong
-                $employees = new LengthAwarePaginator([], 0, 10);
+                $employee = collect();
             } else {
-                $subordinates = $this->getSubordinates($emp->id)
+                $employee = $this->getSubordinates($emp->id)
                     ->where('company_name', $emp->company_name);
-
-                // Jika $subordinates adalah Query Builder
-                if ($subordinates instanceof \Illuminate\Database\Eloquent\Builder ||
-                    $subordinates instanceof \Illuminate\Database\Query\Builder) {
-                    $employees = $subordinates->when($search, function ($q) use ($search) {
-                            $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('npk', 'like', "%{$search}%")
-                            ->orWhere('position', 'like', "%{$search}%");
-                        })
-                        ->paginate(10);
-                } elseif ($subordinates instanceof \Illuminate\Support\Collection) {
-                    // Jika getSubordinates() mengembalikan Collection, gunakan manual pagination
-                    $filtered = $subordinates->filter(function ($item) use ($search) {
-                        return !$search || 
-                            str_contains(strtolower($item->name), strtolower($search)) ||
-                            str_contains(strtolower($item->npk), strtolower($search)) ||
-                            str_contains(strtolower($item->position), strtolower($search));
-                    });
-
-                    $page = LengthAwarePaginator::resolveCurrentPage();
-                    $perPage = 10;
-                    $currentItems = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
-                    $employees = new LengthAwarePaginator($currentItems, $filtered->count(), $perPage, $page, [
-                        'path'  => $request->url(),
-                        'query' => $request->query(),
-                    ]);
-                } else {
-                    // Jika bukan Query Builder ataupun Collection, set ke empty paginator
-                    $employees = new LengthAwarePaginator([], 0, 10);
-                }
             }
         }
 
-        if ($request->ajax()) {
-            return view('website.master.employee.partials.table', compact('employees'))->render();
-        }
-
-        return view('website.master.employee.index', compact('employees', 'title'));
+        return view('website.master.employee.index', compact('employee'));
     }
-
-
+    
     public function department()
     {
         $division = Division::all();

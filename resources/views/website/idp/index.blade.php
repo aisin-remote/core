@@ -1027,7 +1027,8 @@
                         }
                     })
                 }
-                const employeeId = "{{ $employee->id }}"; // pastikan $employee dikirim dari controller
+
+                const employeeId = "{{ $employees->first()->id }}"; // pastikan $employee dikirim dari controller
 
                 function sendDataConfirmation() {
                     Swal.fire({
