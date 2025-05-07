@@ -272,6 +272,15 @@ class Employee extends Model
         return $collector;
     }
 
+    public function getSubAuth()
+    {
+        return match (strtolower($this->position)) {
+            'supervisor', 'manager' => 2,
+            'direktur', 'gm' => 1,
+            default => 0,
+        };
+    }
+
     // ambil atasan
     public function getSuperiorsByLevel(int $level = 1)
     {
@@ -293,32 +302,35 @@ class Employee extends Model
 
     private function getDirectSuperiorOf(Employee $employee)
     {
-        // Jika dia bagian dari SubSection, cari leader
-        if ($employee->subSection && $employee->subSection->leader_id) {
-            return Employee::find($employee->subSection->leader_id);
+        // Struktur organisasi
+        if ($employee->leadingDivision && $employee->leadingDivision->plant && $employee->leadingDivision->plant->director_id) {
+            return Employee::find($employee->leadingDivision->plant->director_id);
         }
-
-        // Jika dia leader di SubSection, cari supervisor dari Section
-        if ($employee->leadingSubSection && $employee->leadingSubSection->section && $employee->leadingSubSection->section->supervisor_id) {
-            return Employee::find($employee->leadingSubSection->section->supervisor_id);
-        }
-
-        // Jika dia supervisor di Section, cari manager dari Department
-        if ($employee->leadingSection && $employee->leadingSection->department && $employee->leadingSection->department->manager_id) {
-            return Employee::find($employee->leadingSection->department->manager_id);
-        }
-
-        // Jika dia manager di Department, cari GM dari Division
+        
         if ($employee->leadingDepartment && $employee->leadingDepartment->division && $employee->leadingDepartment->division->gm_id) {
             return Employee::find($employee->leadingDepartment->division->gm_id);
         }
 
-        // Jika dia GM di Division, cari Director dari Plant
-        if ($employee->leadingDivision && $employee->leadingDivision->plant && $employee->leadingDivision->plant->director_id) {
-            return Employee::find($employee->leadingDivision->plant->director_id);
+        if ($employee->leadingSection && $employee->leadingSection->department && $employee->leadingSection->department->manager_id) {
+            return Employee::find($employee->leadingSection->department->manager_id);
         }
 
-        // Jika dia Director, tidak ada atasan
+        if ($employee->leadingSubSection && $employee->leadingSubSection->section && $employee->leadingSubSection->section->supervisor_id) {
+            return Employee::find($employee->leadingSubSection->section->supervisor_id);
+        }
+
+        if ($employee->subSection && $employee->subSection->leader_id) {
+            return Employee::find($employee->subSection->leader_id);
+        }
+        
+        // Fallback manual berdasarkan posisi
+        $map = self::manualSuperiorMap();
+        $myPosition = strtolower($employee->position);
+
+        if (isset($map[$myPosition])) {
+            return Employee::whereRaw('LOWER(position) = ?', [$map[$myPosition]])->first();
+        }
+
         return null;
     }
 
@@ -327,7 +339,24 @@ class Employee extends Model
     {
         return match (strtolower($this->position)) {
             'jp', 'operator', 'leader' => 2,
-            'supervisor', 'manager', 'gm' => 1,
+            'supervisor', 'manager', 'gm', 'section head' => 1,
+            default => 0,
+        };
+    }
+    
+    public function getFirstApproval()
+    {
+        return match (strtolower($this->position)) {
+            'jp', 'operator', 'leader' => 3,
+            'supervisor', 'manager', 'gm' => 2,
+            default => 0,
+        };
+    }
+    public function getFinalApproval()
+    {
+        return match (strtolower($this->position)) {
+            'jp', 'operator', 'leader' => 4,
+            'supervisor', 'manager', 'gm' => 3,
             default => 0,
         };
     }

@@ -175,22 +175,21 @@
                                                 @endforeach
                                                 <td class="text-center">
                                                     @php
-                                                        // Periksa apakah ada IDP terkait untuk assessment dan alc tertentu
-                                                        $idp = DB::table('idp')
-                                                            ->where('assessment_id', $assessment->id)
-                                                            ->where('employee_id', $assessment->employee->id)
-                                                            ->first();
+                                                        // count assesment yang skor < 3
+                                                        $below = 0;
+                                                        foreach ($assessment->details as $alc) {
+                                                            if ((int) $alc->score < 3) {
+                                                                $below++;
+                                                            }
+                                                        }
                                                     @endphp
 
-                                                    @if ($idp && $idp->status == 1)
+                                                    @if ($below > $assessment->idp->count())
                                                         <!-- IDP sudah dikirim -->
+                                                        <span class="badge badge-lg badge-info">Waiting</span>
+                                                    @elseif ($below == $assessment->idp->count())
+                                                        <!-- IDP belum dikirim, status Pending -->
                                                         <span class="badge badge-lg badge-warning">Pending</span>
-                                                    @elseif ($idp && $idp->status == 0)
-                                                        <!-- IDP belum dikirim, status Pending -->
-                                                        <span class="badge badge-lg badge-danger">Revisi</span>
-                                                    @elseif ($idp && $idp->status == 2)
-                                                        <!-- IDP belum dikirim, status Pending -->
-                                                        <span class="badge badge-lg badge-success">Approve</span>
                                                     @endif
                                                 </td>
                                                 <td class="text-center" style="width: 50px">

@@ -27,11 +27,11 @@ class IdpController extends Controller
     private function getSubordinatesFromStructure(Employee $employee)
     {
         $subordinateIds = collect();
-
+        
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
-
+            
             $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
 
@@ -97,6 +97,7 @@ class IdpController extends Controller
     public function index($company = null, $reviewType = 'mid_year')
     {
         $user = auth()->user();
+        $employee = $user->employee;
         $alcs = [
             1 => 'Vision & Business Sense',
             2 => 'Customer Focus',
@@ -130,8 +131,9 @@ class IdpController extends Controller
                 $assessments = collect(); // Kosong jika tidak ada employee
             } else {
                 // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-                $subordinates = $this->getSubordinatesFromStructure($emp)->pluck('id')->toArray();
-
+                $viewLevel = $employee->getSubAuth();
+                $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
+                
                 // Ambil assessment terbaru hanya milik bawahannya
                 $assessments = Assessment::with(['employee', 'details', 'idp'])
                     ->whereIn('employee_id', $subordinates)
@@ -145,7 +147,7 @@ class IdpController extends Controller
                             ->from('assessments as a')
                             ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM assessments WHERE employee_id = a.employee_id)');
                     })
-                    ->paginate(10);
+                    ->get();
             }
         }
 
@@ -243,6 +245,7 @@ class IdpController extends Controller
                     'development_program' => $request->development_program,
                     'category' => $request->category,
                     'development_target' => $request->development_target,
+                    'status' => 1,
                     'date' => $request->date,
                 ]);
                 return redirect()->route('idp.index')->with('success', 'Development added successfully.');
@@ -546,10 +549,10 @@ class IdpController extends Controller
             return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat.'], 400);
         }
 
-        // Update semua IDP milik employee menjadi status = 1
+        // Update semua IDP milik employee menjadi status = 2
         IDP::where('employee_id', $employeeId)
             ->update([
-                'status' => 1
+                'status' => 2
             ]);
 
         return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
