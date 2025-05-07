@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Department;
 use App\Models\SubSection;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 class MasterController extends Controller
 {
@@ -41,7 +42,11 @@ class MasterController extends Controller
         $search = $request->get('search');
 
         if ($user->role === 'HRD') {
-            $query = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+            $query = Employee::with(
+                    'subSection.section.department',
+                    'leadingSection.department',
+                    'leadingDepartment.division'
+                )
                 ->when($company, fn($q) => $q->where('company_name', $company))
                 ->where(function ($q) {
                     $q->where('user_id', '!=', auth()->id())
@@ -57,25 +62,49 @@ class MasterController extends Controller
 
             $employees = $query->paginate(10);
         } else {
-            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-                ->where('user_id', $user->id)->first();
+            $emp = Employee::with(
+                        'subSection.section.department',
+                        'leadingSection.department',
+                        'leadingDepartment.division'
+                    )
+                    ->where('user_id', $user->id)
+                    ->first();
 
             if (!$emp) {
-                $employees = collect(); // empty collection
+                // Jika tidak ada data, kita buat paginator kosong
+                $employees = new LengthAwarePaginator([], 0, 10);
             } else {
-                $query = $this->getSubordinates($emp->id)
+                $subordinates = $this->getSubordinates($emp->id)
                     ->where('company_name', $emp->company_name);
 
-                if ($query instanceof \Illuminate\Support\Collection) {
-                    $employees = $query->filter(function ($item) use ($search) {
-                        return !$search || str_contains(strtolower($item->name), strtolower($search));
-                    })->paginate(10);
+                // Jika $subordinates adalah Query Builder
+                if ($subordinates instanceof \Illuminate\Database\Eloquent\Builder ||
+                    $subordinates instanceof \Illuminate\Database\Query\Builder) {
+                    $employees = $subordinates->when($search, function ($q) use ($search) {
+                            $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('npk', 'like', "%{$search}%")
+                            ->orWhere('position', 'like', "%{$search}%");
+                        })
+                        ->paginate(10);
+                } elseif ($subordinates instanceof \Illuminate\Support\Collection) {
+                    // Jika getSubordinates() mengembalikan Collection, gunakan manual pagination
+                    $filtered = $subordinates->filter(function ($item) use ($search) {
+                        return !$search || 
+                            str_contains(strtolower($item->name), strtolower($search)) ||
+                            str_contains(strtolower($item->npk), strtolower($search)) ||
+                            str_contains(strtolower($item->position), strtolower($search));
+                    });
+
+                    $page = LengthAwarePaginator::resolveCurrentPage();
+                    $perPage = 10;
+                    $currentItems = $filtered->slice(($page - 1) * $perPage, $perPage)->values();
+                    $employees = new LengthAwarePaginator($currentItems, $filtered->count(), $perPage, $page, [
+                        'path'  => $request->url(),
+                        'query' => $request->query(),
+                    ]);
                 } else {
-                    $employees = $query->when($search, function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                        ->orWhere('npk', 'like', "%{$search}%")
-                        ->orWhere('position', 'like', "%{$search}%");
-                    })->paginate(10);
+                    // Jika bukan Query Builder ataupun Collection, set ke empty paginator
+                    $employees = new LengthAwarePaginator([], 0, 10);
                 }
             }
         }
@@ -86,6 +115,7 @@ class MasterController extends Controller
 
         return view('website.master.employee.index', compact('employees', 'title'));
     }
+
 
     public function department()
     {
