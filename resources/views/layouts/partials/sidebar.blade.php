@@ -70,6 +70,20 @@
                 $isdepartment = str_starts_with($currentPath, 'department');
                 $issection = str_starts_with($currentPath, 'section');
             @endphp
+            @php
+                $jobPositions = [
+                    'Show All',
+                    'Direktur',
+                    'GM',
+                    'Manager',
+                    'Coordinator',
+                    'Section Head',
+                    'Supervisor',
+                    'Leader',
+                    'JP',
+                    'Operator',
+                ];
+            @endphp
 
             <div class="menu menu-column menu-rounded menu-sub-indention fw-semibold fs-6" id="#kt_app_sidebar_menu"
                 data-kt-menu="true" style="margin-top: 40px;" data-kt-menu-expand="true">
@@ -86,8 +100,8 @@
 
                         {{-- Dashboard --}}
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/dashboard') ? 'active' : '' }}"
-                                href="/dashboard">
+                            <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
+                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                 <span class="menu-title ps-1">Development Plan</span>
                             </a>
                         </div>
@@ -104,7 +118,7 @@
                             <div class="menu-item menu-accordion {{ $isEmployee ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-employee-profile">
                                 <span class="menu-link {{ $isEmployee ? 'active' : '' }}">
-                                    {{-- <span class="menu-icon"><i class="fas fa-user-tie"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">Employee Profile</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -140,7 +154,7 @@
                             <div class="menu-item menu-accordion {{ $isAssessment ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-assessment">
                                 <span class="menu-link {{ $isAssessment ? 'active' : '' }}">
-                                    {{-- <span class="menu-icon"><i class="fas fa-chart-line"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">Assessment</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -163,12 +177,11 @@
                             </div>
                         @endif
 
-                        {{-- HAV --}}
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
                                 <span class="menu-link {{ $isHav ? 'active' : '' }}">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -196,7 +209,7 @@
                                 data-kt-menu-trigger="click" data-kt-menu-expand="true">
                                 <span class="menu-link">
                                     <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">HAV</span>
+                                    <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
 
@@ -309,7 +322,7 @@
                             <div class="menu-item menu-accordion {{ $isRtc ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-rtc">
                                 <span class="menu-link {{ $isRtc ? 'active' : '' }}">
-                                    {{-- <span class="menu-icon"><i class="fas fa-sitemap"></i></span> --}}
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                     <span class="menu-title ps-1">RTC</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -343,29 +356,22 @@
             <!--begin:Master Section-->
             <!--begin:Master Menu Accordion-->
 
-            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                id="menu-master">
-                <span class="menu-link">
-                    <span class="menu-icon">
-                        <i class="fas fa-cog"></i>
+            @if (auth()->user()->role == 'HRD')
+                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                    id="menu-master">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="fas fa-cog"></i>
+                        </span>
+                        <span class="menu-title ps-1">Master</span>
+                        <span class="menu-arrow"></span>
                     </span>
-                    <span class="menu-title ps-1">Master</span>
-                    <span class="menu-arrow"></span>
-                </span>
-                <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                    @if (auth()->user()->role == 'User')
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
-                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                <span class="menu-title ps-1">Employee</span>
-                            </a>
-                        </div>
-                    @else
+                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
                         <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                             id="menu-employee-profile">
                             <span
                                 class="menu-link {{ request()->is('master/employee/aii') || request()->is('master/employee/aiia') ? 'active' : '' }}">
-                                {{-- <span class="menu-icon"><i class="fas fa-user-tie"></i></span> --}}
+                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                 <span class="menu-title ps-1">Employee</span>
                                 <span class="menu-arrow"></span>
                             </span>
@@ -386,11 +392,9 @@
                                 </div>
                             </div>
                         </div>
-                    @endif
 
-
-                    <!-- Employee Submenu Accordion -->
-                    {{-- <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                        <!-- Employee Submenu Accordion -->
+                        {{-- <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click">
                         <span class="menu-link">
                             <span class="menu-icon"><i class="fas fa-user-tie"></i></span>
                             <span class="menu-title ps-1">Employee</span>
@@ -414,68 +418,158 @@
                         </div>
                     </div> --}}
 
-                    <!-- Grade -->
+                        <!-- Grade -->
 
-                    <!-- Grade -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
-                            href="/master/grade">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Grade</span>
-                        </a>
+                        <!-- Grade -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
+                                href="/master/grade">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">Grade</span>
+                            </a>
+                        </div>
+
+
+                        <!-- plant -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
+                                href="/master/plant">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">Plant</span>
+                            </a>
+                        </div>
+
+
+                        <!-- Division -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                                href="/master/division">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">Division</span>
+                            </a>
+                        </div>
+
+                        <!-- Department -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
+                                href="/master/department">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">Department</span>
+                            </a>
+                        </div>
+
+                        <!-- Section -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/section') ? 'active' : '' }}"
+                                href="/master/section">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">Section</span>
+                            </a>
+                        </div>
+
+                        {{-- sub section --}}
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/subSection') ? 'active' : '' }}"
+                                href="/master/subSection">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">Sub Section</span>
+                            </a>
+                        </div>
+
                     </div>
-
-
-                    <!-- plant -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
-                            href="/master/plant">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Plant</span>
-                        </a>
-                    </div>
-
-
-                    <!-- Division -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
-                            href="/master/division">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Division</span>
-                        </a>
-                    </div>
-
-                    <!-- Department -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
-                            href="/master/department">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Department</span>
-                        </a>
-                    </div>
-
-                    <!-- Section -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/section') ? 'active' : '' }}"
-                            href="/master/section">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Section</span>
-                        </a>
-                    </div>
-
-                    {{-- sub section --}}
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/subSection') ? 'active' : '' }}"
-                            href="/master/subSection">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Sub Section</span>
-                        </a>
-                    </div>
-
                 </div>
-            </div>
+            @endif
 
-            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+            {{-- approve --}}
+            @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
+                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                    id="menu-approval">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="fas fa-check  "></i>
+                        </span>
+                        <span class="menu-title ps-1">Approval</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}" href="#">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">IDP</span>
+                            </a>
+                        </div>
+
+
+                        <!-- plant -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}" href="#">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">HAV</span>
+                            </a>
+                        </div>
+
+
+                        <!-- Division -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                                href="#">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">RTC</span>
+                            </a>
+                        </div>
+
+                        <!-- Department -->
+
+
+                    </div>
+                </div>
+            @elseif (auth()->user()->role == 'HRD')
+                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                    id="menu-approval">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="fas fa-check"></i>
+                        </span>
+                        <span class="menu-title ps-1">Approval</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}" href="#">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">IDP</span>
+                            </a>
+                        </div>
+
+
+                        <!-- plant -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}" href="#">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">HAV</span>
+                            </a>
+                        </div>
+
+
+                        <!-- Division -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                                href="#">
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                <span class="menu-title ps-1">RTC</span>
+                            </a>
+                        </div>
+
+                        <!-- Department -->
+
+
+                    </div>
+                </div>
+            @endif
+
+            {{-- <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                 id="menu-master">
                 <span class="menu-link">
                     <span class="menu-icon">
@@ -515,7 +609,7 @@
                     </div>
                 </div>
 
-            </div>
+            </div> --}}
             <!--end:Master Menu Accordion-->
 
             <!--end:Master Section-->
@@ -524,9 +618,6 @@
         <!--begin::User info sidebar bottom-->
 
         <!--end::User info sidebar bottom-->
-
-
-
         <!--end::sidebar menu-->
     </div>
     <div class="app-sidebar-user mt-auto px-3 pt-5 pb-5 border-top border-white border-opacity-25"

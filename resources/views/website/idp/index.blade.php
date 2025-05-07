@@ -98,6 +98,7 @@
                                             @foreach ($alcs as $id => $title)
                                                 <th class="text-center" style="width: 100px">{{ $title }}</th>
                                             @endforeach
+                                            <th class="text-center">Status</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -148,14 +149,33 @@
                                                         @endif
                                                     </td>
                                                 @endforeach
+                                                <td class="text-center">
+                                                    @php
+                                                        // Periksa apakah ada IDP terkait untuk assessment dan alc tertentu
+                                                        $idp = DB::table('idp')
+                                                            ->where('assessment_id', $assessment->id)
+                                                            ->where('employee_id', $assessment->employee->id)
+                                                            ->first();
+                                                    @endphp
 
+                                                    @if ($idp && $idp->status == 1)
+                                                        <!-- IDP sudah dikirim -->
+                                                        <span class="badge badge-lg badge-warning">Pending</span>
+                                                    @elseif ($idp && $idp->status == 0)
+                                                        <!-- IDP belum dikirim, status Pending -->
+                                                        <span class="badge badge-lg badge-danger">Revisi</span>
+                                                        @elseif ($idp && $idp->status == 2)
+                                                        <!-- IDP belum dikirim, status Pending -->
+                                                        <span class="badge badge-lg badge-success">Approve</span>
+                                                    @endif
+                                                </td>
                                                 <td class="text-center" style="width: 50px">
                                                     <div class="d-flex gap-2 justify-content-center">
-                                                        {{-- <button type="button" class="btn btn-sm btn-primary"
+                                                        <button type="button" class="btn btn-sm btn-primary"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
                                                             <i class="fas fa-pencil-alt"></i>
-                                                        </button> --}}
+                                                        </button>
                                                         <button type="button" class="btn btn-sm btn-info"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#notes_{{ $assessment->employee->id }}">
@@ -167,19 +187,19 @@
                                                                 <i class="fas fa-file-export"></i>
                                                             </button>
                                                         @endif
-                                                        {{-- <button type="button" class="btn btn-sm btn-warning"
+                                                        <button type="button" class="btn btn-sm btn-warning"
                                                             onclick="sendDataConfirmation()">
                                                             <i class="fas fa-paper-plane"></i>
-                                                        </button> --}}
+                                                        </button>
 
-                                                        <button type="button" class="btn btn-sm btn-success"
+                                                        {{-- <button type="button" class="btn btn-sm btn-success"
                                                             onclick="approveAction()">
                                                             <i class="fas fa-check-circle"></i>
                                                         </button>
                                                         <button type="button" class="btn btn-sm btn-danger"
                                                             onclick="rejectAction()">
                                                             <i class="fas fa-times-circle"></i>
-                                                        </button>
+                                                        </button> --}}
                                                     </div>
 
                                                 </td>
@@ -983,50 +1003,87 @@
                         }
                     })
                 }
+                const employeeId = "{{ $employee->id }}"; // pastikan $employee dikirim dari controller
 
-                    function approveAction() {
-                        Swal.fire({
-                            title: 'Setujui Data?',
-                            icon: 'success',
-                            text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
-                            showCancelButton: true,
-                            confirmButtonText: 'Ya, Setujui',
-                            cancelButtonText: 'Batal'
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
-                                // TODO: Kirim ke server via AJAX atau redirect di sini
-                            }
-                        });
-                    }
+                function sendDataConfirmation() {
+                    Swal.fire({
+                        title: 'Kirim IDP ke atasan?',
+                        text: 'Pastikan semua ALC bernilai < 3 sudah dibuat.',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Kirim',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            fetch("{{ route('send.idp') }}", {
+                                    method: "POST",
+                                    headers: {
+                                        "Content-Type": "application/json",
+                                        "X-CSRF-TOKEN": document.querySelector('meta[name=\"csrf-token\"]')
+                                            .getAttribute('content')
+                                    },
+                                    body: JSON.stringify({
+                                        employee_id: employeeId
+                                    })
+                                })
+                                .then(async res => {
+                                    const data = await res.json();
+                                    if (!res.ok) {
+                                        throw new Error(data.message || "Terjadi kesalahan.");
+                                    }
+                                    Swal.fire('Berhasil!', data.message, 'success');
+                                })
+                                .catch(err => {
+                                    Swal.fire('Gagal', err.message || 'Terjadi kesalahan saat mengirim IDP.', 'error');
+                                    console.error(err);
+                                });
+                        }
+                    });
+                }
 
-                    function rejectAction() {
-                        Swal.fire({
-                            title: 'Revisi Data?',
-                            input: 'textarea',
-                            inputLabel: 'Alasan Revisi',
-                            inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
-                            inputAttributes: {
-                                'aria-label': 'Catatan Revisi'
-                            },
-                            showCancelButton: true,
-                            confirmButtonText: 'Revisi',
-                            cancelButtonText: 'Batal',
-                            inputValidator: (value) => {
-                                if (!value) {
-                                    return 'Catatan wajib diisi untuk Revisi!';
-                                }
-                            }
-                        }).then((result) => {
-                            if (result.isConfirmed) {
-                                Swal.fire(
-                                    'Revisi!',
-                                    'Note: ' + result.value,
-                                    'error'
-                                );
-                                // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
-                            }
-                        });
-                    }
+                // function approveAction() {
+                //     Swal.fire({
+                //         title: 'Setujui Data?',
+                //         icon: 'success',
+                //         text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
+                //         showCancelButton: true,
+                //         confirmButtonText: 'Ya, Setujui',
+                //         cancelButtonText: 'Batal'
+                //     }).then((result) => {
+                //         if (result.isConfirmed) {
+                //             Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
+                //             // TODO: Kirim ke server via AJAX atau redirect di sini
+                //         }
+                //     });
+                // }
+
+                // function rejectAction() {
+                //     Swal.fire({
+                //         title: 'Revisi Data?',
+                //         input: 'textarea',
+                //         inputLabel: 'Alasan Revisi',
+                //         inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                //         inputAttributes: {
+                //             'aria-label': 'Catatan Revisi'
+                //         },
+                //         showCancelButton: true,
+                //         confirmButtonText: 'Revisi',
+                //         cancelButtonText: 'Batal',
+                //         inputValidator: (value) => {
+                //             if (!value) {
+                //                 return 'Catatan wajib diisi untuk Revisi!';
+                //             }
+                //         }
+                //     }).then((result) => {
+                //         if (result.isConfirmed) {
+                //             Swal.fire(
+                //                 'Revisi!',
+                //                 'Note: ' + result.value,
+                //                 'error'
+                //             );
+                //             // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                //         }
+                //     });
+                // }
             </script>
         @endpush
