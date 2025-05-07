@@ -25,11 +25,13 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
+                    <form method="GET" action="{{ route('employee.index') }}" class="d-flex align-items-center">
+                        <input type="text" name="search" class="form-control me-2" value="{{ request('search') }}"
+                            placeholder="Search Employee..." style="width: 200px;">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </form>
                     <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
                         data-kt-menu-placement="bottom-end">
                         <i class="fas fa-filter"></i> Filter
@@ -150,8 +152,6 @@
         });
 
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("✅ Script Loaded!");
-
             var searchInput = document.getElementById("searchInput");
             var filterItems = document.querySelectorAll(".filter-department");
             var table = document.getElementById("kt_table_users");

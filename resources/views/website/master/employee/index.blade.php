@@ -38,15 +38,13 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                        data-kt-menu-placement="bottom-end">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
+                    <form method="GET" action="{{ route('employee.index') }}" class="d-flex align-items-center">
+                        <input type="text" name="search" class="form-control me-2" value="{{ request('search') }}"
+                            placeholder="Search Employee..." style="width: 200px;">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                    </form>
                     <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
                         <i class="fas fa-plus"></i>
                         Add
@@ -76,7 +74,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($employee as $index => $employee)
+                        @forelse ($employees as $index => $employee)
                             <tr>
                                 <td>{{ $index + 1 }}</td>
                                 <td class="text-center">
@@ -115,6 +113,9 @@
                         @endforelse
                     </tbody>
                 </table>
+                <div class="d-flex justify-content-end mt-4">
+                    {{ $employees->links('pagination::bootstrap-5') }}
+                </div>
             </div>
         </div>
     </div>

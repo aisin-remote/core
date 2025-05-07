@@ -81,14 +81,14 @@
                                                     <input readonly type="text" name="gender"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->gender) }}">
+                                                        value="{{ old('gender', $employee->gender) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Birthday Date</label>
                                                     <input readonly type="date" name="birthday_date"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->birthday_date) }}">
+                                                        value="{{ old('birthday_date', $employee->birthday_date) }}">
                                                 </div>
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Email</label>
@@ -121,21 +121,21 @@
                                                     <input readonly type="text" name="company_group"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->company_group) }}">
+                                                        value="{{ old('company_group', $employee->company_group) }}">
                                                 </div>
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Join Date</label>
                                                     <input readonly type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->aisin_entry_date) }}">
+                                                        value="{{ old('aisin_entry_date', $employee->aisin_entry_date) }}">
                                                 </div>
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Working Period</label>
                                                     <input readonly type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->working_period) }}">
+                                                        value="{{ old('working_period', $employee->working_period) }}">
                                                 </div>
                                                 <div class="col-12 mb-8">
                                                     <label class="form-label fw-bold fs-6">Department</label>
@@ -156,7 +156,7 @@
                                                     <input readonly type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Nama Lengkap"
-                                                        value="{{ old('name', $employee->grade) }}">
+                                                        value="{{ old('grade', $employee->grade) }}">
                                                 </div>
                                             </div>
                                         </div>
@@ -377,24 +377,26 @@
                                     <div class="card-body border-top p-10">
                                         <!-- Mengurangi padding agar card lebih kecil -->
                                         @php
-                                            $humanAssets = [
-                                                ['title' => 'Future Star', 'count' => 2, 'year' => 2024],
-                                                ['title' => 'Potential Candidate', 'count' => 4, 'year' => 2023],
-                                            ];
+                                            $humanAssets = [];
                                             $maxSlots = 3; // Set jumlah maksimum slot
                                             $humanAssetsCount = count($humanAssets);
                                         @endphp
 
                                         @if ($humanAssetsCount === 0)
-                                            <div class="text-center text-muted">No data available</div>
-                                            <div class="separator separator-dashed my-4"></div>
-                                            <div class="d-flex justify-content-between align-items-center">
-                                                <span class="text-muted">Empty slot</span>
-                                                <a class="fw-semibold text-primary"
-                                                    href="{{ route('employee.edit', $employee->npk) }}">
-                                                    Go to employee edit page
-                                                </a>
-                                            </div>
+                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
+                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
+                                                <div
+                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
+                                                    <div>
+                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
+                                                        <a class="fw-semibold"
+                                                            href="{{ route('hav.index', $employee->npk) }}">
+                                                            Go to hav page
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                                <div class="separator separator-dashed mt-4"></div>
+                                            @endfor
                                         @else
                                             @foreach ($humanAssets as $asset)
                                                 <div class="d-flex flex-wrap align-items-center">
@@ -410,21 +412,6 @@
 
                                                 <div class="separator separator-dashed my-4"></div>
                                             @endforeach
-
-                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
-                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <a class="fw-semibold"
-                                                            href="{{ route('hav.index', $employee->npk) }}">
-                                                            Go to hav page
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                <div class="separator separator-dashed mt-4"></div>
-                                            @endfor
                                         @endif
                                     </div>
                                 </div>

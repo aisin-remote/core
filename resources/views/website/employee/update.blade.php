@@ -106,7 +106,8 @@
                                                     <label class="form-label fw-bold fs-6">Gender</label>
                                                     <input type="text" name="gender"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Gender" value="{{ old('name', $employee->gender) }}">
+                                                        placeholder="Gender"
+                                                        value="{{ old('gender', $employee->gender) }}">
                                                     @error('gender')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -116,7 +117,7 @@
                                                     <input type="date" name="birthday_date"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Birthday Date"
-                                                        value="{{ old('name', $employee->birthday_date) }}">
+                                                        value="{{ old('birthday_date', $employee->birthday_date) }}">
                                                     @error('birthday_date')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -154,7 +155,7 @@
                                                     <input type="text" name="company_group"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Company Group"
-                                                        value="{{ old('name', $employee->company_group) }}">
+                                                        value="{{ old('company_group', $employee->company_group) }}">
                                                     @error('company_group')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -164,7 +165,7 @@
                                                     <input type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Join Date"
-                                                        value="{{ old('name', $employee->aisin_entry_date) }}">
+                                                        value="{{ old('aisin_entry_date', $employee->aisin_entry_date) }}">
                                                     @error('aisin_entry_date')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -174,7 +175,7 @@
                                                     <input type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Wokring Period"
-                                                        value="{{ old('name', $employee->working_period) }}">
+                                                        value="{{ old('working_period', $employee->working_period) }}">
                                                     @error('working_period')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -238,7 +239,7 @@
                                                         <option value="">Pilih Section</option>
                                                         @foreach ($sections as $section)
                                                             <option value="{{ $section->id }}"
-                                                                {{ old('department_id', (int) $employee->leadingSection?->id ?? '') == (int) $section->id ? 'selected' : '' }}>
+                                                                {{ old('section_id', (int) $employee->leadingSection?->id ?? '') == (int) $section->id ? 'selected' : '' }}>
                                                                 {{ $section->name }}
                                                             </option>
                                                         @endforeach
@@ -308,7 +309,7 @@
                                                     <label class="form-label fw-bold fs-6">Grade</label>
                                                     <input type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Grade" value="{{ old('name', $employee->grade) }}">
+                                                        placeholder="Grade" value="{{ old('grade', $employee->grade) }}">
                                                     @error('grade')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
@@ -746,7 +747,7 @@
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
 
-                                                    <th class="text-center">Year</th>
+                                                <th class="text-center">Year</th>
                                                 <th class="text-center">Program</th>
                                                 <th class="text-center">ICT/Project/Total</th>
                                                 <th class="text-center">Action</th>
@@ -845,7 +846,7 @@
                                             <tr>
                                                 <th>Training</th>
 
-                                                    <th class="text-center">Year</th>
+                                                <th class="text-center">Year</th>
                                                 <th class="text-center">Vendor</th>
                                                 <th class="text-center">Action</th>
                                             </tr>

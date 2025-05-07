@@ -101,33 +101,50 @@ class EmployeeController extends Controller
     }
 
 
-    public function index($company = null)
+    public function index(Request $request)
     {
-        $title = 'Employee';
+        $search = $request->get('search');
         $user = auth()->user();
 
         if ($user->role === 'HRD') {
-            $employees = Employee::with([
-                'subSection.section.department',
-                'leadingSection.department',
-                'leadingDepartment.division'
-            ])->when($company, fn($query) => $query->where('company_name', $company))
-                ->paginate(10); // <<-- tambahkan paginate di sini
+            $employees = Employee::with(['subSection.section.department'])
+                ->when($search, function ($query, $search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('npk', 'like', "%{$search}%")
+                        ->orWhere('position', 'like', "%{$search}%");
+                })
+                ->paginate(10);
         } else {
-            $employee = Employee::with([
-                'subSection.section.department.division.plant',
-                'leadingSection.department.division.plant',
-                'leadingDepartment.division.plant'
-            ])->where('user_id', $user->id)->first();
+            $employee = Employee::with(['subSection.section.department.division.plant'])
+                ->where('user_id', $user->id)
+                ->first();
 
             if (!$employee) {
-                $employees = collect(); // empty
+                $employees = collect(); // empty collection
             } else {
-                $employees = $this->getSubordinatesFromStructure($employee)->paginate(10); // <<-- pastikan ini QueryBuilder
+                $query = $this->getSubordinatesFromStructure($employee);
+
+                // Jika hasilnya Collection
+                if ($query instanceof \Illuminate\Support\Collection) {
+                    $employees = $query->filter(function ($emp) use ($search) {
+                        return !$search || str_contains(strtolower($emp->name), strtolower($search));
+                    })->paginate(10);
+                } else {
+                    // Jika QueryBuilder
+                    $employees = $query->when($search, fn($q) =>
+                        $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('npk', 'like', "%{$search}%")
+                        ->orWhere('position', 'like', "%{$search}%")
+                    )->paginate(10);
+                }
             }
         }
 
-        return view('website.employee.index', compact('employees', 'title'));
+        if ($request->ajax()) {
+            return view('website.employee.partials.table', compact('employees'))->render();
+        }
+
+        return view('website.employee.index', compact('employees'));
     }
 
 

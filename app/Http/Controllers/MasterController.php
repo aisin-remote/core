@@ -34,33 +34,59 @@ class MasterController extends Controller
         return $subordinates;
     }
 
-    public function employee($company = null)
+    public function employee(Request $request, $company = null)
     {
         $title = 'Employee';
         $user = auth()->user();
+        $search = $request->get('search');
 
-        // Jika HRD, bisa melihat semua karyawan
         if ($user->role === 'HRD') {
-            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-                ->when($company, fn($query) => $query->where('company_name', $company))
-                ->where(function ($query) {
-                    $query->where('user_id', '!=', auth()->id())
-                        ->orWhereNull('user_id');
+            $query = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+                ->when($company, fn($q) => $q->where('company_name', $company))
+                ->where(function ($q) {
+                    $q->where('user_id', '!=', auth()->id())
+                    ->orWhereNull('user_id');
                 })
-                ->get();
+                ->when($search, function ($q) use ($search) {
+                    $q->where(function ($query) use ($search) {
+                        $query->where('name', 'like', "%{$search}%")
+                            ->orWhere('npk', 'like', "%{$search}%")
+                            ->orWhere('position', 'like', "%{$search}%");
+                    });
+                });
+
+            $employees = $query->paginate(10);
         } else {
-            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
-            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')->where('user_id', $user->id)->first();
+            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+                ->where('user_id', $user->id)->first();
+
             if (!$emp) {
-                $employee = collect();
+                $employees = collect(); // empty collection
             } else {
-                $employee = $this->getSubordinates($emp->id)
+                $query = $this->getSubordinates($emp->id)
                     ->where('company_name', $emp->company_name);
+
+                if ($query instanceof \Illuminate\Support\Collection) {
+                    $employees = $query->filter(function ($item) use ($search) {
+                        return !$search || str_contains(strtolower($item->name), strtolower($search));
+                    })->paginate(10);
+                } else {
+                    $employees = $query->when($search, function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('npk', 'like', "%{$search}%")
+                        ->orWhere('position', 'like', "%{$search}%");
+                    })->paginate(10);
+                }
             }
         }
 
-        return view('website.master.employee.index', compact('employee'));
+        if ($request->ajax()) {
+            return view('website.master.employee.partials.table', compact('employees'))->render();
+        }
+
+        return view('website.master.employee.index', compact('employees', 'title'));
     }
+
     public function department()
     {
         $division = Division::all();
