@@ -70,12 +70,13 @@ class HavQuadrant extends Model
     }
 
     // Get average from 3 last performance appraisal history by employee_id
-    public function getLastPerformanceAppraisal($employee_id)
+    public function getLastPerformanceAppraisal($employee_id, $year)
     {
         $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
-            ->orderBy('created_at', 'desc')
-            ->take(3)
+            ->whereIn(DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
             ->get();
+        dd($performance);
+
         if ($performance->isEmpty()) {
             return 1; // Return 0 if no performance appraisal history found
         }
@@ -90,13 +91,13 @@ class HavQuadrant extends Model
     }
 
     // Get average Assessment from Alc score
-    public function updateHavFromAssessment($employee_id, $alc1, $alc2, $alc3, $alc4, $alc5, $alc6, $alc7, $alc8)
+    public function updateHavFromAssessment($employee_id, $year, $alc1, $alc2, $alc3, $alc4, $alc5, $alc6, $alc7, $alc8)
     {
         // Menghitung rata-rata dengan bobot yang sesuai
         $average = ($alc1 * 0.15) + ($alc2 * 0.15) + ($alc3 * 0.10) + ($alc4 * 0.10) + ($alc5 * 0.10)
             + ($alc6 * 0.15) + ($alc7 * 0.10) + ($alc8 * 0.15);
 
-        $pkScore = $this->getLastPerformanceAppraisal($employee_id);
+        $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
         $this->generateHavQuadrant($employee_id, $average, $pkScore);
         // Mengembalikan nilai rata-rata
         return $average;

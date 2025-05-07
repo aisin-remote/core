@@ -75,7 +75,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/update/{id}', [HavController::class, 'update'])->name('hav.update');
         Route::post('/update-rating', [HavController::class, 'updateRating'])->name('update.rating');
         Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
+        Route::delete('/{id}', [HavController::class, 'destroy'])->name('hav.destroy');
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
+        Route::get('/history/{id}', [HavController::class, 'show'])->name('hav.show');
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
 
         Route::get('/hav/test-import', function () {
