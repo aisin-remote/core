@@ -511,13 +511,6 @@
                     });
                 }
 
-
-
-
-
-
-
-
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
                 $("#updateAssessmentModal").on("hidden.bs.modal", function() {
                     setTimeout(() => {

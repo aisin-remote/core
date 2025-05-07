@@ -26,6 +26,12 @@ class Hav extends Model
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
+
+    // Many-to-One: Hav -> Employee
+    public function quadran()
+    {
+        return $this->belongsTo(QuadranMaster::class, 'quadrant', 'code');
+    }
     // Get the status of the employee
     public function getStatusAttribute()
     {

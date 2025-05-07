@@ -181,7 +181,7 @@ class HavController extends Controller
         $title = 'Add Employee';
         $user = auth()->user();
         if ($user->role === 'HRD') {
-            $employees = Hav::with('employee')
+            $employees = Hav::with('employee', 'quadran', 'details')
                 ->whereHas('employee', function ($query) use ($company) {
                     $query->where('company_name', $company);
                 })
@@ -199,14 +199,13 @@ class HavController extends Controller
                 $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
 
                 // Ambil data assessment yang berkaitan dengan bawahan tersebut
-                $employees = Hav::with('employee')
+                $employees = Hav::with('employee', 'quadran', 'details')
                     ->whereIn('employee_id', $subordinateIds)
                     ->get()
                     ->unique('employee_id')
                     ->values(); // reset indeks agar rapi
             }
         }
-
         return view('website.hav.list', compact('title', 'employees'));
     }
 
@@ -228,34 +227,6 @@ class HavController extends Controller
      */
     public function generateCreate($id)
     {
-        // $createHav = new Hav();
-        // $createHav->employee_id = $id;
-        // $createHav->save();
-
-        // $hav_id = $createHav->id;
-        // $alc = Alc::all();
-
-        // foreach ($alc as $alc) {
-        //     $createHavDetail = new HavDetail();
-        //     $createHavDetail->alc_id = $alc->id;
-        //     $createHavDetail->hav_id = $hav_id;
-        //     $createHavDetail->score = 0;
-        //     $createHavDetail->evidence = '';
-        //     $createHavDetail->save();
-
-        //     $keyBehaviors = KeyBehavior::where('alc_id', $alc->id)->get();
-        //     foreach ($keyBehaviors as $keyBehavior) {
-        //         $createHavDetailKeyBehavior = new HavDetailKeyBehavior();
-        //         $createHavDetailKeyBehavior->hav_detail_id = $createHavDetail->id;
-        //         $createHavDetailKeyBehavior->key_behavior_id = $keyBehavior->id;
-        //         $createHavDetailKeyBehavior->score = 0;
-        //         $createHavDetailKeyBehavior->save();
-        //     }
-        // }
-
-
-        // $title = 'Add Employee';
-        // $employees = Employee::all();
         return redirect()->route('hav.update', $id);
     }
 
@@ -442,6 +413,7 @@ class HavController extends Controller
      */
     public function import(Request $request)
     {
+        dd('ass');
         $request->validate([
             'file' => 'required|mimes:xlsx,xls',
         ]);
@@ -453,6 +425,27 @@ class HavController extends Controller
             return back()->with('error', 'Gagal import: ' . $e->getMessage());
         }
         return redirect()->back();
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function show($id)
+    {
+        $employee = Employee::with('hav', 'hav.details')->find($id);
+
+        if (!$employee) {
+            return response()->json([
+                'error' => 'Employee not found'
+            ], 404);
+        }
+
+        return response()->json([
+            'employee' => $employee
+        ]);
     }
 
     /**

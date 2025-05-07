@@ -58,31 +58,22 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Company</th>
-                            <th>Position</th>
-                            <th>Department</th>
-                            <th>Grade</th>
-                            <th>Last HAV</th>
+                            <th>Tahun</th>
+                            <th>Quadran</th>
                             <th class="text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @foreach ($employees as $item)
+                        @foreach ($havs as $item)
                             <tr data-position="{{ $item->employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $item->employee->npk }}</td>
                                 <td>{{ $item->employee->name }}</td>
-                                <td>{{ $item->employee->company_name }}</td>
-                                <td>{{ $item->employee->position }}</td>
-                                <td>{{ $item->employee->department?->name }}</td>
-                                <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name }}</span></td>
+                                <td><span class="badge badge-light-warning fs-7 fw-bold">Career Person</span></td>
                                 <td class="text-center">
                                     {{-- Summary --}}
-                                    <a href="#" data-employee-id="{{ $item->employee->id }}"
-                                        class="btn btn-info btn-sm history-btn">
+                                    <a href="{{ url('hav/generate-create', ['id' => $item->employee_id]) }}"
+                                        class="btn btn-info btn-sm">
                                         History
                                     </a>
                                 </td>
@@ -156,7 +147,7 @@
         </div>
     </div>
     
-    <div class="modal fade" id="havDetail" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="kt_modal_create_app" tabindex="-1" aria-hidden="true">
         <!--begin::Modal dialog-->
         <div class="modal-dialog modal-dialog-centered mw-900px">
             <!--begin::Modal content-->
@@ -164,7 +155,7 @@
                 <!--begin::Modal header-->
                 <div class="modal-header">
                     <!--begin::Modal title-->
-                    <h2 id="nameTitle">Herizal Arfiansyah</h2>
+                    <h2>Herizal Arfiansyah</h2>
                     <!--end::Modal title-->
 
                     <!--begin::Close-->
@@ -216,35 +207,35 @@
                                                     <tbody>
                                                         <tr>
                                                             <td>Vision & Business Sense</td>
-                                                            <td id="alc1">2</td>
+                                                            <td>2</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Customer Focus</td>
-                                                            <td id="alc2">3</td>
+                                                            <td>3</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Interpersonal Skill</td>
-                                                            <td id="alc3">3</td>
+                                                            <td>3</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Analysis & Judgment</td>
-                                                            <td id="alc4">3</td>
+                                                            <td>3</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Planning & Driving Action</td>
-                                                            <td id="alc5">3</td>
+                                                            <td>3</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Leading & Motivating</td>
-                                                            <td id="alc6">3</td>
+                                                            <td>3</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Teamwork</td>
-                                                            <td id="alc7">3</td>
+                                                            <td>3</td>
                                                         </tr>
                                                         <tr>
                                                             <td>Drive & Courage</td>
-                                                            <td id="alc8">3</td>
+                                                            <td>3</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
@@ -307,51 +298,6 @@
     </div>
 
 
-    <!-- Modal -->
-<div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
-aria-hidden="true">
-<div class="modal-dialog modal-xl">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History Assessment</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-            <h1 class="text-center mb-4 fw-bold">History HAV</h1>
-
-            <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
-                <div class="col-auto">
-                    <p class="fs-5 fw-bold"><strong>NPK:</strong><span id="npkText"></span></p>
-                </div>
-                <div class="col-auto">
-                    <p class="fs-5 fw-bold"><strong>Position:</strong> <span id="positionText"></span></p>
-                </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle table-hover fs-6"
-                    id="kt_table_assessments" width="100%">
-                    <thead class="table-dark">
-                        <tr>
-                            <th class="text-center" width="10%">No</th>
-                            <th class="text-center">Quadran</th>
-                            <th class="text-center">Date</th>
-                            <th class="text-center" width="40%">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
-    </div>
-</div>
-</div>
-
-
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -369,148 +315,147 @@ aria-hidden="true">
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script>
-        
-        $(document).ready(function() {
-                $(document).on("click", ".history-btn", function(event) {
-                    event.preventDefault();
+        document.addEventListener("DOMContentLoaded", function() {
+            const tabs = document.querySelectorAll(".filter-tab");
+            const rows = document.querySelectorAll("#kt_table_users tbody tr");
 
-                    let employeeId = $(this).data("employee-id");
-                    console.log("Fetching history for Employee ID:", employeeId); // Debug
+            tabs.forEach(tab => {
+                tab.addEventListener("click", function(e) {
+                    e.preventDefault();
 
-                    // Reset data modal sebelum request baru dilakukan
-                    $("#npkText").text("-");
-                    $("#positionText").text("-");
-                    $("#kt_table_assessments tbody").empty();
+                    // Hapus class active dari semua tab
+                    tabs.forEach(t => t.classList.remove("active"));
+                    this.classList.add("active");
 
-                    $.ajax({
-                        url: `/hav/history/${employeeId}`,
-                        type: "GET",
-                        success: function(response) {
-                            console.log("Response received:", response); // Debug respons
+                    const filter = this.getAttribute("data-filter");
 
-                            if (!response.employee) {
-                                console.error("Employee data not found in response!");
-                                alert("Employee not found!");
-                                return;
-                            }
-
-                            // Update informasi karyawan
-                            $("#npkText").text(response.employee.npk);
-                            $("#positionText").text(response.employee.position);
-
-                            // Kosongkan tabel sebelum menambahkan data baru
-                            $("#kt_table_assessments tbody").empty();
-
-                            if (response.employee.hav.length > 0) {
-                                response.employee.hav.forEach((hav, index) => {
-                                    let row = `
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td class="text-center">${hav.status || '-'}</td>
-                            <td class="text-center">${hav.year}</td>
-                            <td class="text-center">
-                                <a
-                                data-detail='${JSON.stringify(hav.details)}' 
-                                data-tahun='${hav.year}'  
-                                data-nama='${response.employee.name}' 
-                                class="btn btn-info btn-sm btn-hav-detail" href="#">
-                                    Detail
-                                </a>
-                              ${`<a class="btn btn-primary btn-sm"
-                                    target="_blank"
-                                    href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
-                                    onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                    Revise
-                                </a>`}
-
-
-
-                                            <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                                data-id="${hav.id}">Delete</button>
-                                        </td>
-                                    </tr>
-                                `;
-                                    $("#kt_table_assessments tbody").append(row);
-                                });
-                            } else {
-                                $("#kt_table_assessments tbody").append(`
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">No assessment found</td>
-                                    </tr>
-                                `);
-                            }
-
-                            // Tampilkan modal setelah data dimuat
-                            $("#detailAssessmentModal").modal("show");
-                        },
-                        error: function(error) {
-                            console.error("Error fetching data:", error);
-                            alert("Failed to load assessment data!");
+                    rows.forEach(row => {
+                        const position = row.getAttribute("data-position");
+                        if (filter === "all" || position === filter) {
+                            row.style.display = "";
+                        } else {
+                            row.style.display = "none";
                         }
                     });
                 });
-
-                $(document).on("click", ".btn-hav-detail", function() {
-                    event.preventDefault();
-
-                    // Ambil data dari atribut data-upload
-
-                    const havDetails = $(this).data("detail");
-                    const year = $(this).data("tahun");
-                    const nama = $(this).data("nama");
-                    $(`#nameTitle`).text(nama + ' - ' + year);
-
-                    // Cek apakah data ada
-                    if (havDetails) {
-                        try {
-
-                            havDetails.forEach((item) => {
-                                console.log(item.alc_id);
-                                $(`#alc${item.alc_id}`).text(item.score);
-                            });
-
-
-                            // Tampilkan modal setelah data dimuat
-                            $("#detailAssessmentModal").modal("hide");
-                            $("#havDetail").modal("show");
-                        } catch (error) {
-                            console.error("Error parsing data:", error);
-                            alert("Data tidak valid.");
-                        }
-                    } else {
-                        alert("Data HAV tidak ditemukan.");
-                    }
-                   
-                });
-
-                // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
-                $("#havDetail").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal update
-                        $("body").removeClass("modal-open");
-
-                        $("#detailAssessmentModal").modal("show");
-
-                        // Tambahkan overlay kembali untuk modal history
-                        $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 300);
-                });
-
-                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        if (!$("#havDetail").hasClass("show")) {
-                            $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
-                            $("body").removeClass("modal-open");
-                        }
-                    }, 30);
-                });
-
-                // ===== CEGAH OVERLAY BERLAPIS =====
-                $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").last().css("z-index",
-                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
-                });
-
             });
+        });
+
+        function rejectAction() {
+            Swal.fire({
+                title: 'Revisi Data?',
+                input: 'textarea',
+                inputLabel: 'Alasan Revisi',
+                inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                inputAttributes: {
+                    'aria-label': 'Catatan Revisi'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Revisi',
+                cancelButtonText: 'Batal',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Catatan wajib diisi untuk Revisi!';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire(
+                        'Revisi!',
+                        'Note: ' + result.value,
+                        'error'
+                    );
+                    // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                }
+            });
+        }
+        $(document).ready(function() {
+            // $('#hav-table').DataTable({
+            //     processing: true,
+            //     serverSide: true,
+            //     ajax: '{{ route('hav.ajax.list') }}',
+            //     columns: [{
+            //             data: 'npk',
+            //             name: 'npk'
+            //         },
+            //         {
+            //             data: 'nama',
+            //             name: 'nama'
+            //         },
+            //         {
+            //             data: 'status',
+            //             name: 'status'
+            //         }
+            //     ]
+            // });
+
+            $('#submitBtn').click(function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: 'Data berhasil disubmit.',
+                    confirmButtonText: 'Ok'
+                });
+            });
+
+            $(document).on('click', '.approve-btn', function() {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil Disetujui!',
+                    text: 'Data berhasil di-approve.',
+                    confirmButtonText: 'OK',
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+            });
+        });
+
+        function rejectAction() {
+                        Swal.fire({
+                            title: 'Revisi Note?',
+                            input: 'textarea',
+                            inputLabel: 'Alasan Revisi',
+                            inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                            inputAttributes: {
+                                'aria-label': 'Catatan Revisi'
+                            },
+                            showCancelButton: true,
+                            confirmButtonText: 'Revisi',
+                            cancelButtonText: 'Batal',
+                            inputValidator: (value) => {
+                                if (!value) {
+                                    return 'Catatan wajib diisi untuk Revisi!';
+                                }
+                            }
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                Swal.fire(
+                                    'Revisi!',
+                                    'Note: ' + result.value,
+                                    'error'
+                                );
+                                // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                            }
+                        });
+                    }
+        function approve() {
+            Swal.fire({
+                title: "Are you sure?",
+                text: "",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes, Approve it!"
+                }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                    title: "Approved!",
+                    text: "HAV has been approved.",
+                    icon: "success"
+                    });
+                }
+                });
+        }
     </script>
 @endpush

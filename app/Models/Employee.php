@@ -15,14 +15,14 @@ class Employee extends Model
     // === RELATIONSHIPS ===
     // In Employee model
     public function departments()
-{
-    return $this->belongsToMany(
-        Department::class,
-        'employee_departments',   // ← nama pivot table yang benar
-        'employee_id',            // ← foreign key utk model Employee di pivot
-        'department_id'           // ← foreign key utk model Department di pivot
-    )->withTimestamps();
-}
+    {
+        return $this->belongsToMany(
+            Department::class,
+            'employee_departments',   // ← nama pivot table yang benar
+            'employee_id',            // ← foreign key utk model Employee di pivot
+            'department_id'           // ← foreign key utk model Department di pivot
+        )->withTimestamps();
+    }
 
 
     public function assessments()
@@ -126,6 +126,13 @@ class Employee extends Model
             ? Carbon::parse($this->aisin_entry_date)->diffInYears(Carbon::now())
             : null;
     }
+
+    // Mengambil Hav
+    public function hav()
+    {
+        return $this->hasMany(\App\Models\Hav::class, 'employee_id', 'id');
+    }
+
     public function havQuadrants()
     {
         return $this->hasMany(\App\Models\HavQuadrant::class);

@@ -51,6 +51,7 @@ class HavImport implements WithMultipleSheets, WithEvents
 
                     (new HavQuadrant())->updateHavFromAssessment(
                         $employee->id,
+                        $sheet->getCell('C13')->getCalculatedValue(),
                         $sheet->getCell($scoreMap[1])->getCalculatedValue(),
                         $sheet->getCell($scoreMap[2])->getCalculatedValue(),
                         $sheet->getCell($scoreMap[3])->getCalculatedValue(),
