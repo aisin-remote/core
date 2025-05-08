@@ -307,6 +307,15 @@ class Employee extends Model
         return $superiors;
     }
 
+    public function manualSuperiorMap()
+    {
+        return [
+            'gm' => 'vp',           // GM ke Vice President
+            'vp' => 'president',    // VP ke President
+            // Tambahkan sesuai kebutuhan
+        ];
+    }
+
     private function getDirectSuperiorOf(Employee $employee)
     {
         // Struktur organisasi
