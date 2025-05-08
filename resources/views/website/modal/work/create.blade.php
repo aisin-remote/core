@@ -18,6 +18,10 @@
                         <label class="form-label">Company</label>
                         <input type="text" class="form-control" name="company" required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" name="department" required>
+                    </div>
                     <div class="row mb-3">
                         <div class="col-6">
                             <div class="mb-3">

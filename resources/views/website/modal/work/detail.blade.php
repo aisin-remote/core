@@ -7,7 +7,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p><strong>Company:</strong> {{ $experience->company }}</p>
+                <p><strong>Department:</strong> {{ $experience->department }}</p>
                 <p><strong>Period:</strong>
                     {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('d M Y') }}
                     -

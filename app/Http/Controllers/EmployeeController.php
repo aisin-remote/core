@@ -819,6 +819,7 @@ class EmployeeController extends Controller
         $request->validate([
             'position' => 'required|string|max:255',
             'company' => 'required|string|max:255',
+            'department' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string',
@@ -831,6 +832,7 @@ class EmployeeController extends Controller
                 'employee_id' => $request->employee_id, // Sesuaikan dengan sistem autentikasi
                 'position' => $request->position,
                 'company' => $request->company,
+                'department' => $request->department,
                 'start_date' => $request->start_date,
                 'end_date' => $request->end_date,
                 'description' => $request->description,
@@ -853,6 +855,7 @@ class EmployeeController extends Controller
         $request->validate([
             'position'   => 'required|string|max:255',
             'company'    => 'required|string|max:255',
+            'department'    => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date'   => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string',
@@ -864,6 +867,7 @@ class EmployeeController extends Controller
             $experience->update([
                 'position'    => $request->position,
                 'company'     => $request->company,
+                'department'     => $request->department,
                 'start_date'  => Carbon::parse($request->start_date),
                 'end_date'    => $request->end_date ? Carbon::parse($request->end_date) : null,
                 'description' => $request->description,

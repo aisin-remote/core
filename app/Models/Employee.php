@@ -37,7 +37,7 @@ class Employee extends Model
 
     public function user()
     {
-        return $this->hasOne(User::class, 'employee_id', 'id');
+        return $this->belongsTo(User::class,'user_id');
     }
 
     public function promotionHistory()

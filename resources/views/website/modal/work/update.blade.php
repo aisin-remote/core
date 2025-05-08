@@ -22,6 +22,11 @@
                         <input type="text" class="form-control" name="company" value="{{ $experience->company }}"
                             required>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" name="department"
+                            value="{{ $experience->department }}" required>
+                    </div>
                     <div class="row mb-3">
                         <div class="col-6">
                             <label class="form-label">Start Date</label>
