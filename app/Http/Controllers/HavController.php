@@ -454,6 +454,26 @@ class HavController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+    public function get3LastPerformance($id, $year)
+    {
+        $performanceAppraisals = Employee::getLast3Performance($id, $year);
+        if ($performanceAppraisals->isEmpty()) {
+            return response()->json([
+                'error' => true,
+                'msg' => 'No performance appraisals found for this employee'
+            ], 404);
+        }
+        return response()->json([
+            'performanceAppraisals' => $performanceAppraisals
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
     public function edit($id)
     {
         //
@@ -467,6 +487,15 @@ class HavController extends Controller
      */
     public function destroy($id)
     {
-        //
+        $hav = Hav::findOrFail($id);
+
+        HavDetail::where('hav_id', $id)->delete();
+
+        $hav->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hav berhasil dihapus.'
+        ]);
     }
 }

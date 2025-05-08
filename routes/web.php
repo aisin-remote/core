@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{id}', [HavController::class, 'destroy'])->name('hav.destroy');
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
         Route::get('/history/{id}', [HavController::class, 'show'])->name('hav.show');
+        Route::get('/get3-last-performance/{id}/{year}', [HavController::class, 'get3LastPerformance'])->name('hav.get3LastPerformance');
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
 
         Route::get('/hav/test-import', function () {

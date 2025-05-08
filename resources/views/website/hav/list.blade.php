@@ -23,10 +23,6 @@
                         <i class="fas fa-upload"></i>
                         Import
                     </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#kt_modal_create_app">
-                        <i class="fas fa-upload"></i>
-                        Import2
-                    </button>
                 </div>
             </div>
 
@@ -279,20 +275,7 @@
                                                         <th>Score</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>2022</td>
-                                                        <td>B+</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>2023</td>
-                                                        <td>B+</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>2024</td>
-                                                        <td>B+</td>
-                                                    </tr>
-
+                                                <tbody id="performanceBody">
                                                 </tbody>
                                             </table>
                                         </div>
@@ -413,6 +396,7 @@ aria-hidden="true">
                                 data-detail='${JSON.stringify(hav.details)}' 
                                 data-tahun='${hav.year}'  
                                 data-nama='${response.employee.name}' 
+                                data-employeeid='${response.employee.id}' 
                                 class="btn btn-info btn-sm btn-hav-detail" href="#">
                                     Detail
                                 </a>
@@ -453,12 +437,45 @@ aria-hidden="true">
                 $(document).on("click", ".btn-hav-detail", function() {
                     event.preventDefault();
 
-                    // Ambil data dari atribut data-upload
 
                     const havDetails = $(this).data("detail");
+                    const employee_id = $(this).data("employeeid");
                     const year = $(this).data("tahun");
                     const nama = $(this).data("nama");
                     $(`#nameTitle`).text(nama + ' - ' + year);
+                    console.log("Employee ID:", employee_id); // Debug
+
+                    // Ambil data dari atribut data-upload
+                    let url = "{{ url('/hav/get3-last-performance') }}/" + employee_id + "/" + year;
+                    $.ajax({
+                        url: url,
+                        type: "GET",
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            console.log("Response received:", response); 
+                            // Debug respons
+                            let rows = '';
+                                response.performanceAppraisals.forEach(function(item) {
+                                    rows += `
+                                        <tr>
+                                            <td>${new Date(item.date).getFullYear()}</td>
+                                            <td>${item.score}</td>
+                                        </tr>
+                                    `;
+                                });
+                            $('#performanceBody').html(rows);
+                        },
+                        error: function(xhr, status, error) {
+                            rows = `
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted">No performance data found</td>
+                                </tr>
+                            `;
+                            $('#performanceBody').html(rows);
+                        }
+                    });
+
 
                     // Cek apakah data ada
                     if (havDetails) {
@@ -509,6 +526,54 @@ aria-hidden="true">
                 $(".modal").on("shown.bs.modal", function() {
                     $(".modal-backdrop").last().css("z-index",
                         1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+                });
+
+                $(document).on("click", ".delete-btn", function() {
+                    let assessmentId = $(this).data("id");
+                    console.log("ID yang akan dihapus:", assessmentId); // Debugging
+
+                    if (!assessmentId) {
+                        console.error("ID Hav tidak ditemukan!");
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: "Apakah Anda yakin?",
+                        text: "Data Hav ini akan dihapus secara permanen!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#3085d6",
+                        confirmButtonText: "Ya, Hapus!"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            console.log("Mengirim request DELETE untuk ID:", assessmentId); // Debugging
+
+                            fetch(`/hav/${assessmentId}`, {
+                                    method: "DELETE",
+                                    headers: {
+                                        "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr(
+                                            "content"),
+                                        "Content-Type": "application/json"
+                                    }
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    console.log("Response dari server:", data); // Debugging
+
+                                    if (data.success) {
+                                        Swal.fire("Terhapus!", data.message, "success")
+                                            .then(() => location.reload());
+                                    } else {
+                                        Swal.fire("Error!", "Gagal menghapus data!", "error");
+                                    }
+                                })
+                                .catch(error => {
+                                    console.error("Error saat menghapus:", error);
+                                    Swal.fire("Error!", "Terjadi kesalahan!", "error");
+                                });
+                        }
+                    });
                 });
 
             });
