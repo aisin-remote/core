@@ -13,7 +13,7 @@ use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
-
+use App\Http\Controllers\SkillMatrixController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -35,6 +35,7 @@ Route::get('/employee-competencies/get-employees', [EmployeeCompetencyController
 Route::get('/employee-competencies/get-competencies', [EmployeeCompetencyController::class, 'getCompetencies']);
 Route::get('/employeeCompetencies/employee/{employee}', [EmployeeCompetencyController::class, 'show'])->name('employeeCompetencies.show');
 Route::patch('/employeeCompetencies/{id}/approve', [EmployeeCompetencyController::class, 'approve'])->name('employeeCompetencies.approve');
+Route::patch('/employee-competencies/{id}/unapprove', [EmployeeCompetencyController::class, 'unapprove'])->name('employeeCompetencies.unapprove');
 
 /* Group Competency */
 Route::resource('group_competency', GroupCompetencyController::class);
@@ -47,6 +48,9 @@ Route::post('/competencies/store', [CompetencyController::class, 'store'])->name
 Route::get('/competencies/{competency}/edit', [CompetencyController::class, 'edit'])->name('competencies.edit');
 Route::put('/competencies/{competency}', [CompetencyController::class, 'update'])->name('competencies.update');
 Route::delete('/competencies/{competency}', [CompetencyController::class, 'destroy'])->name('competencies.destroy');
+
+Route::resource('skill_matrix', SkillMatrixController::class);
+Route::get('/skill_matrix', [SkillMatrixController::class, 'index'])->name('skill_matrix.index');
 
 Route::middleware('guest')->group(function () {
     Route::prefix('register')->group(function () {

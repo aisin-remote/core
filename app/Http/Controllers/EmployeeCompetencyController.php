@@ -60,7 +60,6 @@ class EmployeeCompetencyController extends Controller
             'weight' => 'nullable|integer',
             'plan' => 'nullable|integer',
             'act' => 'nullable|integer',
-            'plan_date' => 'required|date|after_or_equal:today',
             'due_date' => 'required|date|after_or_equal:today'
         ]);
 
@@ -79,7 +78,6 @@ class EmployeeCompetencyController extends Controller
                         'weight' => $request->weight,
                         'plan' => $request->plan,
                         'act' => $request->act,
-                        'plan_date' => $request->plan_date,
                         'due_date' => $request->due_date
                     ]);
                     $createdCount++;
@@ -184,45 +182,87 @@ class EmployeeCompetencyController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'act' => 'required|integer',
-            'file' => 'nullable|file|max:2048',
+            'file' => 'required|file|max:2048',
         ]);
 
-        $employeeCompetency = EmployeeCompetency::findOrFail($id);
-        $data = $request->except('file');
+        try {
+            $employeeCompetency = EmployeeCompetency::findOrFail($id);
 
-        // Handle file upload
-        if ($request->hasFile('file')) {
-            // Delete old file jika ada
-            if ($employeeCompetency->files) {
-                Storage::delete($employeeCompetency->files);
+            if ($request->hasFile('file')) {
+                if ($employeeCompetency->files) {
+                    Storage::delete($employeeCompetency->files);
+                }
+                
+                $originalName = $request->file('file')->getClientOriginalName();
+                $directory = 'employee_competency_files/' . $employeeCompetency->employee_id;
+                $path = $request->file('file')->storeAs($directory, $originalName, 'public');
+                
+                $employeeCompetency->update([
+                    'files' => $path,
+                    'status' => 0
+                ]);
             }
-            
-            // Simpan file dengan nama asli di direktori sesuai employee_id
-            $originalName = $request->file('file')->getClientOriginalName();
-            $directory = 'employee_competency_files/' . $employeeCompetency->employee_id;
-            $path = $request->file('file')->storeAs($directory, $originalName, 'public');
-            
-            $data['files'] = $path;
-            $data['status'] = 0;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'File berhasil diupload!'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Upload gagal: ' . $e->getMessage()
+            ], 500);
         }
-
-        $employeeCompetency->update($data);
-
-        return response()->json(['message' => 'Competency updated successfully']);
     }
 
     public function approve($id)
     {
+        try {
+            $employeeCompetency = EmployeeCompetency::findOrFail($id);
+            
+            if(!$employeeCompetency->files) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'File belum diupload'
+                ], 400);
+            }
+
+            if($employeeCompetency->status == 1) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Sudah diapprove sebelumnya'
+                ]);
+            }
+
+            $employeeCompetency->update([
+                'status' => 1,
+                'act' => 1
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Competency berhasil diapprove!'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Gagal approve: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function unapprove($id)
+    {
         $employeeCompetency = EmployeeCompetency::findOrFail($id);
         
-        if(!$employeeCompetency->files) {
-            return response()->json(['error' => 'File belum diupload'], 400);
-        }
+        $employeeCompetency->update([
+            'status' => 0,
+            'act' => $employeeCompetency->act
+        ]);
 
-        $employeeCompetency->update(['status' => 1]);
-
-        return response()->json(['message' => 'Competency approved successfully']);
+        return response()->json(['message' => 'Competency unapproved successfully']);
     }
 
     /**
@@ -233,9 +273,19 @@ class EmployeeCompetencyController extends Controller
      */
     public function destroy(EmployeeCompetency $employeeCompetency)
     {
-        $employeeCompetency->delete();
-        
-        return redirect()->back()
-            ->with('success', 'Competency deleted successfully!');
+        try {
+            $employeeCompetency->delete();
+            
+            return response()->json([
+                'success' => true,
+                'message' => 'Competency berhasil dihapus!'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Gagal menghapus: ' . $e->getMessage()
+            ], 500);
+        }
     }
 }

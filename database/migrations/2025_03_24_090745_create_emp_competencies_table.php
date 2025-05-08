@@ -28,7 +28,6 @@ return new class extends Migration
             $table->integer('weight');
             $table->integer('plan');
             $table->integer('act');
-            $table->date('plan_date');
             $table->date('due_date');
             $table->timestamps();
         });

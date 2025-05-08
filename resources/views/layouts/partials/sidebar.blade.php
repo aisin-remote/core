@@ -315,11 +315,11 @@
 
                     <div class="menu-item pt-5">
                         <!--begin:Menu content-->
-                        <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Master</span>
+                        <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Training</span>
                         </div>
                         <!--end:Menu content-->
                     </div>
-
+                    
                     <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
                         <!-- Begin: Menu Link -->
                         <span class="menu-link {{ request()->is('Competency') ? 'active' : '' }}">
@@ -331,17 +331,16 @@
                         </span>
                         <!-- End: Menu Link -->
 
-
                         <!-- Begin: Menu Sub -->
                         <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
                             style="display: none; overflow: hidden;">
                             <!-- Menu Item: FAQ Classic -->
                             <div class="menu-item">
-                                <a class="menu-link" href="/employeeCompetencies">
+                                <a class="menu-link" href="/group_competency">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
-                                    <span class="menu-title">Employee Competency</span>
+                                    <span class="menu-title">Group Competency</span>
                                 </a>
                             </div>
 
@@ -356,17 +355,32 @@
                             </div>
 
                             <div class="menu-item">
-                                <a class="menu-link" href="/group_competency">
+                                <a class="menu-link" href="/employeeCompetencies">
                                     <span class="menu-bullet">
                                         <span class="bullet bullet-dot"></span>
                                     </span>
-                                    <span class="menu-title">Group Competency</span>
+                                    <span class="menu-title">Employee Competency</span>
+                                </a>
+                            </div>
+
+                            <div class="menu-item">
+                                <a class="menu-link" href="/skill_matrix">
+                                    <span class="menu-bullet">
+                                        <span class="bullet bullet-dot"></span>
+                                    </span>
+                                    <span class="menu-title">Skill Matrix</span>
                                 </a>
                             </div>
                         </div>
                         <!-- End: Menu Sub -->
                     </div>
 
+                    <div class="menu-item pt-5">
+                        <!--begin:Menu content-->
+                        <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Master</span>
+                        </div>
+                        <!--end:Menu content-->
+                    </div>
 
                     @if (auth()->user()->role == 'User')
                         <div class="menu-item">
