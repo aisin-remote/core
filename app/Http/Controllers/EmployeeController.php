@@ -99,34 +99,82 @@ class EmployeeController extends Controller
         return $subordinateIds->merge($operatorIds);
     }
 
-    public function index($company = null)
+    public function index(Request $request, $company = null)
     {
         $title = 'Employee';
         $user = auth()->user();
+        $search = $request->input('search');
+        $filter = $request->input('filter', 'all'); // Menambahkan filter, default 'all'
 
         if ($user->role === 'HRD') {
+            // HRD bisa mencari berdasarkan beberapa kolom, termasuk company_name
             $employees = Employee::with([
                 'subSection.section.department',
                 'leadingSection.department',
                 'leadingDepartment.division'
-            ])->when($company, fn($query) => $query->where('company_name', $company))
-                ->paginate(10); // <<-- tambahkan paginate di sini
+            ])
+            ->when($company, fn($query) => $query->where('company_name', $company))  // Filter berdasarkan perusahaan yang sedang diakses
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('npk', 'like', "%{$search}%")
+                      ->orWhere('company_name', 'like', "%{$search}%");  // Pencarian di seluruh kolom
+                });
+            })
+            ->when($filter && $filter != 'all', function ($query) use ($filter) {
+                $query->where('position', $filter);  // Filter posisi jika diperlukan
+            })
+            ->paginate(10)
+            ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
+
         } else {
+            // Untuk user biasa (misalnya Supervisor), pencarian hanya berlaku untuk 'company_name' yang terkait
             $employee = Employee::with([
                 'subSection.section.department.division.plant',
                 'leadingSection.department.division.plant',
                 'leadingDepartment.division.plant'
-            ])->where('user_id', $user->id)->first();
+            ])
+            ->where('user_id', $user->id)
+            ->first();
 
             if (!$employee) {
-                $employees = collect(); // empty
+                $employees = collect();
             } else {
-                $employees = $this->getSubordinatesFromStructure($employee)->paginate(10); // <<-- pastikan ini QueryBuilder
+                $query = $this->getSubordinatesFromStructure($employee);
+
+                if ($query instanceof \Illuminate\Database\Eloquent\Builder) {
+                    // Pastikan hanya pencarian berdasarkan company_name yang relevan
+                    if ($search) {
+                        $query->where(function ($q) use ($search, $employee) {
+                            $q->where('company_name', $employee->company_name)  // Batasi pencarian hanya dalam company_name yang sama dengan user
+                              ->where(function ($q2) use ($search) {
+                                  $q2->where('name', 'like', "%{$search}%")
+                                      ->orWhere('npk', 'like', "%{$search}%");
+                              });
+                        });
+                    }
+
+                    // Filter posisi jika diperlukan
+                    if ($filter && $filter != 'all') {
+                        $query->where('position', $filter);
+                    }
+
+                    // Paginate hasil
+                    $employees = $query->paginate(10)->appends([
+                        'search' => $search,
+                        'filter' => $filter,
+                        'company' => $company
+                    ]);
+                } else {
+                    $employees = collect();
+                }
             }
         }
 
-        return view('website.employee.index', compact('employees', 'title'));
+        return view('website.employee.index', compact('employees', 'title', 'filter', 'company'));
     }
+
+
 
     public function status($id)
     {

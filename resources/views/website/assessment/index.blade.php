@@ -16,16 +16,16 @@
                     <h3 class="card-title">Assessment List</h3>
                     <div class="d-flex align-items-center">
                         <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                            style="width: 200px;">
+                            style="width: 200px;" value="{{ request('search') }}">
                         <button type="button" class="btn btn-primary me-3" id="searchButton">
                             <i class="fas fa-search"></i> Search
                         </button>
-                        <select id="departmentFilter" class="form-select me-2" style="width: 200px;">
+                        {{-- <select id="departmentFilter" class="form-select me-2" style="width: 200px;">
                             <option value="">All Department</option>
                             @foreach ($departments as $department)
                                 <option value="{{ $department }}">{{ $department }}</option>
                             @endforeach
-                        </select>
+                        </select> --}}
                         @if (auth()->user()->role == 'HRD')
                             <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#addAssessmentModal">Add</a>
@@ -36,43 +36,51 @@
                     @if (auth()->user()->role == 'HRD')
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                             role="tablist" style="cursor:pointer">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                                href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                                Show All
+                            </a>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show
-                                    All</a>
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                                    Direktur
+                                </a>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Direktur">Direktur</a>
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="GM">GM</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab"
-                                    data-filter="Coordinator">Coordinator</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Section Head">Section
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
                                     Head</a>
                             </li>
-
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab"
-                                    data-filter="Supervisor">Supervisor</a>
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
                             </li>
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
                             </li>
                         </ul>
                     @endif
+
 
                     <div class="card-body">
                         <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
@@ -250,13 +258,13 @@
                                     Detail
                                 </a>
                               ${`
-                                                    <a class="btn btn-primary btn-sm"
-                                                        target="_blank"
-                                                        href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
-                                                        onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                        View PDF
-                                                    </a>
-                                        `}
+                                                                            <a class="btn btn-primary btn-sm"
+                                                                                target="_blank"
+                                                                                href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                                                                onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                                                View PDF
+                                                                            </a>
+                                                                `}
 
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
                                 data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
@@ -592,9 +600,7 @@
 
                 }
 
-                searchInput.on("keyup", function() {
-                    filterTable();
-                });
+
 
 
                 // 🔹 Variabel Global untuk Chart
@@ -787,11 +793,7 @@
                     applyFilters();
                 });
 
-                // Event listener untuk search input
-                searchInput.addEventListener("keyup", function() {
-                    currentSearchValue = this.value.toLowerCase();
-                    applyFilters();
-                });
+
 
                 function applyFilters() {
                     rows.forEach(row => {
@@ -822,6 +824,15 @@
                         }
                     });
                 }
+            });
+            document.getElementById('searchButton').addEventListener('click', function() {
+                const search = document.getElementById('searchInput').value;
+                const url = new URL(window.location.href);
+
+                url.searchParams.set('search', search);
+                url.searchParams.set('page', 1); // Reset to first page on new search
+
+                window.location.href = url.toString();
             });
         </script>
     @endpush

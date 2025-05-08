@@ -23,7 +23,8 @@
                         <i class="fas fa-upload"></i>
                         Import
                     </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#kt_modal_create_app">
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
+                        data-bs-target="#kt_modal_create_app">
                         <i class="fas fa-upload"></i>
                         Import2
                     </button>
@@ -34,23 +35,47 @@
                 @if (auth()->user()->role == 'HRD')
                     <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                         role="tablist" style="cursor:pointer">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                            href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            Show All
+                        </a>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                                Direktur
+                            </a>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                                Head</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
                         </li>
                     </ul>
                 @endif
@@ -78,7 +103,8 @@
                                 <td>{{ $item->employee->position }}</td>
                                 <td>{{ $item->employee->department?->name }}</td>
                                 <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name }}</span></td>
+                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name }}</span>
+                                </td>
                                 <td class="text-center">
                                     {{-- Summary --}}
                                     <a href="#" data-employee-id="{{ $item->employee->id }}"
@@ -129,23 +155,26 @@
                     <h5 class="modal-title" id="importModalLabel">Import HAV Employee Data</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-    
+
                 <div class="modal-body">
-                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST"
+                        enctype="multipart/form-data">
                         @csrf
-    
+
                         <div class="mb-3">
                             <label for="importFile" class="form-label">Pilih File Excel</label>
-                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls" required>
+                            <input type="file" name="file" id="importFile" class="form-control"
+                                accept=".xlsx, .xls" required>
                             <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
-    
+
                         <div class="alert alert-info small">
                             <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
                             Download template format import:
-                            <a href="{{ Storage::url('Import-HAV.xlsx') }}" target="_blank" class="fw-bold text-primary text-decoration-underline">Download Template</a>
+                            <a href="{{ asset('/file/Import-HAV.xlsx') }}" target="_blank"
+                                class="fw-bold text-primary text-decoration-underline">Download Template</a>
                         </div>
-    
+
                         <div class="text-end">
                             <button type="submit" class="btn btn-primary">Upload</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -155,8 +184,8 @@
             </div>
         </div>
     </div>
-    
-    <div class="modal fade" id="havDetail" tabindex="-1" aria-hidden="true">
+
+    <div class="modal fade" id="kt_modal_create_app" tabindex="-1" aria-hidden="true">
         <!--begin::Modal dialog-->
         <div class="modal-dialog modal-dialog-centered mw-900px">
             <!--begin::Modal content-->
@@ -305,53 +334,6 @@
             </div>
         </div>
     </div>
-
-
-    <!-- Modal -->
-<div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
-aria-hidden="true">
-<div class="modal-dialog modal-xl">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History Assessment</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-            <h1 class="text-center mb-4 fw-bold">History HAV</h1>
-
-            <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
-                <div class="col-auto">
-                    <p class="fs-5 fw-bold"><strong>NPK:</strong><span id="npkText"></span></p>
-                </div>
-                <div class="col-auto">
-                    <p class="fs-5 fw-bold"><strong>Position:</strong> <span id="positionText"></span></p>
-                </div>
-            </div>
-
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle table-hover fs-6"
-                    id="kt_table_assessments" width="100%">
-                    <thead class="table-dark">
-                        <tr>
-                            <th class="text-center" width="10%">No</th>
-                            <th class="text-center">Quadran</th>
-                            <th class="text-center">Date</th>
-                            <th class="text-center" width="40%">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        </div>
-    </div>
-</div>
-</div>
-
-
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -369,41 +351,40 @@ aria-hidden="true">
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     <script>
-        
         $(document).ready(function() {
-                $(document).on("click", ".history-btn", function(event) {
-                    event.preventDefault();
+            $(document).on("click", ".history-btn", function(event) {
+                event.preventDefault();
 
-                    let employeeId = $(this).data("employee-id");
-                    console.log("Fetching history for Employee ID:", employeeId); // Debug
+                let employeeId = $(this).data("employee-id");
+                console.log("Fetching history for Employee ID:", employeeId); // Debug
 
-                    // Reset data modal sebelum request baru dilakukan
-                    $("#npkText").text("-");
-                    $("#positionText").text("-");
-                    $("#kt_table_assessments tbody").empty();
+                // Reset data modal sebelum request baru dilakukan
+                $("#npkText").text("-");
+                $("#positionText").text("-");
+                $("#kt_table_assessments tbody").empty();
 
-                    $.ajax({
-                        url: `/hav/history/${employeeId}`,
-                        type: "GET",
-                        success: function(response) {
-                            console.log("Response received:", response); // Debug respons
+                $.ajax({
+                    url: `/hav/history/${employeeId}`,
+                    type: "GET",
+                    success: function(response) {
+                        console.log("Response received:", response); // Debug respons
 
-                            if (!response.employee) {
-                                console.error("Employee data not found in response!");
-                                alert("Employee not found!");
-                                return;
-                            }
+                        if (!response.employee) {
+                            console.error("Employee data not found in response!");
+                            alert("Employee not found!");
+                            return;
+                        }
 
-                            // Update informasi karyawan
-                            $("#npkText").text(response.employee.npk);
-                            $("#positionText").text(response.employee.position);
+                        // Update informasi karyawan
+                        $("#npkText").text(response.employee.npk);
+                        $("#positionText").text(response.employee.position);
 
-                            // Kosongkan tabel sebelum menambahkan data baru
-                            $("#kt_table_assessments tbody").empty();
+                        // Kosongkan tabel sebelum menambahkan data baru
+                        $("#kt_table_assessments tbody").empty();
 
-                            if (response.employee.hav.length > 0) {
-                                response.employee.hav.forEach((hav, index) => {
-                                    let row = `
+                        if (response.employee.hav.length > 0) {
+                            response.employee.hav.forEach((hav, index) => {
+                                let row = `
                         <tr>
                             <td class="text-center">${index + 1}</td>
                             <td class="text-center">${hav.status || '-'}</td>
@@ -417,11 +398,11 @@ aria-hidden="true">
                                     Detail
                                 </a>
                               ${`<a class="btn btn-primary btn-sm"
-                                    target="_blank"
-                                    href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
-                                    onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                    Revise
-                                </a>`}
+                                            target="_blank"
+                                            href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
+                                            onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                            Revise
+                                        </a>`}
 
 
 
@@ -430,87 +411,136 @@ aria-hidden="true">
                                         </td>
                                     </tr>
                                 `;
-                                    $("#kt_table_assessments tbody").append(row);
-                                });
-                            } else {
-                                $("#kt_table_assessments tbody").append(`
+                                $("#kt_table_assessments tbody").append(row);
+                            });
+                        } else {
+                            $("#kt_table_assessments tbody").append(`
                                     <tr>
                                         <td colspan="3" class="text-center text-muted">No assessment found</td>
                                     </tr>
                                 `);
-                            }
-
-                            // Tampilkan modal setelah data dimuat
-                            $("#detailAssessmentModal").modal("show");
-                        },
-                        error: function(error) {
-                            console.error("Error fetching data:", error);
-                            alert("Failed to load assessment data!");
                         }
-                    });
-                });
 
-                $(document).on("click", ".btn-hav-detail", function() {
-                    event.preventDefault();
-
-                    // Ambil data dari atribut data-upload
-
-                    const havDetails = $(this).data("detail");
-                    const year = $(this).data("tahun");
-                    const nama = $(this).data("nama");
-                    $(`#nameTitle`).text(nama + ' - ' + year);
-
-                    // Cek apakah data ada
-                    if (havDetails) {
-                        try {
-
-                            havDetails.forEach((item) => {
-                                console.log(item.alc_id);
-                                $(`#alc${item.alc_id}`).text(item.score);
-                            });
-
-
-                            // Tampilkan modal setelah data dimuat
-                            $("#detailAssessmentModal").modal("hide");
-                            $("#havDetail").modal("show");
-                        } catch (error) {
-                            console.error("Error parsing data:", error);
-                            alert("Data tidak valid.");
-                        }
-                    } else {
-                        alert("Data HAV tidak ditemukan.");
-                    }
-                   
-                });
-
-                // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
-                $("#havDetail").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal update
-                        $("body").removeClass("modal-open");
-
+                        // Tampilkan modal setelah data dimuat
                         $("#detailAssessmentModal").modal("show");
-
-                        // Tambahkan overlay kembali untuk modal history
-                        $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 300);
+                    },
+                    error: function(error) {
+                        console.error("Error fetching data:", error);
+                        alert("Failed to load assessment data!");
+                    }
                 });
+            });
 
-                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        if (!$("#havDetail").hasClass("show")) {
-                            $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
-                            $("body").removeClass("modal-open");
-                        }
-                    }, 30);
-                });
+            $(document).on("click", ".btn-hav-detail", function() {
+                event.preventDefault();
 
-                // ===== CEGAH OVERLAY BERLAPIS =====
-                $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").last().css("z-index",
-                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
-                });
+                // Ambil data dari atribut data-upload
+
+                const havDetails = $(this).data("detail");
+                const year = $(this).data("tahun");
+                const nama = $(this).data("nama");
+                $(`#nameTitle`).text(nama + ' - ' + year);
+
+                // Cek apakah data ada
+                if (havDetails) {
+                    try {
+
+                        havDetails.forEach((item) => {
+                            console.log(item.alc_id);
+                            $(`#alc${item.alc_id}`).text(item.score);
+                        });
+
+
+                        // Tampilkan modal setelah data dimuat
+                        $("#detailAssessmentModal").modal("hide");
+                        $("#havDetail").modal("show");
+                    } catch (error) {
+                        console.error("Error parsing data:", error);
+                        alert("Data tidak valid.");
+                    }
+                } else {
+                    alert("Data HAV tidak ditemukan.");
+                }
 
             });
+
+            // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+            $("#havDetail").on("hidden.bs.modal", function() {
+                setTimeout(() => {
+                    $(".modal-backdrop").remove(); // Hapus overlay modal update
+                    $("body").removeClass("modal-open");
+
+                    $("#detailAssessmentModal").modal("show");
+
+                    // Tambahkan overlay kembali untuk modal history
+                    $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+                }, 300);
+            });
+
+            $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+                setTimeout(() => {
+                    if (!$("#havDetail").hasClass("show")) {
+                        $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
+                        $("body").removeClass("modal-open");
+                    }
+                }, 30);
+            });
+
+            // ===== CEGAH OVERLAY BERLAPIS =====
+            $(".modal").on("shown.bs.modal", function() {
+                $(".modal-backdrop").last().css("z-index",
+                    1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+            });
+
+        });
+
+        function rejectAction() {
+            Swal.fire({
+                title: 'Revisi Note?',
+                input: 'textarea',
+                inputLabel: 'Alasan Revisi',
+                inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+                inputAttributes: {
+                    'aria-label': 'Catatan Revisi'
+                },
+                showCancelButton: true,
+                confirmButtonText: 'Revisi',
+                cancelButtonText: 'Batal',
+                inputValidator: (value) => {
+                    if (!value) {
+                        return 'Catatan wajib diisi untuk Revisi!';
+                    }
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire(
+                        'Revisi!',
+                        'Note: ' + result.value,
+                        'error'
+                    );
+                    // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+                }
+            });
+        }
+
+        function approve() {
+            Swal.fire({
+                title: "Are you sure?",
+                text: "",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#3085d6",
+                cancelButtonColor: "#d33",
+                confirmButtonText: "Yes, Approve it!"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({
+                        title: "Approved!",
+                        text: "HAV has been approved.",
+                        icon: "success"
+                    });
+                }
+            });
+        }
     </script>
 @endpush

@@ -27,12 +27,12 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                         continue; // Skip jika NPK sudah ada
                     }
 
-                    // **2. Cari department berdasarkan nama**
-                    $department = Department::where('name', $row['department'])->first();
-                    if (!$department) {
-                        Log::warning("Departemen {$row['department']} tidak ditemukan, dilewati.");
-                        continue; // Skip jika department tidak ditemukan
-                    }
+                    // // **2. Cari department berdasarkan nama**
+                    // $department = Department::where('name', $row['department'])->first();
+                    // if (!$department) {
+                    //     Log::warning("Departemen {$row['department']} tidak ditemukan, dilewati.");
+                    //     continue; // Skip jika department tidak ditemukan
+                    // }
 
                     $position = strtolower($row['position']);
 
@@ -61,22 +61,22 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     Log::info("Employee ID: {$employee->id} berhasil dibuat.");
 
                     // **6. Hubungkan Employee dengan Department**
-                    $employee->departments()->attach($department->id);
-                    Log::info("Employee {$employee->id} terhubung ke Department ID {$department->id}");
+                    // $employee->departments()->attach($department->id);
+                    // Log::info("Employee {$employee->id} terhubung ke Department ID {$department->id}");
 
                     // **7. Cari atasan dalam department yang sama**
-                    $supervisor = Employee::whereHas('departments', function ($query) use ($department) {
-                        $query->where('departments.id', $department->id);
-                    })
-                    ->whereIn('position', ['manager', 'section head', 'supervisor'])
-                    ->orderByRaw("FIELD(position, 'manager', 'section head', 'supervisor')")
-                    ->first();
+                    // $supervisor = Employee::whereHas('departments', function ($query) use ($department) {
+                    //     $query->where('departments.id', $department->id);
+                    // })
+                    // ->whereIn('position', ['manager', 'section head', 'supervisor'])
+                    // ->orderByRaw("FIELD(position, 'manager', 'section head', 'supervisor')")
+                    // ->first();
 
-                    // **8. Update employee dengan supervisor yang ditemukan**
-                    $employee->update([
-                        'supervisor_id' => $supervisor ? $supervisor->id : null,
-                    ]);
-                    Log::info("Employee {$employee->id} mendapatkan Supervisor ID " . ($supervisor ? $supervisor->id : 'NULL'));
+                    // // **8. Update employee dengan supervisor yang ditemukan**
+                    // $employee->update([
+                    //     'supervisor_id' => $supervisor ? $supervisor->id : null,
+                    // ]);
+                    // Log::info("Employee {$employee->id} mendapatkan Supervisor ID " . ($supervisor ? $supervisor->id : 'NULL'));
 
                     // **9. Jika jabatan adalah "manager", buat akun user untuk login**
                     if ($position === 'manager') {
