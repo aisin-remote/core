@@ -28,7 +28,8 @@
         content="Metronic - The World's #1 Selling Tailwind CSS & Bootstrap Admin Template by KeenThemes" />
     <link rel="canonical" href="index.html" />
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/satu-aisin-final1.png') }}" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+            
+    {{-- <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script> --}}
 
     <!--begin::Fonts(mandatory for all pages)-->
     <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,400,500,600,700" /> <!--end::Fonts-->

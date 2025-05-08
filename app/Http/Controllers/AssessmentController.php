@@ -4,11 +4,19 @@ namespace App\Http\Controllers;
 
 use DataTables;
 use App\Models\Alc;
+use App\Models\Section;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Assessment;
+use App\Models\Department;
+
+use App\Models\SubSection;
 use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
-
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Request;
 
 class AssessmentController extends Controller
@@ -18,72 +26,148 @@ class AssessmentController extends Controller
      *
      *
      */
-    public function getSubordinates($employeeId, $processedIds = [])
+
+    private function getSubordinatesFromStructure(Employee $employee)
     {
-        // Cegah infinite loop dengan memeriksa apakah ID sudah diproses sebelumnya
-        if (in_array($employeeId, $processedIds)) {
-            return collect(); // Kembalikan collection kosong untuk menghindari loop
+        $subordinateIds = collect();
+
+        if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
+            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
+
+            $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
+            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
+            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
+            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+            $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id');
+
+            $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
         }
 
-        // Tambahkan ID saat ini ke daftar yang sudah diproses
-        $processedIds[] = $employeeId;
-
-        // Ambil hanya bawahan langsung (bukan atasan)
-        $employees = Employee::where('supervisor_id', $employeeId)->get();
-        $subordinates = collect($employees);
-
-        // Lanjutkan rekursi untuk mendapatkan semua bawahan di level lebih dalam
-        foreach ($employees as $employee) {
-            $subordinates = $subordinates->merge($this->getSubordinates($employee->id, $processedIds));
+        if ($subordinateIds->isEmpty()) {
+            return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
 
-        return $subordinates;
+        return Employee::whereIn('id', $subordinateIds);
     }
-    
+
+    private function collectSubordinates($models, $field, $subordinateIds)
+    {
+        $ids = $models->pluck($field)->filter();
+        return $subordinateIds->merge($ids);
+    }
+
+    private function collectOperators($subSections, $subordinateIds)
+    {
+        $subSectionIds = $subSections->pluck('id');
+        $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
+        return $subordinateIds->merge($operatorIds);
+    }
+
     public function index(Request $request, $company = null)
     {
         $user = auth()->user();
         $title = 'Assessment';
 
-        // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
+        $filter = $request->input('filter'); // Filter by position
+        $search = $request->input('search'); // Search by name
+
         if ($user->role === 'HRD') {
-            $employees = Employee::with('departments')
+            $employees = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
+                ->when($filter && $filter !== 'all', fn($query) => $query->where('position', $filter))
+                ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
                 ->get();
         } else {
-            // Jika user biasa, hanya bisa melihat bawahannya dalam satu perusahaan
-            $employee = Employee::with('departments')->where('user_id', $user->id)->first();
+            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+                ->where('user_id', $user->id)
+                ->first();
+
             if (!$employee) {
                 $employees = collect();
             } else {
-                $employees = $this->getSubordinates($employee->id)
-                    ->where('company_name', $employee->company_name);
+                $employees = $this->getSubordinatesFromStructure($employee)
+                    ->when($filter && $filter !== 'all', fn($query) => $query->where('position', $filter))
+                    ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
+                    ->get();
             }
         }
-        
-        // Dapatkan employee yang memiliki assessment
+
+        $departments = Department::pluck('name');
+        $assessments = $this->getAssessmentsForSubordinates($employees, $request);
         $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());
         $alcs = Alc::all();
 
-        // Ambil assessment terbaru per employee
-        $assessments = Assessment::with(['employee.departments', 'alc'])
+        return view('website.assessment.index', compact(
+            'assessments',
+            'employees',
+            'alcs',
+            'employeesWithAssessments',
+            'title',
+            'company',
+            'departments',
+            'filter',
+            'search'
+        ));
+    }
+
+    /**
+     * Mendapatkan assessment terbaru dari bawahan
+     */
+    private function getAssessmentsForSubordinates($employees, $request)
+    {
+        return Assessment::with(['employee', 'alc',  'employee.leadingDepartment', 'employee.subSection.section.department', 'employee.leadingSection.department', 'employee.leadingDepartment.division'])
             ->whereHas('employee', function ($query) use ($employees) {
+                // Filter berdasarkan list employee bawahan
                 return $query->whereIn('id', $employees->pluck('id'));
             })
             ->when($request->search, function ($query) use ($request) {
+                // Pencarian berdasarkan nama atau npk
                 return $query->whereHas('employee', function ($q) use ($request) {
                     $q->where('name', 'like', '%' . $request->search . '%')
                         ->orWhere('npk', 'like', '%' . $request->search . '%');
                 });
             })
             ->whereIn('id', function ($query) {
+                // Ambil assessment terbaru per employee
                 $query->selectRaw('MAX(id)')
                     ->from('assessments')
                     ->groupBy('employee_id');
             })
             ->paginate(10);
-        
-        return view('website.assessment.index', compact('assessments', 'employees', 'alcs', 'employeesWithAssessments', 'title'));
     }
 
     // public function history_ajax(Request $request)
@@ -131,7 +215,7 @@ class AssessmentController extends Controller
         }
 
         $assessments = Assessment::where('employee_id', $employee_id)
-            ->select('id', 'date', 'employee_id', 'upload')
+            ->select('id', 'date',  'description', 'employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
                 $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
@@ -154,7 +238,13 @@ class AssessmentController extends Controller
         $assessment = Assessment::findOrFail($assessment_id);
 
         // Ambil employee dari assessment (pastikan kolom employee_id ada di tabel assessments)
-        $employee = Employee::with('departments')->findOrFail($assessment->employee_id);
+        $employee = Employee::with(
+            'departments', // ← tambahkan ini
+            'subSection.section.department',
+            'leadingSection.department',
+            'leadingDepartment.division'
+        )->findOrFail($assessment->employee_id);
+
 
         // Ambil data detail_assessment dengan alc (menggunakan Eloquent)
         $assessments = DetailAssessment::with('alc')
@@ -193,6 +283,7 @@ class AssessmentController extends Controller
         $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
+            'description' => 'required|string',
             'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
             'alc_ids' => 'required|array',
             'alc_ids.*' => 'exists:alc,id',
@@ -213,6 +304,7 @@ class AssessmentController extends Controller
         $assessment = Assessment::create([
             'employee_id' => $request->employee_id,
             'date' => $request->date,
+            'description' => $request->description,
             'upload' => $filePath,
         ]);
 
@@ -233,14 +325,46 @@ class AssessmentController extends Controller
                     ]
                 );
         }
+        $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
+
+        $user = Auth::user();
+        $employee = $user->employee; // ambil employee yang login
+        $rawNumber = $employee->phone_number ?? null;
+        $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
+
+        if (!$formattedNumber) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nomor HP Anda tidak tersedia.',
+            ]);
+        }
+
+        $message = sprintf(
+            "Hallo Apakah Benar ini Nomor?"
+            // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
+            // $assessment->id,
+            // $assessment->date,
+            // $assessment->name ?? 'Anda'
+        );
+
+        $whatsappResponse = Http::asForm()
+            ->withOptions(['verify' => false])
+            ->post('https://app.ruangwa.id/api/send_message', [
+                'token' => $token,
+                'number' => $formattedNumber,
+                'message' => $message
+            ]);
 
 
-        // Simpan batch data ke database
+
+        // Jika mau debug response dari API
+
         return response()->json([
             'success' => true,
             'message' => 'Data assessment berhasil disimpan.',
             'assessment' => $assessment,
             'assessment_details' => $assessmentDetails,
+            // 'whatsapp_response' => $whatsappResponse->body()
         ]);
     }
     public function getAssessmentDetail($employee_id)
@@ -283,6 +407,7 @@ class AssessmentController extends Controller
             'id' => $assessment->id,
             'employee_id' => $assessment->employee_id,
             'date' => $assessment->date,
+            'description' => $assessment->description,
             'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
             'scores' => $assessment->details->map(fn($d) => [
                 'alc_id' => $d->alc_id,
@@ -290,11 +415,11 @@ class AssessmentController extends Controller
             ]),
             'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'description' => $d->strength
+                'descriptions' => $d->strength
             ])->values(),
             'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'description' => $d->weakness
+                'descriptions' => $d->weakness
             ])->values(),
             'alc_options' => Alc::select('id', 'name')->get()
         ]);
@@ -303,10 +428,12 @@ class AssessmentController extends Controller
 
     public function update(Request $request)
     {
+
         $validated = $request->validate([
             'assessment_id' => 'required|exists:assessments,id',
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
+            'description' => 'required|string|max:255',
             'scores' => 'required|array',
             'strength' => 'nullable|array',
             'weakness' => 'nullable|array',
@@ -317,6 +444,7 @@ class AssessmentController extends Controller
         $assessment = Assessment::findOrFail($request->assessment_id);
         $assessment->employee_id = $request->employee_id;
         $assessment->date = $request->date;
+        $assessment->description = $request->description;
 
         // **Handle File Upload**
         if ($request->hasFile('upload')) {

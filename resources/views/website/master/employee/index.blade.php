@@ -43,10 +43,6 @@
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
-                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                        data-kt-menu-placement="bottom-end">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
                     <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
                         <i class="fas fa-plus"></i>
                         Add
@@ -59,6 +55,53 @@
             </div>
 
             <div class="card-body">
+                @if (auth()->user()->role == 'HRD')
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                    role="tablist" style="cursor:pointer">
+                    <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                        href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                        Show All
+                    </a>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                            Direktur
+                        </a>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                            Head</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
+                    </li>
+                </ul>
+            @endif
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -88,14 +131,16 @@
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
                                 <td>{{ $employee->position }}</td>
-                                <td>{{ $employee->departments->first()->name }}</td>
+                                <td>{{ $employee->department?->name }}</td>
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('employee.show', $employee->npk) }}"
-                                        class="btn btn-primary btn-sm">Detail</a>
+                                    <a href="{{ route('employee.edit', $employee->npk) }}"
+                                        class="btn btn-warning btn-sm"><i class="fa fa-edit"></i>
+                                    </a>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $employee->npk }}">Delete</button>
+                                        data-id="{{ $employee->npk }}"><i class="fa fa-trash"></i>
+                                    </button>
                                 </td>
                                 <td class="text-center">
                                     <button type="button"
@@ -113,6 +158,8 @@
                         @endforelse
                     </tbody>
                 </table>
+
+
             </div>
         </div>
     </div>

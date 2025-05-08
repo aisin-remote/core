@@ -14,25 +14,6 @@
         <!--begin::Row-->
         <div class="row g-5 gx-xl-10 mb-2 mb-xl-10">
             @php
-                $titles = [
-                    '13. Maximal Contributor',
-                    '7. Top Performer',
-                    '3. Future Star',
-                    '1. Star',
-                    '14. Contributor',
-                    '8. Strong Performer',
-                    '4. Potential Candidate',
-                    '2. Future Star',
-                    '15. Minimal Contributor',
-                    '9. Career Person',
-                    '6. Candidate',
-                    '5. Raw Diamond',
-                    '16. Dead Wood',
-                    '12. Problem Employee',
-                    '11. Unfit Employee',
-                    '10. Most Unfit Employee',
-                ];
-
                 $borderColors = [
                     'bg-light-secondary',
                     'bg-light-warning',
@@ -50,25 +31,6 @@
                     'bg-light-secondary',
                     'bg-light-secondary',
                     'bg-light-secondary',
-                ];
-
-                $textColors = [
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
-                    'text-dark',
                 ];
 
                 $percentage = [
@@ -90,279 +52,135 @@
                     '0.0%',
                 ];
             @endphp
-
-            <div class="row mt-5">
-                @for ($i = 0; $i < count($titles); $i++)
+            <div class="card" style="width: 95%;">
+                <div>
+                    <div class="text-center mb-3 mt-3">
+                        <h3 class="fs-2hx text-gray-900">HAV Quadrant</h3>
+                    </div>
+                    <div>
+                        <a class="btn btn-success btn-sm history-btn" href="{{ route('hav.export') }}"> Download Summary </a>
+                    </div>
+                </div>
+                <div class="row mt-5 pr-10">
+                    @foreach ($titles as $i => $title)
+                    @php
+                        $havList = $orderedHavGrouped[$i] ?? collect();
+                        $colorClass = $borderColors[$loop->index] ?? 'bg-light-secondary';
+                        $persen = $havList->count() > 0
+                            ? number_format(($havList->count() / $orderedHavGrouped->flatten(1)->count()) * 100, 1) . '%'
+                            : '0.0%';
+                            $jsonData = $havList->map(function ($h) {
+                                return [
+                                    'npk' => $h->employee->npk ?? '-',
+                                    'name' => $h->employee->name ?? '-',
+                                    'department' => $h->employee->departments[0]->name ?? '-',
+                                    'status' => $h->status,
+                                    'grade' => $h->employee->grade ?? '-',
+                                ];
+                            });
+                    @endphp
+                
                     <div class="col-3">
-                        <div class="card {{ $borderColors[$i] }} card-xl-stretch mb-xl-8 card-clickable"
-                            data-title="{{ $titles[$i] }}">
-                            <div class="card-body" style="padding: 10px;">
-                                <a href="#"
-                                    class="card-title fw-bold text-center {{ $textColors[$i] }} fs-5 mb-3 d-block">
-                                    {{ $titles[$i] }}
-                                </a>
-                                <div class="card-body bg-white" style="height: 100px;"></div>
-                                <div class="py-1 text-center">
-                                    <span class="text-danger fw-bold me-2">{{ $percentage[$i] }}</span>
+                        <a href="#"
+                            class="open-modal"
+                            data-id="{{ $i }}"
+                            data-title="Quadrant {{ $i }} - {{ $title }}"
+                            data-hav='@json($jsonData)'
+                            data-toggle="modal"
+                            data-target="#tes">
+                            <div class="card {{ $colorClass }} card-md-stretch mb-xl-6 card-clickable">
+                                <div class="card-body" style="padding: 10px;">
+                                    <div class="card-title fw-bold text-center text-dark fs-5 mb-3 d-block">
+                                         {{ $i }}. {{ $title }}
+                                    </div>
+                                    <div class="card-body bg-white text-center" style="height: 50px;">
+                                        <h1>
+                                            <span class="text-dark fw-bold me-2">{{ $havList->count() }}</span>
+                                        </h1>
+                                    </div>
+                                    <div class="py-1 text-center">
+                                        {{-- <span class="text-danger fw-bold me-2">{{ $persen }}</span> --}}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     </div>
-                @endfor
+                @endforeach
+
+
+                </div>
             </div>
             <!--end::Content container-->
         </div>
+    </div>
 
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Human Assets Value</h3>
-                <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                        data-kt-menu-placement="bottom-end">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
+    <div class="modal fade" id="tes" tabindex="-1" aria-labelledby="addAssessmentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addAssessmentModalLabel">Create Assessment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-            </div>
-            <div class="card-body">
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                    <thead>
-                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Quadran</th>
-                            <th>Departement</th>
-                            <th>Grade</th>
-                            <th class="text-center">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>000019</td>
-                            <td>Arif Kurniawan Dwi Haryadi</td>
-                            <td>
-                                <span class="badge badge-lg badge-warning">
-                                    6 - [Candidate]
-                                </span>
-                            </td>
-                            <td>PRO EC</td>
-                            <td>11A</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-light-warning">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-light-danger">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                <a class="btn btn-sm btn-light-info">
-                                    <i class="fas fa-file-export"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>000026</td>
-                            <td>Tegar Avrilla Kharismawan</td>
-                            <td>
-                                <span class="badge badge-lg badge-warning">
-                                    8 - [Strong Performer]
-                                </span>
-                            </td>
-                            <td>MMA</td>
-                            <td>10A</td>
-                            <td class="text-center">
-                                <button class="btn btn-sm btn-light-warning">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-sm btn-light-danger">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                                <a href="{{ asset('assets/file/Tegar_Avrilia_HAV_Summary.xlsm') }}"
-                                    class="btn btn-sm btn-light-info" download>
-                                    <i class="fas fa-file-export"></i>
-                                </a>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="modal-body">
+                    
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="kt_app_content_container" class="app-container  container-fluid ">
-        <div class="app-content  container-fluid">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h3 class="card-title">Pergeseran HAV</h3>
-                </div>
-                <div class="card-body">
-                    <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                        <thead>
-                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                                <th>Employee Name</th>
-                                <th>Company</th>
-                                <th>Grade</th>
-                                <th>Age</th>
-                                <th>Prev Hav</th>
-                                <th>Current HAV</th>
-                                <th>Notes</th>
-                            </tr>
-                        </thead>
-                    </table>
-                </div>
-
-            </div>
-        </div>
-        <!--end::Row-->
-        <!--end::Content container-->
-    </div>
 @endsection
 
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const data2025 = {
-                labels: ['Pria', 'Wanita'],
-                datasets: [{
-                    label: 'Employee 2025',
-                    data: [556, 120],
-                    backgroundColor: ['#50C878', '#3B5B92'],
-                    hoverBackgroundColor: ['#C5E1C5', '#5A75C9']
-                }]
-            };
-
-            const data2024 = {
-                labels: ['Pria', 'Wanita'],
-                datasets: [{
-                    label: 'Employee 2024',
-                    data: [405, 174],
-                    backgroundColor: ['#50c878', '#3b5b92'],
-                    hoverBackgroundColor: ['#c5e1c5', '#5a75c9']
-                }]
-            };
-
-            const options = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom'
-                    }
+        $(document).ready(function () {
+            $('.open-modal').on('click', function (e) {
+                e.preventDefault();
+        
+                let title = $(this).data('title');
+                let data = $(this).data('hav'); // sudah array of objects
+                $('#addAssessmentModalLabel').text(title);
+        
+                // Build HTML table
+                if (data.length === 0) {
+                    $('#tes .modal-body').html('<p class="text-center">Belum ada data untuk quadrant ini.</p>');
+                    return;
                 }
-            };
-
-            new Chart(document.getElementById('employeeChart2025'), {
-                type: 'doughnut',
-                data: data2025,
-                options: options
-            });
-
-            new Chart(document.getElementById('employeeChart2024'), {
-                type: 'doughnut',
-                data: data2024,
-                options: options
+        
+                let html = `
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>NPK</th>
+                                <th>Nama</th>
+                                <th>Department</th>
+                                <th>Grade</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+        
+                data.forEach(function (item) {
+                    html += `
+                        <tr>
+                            <td>${item.npk}</td>
+                            <td>${item.name}</td>
+                            <td>${item.department}</td>
+                            <td>${item.grade}</td>
+                            <td>${item.status}</td>
+                        </tr>
+                    `;
+                });
+        
+                html += `</tbody></table>`;
+                $('#tes .modal-body').html(html);
+        
+                $('#tes').modal('show');
             });
         });
-    </script>
-    <script>
-        $(document).ready(function() {
-            var strongPerformers = [{
-                npk: "000026",
-                name: "Tegar Avrilla Kharismawan",
-                department: "MMA",
-                grade: "10A"
-            }, ];
-
-            var candidates = [{
-                npk: "000019",
-                name: "Arif Kurniawan Dwi Haryadi",
-                department: "PRO EC",
-                grade: "10A"
-            }, ];
-
-            $(".card-clickable").on("click", function() {
-                var title = $(this).data("title");
-
-                $("#infoModalLabel").text(title);
-                $("#modalEmployeeList").empty();
-
-                var selectedEmployees = [];
-
-                if (title === "8. Strong Performer") {
-                    selectedEmployees = strongPerformers;
-                } else if (title === "6. Candidate") {
-                    selectedEmployees = candidates;
-                }
-
-                if (selectedEmployees.length > 0) {
-                    selectedEmployees.forEach(function(employee) {
-                        $("#modalEmployeeList").append(`
-            <li class="list-group-item border-0 py-3 d-flex align-items-center shadow-sm rounded" style="background: linear-gradient(135deg, #6a11cb, #2575fc); color: #fff;">
-                <div>
-                    <strong class="fs-6">${employee.name}</strong><br>
-                    <small class="opacity-75">NPK: ${employee.npk} | ${employee.department} | Grade: ${employee.grade}</small>
-                </div>
-            </li>
-        `);
-                    });
-
-                    $("#infoModal").modal("show");
-                }
-            });
-        });
-
-        document.addEventListener("DOMContentLoaded", function() {
-            const data2025 = {
-                labels: ['Pria', 'Wanita'],
-                datasets: [{
-                    label: 'Employee 2025',
-                    data: [556, 120],
-                    backgroundColor: ['#50C878', '#3B5B92'],
-                    hoverBackgroundColor: ['#C5E1C5', '#5A75C9']
-                }]
-            };
-
-            const data2024 = {
-                labels: ['Pria', 'Wanita'],
-                datasets: [{
-                    label: 'Employee 2024',
-                    data: [405, 174],
-                    backgroundColor: ['#50c878', '#3b5b92'],
-                    hoverBackgroundColor: ['#c5e1c5', '#5a75c9']
-                }]
-            };
-
-            const options = {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'bottom'
-                    }
-                }
-            };
-
-            new Chart(document.getElementById('employeeChart2025'), {
-                type: 'doughnut',
-                data: data2025,
-                options: options
-            });
-
-            new Chart(document.getElementById('employeeChart2024'), {
-                type: 'doughnut',
-                data: data2024,
-                options: options
-            });
-        });
-    </script>
+        </script>
+        
+        
 @endpush

@@ -1,4 +1,3 @@
-
 @extends('layouts.root.main')
 
 @section('title')
@@ -16,8 +15,8 @@
                         </div>
                         <div class="col-md-6">
                             <p class="fs-4 fw-bold"><strong>Departemen:</strong>
-                                @if ($employee->departments->isNotEmpty())
-                                    {{ $employee->departments->pluck('name')->join(', ') }}
+                                @if ($employee->department)
+                                    {{ $employee->department->name }}
                                 @else
                                     Tidak Ada Departemen
                                 @endif
@@ -46,34 +45,27 @@
                         </thead>
                         <tbody>
                             @php
-                                // Ambil hanya yang memiliki strength atau weakness
                                 $strengths = $details->filter(fn($item) => !empty($item->strength))->values();
-                                $weaknesses = $details->filter(fn($item) => !empty($item->weakness))->values();
-                                $maxRows = max($strengths->count(), $weaknesses->count()); // Menyesuaikan jumlah baris maksimum
                             @endphp
 
-                            @for ($i = 0; $i < $maxRows; $i++)
+                            @foreach ($strengths as $index => $strength)
                                 <tr>
-                                    <td class="text-center">{{ $i + 1 }}</td>
+                                    <td class="text-center">{{ $index + 1 }}</td>
                                     <td>
-                                        @if (isset($strengths[$i]))
-                                            <strong>{{ $strengths[$i]->alc_name }}</strong>
-                                        @endif
+                                        <strong>{{ $strength->alc_name }}</strong>
                                     </td>
-
                                     <td>
-                                        @if (isset($strengths[$i]))
-                                            {{ $strengths[$i]->strength }}
-                                        @endif
+                                        {{ $strength->strength }}
                                     </td>
                                 </tr>
-                            @endfor
-
-
+                            @endforeach
                         </tbody>
                     </table>
+                </div>
+
+                <div class="card mt-4 p-3">
+                    <h4 class="text-center">Weaknesses</h4>
                     <table class="table table-bordered">
-                        <h4 class="text-center">Weakness</h4>
                         <thead class="table-dark">
                             <tr>
                                 <th class="text-center" style="width: 5%;">#</th>
@@ -83,30 +75,20 @@
                         </thead>
                         <tbody>
                             @php
-                                // Ambil hanya yang memiliki strength atau weakness
-
                                 $weaknesses = $details->filter(fn($item) => !empty($item->weakness))->values();
-                                $maxRows = max($strengths->count(), $weaknesses->count()); // Menyesuaikan jumlah baris maksimum
                             @endphp
 
-                            @for ($i = 0; $i < $maxRows; $i++)
+                            @foreach ($weaknesses as $index => $weakness)
                                 <tr>
-                                    <td class="text-center">{{ $i + 1 }}</td>
+                                    <td class="text-center">{{ $index + 1 }}</td>
                                     <td>
-                                        @if (isset($weaknesses[$i]))
-                                            <strong>{{ $weaknesses[$i]->alc_name }}</strong>
-                                        @endif
+                                        <strong>{{ $weakness->alc_name }}</strong>
                                     </td>
-
                                     <td>
-                                        @if (isset($weaknesses[$i]))
-                                            {{ $weaknesses[$i]->weakness }}
-                                        @endif
+                                        {{ $weakness->weakness }}
                                     </td>
                                 </tr>
-                            @endfor
-
-
+                            @endforeach
                         </tbody>
                     </table>
                 </div>
@@ -118,60 +100,65 @@
         </div>
     </div>
 @endsection
+
 @push('scripts')
-<script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var canvas = document.getElementById('assessmentChart');
-        if (!canvas) {
-            console.error("Canvas 'assessmentChart' tidak ditemukan.");
-            return;
-        }
-        var ctx = canvas.getContext('2d');
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var canvas = document.getElementById('assessmentChart');
+            if (!canvas) {
+                console.error("Canvas 'assessmentChart' tidak ditemukan.");
+                return;
+            }
+            var ctx = canvas.getContext('2d');
 
-        // Ambil data dari backend
-        var labels = @json($assessments->pluck('alc.name'));
-        var scores = @json($assessments->pluck('score'));
+            // Ambil data dari backend
+            var labels = @json($assessments->pluck('alc.name'));
+            var scores = @json($assessments->pluck('score'));
 
-        console.log("Labels:", labels);
-        console.log("Scores:", scores);
+            console.log("Labels:", labels);
+            console.log("Scores:", scores);
 
-        if (!labels.length || !scores.length) {
-            console.warn("Data kosong, tidak menampilkan grafik.");
-            return;
-        }
+            if (!labels.length || !scores.length) {
+                console.warn("Data kosong, tidak menampilkan grafik.");
+                return;
+            }
 
-        new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Scores ALC',
-                    data: scores,
-                    backgroundColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 0.6)' :
-                        'rgba(75, 192, 192, 0.6)'),
-                    borderColor: scores.map(score => score < 3 ? 'rgba(255, 99, 132, 1)' :
-                        'rgba(75, 192, 192, 1)'),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Scores ALC',
+                        data: scores,
+                        backgroundColor: scores.map(score => score < 3 ?
+                            'rgba(255, 99, 132, 0.6)' :
+                            'rgba(75, 192, 192, 0.6)'),
+                        borderColor: scores.map(score => score < 3 ?
+                            'rgba(255, 99, 132, 1)' :
+                            'rgba(75, 192, 192, 1)'),
+                        borderWidth: 1
+                    }]
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        suggestedMax: 5,
-                        ticks: {
-                            stepSize: 1
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 5,
+                            ticks: {
+                                stepSize: 1
+                            }
                         }
                     }
                 }
-            }
+            });
         });
-    });
-</script>
+    </script>
+@endpush

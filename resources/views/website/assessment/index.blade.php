@@ -16,37 +16,71 @@
                     <h3 class="card-title">Assessment List</h3>
                     <div class="d-flex align-items-center">
                         <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                            style="width: 200px;">
+                            style="width: 200px;" value="{{ request('search') }}">
                         <button type="button" class="btn btn-primary me-3" id="searchButton">
                             <i class="fas fa-search"></i> Search
                         </button>
-
-                        <a href="#" class="btn btn-primary" data-bs-toggle="modal"
-                            data-bs-target="#addAssessmentModal">Add</a>
+                        {{-- <select id="departmentFilter" class="form-select me-2" style="width: 200px;">
+                            <option value="">All Department</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department }}">{{ $department }}</option>
+                            @endforeach
+                        </select> --}}
+                        @if (auth()->user()->role == 'HRD')
+                            <a href="#" class="btn btn-primary" data-bs-toggle="modal"
+                                data-bs-target="#addAssessmentModal">Add</a>
+                        @endif
                     </div>
                 </div>
                 <div class="card-body">
-                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                        role="tablist" style="cursor:pointer">
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
-                        </li>
-                    </ul>
+                    @if (auth()->user()->role == 'HRD')
+                        <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                            role="tablist" style="cursor:pointer">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                                href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                                Show All
+                            </a>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                                    Direktur
+                                </a>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                                    Head</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
+                            </li>
+                        </ul>
+                    @endif
+
 
                     <div class="card-body">
                         <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
@@ -67,8 +101,8 @@
                                         <td>{{ $assessments->firstItem() + $index }}</td>
                                         <td>{{ $assessment->employee->name ?? '-' }}</td>
                                         <td>
-                                            @if ($assessment->employee->departments->isNotEmpty())
-                                                {{ $assessment->employee->departments->pluck('name')->join(', ') }}
+                                            @if ($assessment->employee->department)
+                                                {{ $assessment->employee->department->name }}
                                             @else
                                                 Tidak Ada Departemen
                                             @endif
@@ -166,11 +200,11 @@
                         this.classList.add("active");
 
                         const filter = this.getAttribute("data-filter")
-                    .toLowerCase(); // Ambil filter dari tab
+                            .toLowerCase(); // Ambil filter dari tab
 
                         rows.forEach(row => {
                             const position = row.getAttribute("data-position")
-                        .toLowerCase(); // Ambil posisi dari row
+                                .toLowerCase(); // Ambil posisi dari row
                             if (filter === "all" || position.includes(filter)) {
                                 row.style.display = "";
                             } else {
@@ -217,21 +251,27 @@
                         <tr>
                             <td class="text-center">${index + 1}</td>
                             <td class="text-center">${assessment.date}</td>
+                           <td class="text-center">${assessment.description || '-'}</td>
+
                             <td class="text-center">
                                 <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
                                     Detail
                                 </a>
-                                ${assessment.upload ? `
-                                                                                                        <a class="btn btn-primary btn-sm" target="_blank" href="/storage/${assessment.upload}">
-                                                                                                            View PDF
-                                                                                                        </a>`
-                                    : '<span class="text-muted">No PDF Available</span>'
-                                }
+                              ${`
+                                                                            <a class="btn btn-primary btn-sm"
+                                                                                target="_blank"
+                                                                                href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                                                                onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                                                View PDF
+                                                                            </a>
+                                                                `}
+
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
                                 data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
                                 data-id="${assessment.id}"
                                 data-employee-id="${assessment.employee_id}"
                                 data-date="${assessment.date}"
+                                data-description="${assessment.description}"
                                 data-upload="${assessment.upload}"
                                 data-scores='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.score)))}'
                                 data-alcs='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
@@ -241,19 +281,19 @@
                                 Edit
                             </button>
 
-                                <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                    data-id="${assessment.id}">Delete</button>
-                            </td>
-                        </tr>
-                    `;
+                                                                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                                                                        data-id="${assessment.id}">Delete</button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        `;
                                     $("#kt_table_assessments tbody").append(row);
                                 });
                             } else {
                                 $("#kt_table_assessments tbody").append(`
-                    <tr>
-                        <td colspan="3" class="text-center text-muted">No assessment found</td>
-                    </tr>
-                `);
+                                                                        <tr>
+                                                                            <td colspan="3" class="text-center text-muted">No assessment found</td>
+                                                                        </tr>
+                                                                    `);
                             }
 
                             // Tampilkan modal setelah data dimuat
@@ -269,6 +309,7 @@
                     let assessmentId = $(this).data("id");
                     let employeeId = $(this).data("employee-id");
                     let date = $(this).data("date");
+                    let description = $(this).data("description");
                     let upload = $(this).data("upload");
 
                     let scores = JSON.parse(decodeURIComponent($(this).attr("data-scores")));
@@ -280,6 +321,7 @@
                     $("#update_assessment_id").val(assessmentId);
                     $("#update_employee_id").val(employeeId);
                     $("#update_date").val(date);
+                    $("#update_description").val(description);
                     $("#update_upload").attr("href", upload).text("Lihat File");
 
                     scores.forEach((score, index) => {
@@ -287,13 +329,11 @@
                         $(`#update_score_${alcId}_${score}`).prop("checked", true);
                     });
 
-                    populateAssessmentCards("strength", "update-strengths-wrapper", strengths, alcs, alcNames);
-                    populateAssessmentCards("weakness", "update-weaknesses-wrapper", weaknesses, alcs,
-                        alcNames);
+                    // Sinkronisasi dari skor ke strength dan weakness
+                    syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses);
+
                     const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
                     modal.show();
-
-                    $("#updateAssessmentModal").modal("show");
 
                     // Tutup modal History sebelum membuka modal Update
                     $("#detailAssessmentModal").modal("hide");
@@ -308,6 +348,32 @@
                         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
                     }, 300);
                 });
+
+                function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses) {
+                    let strengthContainer = document.getElementById("update-strengths-wrapper");
+                    let weaknessContainer = document.getElementById("update-weaknesses-wrapper");
+
+                    // Bersihkan kontainer strength dan weakness sebelum memperbarui
+                    strengthContainer.innerHTML = "";
+                    weaknessContainer.innerHTML = "";
+
+                    scores.forEach((score, index) => {
+                        let alcId = alcs[index];
+                        let alcName = alcNames[index];
+                        let description = (score >= 3) ? strengths[alcId] : weaknesses[
+                            alcId]; // Ambil deskripsi berdasarkan skor
+
+                        // Tentukan apakah ALC ini masuk ke strength atau weakness
+                        let type = score >= 3 ? "strength" : "weakness";
+                        let containerId = type === "strength" ? "update-strengths-wrapper" :
+                            "update-weaknesses-wrapper";
+
+                        // Tambahkan ALC sesuai dengan kategori yang sesuai
+                        addAssessmentCard(type, containerId, alcId, description, alcName);
+                    });
+
+                    updateDropdownOptions(); // Perbarui opsi dropdown ALC setelah sinkronisasi
+                }
 
                 function populateAssessmentCards(type, containerId, data, alcs, alcNames) {
                     let container = document.getElementById(containerId);
@@ -326,31 +392,33 @@
                     updateDropdownOptions();
                 }
 
-                function addAssessmentCard(type, containerId, selectedAlc = "", description = "", alcName = "") {
+                function addAssessmentCard(type, containerId, alcId = "", descriptions = "", alcName = "") {
                     let container = document.getElementById(containerId);
                     let templateCard = document.createElement("div");
                     templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
+                    // Tentukan ID untuk card berdasarkan ALC
+                    if (alcId) {
+                        templateCard.setAttribute("id", `assessment_card_${alcId}`);
+                    }
+
                     templateCard.innerHTML = `
-        <div class="mb-3">
-            <label>ALC</label>
-            <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
-                <option value="">Pilih ALC</option>
-                @foreach ($alcs as $alc)
-                    <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
-                        {{ $alc->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="mb-3">
-            <label>Description</label>
-            <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${description}</textarea>
-        </div>
-        <div class="d-flex justify-content-end button-group">
-            <button type="button" class="btn btn-success btn-sm add-assessment" data-type="${type}">Tambah ${type.charAt(0).toUpperCase() + type.slice(1)}</button>
-        </div>
-    `;
+                                <div class="mb-3">
+                                    <label>ALC</label>
+                                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                                        <option value="">Pilih ALC</option>
+                                        @foreach ($alcs as $alc)
+                                            <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
+                                                {{ $alc->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label>Description</label>
+                                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${descriptions}</textarea>
+                                </div>
+                            `;
 
                     let selectElement = templateCard.querySelector(".alc-dropdown");
                     selectElement.addEventListener("change", function() {
@@ -358,31 +426,11 @@
                         updateDropdownOptions();
                     });
 
-                    let buttonGroup = templateCard.querySelector(".button-group");
-
-                    if (container.children.length > 0) {
-                        let removeButton = document.createElement("button");
-                        removeButton.type = "button";
-                        removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card", "me-2");
-                        removeButton.textContent = "Hapus";
-
-                        removeButton.addEventListener("click", function() {
-                            templateCard.remove();
-                            updateDropdownOptions();
-                        });
-
-                        buttonGroup.insertBefore(removeButton, buttonGroup.firstChild);
-                    }
-
-                    templateCard.querySelector(".add-assessment").addEventListener("click", function() {
-                        addAssessmentCard(type, containerId);
-                        updateDropdownOptions();
-                    });
-
                     container.appendChild(templateCard);
                     updateDropdownOptions();
                 }
 
+                // Fungsi untuk memperbarui nama deskripsi berdasarkan ALC yang dipilih
                 function updateDescriptionName(selectElement, type) {
                     let card = selectElement.closest(".assessment-card");
                     let textarea = card.querySelector(`.${type}-textarea`);
@@ -395,18 +443,64 @@
                     }
                 }
 
+                // Fungsi untuk menangani perubahan skor
+                $(document).on("change", "input[name^='update_score_']", function() {
+                    const radio = $(this);
+                    const idParts = radio.attr("id").split("_"); // e.g. update_score_1_2
+                    const alcId = idParts[2];
+                    const score = parseInt(idParts[3]);
+
+                    // Tentukan kategori berdasarkan skor (strength jika >= 3, weakness jika < 3)
+                    const newType = score >= 3 ? "strength" : "weakness";
+                    const oldType = score >= 3 ? "weakness" : "strength";
+
+                    // Dapatkan card yang sesuai
+                    let card = $(`#assessment_card_${alcId}`);
+                    const newWrapper = $(`#update-${newType}s-wrapper`);
+                    const oldWrapper = $(`#update-${oldType}s-wrapper`);
+
+                    // Jika card belum ada, buat card baru
+                    if (card.length === 0) {
+                        addAssessmentCard(newType, `update-${newType}s-wrapper`, alcId);
+                        card = $(`#assessment_card_${alcId}`);
+                    } else {
+                        // Pindahkan card dari wrapper lama ke wrapper baru
+                        const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`)
+                            .detach();
+                        newWrapper.append(detachedCard);
+                        card = detachedCard;
+                    }
+
+                    // Update nama untuk textarea dan select agar sesuai dengan kategori
+                    const textarea = card.find("textarea");
+                    const select = card.find("select");
+
+                    textarea.attr("name", `${newType}[${alcId}]`);
+                    select.attr("name", `${newType}_alc_ids[]`);
+
+                    // Update class card untuk memastikan gaya sesuai kategori
+                    card.removeClass("strength-card weakness-card").addClass(`${newType}-card`);
+
+                    // Memperbarui dropdown options agar tidak ada ALC yang sama di kategori lain
+                    updateDropdownOptions();
+                });
+
+                // Fungsi untuk memperbarui dropdown ALC agar tidak ada pilihan yang tumpang tindih
                 function updateDropdownOptions() {
                     let selectedStrengths = new Set();
                     let selectedWeaknesses = new Set();
 
+                    // Ambil ALC yang sudah dipilih di strength
                     document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
                         if (select.value) selectedStrengths.add(select.value);
                     });
 
+                    // Ambil ALC yang sudah dipilih di weakness
                     document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
                         if (select.value) selectedWeaknesses.add(select.value);
                     });
 
+                    // Update dropdown ALC di strength agar tidak ada ALC yang sudah dipilih di weakness
                     document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
                         let currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
@@ -415,6 +509,7 @@
                         });
                     });
 
+                    // Update dropdown ALC di weakness agar tidak ada ALC yang sudah dipilih di strength
                     document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
                         let currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
@@ -423,10 +518,6 @@
                         });
                     });
                 }
-
-
-
-
 
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
                 $("#updateAssessmentModal").on("hidden.bs.modal", function() {
@@ -509,9 +600,7 @@
 
                 }
 
-                searchInput.on("keyup", function() {
-                    filterTable();
-                });
+
 
 
                 // 🔹 Variabel Global untuk Chart
@@ -675,6 +764,75 @@
                     });
 
                 });
+            });
+
+            document.addEventListener("DOMContentLoaded", function() {
+                const tabs = document.querySelectorAll(".filter-tab");
+                const rows = document.querySelectorAll("#kt_table_users tbody tr");
+                const searchInput = document.getElementById("searchInput");
+                const departmentFilter = document.getElementById("departmentFilter");
+
+                let currentPositionFilter = 'all';
+                let currentDepartmentFilter = '';
+                let currentSearchValue = '';
+
+                // Event listener untuk tabs position
+                tabs.forEach(tab => {
+                    tab.addEventListener("click", function(e) {
+                        e.preventDefault();
+                        tabs.forEach(t => t.classList.remove("active"));
+                        this.classList.add("active");
+                        currentPositionFilter = this.getAttribute("data-filter").toLowerCase();
+                        applyFilters();
+                    });
+                });
+
+                // Event listener untuk department dropdown
+                departmentFilter.addEventListener("change", function() {
+                    currentDepartmentFilter = this.value.toLowerCase();
+                    applyFilters();
+                });
+
+
+
+                function applyFilters() {
+                    rows.forEach(row => {
+                        const position = row.getAttribute("data-position").toLowerCase();
+                        const departmentCell = row.querySelector("td:nth-child(3)");
+                        const department = departmentCell ? departmentCell.textContent.toLowerCase() : '';
+                        const departments = department.split(', ').map(d => d.trim());
+
+                        const name = row.querySelector("td:nth-child(2)").textContent.toLowerCase();
+                        const npk = row.querySelector("td:nth-child(5)").textContent.toLowerCase();
+                        const age = row.querySelector("td:nth-child(6)").textContent.toLowerCase();
+
+                        const matchesPosition = currentPositionFilter === 'all' ||
+                            position.includes(currentPositionFilter);
+
+                        const matchesDepartment = currentDepartmentFilter === '' ||
+                            departments.includes(currentDepartmentFilter);
+
+                        const matchesSearch = currentSearchValue === '' ||
+                            name.includes(currentSearchValue) ||
+                            npk.includes(currentSearchValue) ||
+                            age.includes(currentSearchValue);
+
+                        if (matchesPosition && matchesDepartment && matchesSearch) {
+                            row.style.display = "";
+                        } else {
+                            row.style.display = "none";
+                        }
+                    });
+                }
+            });
+            document.getElementById('searchButton').addEventListener('click', function() {
+                const search = document.getElementById('searchInput').value;
+                const url = new URL(window.location.href);
+
+                url.searchParams.set('search', search);
+                url.searchParams.set('page', 1); // Reset to first page on new search
+
+                window.location.href = url.toString();
             });
         </script>
     @endpush

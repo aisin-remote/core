@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Idp extends Model
 {
@@ -20,5 +20,10 @@ class Idp extends Model
     public function assessment()
     {
         return $this->belongsTo(Assessment::class, 'assessment_id', 'id');
+    }
+
+    public function alc()
+    {
+        return $this->belongsTo(Alc::class, 'alc_id', 'id');
     }
 }
