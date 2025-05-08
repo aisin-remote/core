@@ -351,7 +351,31 @@ aria-hidden="true">
 
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    @if(session('success'))
     <script>
+        Swal.fire({
+            icon: 'success',
+            title: 'Success!',
+            text: '{{ session('success') }}',
+            confirmButtonText: 'Ok'
+        });
+    </script>
+    @endif
+
+    @if(session('error'))
+        <script>
+            console.log("Error session:", '{{ session('error') }}'); // Debugging
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: '{{ session('error') }}',
+                confirmButtonText: 'Ok'
+            });
+        </script>
+    @endif
+
+    <script>
+        
         
         $(document).ready(function() {
                 $(document).on("click", ".history-btn", function(event) {

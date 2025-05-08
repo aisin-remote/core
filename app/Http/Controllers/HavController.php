@@ -413,7 +413,6 @@ class HavController extends Controller
      */
     public function import(Request $request)
     {
-        dd('ass');
         $request->validate([
             'file' => 'required|mimes:xlsx,xls',
         ]);

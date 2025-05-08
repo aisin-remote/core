@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class HavQuadrant extends Model
 {
@@ -75,7 +76,6 @@ class HavQuadrant extends Model
         $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
             ->whereIn(DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
             ->get();
-        dd($performance);
 
         if ($performance->isEmpty()) {
             return 1; // Return 0 if no performance appraisal history found
@@ -100,14 +100,14 @@ class HavQuadrant extends Model
         $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
         $this->generateHavQuadrant($employee_id, $average, $pkScore);
         // Mengembalikan nilai rata-rata
-        return $average;
+        return $this->generateHavQuadrant($employee_id, $average, $pkScore);;
     }
 
     //Update Hav Quadrant from Performance Appraisal
-    public function updateHavFromPerformance($employee_id)
+    public function updateHavFromPerformance($employee_id, $year)
     {
         $getHavQuadrant = HavQuadrant::where('employee_id', $employee_id)->first();
-        $pkScore = $this->getLastPerformanceAppraisal($employee_id);
+        $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
         $this->generateHavQuadrant($employee_id, $getHavQuadrant->assessment_score ?? 1, $pkScore);
     }
 }
