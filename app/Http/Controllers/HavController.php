@@ -439,7 +439,7 @@ class HavController extends Controller
     }
     public function approval(Request $request)
     {
-        return view('website.approval.approvalhav');
+        return view('website.approval.hav.index');
     }
 
     /**

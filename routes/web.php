@@ -88,8 +88,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
     Route::prefix('approval')->group(function () {
-        Route::get('/list-approval-HAV', [HavController::class, 'approval'])->name('hav.approval');
-        Route::get('/list-approval-IDP', [IdpController::class, 'approvalidp'])->name('idp.approvalidp');
+        Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
+        Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
     });
 
     Route::prefix('employee')->group(function () {
