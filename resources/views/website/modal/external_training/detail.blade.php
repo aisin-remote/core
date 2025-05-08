@@ -23,7 +23,8 @@
                                 @foreach ($externalTrainings as $training)
                                     <tr>
                                         <td>{{ $training->program }}</td>
-                                        <td class="text-center">{{ $training->year }}</td>
+                                        <td class="text-center">
+                                            {{ \Carbon\Carbon::parse($training->date_end)->format('Y') }}</td>
                                         <td class="text-center">{{ $training->vendor }}</td>
                                     </tr>
                                 @endforeach
