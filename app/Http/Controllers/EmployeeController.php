@@ -440,8 +440,8 @@ class EmployeeController extends Controller
             ->latest()
             ->first();
 
-        $idps = Idp::with('alc', 'employee')
-            ->whereHas('employee', function ($query) use ($npk) {
+        $idps = Idp::with('alc', 'assessment.employee')
+            ->whereHas('assessment.employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
             ->get();
@@ -502,8 +502,8 @@ class EmployeeController extends Controller
             ->latest()
             ->first();
 
-        $idps = Idp::with('alc', 'employee')
-            ->whereHas('employee', function ($query) use ($npk) {
+        $idps = Idp::with('alc', 'assessment.employee')
+            ->whereHas('assessment.employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
             ->get();
