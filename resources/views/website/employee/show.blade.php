@@ -197,7 +197,7 @@
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
                                         @if ($educations->isNotEmpty())
-                                            @foreach ($educations as $index => $education)
+                                            @foreach ($educations->take(3) as $index => $education)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold">
@@ -207,11 +207,9 @@
                                                             {{ $education->institute }}
                                                         </div>
                                                     </div>
-                                                    <div class="text-muted fs-7">
-                                                        {{ \Illuminate\Support\Carbon::parse($education->start_date)->format('Y') }}
-                                                        -
-                                                        {{ \Illuminate\Support\Carbon::parse($education->end_date)->format('Y') }}
-                                                    </div>
+                                                    <span class="text-muted fs-7">
+                                                        {{ $education->start_date ? \Carbon\Carbon::parse($education->start_date)->format('Y') . ' - ' : '' }}{{ $education->end_date ? \Carbon\Carbon::parse($education->end_date)->format('Y') : 'Present' }}
+                                                    </span>
                                                 </div>
 
                                                 @if (!$loop->last)
@@ -256,7 +254,7 @@
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
                                         @if ($workExperiences->isNotEmpty())
-                                            @foreach ($workExperiences as $experience)
+                                            @foreach ($workExperiences->take(3) as $experience)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold">
@@ -315,7 +313,7 @@
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
                                         @if ($performanceAppraisals->isNotEmpty())
-                                            @foreach ($performanceAppraisals as $appraisal)
+                                            @foreach ($performanceAppraisals->take(3) as $appraisal)
                                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <div class="fs-6 fw-bold">Score - {{ $appraisal->score }}</div>
@@ -369,7 +367,7 @@
                                             @endphp
 
                                             @if ($humanAssetsCount > 0)
-                                                @foreach ($humanAssets as $asset)
+                                                @foreach ($humanAssets->take(3) as $asset)
                                                     <div class="d-flex flex-wrap align-items-center">
                                                         <div id="kt_signin_email">
                                                             <div class="fs-6 fw-bold mb-1">

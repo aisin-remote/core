@@ -13,8 +13,6 @@
                     -
                     {{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('d M Y') : 'Present' }}
                 </p>
-                <p><strong>Job Description:</strong></p>
-                <p>{{ $experience->description }}</p>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">

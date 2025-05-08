@@ -42,10 +42,6 @@
 
                         </div>
                     </div>
-                    <div class="mb-10">
-                        <label class="form-label">Job Description</label>
-                        <textarea class="form-control" name="description" rows="3">{{ $experience->description }}</textarea>
-                    </div>
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary">Save
                             Changes</button>

@@ -363,7 +363,7 @@
                                         @endphp
 
                                         @if ($totalEducation > 0)
-                                            @foreach ($educations as $education)
+                                            @foreach ($educations->take(3) as $education)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold mb-2">
@@ -373,9 +373,7 @@
                                                             class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
                                                             <span>{{ $education->institute }}</span>
                                                             <span class="text-muted fs-7">
-                                                                [{{ \Carbon\Carbon::parse($education->start_date)->format('Y') }}
-                                                                -
-                                                                {{ \Carbon\Carbon::parse($education->end_date)->format('Y') }}]
+                                                                [{{ $education->start_date ? \Carbon\Carbon::parse($education->start_date)->format('Y') . ' - ' : '' }}{{ $education->end_date ? \Carbon\Carbon::parse($education->end_date)->format('Y') : 'Present' }}]
                                                             </span>
                                                         </div>
                                                     </div>
@@ -450,7 +448,7 @@
                                         @endphp
 
                                         @if ($experienceCount > 0)
-                                            @foreach ($workExperiences as $experience)
+                                            @foreach ($workExperiences->take(3) as $experience)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold mb-2">{{ $experience->department }}</div>
@@ -542,7 +540,7 @@
                                         @endphp
 
                                         @if ($appraisalCount > 0)
-                                            @foreach ($performanceAppraisals as $appraisal)
+                                            @foreach ($performanceAppraisals->take(3) as $appraisal)
                                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <div class="fs-6 fw-bold">Score - {{ $appraisal->score }}</div>
@@ -621,7 +619,7 @@
                                             @endphp
 
                                             @if ($humanAssetsCount > 0)
-                                                @foreach ($humanAssets as $asset)
+                                                @foreach ($humanAssets->take(3) as $asset)
                                                     <div class="d-flex flex-wrap align-items-center">
                                                         <div id="kt_signin_email">
                                                             <div class="fs-6 fw-bold mb-1">
