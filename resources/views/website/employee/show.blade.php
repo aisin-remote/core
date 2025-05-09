@@ -679,7 +679,7 @@
 
                             <!--begin::Tbody-->
                             <tbody class="fw-6 fw-semibold text-gray-600">
-                                @forelse ($promotionHistories as $promotionHistory)
+                                @forelse ($promotionHistories->take(3) as $promotionHistory)
                                     <tr>
                                         <td class="text-center">{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $promotionHistory->previous_grade }}</td>

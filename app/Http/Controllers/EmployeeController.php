@@ -521,8 +521,8 @@ class EmployeeController extends Controller
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
-            ->orderBy('start_date', 'desc') // Jika end_date sama, urutkan berdasarkan tanggal mulai terbaru
+            ->orderByRaw('ISNULL(end_date) DESC') // Prioritaskan null (masih aktif)
+            ->orderByDesc('end_date') // Lalu urutkan berdasarkan tanggal
             ->get();
 
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
