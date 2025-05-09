@@ -200,6 +200,7 @@
                                                         @php
                                                             $positions = [
                                                                 'GM' => 'General Manager',
+                                                                'Act GM' => 'Act General Manager',
                                                                 'Manager' => 'Manager',
                                                                 'Coordinator' => 'Coordinator',
                                                                 'Section Head' => 'Section Head',
