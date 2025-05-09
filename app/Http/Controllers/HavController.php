@@ -418,7 +418,14 @@ class HavController extends Controller
         ]);
 
         try {
-            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport, $request->file('file'));
+            // Handle file upload here in the controller
+            $file = $request->file('file');
+            $fileName = 'hav_' . time() . '.' . $file->getClientOriginalExtension();
+            $filePath = $file->storeAs('public/hav_uploads', $fileName);
+
+            // Pass the file path to the import class
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport($filePath), $file);
+
             return back()->with('success', 'Import HAV berhasil.');
         } catch (\Throwable $e) {
             return back()->with('error', 'Gagal import: ' . $e->getMessage());
