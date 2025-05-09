@@ -12,6 +12,7 @@ use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\AstraTraining;
 use App\Imports\MasterImports;
@@ -26,7 +27,6 @@ use App\Models\EducationalBackground;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PerformanceAppraisalHistory;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Str;
 
 
 class EmployeeController extends Controller
@@ -172,6 +172,7 @@ class EmployeeController extends Controller
                 }
             }
         }
+        
         $allPositions = [
             'Direktur',
             'GM',
@@ -201,8 +202,6 @@ class EmployeeController extends Controller
         $visiblePositions = $positionIndex !== false
             ? array_slice($allPositions, $positionIndex)
             : [];
-
-
 
         return view('website.employee.index', compact('employees', 'title', 'filter', 'company','visiblePositions'));
     }
@@ -335,57 +334,64 @@ class EmployeeController extends Controller
             // Simpan ke struktur sesuai posisi
             $pos = strtolower($validatedData['position']);
 
-            switch ($pos) {
-                case 'operator':
-                case 'jp':
-                    $employee->update([
+            // Mapping posisi ke entitas dan kolom yang perlu diupdate
+            $roleMappings = [
+                'sub_section' => [
+                    'roles' => ['act jp', 'operator', 'jp'],
+                    'update' => fn() => $employee->update([
                         'sub_section_id' => $validatedData['sub_section_id'] ?? null,
-                    ]);
-                    break;
-
-                case 'leader':
-                    if ($validatedData['sub_section_id']) {
+                    ]),
+                ],
+                'sub_section_leader' => [
+                    'roles' => ['act leader', 'leader'],
+                    'update' => fn() => $validatedData['sub_section_id'] &&
                         DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                            ->update(['leader_id' => $employee->id]);
-                    }
-                    break;
-
-                case 'supervisor':
-                case 'section head':
-                    if ($validatedData['section_id']) {
+                            ->update(['leader_id' => $employee->id]),
+                ],
+                'section' => [
+                    'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
+                    'update' => fn() => $validatedData['section_id'] &&
                         DB::table('sections')->where('id', $validatedData['section_id'])
-                            ->update(['supervisor_id' => $employee->id]);
-                    }
-                    break;
-
-                case 'manager':
-                case 'coordinator':
-                    if ($validatedData['department_id']) {
+                            ->update(['supervisor_id' => $employee->id]),
+                ],
+                'department' => [
+                    'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
+                    'update' => fn() => $validatedData['department_id'] &&
                         DB::table('departments')->where('id', $validatedData['department_id'])
-                            ->update(['manager_id' => $employee->id]);
-                    }
-                    break;
-
-                case 'gm':
-                    if ($validatedData['division_id']) {
+                            ->update(['manager_id' => $employee->id]),
+                ],
+                'division' => [
+                    'roles' => ['act gm', 'gm'],
+                    'update' => fn() => $validatedData['division_id'] &&
                         DB::table('divisions')->where('id', $validatedData['division_id'])
-                            ->update(['gm_id' => $employee->id]);
-                    }
-                    break;
-
-                case 'director':
-                    if ($validatedData['plant_id']) {
+                            ->update(['gm_id' => $employee->id]),
+                ],
+                'plant' => [
+                    'roles' => ['director'],
+                    'update' => fn() => $validatedData['plant_id'] &&
                         DB::table('plants')->where('id', $validatedData['plant_id'])
-                            ->update(['director_id' => $employee->id]);
-                    }
+                            ->update(['director_id' => $employee->id]),
+                ],
+            ];
+
+            // Jalankan update berdasarkan role
+            foreach ($roleMappings as $map) {
+                if (in_array($pos, $map['roles'])) {
+                    $map['update']();
                     break;
+                }
             }
 
-            // Buat user jika manager
-            if ($pos === 'manager') {
+            // Role yang butuh dibuatkan user
+            $userRoles = [
+                'manager', 'act manager', 'act supervisor', 'act section head',
+                'supervisor', 'section head', 'act gm', 'gm', 'director'
+            ];
+
+            if (in_array($pos, $userRoles)) {
                 $user = User::create([
                     'name' => $validatedData['name'],
-                    'email' => strtolower($validatedData['name']) . '@aiia.co.id',
+                    'email' => strtolower(strtok($validatedData['name'], ' ')) . '@aiia.co.id',
                     'password' => bcrypt('aiia'),
                 ]);
                 $employee->update(['user_id' => $user->id]);
@@ -606,18 +612,25 @@ class EmployeeController extends Controller
                 $employee->update($validatedData);
 
                 $positionAliasMap = [
-                    'section head' => 'supervisor',
-                    'coordinator' => 'manager',
-                ];
+                    'section head'     => 'supervisor',
+                    'act section head' => 'supervisor',
+                    'coordinator'      => 'manager',
+                    'act coordinator'  => 'manager',
+                    'act manager'      => 'manager',
+                    'act supervisor'   => 'supervisor',
+                    'act leader'       => 'leader',
+                    'act jp'           => 'jp',
+                    'act gm'           => 'gm',
+                ];                
 
                 $promotionPaths = [
                     'operator' => ['leader' => ['clear' => 'sub_section_id']],
-                    'jp' => ['leader' => ['clear' => 'sub_section_id']],
-                    'leader' => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
+                    'jp'       => ['leader' => ['clear' => 'sub_section_id']],
+                    'leader'   => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
                     'supervisor' => ['manager' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id']],
-                    'manager' => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
-                    'gm' => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
-                ];
+                    'manager'  => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
+                    'gm'       => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
+                ];                
 
                 $normalizePosition = function ($position) use ($positionAliasMap) {
                     $lower = strtolower($position);
@@ -643,50 +656,52 @@ class EmployeeController extends Controller
                 // Update struktur sesuai jabatan baru
                 $pos = strtolower($validatedData['position']);
 
-                switch ($pos) {
-                    case 'operator':
-                    case 'jp':
-                        $employee->update([
+                // Mapping posisi ke entitas dan kolom yang perlu diupdate
+                $roleMappings = [
+                    'sub_section' => [
+                        'roles' => ['act jp', 'operator', 'jp'],
+                        'update' => fn() => $employee->update([
                             'sub_section_id' => $validatedData['sub_section_id'] ?? null,
-                        ]);
-                        break;
-
-                    case 'leader':
-                        if ($validatedData['sub_section_id']) {
+                        ]),
+                    ],
+                    'sub_section_leader' => [
+                        'roles' => ['act leader', 'leader'],
+                        'update' => fn() => $validatedData['sub_section_id'] &&
                             DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                                ->update(['leader_id' => $employee->id]);
-                        }
-                        break;
-
-                    case 'supervisor':
-                    case 'section head':
-                        if ($validatedData['section_id']) {
+                                ->update(['leader_id' => $employee->id]),
+                    ],
+                    'section' => [
+                        'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
+                        'update' => fn() => $validatedData['section_id'] &&
                             DB::table('sections')->where('id', $validatedData['section_id'])
-                                ->update(['supervisor_id' => $employee->id]);
-                        }
-                        break;
-
-                    case 'manager':
-                    case 'coordinator':
-                        if ($validatedData['department_id']) {
+                                ->update(['supervisor_id' => $employee->id]),
+                    ],
+                    'department' => [
+                        'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
+                        'update' => fn() => $validatedData['department_id'] &&
                             DB::table('departments')->where('id', $validatedData['department_id'])
-                                ->update(['manager_id' => $employee->id]);
-                        }
-                        break;
-
-                    case 'gm':
-                        if ($validatedData['division_id']) {
+                                ->update(['manager_id' => $employee->id]),
+                    ],
+                    'division' => [
+                        'roles' => ['act gm', 'gm'],
+                        'update' => fn() => $validatedData['division_id'] &&
                             DB::table('divisions')->where('id', $validatedData['division_id'])
-                                ->update(['gm_id' => $employee->id]);
-                        }
-                        break;
-
-                    case 'director':
-                        if ($validatedData['plant_id']) {
+                                ->update(['gm_id' => $employee->id]),
+                    ],
+                    'plant' => [
+                        'roles' => ['director'],
+                        'update' => fn() => $validatedData['plant_id'] &&
                             DB::table('plants')->where('id', $validatedData['plant_id'])
-                                ->update(['director_id' => $employee->id]);
-                        }
+                                ->update(['director_id' => $employee->id]),
+                    ],
+                ];
+
+                // Jalankan update berdasarkan role
+                foreach ($roleMappings as $map) {
+                    if (in_array($pos, $map['roles'])) {
+                        $map['update']();
                         break;
+                    }
                 }
 
                 $positionFieldMap = [
@@ -697,9 +712,8 @@ class EmployeeController extends Controller
                     'director' => ['table' => 'plants', 'column' => 'director_id', 'key' => 'plant_id'],
                 ];
 
-                $oldPositionLower = strtolower($oldPosition);
-                $newPositionLower = strtolower($validatedData['position']);
-
+                $oldPositionLower = $normalizePosition($oldPosition);
+                $newPositionLower = $normalizePosition($validatedData['position']);
 
                 // Cek jika posisi tidak berubah tapi tempat berubah (mutasi struktural lateral)
                 if (
@@ -708,8 +722,8 @@ class EmployeeController extends Controller
                 ) {
                     $config = $positionFieldMap[$oldPositionLower];
 
-                    $oldRefId = DB::table($config['table'])->where($config['column'], $employee->id)->first(); // lokasi sebelum update
-                    $newRefId = $validatedData[$config['key']] ?? null; // lokasi setelah update
+                    $oldRefId = DB::table($config['table'])->where($config['column'], $employee->id)->first();
+                    $newRefId = $validatedData[$config['key']] ?? null;
 
                     if ($oldRefId && $oldRefId->id != (int) $newRefId) {
                         DB::table($config['table'])->where('id', $oldRefId->id)->update([$config['column'] => null]);
