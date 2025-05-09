@@ -436,17 +436,21 @@ class EmployeeController extends Controller
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
+            ->orderBy('last_promotion_date', 'desc') // Urutkan dari yang terbaru
             ->get();
 
         $astraTrainings = AstraTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
-            })->get();
-
+            })
+            ->orderBy('date_end', 'desc') // Urut berdasarkan tanggal selesai terbaru
+            ->get();
+            
         $externalTrainings = ExternalTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
+            ->orderBy('date_end', 'desc') // Urut dari yang terbaru
             ->get();
 
         $educations = EducationalBackground::with('employee')
@@ -498,17 +502,23 @@ class EmployeeController extends Controller
         $promotionHistories = PromotionHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
-            })->get();
+            })
+            ->orderBy('last_promotion_date', 'desc') // Urutkan dari yang terbaru
+            ->get();
 
         $astraTrainings = AstraTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
-            })->get();
+            })
+            ->orderBy('date_end', 'desc') // Urut berdasarkan tanggal selesai terbaru
+            ->get();
 
         $externalTrainings = ExternalTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
-            })->get();
+            })
+            ->orderBy('date_end', 'desc') // Urut dari yang terbaru
+            ->get();
 
         $educations = EducationalBackground::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
