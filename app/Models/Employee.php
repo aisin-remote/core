@@ -382,4 +382,16 @@ class Employee extends Model
 
         return $performance;
     }
+
+    // astra grade conversion
+    public function conversion()
+    {
+        return $this->hasOne(GradeConversion::class, 'aisin_grade', 'grade');
+    }
+
+    public function getAstraGradeAttribute()
+    {
+        $conversion = $this->conversion;
+        return $conversion ? $conversion->astra_grade : null;
+    }
 }

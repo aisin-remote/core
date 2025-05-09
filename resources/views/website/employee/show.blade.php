@@ -37,7 +37,7 @@
         <div class="container mt-4">
             <div class="row">
                 <div class="col-md-4 col-sm-12">
-                    <div class="card mb-5 mb-xl-10" style="height: 930px !important">
+                    <div class="card mb-5 mb-xl-10" style="height: 1020px !important">
                         <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
@@ -61,8 +61,20 @@
                                             </div>
                                         </div>
                                         <h4 class="mt-6 fw-bolder text-center">{{ $employee->name }}</h4>
+                                        @php
+                                            $position = $employee->position;
+
+                                            $positionLabelMap = [
+                                                'Direktur' => $employee->plant?->name,
+                                                'GM' => $employee->division?->name,
+                                                'Act GM' => $employee->division?->name,
+                                            ];
+
+                                            $unitName = $positionLabelMap[$position] ?? $employee->department?->name;
+                                        @endphp
+
                                         <p class="fw-bolder text-muted text-center">
-                                            {{ $employee->position }} - {{ $employee->department?->name }}
+                                            {{ $employee->position }} - {{ $unitName }}
                                         </p>
                                     </div>
 
@@ -150,24 +162,74 @@
                                                         value="{{ old('working_period', $employee->working_period) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
-                                                    <label class="form-label fw-bold fs-6">Department</label>
-                                                    <select disabled name="department_id" aria-label="Pilih Departemen"
-                                                        data-control="select2" data-placeholder="Pilih departement"
-                                                        class="form-select form-select-sm fw-semibold">
-                                                        <option value="">Pilih Departemen</option>
-                                                        @foreach ($departments as $department)
-                                                            <option value="{{ $department->id }}"
-                                                                {{ old('department_id', (int) $employee->leadingDepartment?->id ?? '') == (int) $department->id ? 'selected' : '' }}>
-                                                                {{ $department->name }}
-                                                            </option>
-                                                        @endforeach
-                                                    </select>
-                                                </div>
-                                                <div class="col-6 mb-8">
-                                                    <label class="form-label fw-bold fs-6">Grade</label>
+                                                    <label class="form-label fw-bold fs-6">Aisin Grade</label>
                                                     <input readonly type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Grade" value="{{ old('grade', $employee->grade) }}">
+                                                </div>
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Astra Grade</label>
+                                                    <input readonly type="text" name="grade"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Grade" value="{{ $employee->astra_grade }}">
+                                                </div>
+                                                @php
+                                                    $position = $employee->position;
+                                                    $selectData = [
+                                                        'Direktur' => [
+                                                            'label' => 'Plant',
+                                                            'name' => 'plant_id',
+                                                            'options' => $plants,
+                                                            'selected' => (int) old('plant_id', $employee->plant?->id),
+                                                        ],
+                                                        'GM' => [
+                                                            'label' => 'Division',
+                                                            'name' => 'division_id',
+                                                            'options' => $divisions,
+                                                            'selected' => (int) old(
+                                                                'division_id',
+                                                                $employee->division?->id,
+                                                            ),
+                                                        ],
+                                                        'Act GM' => [
+                                                            'label' => 'Division',
+                                                            'name' => 'division_id',
+                                                            'options' => $divisions,
+                                                            'selected' => (int) old(
+                                                                'division_id',
+                                                                $employee->division?->id,
+                                                            ),
+                                                        ],
+                                                    ];
+
+                                                    // Default (untuk semua posisi lainnya)
+                                                    $default = [
+                                                        'label' => 'Department',
+                                                        'name' => 'department_id',
+                                                        'options' => $departments,
+                                                        'selected' => (int) old(
+                                                            'department_id',
+                                                            $employee->department?->id,
+                                                        ),
+                                                    ];
+
+                                                    $field = $selectData[$position] ?? $default;
+                                                @endphp
+
+                                                <div class="col-12 mb-8">
+                                                    <label class="form-label fw-bold fs-6">{{ $field['label'] }}</label>
+                                                    <select disabled name="{{ $field['name'] }}"
+                                                        aria-label="Pilih {{ $field['label'] }}" data-control="select2"
+                                                        data-placeholder="Pilih {{ strtolower($field['label']) }}"
+                                                        class="form-select form-select-sm fw-semibold">
+                                                        <option value="">Pilih {{ $field['label'] }}</option>
+                                                        @foreach ($field['options'] as $option)
+                                                            <option value="{{ $option->id }}"
+                                                                {{ $field['selected'] == (int) $option->id ? 'selected' : '' }}>
+                                                                {{ $option->name }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
                                                 </div>
                                             </div>
                                         </div>

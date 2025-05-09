@@ -37,7 +37,7 @@
         <div class="container mt-4">
             <div class="row">
                 <div class="col-4">
-                    <div class="card mb-5 mb-xl-10" style="height: 1020px !important">
+                    <div class="card mb-5 mb-xl-10" style="height: 1110px !important">
                         <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
@@ -202,9 +202,13 @@
                                                                 'GM' => 'General Manager',
                                                                 'Act GM' => 'Act General Manager',
                                                                 'Manager' => 'Manager',
+                                                                'Act Manager' => 'Act Manager',
                                                                 'Coordinator' => 'Coordinator',
+                                                                'Act Coordinator' => 'Act Coordinator',
                                                                 'Section Head' => 'Section Head',
+                                                                'Act Section Head' => 'Act Section Head',
                                                                 'Supervisor' => 'Supervisor',
+                                                                'Act Supervisor' => 'Act Supervisor',
                                                                 'Act Leader' => 'Act Leader',
                                                                 'Act JP' => 'Act JP',
                                                                 'Operator' => 'Operator',
@@ -224,7 +228,7 @@
                                                 </div>
 
                                                 {{-- Sub Section --}}
-                                                <div id="subsection-group" class="col-6 mb-8 d-none">
+                                                <div id="subsection-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Sub Section</label>
                                                     <select name="sub_section_id"
                                                         class="form-select form-select-sm fw-semibold"
@@ -243,7 +247,7 @@
                                                 </div>
 
                                                 {{-- Section --}}
-                                                <div id="section-group" class="col-6 mb-8 d-none">
+                                                <div id="section-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Section</label>
                                                     <select name="section_id"
                                                         class="form-select form-select-sm fw-semibold"
@@ -262,7 +266,7 @@
                                                 </div>
 
                                                 {{-- Department --}}
-                                                <div id="department-group" class="col-6 mb-8 d-none">
+                                                <div id="department-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Department</label>
                                                     <select name="department_id"
                                                         class="form-select form-select-sm fw-semibold"
@@ -281,7 +285,7 @@
                                                 </div>
 
                                                 {{-- Division --}}
-                                                <div id="division-group" class="col-6 mb-8 d-none">
+                                                <div id="division-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Division</label>
                                                     <select name="division_id"
                                                         class="form-select form-select-sm fw-semibold"
@@ -300,7 +304,7 @@
                                                 </div>
 
                                                 {{-- Plant --}}
-                                                <div id="plant-group" class="col-6 mb-8 d-none">
+                                                <div id="plant-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Plant</label>
                                                     <select name="plant_id" class="form-select form-select-sm fw-semibold"
                                                         data-control="select2">
@@ -318,13 +322,19 @@
                                                 </div>
 
                                                 <div class="col-6 mb-8">
-                                                    <label class="form-label fw-bold fs-6">Grade</label>
+                                                    <label class="form-label fw-bold fs-6">Aisin Grade</label>
                                                     <input type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Grade" value="{{ old('grade', $employee->grade) }}">
                                                     @error('grade')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
+                                                </div>
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Astra Grade</label>
+                                                    <input readonly type="text" name="grade"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Grade" value="{{ $employee->astra_grade }}">
                                                 </div>
                                             </div>
                                         </div>
@@ -1132,11 +1142,12 @@
 
                 if (['Operator', 'Act JP', 'Act Leader'].includes(position)) {
                     $('#subsection-group').removeClass('d-none');
-                } else if (['Supervisor', 'Section Head'].includes(position)) {
+                } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(
+                        position)) {
                     $('#section-group').removeClass('d-none');
-                } else if (['Manager', 'Coordinator'].includes(position)) {
+                } else if (['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'].includes(position)) {
                     $('#department-group').removeClass('d-none');
-                } else if (position === 'GM') {
+                } else if (['GM', 'Act GM']) {
                     $('#division-group').removeClass('d-none');
                 } else if (position === 'Director') {
                     $('#plant-group').removeClass('d-none');

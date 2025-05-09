@@ -488,7 +488,9 @@ class EmployeeController extends Controller
             ->where('npk', $npk)
             ->firstOrFail();
         $departments = Department::all();
-        return view('website.employee.show', compact('employee', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps'));
+        $divisions = Division::all();
+        $plants = Plant::all();
+        return view('website.employee.show', compact('employee', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'));
     }
 
     public function edit($npk)
