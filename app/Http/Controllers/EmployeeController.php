@@ -26,6 +26,8 @@ use App\Models\EducationalBackground;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PerformanceAppraisalHistory;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Str;
+
 
 class EmployeeController extends Controller
 {
@@ -170,8 +172,39 @@ class EmployeeController extends Controller
                 }
             }
         }
+        $allPositions = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
 
-        return view('website.employee.index', compact('employees', 'title', 'filter', 'company'));
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        // Cari index posisi saat ini
+        $positionIndex = array_search($currentPosition, $allPositions);
+
+        // Fallback jika tidak ditemukan
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        // Ambil posisi di bawahnya (tanpa posisi user)
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+
+
+        return view('website.employee.index', compact('employees', 'title', 'filter', 'company','visiblePositions'));
     }
 
 

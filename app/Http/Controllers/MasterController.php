@@ -33,44 +33,43 @@ class MasterController extends Controller
 
         return $subordinates;
     }
+    public function employee(Request $request, $company = null)
+    {
+        $title = 'Employee';
+        $user = auth()->user();
+        $filter = $request->input('filter', 'all'); // posisi (default: all)
 
-  public function employee(Request $request, $company = null)
-{
-    $title = 'Employee';
-    $user = auth()->user();
-    $filter = $request->input('filter', 'all'); // posisi (default: all)
-
-    if ($user->role === 'HRD') {
-        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-            ->when($company, fn($query) => $query->where('company_name', $company))
-            ->when($filter !== 'all', fn($query) => $query->where('position', $filter))
-            ->where(function ($query) {
-                $query->where('user_id', '!=', auth()->id())
-                      ->orWhereNull('user_id');
-            })
-            ->paginate(10)
-            ->appends(['filter' => $filter, 'company' => $company]); // Menambahkan filter dan company pada pagination
-    } else {
-        $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-            ->where('user_id', $user->id)
-            ->first();
-
-        if (!$emp) {
-            $employee = collect();
+        if ($user->role === 'HRD') {
+            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+                ->when($company, fn($query) => $query->where('company_name', $company))
+                ->when($filter !== 'all', fn($query) => $query->where('position', $filter))
+                ->where(function ($query) {
+                    $query->where('user_id', '!=', auth()->id())
+                          ->orWhereNull('user_id');
+                })
+                ->get();
         } else {
-            $query = $this->getSubordinates($emp->id)->where('company_name', $emp->company_name);
+            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+                ->where('user_id', $user->id)
+                ->first();
 
-            if ($filter !== 'all') {
-                $query = $query->where('position', $filter);
+            if (!$emp) {
+                $employee = collect();
+            } else {
+                $subordinates = $this->getSubordinates($emp->id);
+
+                $employee = $subordinates->filter(function ($item) use ($emp, $filter) {
+                    if ($filter !== 'all' && $item->position !== $filter) {
+                        return false;
+                    }
+                    return $item->company_name === $emp->company_name;
+                })->values();
             }
-
-            $employee = $query->paginate($perPage)->appends(['filter' => $filter, 'company' => $company]); // Pagination
         }
+
+
+        return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company'));
     }
-
-    return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company'));
-}
-
 
     public function department()
     {

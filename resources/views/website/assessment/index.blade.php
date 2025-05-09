@@ -33,54 +33,26 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    @if (auth()->user()->role == 'HRD')
-                        <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                            role="tablist" style="cursor:pointer">
+                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                        role="tablist" style="cursor:pointer">
+                        {{-- Tab Show All --}}
+                        <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
-                                href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                                 Show All
                             </a>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
-                                    Direktur
-                                </a>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
-                                    Head</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
-                            </li>
-                        </ul>
-                    @endif
+                        </li>
 
+                        {{-- Tab Dinamis --}}
+                        @foreach ($visiblePositions as $position)
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                                    href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                    {{ $position }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
 
                     <div class="card-body">
                         <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
@@ -258,13 +230,13 @@
                                     Detail
                                 </a>
                               ${`
-                                                                            <a class="btn btn-primary btn-sm"
-                                                                                target="_blank"
-                                                                                href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
-                                                                                onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                                                View PDF
-                                                                            </a>
-                                                                `}
+                                                                                            <a class="btn btn-primary btn-sm"
+                                                                                                target="_blank"
+                                                                                                href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                                                                                onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                                                                View PDF
+                                                                                            </a>
+                                                                                `}
 
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
                                 data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
