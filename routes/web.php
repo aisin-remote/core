@@ -79,6 +79,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
         Route::get('/history/{id}', [HavController::class, 'show'])->name('hav.show');
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
+        Route::patch('/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
+        Route::patch('/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
 
         Route::get('/hav/test-import', function () {
         });

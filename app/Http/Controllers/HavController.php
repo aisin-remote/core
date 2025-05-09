@@ -26,6 +26,8 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Database\Events\TransactionBeginning;
+use Illuminate\Support\Str;
+
 
 class HavController extends Controller
 {
@@ -180,21 +182,25 @@ class HavController extends Controller
     {
         $title = 'Add Employee';
         $user = auth()->user();
-        $filter = $request->input('filter'); // Tambahan: ambil filter dari request
+        $filter = $request->input('filter', 'all');
+        $search = $request->input('search'); // ambil input search dari request
 
         if ($user->role === 'HRD') {
             $employees = Hav::with('employee')
-                ->whereHas('employee', function ($query) use ($company, $filter) {
+                ->whereHas('employee', function ($query) use ($company, $filter, $search) {
                     if ($company) {
                         $query->where('company_name', $company);
                     }
                     if ($filter && $filter !== 'all') {
                         $query->where('position', $filter);
                     }
+                    if ($search) {
+                        $query->where('name', 'like', '%' . $search . '%');
+                    }
                 })
                 ->get()
                 ->unique('employee_id')
-                ->values(); // reset indeks agar rapi
+                ->values();
         } else {
             $employee = Employee::where('user_id', $user->id)->first();
 
@@ -205,19 +211,54 @@ class HavController extends Controller
 
                 $employees = Hav::with('employee')
                     ->whereIn('employee_id', $subordinateIds)
-                    ->whereHas('employee', function ($query) use ($filter) {
+                    ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
+                        $query->where('company_name', $employee->company_name); // tetap batasi berdasarkan company milik atasan
                         if ($filter && $filter !== 'all') {
                             $query->where('position', $filter);
+                        }
+                        if ($search) {
+                            $query->where('name', 'like', '%' . $search . '%');
                         }
                     })
                     ->get()
                     ->unique('employee_id')
-                    ->values(); // reset indeks agar rapi
+                    ->values();
             }
         }
+        $allPositions = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
 
-        return view('website.hav.list', compact('title', 'employees', 'filter','company'));
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        // Cari index posisi saat ini
+        $positionIndex = array_search($currentPosition, $allPositions);
+
+        // Fallback jika tidak ditemukan
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        // Ambil posisi di bawahnya (tanpa posisi user)
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+
+        return view('website.hav.list', compact('title', 'employees', 'filter', 'company', 'search','visiblePositions'));
     }
+
 
 
     public function ajaxList(Request $request)
@@ -437,10 +478,66 @@ class HavController extends Controller
         }
         return redirect()->back();
     }
-    public function approval(Request $request)
+    public function approval(Request $request,$company = null)
     {
-        return view('website.approval.approvalhav');
+        $title = 'Add Employee';
+        $user = auth()->user();
+        $filter = $request->input('filter', 'all');
+        $search = $request->input('search'); // ambil input search dari request
+
+        if ($user->role === 'HRD') {
+            $employees = Hav::with('employee')
+                ->whereHas('employee', function ($query) use ($company, $filter, $search) {
+                    if ($company) {
+                        $query->where('company_name', $company);
+                    }
+                    if ($filter && $filter !== 'all') {
+                        $query->where('position', $filter);
+                    }
+                    if ($search) {
+                        $query->where('name', 'like', '%' . $search . '%');
+                    }
+                })
+                ->get();
+
+        } else {
+            $employee = Employee::where('user_id', $user->id)->first();
+
+            if (!$employee) {
+                $employees = collect();
+            } else {
+
+                $approvallevel = (auth()->user()->employee->getFirstApproval());
+                $subordinate=  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
+
+                $employees = Hav::with('employee')
+                    ->whereIn('employee_id', $subordinate)
+                    ->get();
+
+            }
+        }
+
+        return view('website.approval.approvalhav', compact('title', 'employees', 'filter', 'company', 'search'));
+
     }
+    public function approve($id)
+{
+    $hav = Hav::findOrFail($id); // Langsung ambil berdasarkan ID HAV
+    $hav->status = 2;
+    $hav->save();
+
+    return redirect()->back()->with('success', 'HAV berhasil disetujui.');
+}
+
+public function reject($id)
+{
+    $hav = Hav::findOrFail($id);
+    $hav->status = 1;
+    $hav->save();
+
+    return redirect()->back()->with('success', 'HAV berhasil ditolak.');
+}
+
 
     /**
      * Show the form for editing the specified resource.

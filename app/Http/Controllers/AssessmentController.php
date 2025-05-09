@@ -9,6 +9,7 @@ use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
+use Illuminate\Support\Str;
 
 use App\Models\SubSection;
 use App\Models\DetailAssessment;
@@ -131,6 +132,36 @@ class AssessmentController extends Controller
         $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());
         $alcs = Alc::all();
 
+        $allPositions = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        // Cari index posisi saat ini
+        $positionIndex = array_search($currentPosition, $allPositions);
+
+        // Fallback jika tidak ditemukan
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        // Ambil posisi di bawahnya (tanpa posisi user)
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
         return view('website.assessment.index', compact(
             'assessments',
             'employees',
@@ -140,7 +171,8 @@ class AssessmentController extends Controller
             'company',
             'departments',
             'filter',
-            'search'
+            'search',
+            'visiblePositions'
         ));
     }
 

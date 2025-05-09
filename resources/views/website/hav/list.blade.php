@@ -14,71 +14,44 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">HAV List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="fas fa-upload"></i>
-                        Import
-                    </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
-                        data-bs-target="#kt_modal_create_app">
-                        <i class="fas fa-upload"></i>
-                        Import2
-                    </button>
+                    <form method="GET" class="d-flex align-items-center">
+                        <input type="text" name="search" value="{{ request('search') }}" class="form-control me-2"
+                            placeholder="Search Employee..." style="width: 200px;">
+                        <input type="hidden" name="filter" value="{{ $filter }}">
+                        <button type="submit" class="btn btn-primary me-3">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+                        <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
+                            data-bs-target="#importModal">
+                            <i class="fas fa-upload"></i>
+                            Import
+                        </button>
+                    </form>
                 </div>
             </div>
 
             <div class="card-body">
-                @if (auth()->user()->role == 'HRD')
-                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                        role="tablist" style="cursor:pointer">
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                    role="tablist" style="cursor:pointer">
+                    {{-- Tab Show All --}}
+                    <li class="nav-item" role="presentation">
                         <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
-                            href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             Show All
                         </a>
+                    </li>
+
+                    {{-- Tab Dinamis --}}
+                    @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
-                                Direktur
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                {{ $position }}
                             </a>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
-                                Head</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
-                        </li>
-                    </ul>
-                @endif
+                    @endforeach
+                </ul>
+
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -157,14 +130,13 @@
                 </div>
 
                 <div class="modal-body">
-                    <form id="importForm" action="{{ route('hav.import') }}" method="POST"
-                        enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <div class="mb-3">
                             <label for="importFile" class="form-label">Pilih File Excel</label>
-                            <input type="file" name="file" id="importFile" class="form-control"
-                                accept=".xlsx, .xls" required>
+                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls"
+                                required>
                             <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
 
@@ -391,18 +363,18 @@
                             <td class="text-center">${hav.year}</td>
                             <td class="text-center">
                                 <a
-                                data-detail='${JSON.stringify(hav.details)}' 
-                                data-tahun='${hav.year}'  
-                                data-nama='${response.employee.name}' 
+                                data-detail='${JSON.stringify(hav.details)}'
+                                data-tahun='${hav.year}'
+                                data-nama='${response.employee.name}'
                                 class="btn btn-info btn-sm btn-hav-detail" href="#">
                                     Detail
                                 </a>
                               ${`<a class="btn btn-primary btn-sm"
-                                            target="_blank"
-                                            href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
-                                            onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                            Revise
-                                        </a>`}
+                                                    target="_blank"
+                                                    href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
+                                                    onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                    Revise
+                                                </a>`}
 
 
 
