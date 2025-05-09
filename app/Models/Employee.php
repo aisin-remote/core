@@ -37,7 +37,7 @@ class Employee extends Model
 
     public function user()
     {
-        return $this->hasOne(User::class, 'employee_id', 'id');
+        return $this->belongsTo(User::class,'user_id');
     }
 
     public function promotionHistory()
@@ -303,6 +303,15 @@ class Employee extends Model
         return $superiors;
     }
 
+    public function manualSuperiorMap()
+    {
+        return [
+            'gm' => 'vp',           // GM ke Vice President
+            'vp' => 'president',    // VP ke President
+            // Tambahkan sesuai kebutuhan
+        ];
+    }
+
     private function getDirectSuperiorOf(Employee $employee)
     {
         // Struktur organisasi
@@ -372,5 +381,17 @@ class Employee extends Model
             ->get();
 
         return $performance;
+    }
+
+    // astra grade conversion
+    public function conversion()
+    {
+        return $this->hasOne(GradeConversion::class, 'aisin_grade', 'grade');
+    }
+
+    public function getAstraGradeAttribute()
+    {
+        $conversion = $this->conversion;
+        return $conversion ? $conversion->astra_grade : null;
     }
 }

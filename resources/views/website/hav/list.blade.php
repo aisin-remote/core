@@ -23,33 +23,36 @@
                         <i class="fas fa-upload"></i>
                         Import
                     </button>
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
+                        data-bs-target="#kt_modal_create_app">
+                        <i class="fas fa-upload"></i>
+                        Import2
+                    </button>
                 </div>
             </div>
 
             <div class="card-body">
-                @if (auth()->user()->role == 'HRD')
-                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                        role="tablist" style="cursor:pointer">
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                    role="tablist" style="cursor:pointer">
+                    {{-- Tab Show All --}}
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            Show All
+                        </a>
+                    </li>
+
+                    {{-- Tab Dinamis --}}
+                    @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                {{ $position }}
+                            </a>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
-                        </li>
-                    </ul>
-                @endif
+                    @endforeach
+                </ul>
+
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -74,7 +77,8 @@
                                 <td>{{ $item->employee->position }}</td>
                                 <td>{{ $item->employee->department?->name }}</td>
                                 <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name }}</span></td>
+                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name }}</span>
+                                </td>
                                 <td class="text-center">
                                     {{-- Summary --}}
                                     <a href="#" data-employee-id="{{ $item->employee->id }}"
@@ -125,23 +129,25 @@
                     <h5 class="modal-title" id="importModalLabel">Import HAV Employee Data</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-    
+
                 <div class="modal-body">
                     <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
-    
+
                         <div class="mb-3">
                             <label for="importFile" class="form-label">Pilih File Excel</label>
-                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls" required>
+                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls"
+                                required>
                             <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
-    
+
                         <div class="alert alert-info small">
                             <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
                             Download template format import:
-                            <a href="{{ Storage::url('Import-HAV.xlsx') }}" target="_blank" class="fw-bold text-primary text-decoration-underline">Download Template</a>
+                            <a href="{{ Storage::url('Import-HAV.xlsx') }}" target="_blank"
+                                class="fw-bold text-primary text-decoration-underline">Download Template</a>
                         </div>
-    
+
                         <div class="text-end">
                             <button type="submit" class="btn btn-primary">Upload</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
@@ -151,7 +157,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="modal fade" id="havDetail" tabindex="-1" aria-hidden="true">
         <!--begin::Modal dialog-->
         <div class="modal-dialog modal-dialog-centered mw-900px">
@@ -291,50 +297,48 @@
 
 
     <!-- Modal -->
-<div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
-aria-hidden="true">
-<div class="modal-dialog modal-xl">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History Assessment</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-            <h1 class="text-center mb-4 fw-bold">History HAV</h1>
-
-            <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
-                <div class="col-auto">
-                    <p class="fs-5 fw-bold"><strong>NPK:</strong><span id="npkText"></span></p>
+    <div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History Assessment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="col-auto">
-                    <p class="fs-5 fw-bold"><strong>Position:</strong> <span id="positionText"></span></p>
+                <div class="modal-body">
+                    <h1 class="text-center mb-4 fw-bold">History HAV</h1>
+
+                    <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
+                        <div class="col-auto">
+                            <p class="fs-5 fw-bold"><strong>NPK:</strong><span id="npkText"></span></p>
+                        </div>
+                        <div class="col-auto">
+                            <p class="fs-5 fw-bold"><strong>Position:</strong> <span id="positionText"></span></p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered align-middle table-hover fs-6"
+                            id="kt_table_assessments" width="100%">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center" width="10%">No</th>
+                                    <th class="text-center">Quadran</th>
+                                    <th class="text-center">Date</th>
+                                    <th class="text-center" width="40%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
-
-            <div class="table-responsive">
-                <table class="table table-striped table-bordered align-middle table-hover fs-6"
-                    id="kt_table_assessments" width="100%">
-                    <thead class="table-dark">
-                        <tr>
-                            <th class="text-center" width="10%">No</th>
-                            <th class="text-center">Quadran</th>
-                            <th class="text-center">Date</th>
-                            <th class="text-center" width="40%">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
         </div>
     </div>
-</div>
-</div>
-
-
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -351,18 +355,18 @@ aria-hidden="true">
 
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
-    @if(session('success'))
-    <script>
-        Swal.fire({
-            icon: 'success',
-            title: 'Success!',
-            text: '{{ session('success') }}',
-            confirmButtonText: 'Ok'
-        });
-    </script>
+    @if (session('success'))
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: '{{ session('success') }}',
+                confirmButtonText: 'Ok'
+            });
+        </script>
     @endif
 
-    @if(session('error'))
+    @if (session('error'))
         <script>
             console.log("Error session:", '{{ session('error') }}'); // Debugging
             Swal.fire({
@@ -375,42 +379,40 @@ aria-hidden="true">
     @endif
 
     <script>
-        
-        
         $(document).ready(function() {
-                $(document).on("click", ".history-btn", function(event) {
-                    event.preventDefault();
+            $(document).on("click", ".history-btn", function(event) {
+                event.preventDefault();
 
-                    let employeeId = $(this).data("employee-id");
-                    console.log("Fetching history for Employee ID:", employeeId); // Debug
+                let employeeId = $(this).data("employee-id");
+                console.log("Fetching history for Employee ID:", employeeId); // Debug
 
-                    // Reset data modal sebelum request baru dilakukan
-                    $("#npkText").text("-");
-                    $("#positionText").text("-");
-                    $("#kt_table_assessments tbody").empty();
+                // Reset data modal sebelum request baru dilakukan
+                $("#npkText").text("-");
+                $("#positionText").text("-");
+                $("#kt_table_assessments tbody").empty();
 
-                    $.ajax({
-                        url: `/hav/history/${employeeId}`,
-                        type: "GET",
-                        success: function(response) {
-                            console.log("Response received:", response); // Debug respons
+                $.ajax({
+                    url: `/hav/history/${employeeId}`,
+                    type: "GET",
+                    success: function(response) {
+                        console.log("Response received:", response); // Debug respons
 
-                            if (!response.employee) {
-                                console.error("Employee data not found in response!");
-                                alert("Employee not found!");
-                                return;
-                            }
+                        if (!response.employee) {
+                            console.error("Employee data not found in response!");
+                            alert("Employee not found!");
+                            return;
+                        }
 
-                            // Update informasi karyawan
-                            $("#npkText").text(response.employee.npk);
-                            $("#positionText").text(response.employee.position);
+                        // Update informasi karyawan
+                        $("#npkText").text(response.employee.npk);
+                        $("#positionText").text(response.employee.position);
 
-                            // Kosongkan tabel sebelum menambahkan data baru
-                            $("#kt_table_assessments tbody").empty();
+                        // Kosongkan tabel sebelum menambahkan data baru
+                        $("#kt_table_assessments tbody").empty();
 
-                            if (response.employee.hav.length > 0) {
-                                response.employee.hav.forEach((hav, index) => {
-                                    let row = `
+                        if (response.employee.hav.length > 0) {
+                            response.employee.hav.forEach((hav, index) => {
+                                let row = `
                         <tr>
                             <td class="text-center">${index + 1}</td>
                             <td class="text-center">${hav.status || '-'}</td>
@@ -425,11 +427,11 @@ aria-hidden="true">
                                     Detail
                                 </a>
                               ${`<a class="btn btn-primary btn-sm"
-                                    target="_blank"
-                                    href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
-                                    onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                    Revise
-                                </a>`}
+                                                            target="_blank"
+                                                            href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
+                                                            onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                            Revise
+                                                        </a>`}
 
 
 
@@ -438,168 +440,168 @@ aria-hidden="true">
                                         </td>
                                     </tr>
                                 `;
-                                    $("#kt_table_assessments tbody").append(row);
-                                });
-                            } else {
-                                $("#kt_table_assessments tbody").append(`
+                                $("#kt_table_assessments tbody").append(row);
+                            });
+                        } else {
+                            $("#kt_table_assessments tbody").append(`
                                     <tr>
                                         <td colspan="3" class="text-center text-muted">No assessment found</td>
                                     </tr>
                                 `);
-                            }
-
-                            // Tampilkan modal setelah data dimuat
-                            $("#detailAssessmentModal").modal("show");
-                        },
-                        error: function(error) {
-                            console.error("Error fetching data:", error);
-                            alert("Failed to load assessment data!");
                         }
-                    });
+
+                        // Tampilkan modal setelah data dimuat
+                        $("#detailAssessmentModal").modal("show");
+                    },
+                    error: function(error) {
+                        console.error("Error fetching data:", error);
+                        alert("Failed to load assessment data!");
+                    }
                 });
+            });
 
-                $(document).on("click", ".btn-hav-detail", function() {
-                    event.preventDefault();
+            $(document).on("click", ".btn-hav-detail", function() {
+                event.preventDefault();
 
 
-                    const havDetails = $(this).data("detail");
-                    const employee_id = $(this).data("employeeid");
-                    const year = $(this).data("tahun");
-                    const nama = $(this).data("nama");
-                    $(`#nameTitle`).text(nama + ' - ' + year);
-                    console.log("Employee ID:", employee_id); // Debug
+                const havDetails = $(this).data("detail");
+                const employee_id = $(this).data("employeeid");
+                const year = $(this).data("tahun");
+                const nama = $(this).data("nama");
+                $(`#nameTitle`).text(nama + ' - ' + year);
+                console.log("Employee ID:", employee_id); // Debug
 
-                    // Ambil data dari atribut data-upload
-                    let url = "{{ url('/hav/get3-last-performance') }}/" + employee_id + "/" + year;
-                    $.ajax({
-                        url: url,
-                        type: "GET",
-                        processData: false,
-                        contentType: false,
-                        success: function(response) {
-                            console.log("Response received:", response); 
-                            // Debug respons
-                            let rows = '';
-                                response.performanceAppraisals.forEach(function(item) {
-                                    rows += `
+                // Ambil data dari atribut data-upload
+                let url = "{{ url('/hav/get3-last-performance') }}/" + employee_id + "/" + year;
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        console.log("Response received:", response);
+                        // Debug respons
+                        let rows = '';
+                        response.performanceAppraisals.forEach(function(item) {
+                            rows += `
                                         <tr>
                                             <td>${new Date(item.date).getFullYear()}</td>
                                             <td>${item.score}</td>
                                         </tr>
                                     `;
-                                });
-                            $('#performanceBody').html(rows);
-                        },
-                        error: function(xhr, status, error) {
-                            rows = `
+                        });
+                        $('#performanceBody').html(rows);
+                    },
+                    error: function(xhr, status, error) {
+                        rows = `
                                 <tr>
                                     <td colspan="2" class="text-center text-muted">No performance data found</td>
                                 </tr>
                             `;
-                            $('#performanceBody').html(rows);
-                        }
-                    });
-
-
-                    // Cek apakah data ada
-                    if (havDetails) {
-                        try {
-
-                            havDetails.forEach((item) => {
-                                console.log(item.alc_id);
-                                $(`#alc${item.alc_id}`).text(item.score);
-                            });
-
-
-                            // Tampilkan modal setelah data dimuat
-                            $("#detailAssessmentModal").modal("hide");
-                            $("#havDetail").modal("show");
-                        } catch (error) {
-                            console.error("Error parsing data:", error);
-                            alert("Data tidak valid.");
-                        }
-                    } else {
-                        alert("Data HAV tidak ditemukan.");
+                        $('#performanceBody').html(rows);
                     }
-                   
                 });
 
-                // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
-                $("#havDetail").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal update
-                        $("body").removeClass("modal-open");
 
-                        $("#detailAssessmentModal").modal("show");
+                // Cek apakah data ada
+                if (havDetails) {
+                    try {
 
-                        // Tambahkan overlay kembali untuk modal history
-                        $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 300);
-                });
+                        havDetails.forEach((item) => {
+                            console.log(item.alc_id);
+                            $(`#alc${item.alc_id}`).text(item.score);
+                        });
 
-                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        if (!$("#havDetail").hasClass("show")) {
-                            $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
-                            $("body").removeClass("modal-open");
-                        }
-                    }, 30);
-                });
 
-                // ===== CEGAH OVERLAY BERLAPIS =====
-                $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").last().css("z-index",
-                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
-                });
-
-                $(document).on("click", ".delete-btn", function() {
-                    let assessmentId = $(this).data("id");
-                    console.log("ID yang akan dihapus:", assessmentId); // Debugging
-
-                    if (!assessmentId) {
-                        console.error("ID Hav tidak ditemukan!");
-                        return;
+                        // Tampilkan modal setelah data dimuat
+                        $("#detailAssessmentModal").modal("hide");
+                        $("#havDetail").modal("show");
+                    } catch (error) {
+                        console.error("Error parsing data:", error);
+                        alert("Data tidak valid.");
                     }
-
-                    Swal.fire({
-                        title: "Apakah Anda yakin?",
-                        text: "Data Hav ini akan dihapus secara permanen!",
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#d33",
-                        cancelButtonColor: "#3085d6",
-                        confirmButtonText: "Ya, Hapus!"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            console.log("Mengirim request DELETE untuk ID:", assessmentId); // Debugging
-
-                            fetch(`/hav/${assessmentId}`, {
-                                    method: "DELETE",
-                                    headers: {
-                                        "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr(
-                                            "content"),
-                                        "Content-Type": "application/json"
-                                    }
-                                })
-                                .then(response => response.json())
-                                .then(data => {
-                                    console.log("Response dari server:", data); // Debugging
-
-                                    if (data.success) {
-                                        Swal.fire("Terhapus!", data.message, "success")
-                                            .then(() => location.reload());
-                                    } else {
-                                        Swal.fire("Error!", "Gagal menghapus data!", "error");
-                                    }
-                                })
-                                .catch(error => {
-                                    console.error("Error saat menghapus:", error);
-                                    Swal.fire("Error!", "Terjadi kesalahan!", "error");
-                                });
-                        }
-                    });
-                });
+                } else {
+                    alert("Data HAV tidak ditemukan.");
+                }
 
             });
+
+            // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+            $("#havDetail").on("hidden.bs.modal", function() {
+                setTimeout(() => {
+                    $(".modal-backdrop").remove(); // Hapus overlay modal update
+                    $("body").removeClass("modal-open");
+
+                    $("#detailAssessmentModal").modal("show");
+
+                    // Tambahkan overlay kembali untuk modal history
+                    $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+                }, 300);
+            });
+
+            $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+                setTimeout(() => {
+                    if (!$("#havDetail").hasClass("show")) {
+                        $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
+                        $("body").removeClass("modal-open");
+                    }
+                }, 30);
+            });
+
+            // ===== CEGAH OVERLAY BERLAPIS =====
+            $(".modal").on("shown.bs.modal", function() {
+                $(".modal-backdrop").last().css("z-index",
+                    1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+            });
+
+            $(document).on("click", ".delete-btn", function() {
+                let assessmentId = $(this).data("id");
+                console.log("ID yang akan dihapus:", assessmentId); // Debugging
+
+                if (!assessmentId) {
+                    console.error("ID Hav tidak ditemukan!");
+                    return;
+                }
+
+                Swal.fire({
+                    title: "Apakah Anda yakin?",
+                    text: "Data Hav ini akan dihapus secara permanen!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Ya, Hapus!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        console.log("Mengirim request DELETE untuk ID:", assessmentId); // Debugging
+
+                        fetch(`/hav/${assessmentId}`, {
+                                method: "DELETE",
+                                headers: {
+                                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr(
+                                        "content"),
+                                    "Content-Type": "application/json"
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log("Response dari server:", data); // Debugging
+
+                                if (data.success) {
+                                    Swal.fire("Terhapus!", data.message, "success")
+                                        .then(() => location.reload());
+                                } else {
+                                    Swal.fire("Error!", "Gagal menghapus data!", "error");
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error saat menghapus:", error);
+                                Swal.fire("Error!", "Terjadi kesalahan!", "error");
+                            });
+                    }
+                });
+            });
+
+        });
     </script>
 @endpush

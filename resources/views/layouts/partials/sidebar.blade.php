@@ -101,7 +101,7 @@
                         {{-- Dashboard --}}
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
-                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                 <span class="menu-title ps-1">Development Plan</span>
                             </a>
                         </div>
@@ -110,7 +110,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'employee' ? 'active' : '' }}" href="/employee">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">Employee Profile</span>
                                 </a>
                             </div>
@@ -118,7 +118,7 @@
                             <div class="menu-item menu-accordion {{ $isEmployee ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-employee-profile">
                                 <span class="menu-link {{ $isEmployee ? 'active' : '' }}">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">Employee Profile</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -146,7 +146,7 @@
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'assessment' ? 'active' : '' }}"
                                     href="/assessment">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">Assessment</span>
                                 </a>
                             </div>
@@ -154,7 +154,7 @@
                             <div class="menu-item menu-accordion {{ $isAssessment ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-assessment">
                                 <span class="menu-link {{ $isAssessment ? 'active' : '' }}">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">Assessment</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -181,7 +181,7 @@
                             <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
                                 <span class="menu-link {{ $isHav ? 'active' : '' }}">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -208,7 +208,7 @@
                             <div class="menu-item menu-accordion {{ request()->is('hav*') ? 'show' : '' }}"
                                 data-kt-menu-trigger="click" data-kt-menu-expand="true">
                                 <span class="menu-link">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -277,7 +277,7 @@
                         @if (auth()->user()->role == 'User')
                             <div class="menu-item">
                                 <a class="menu-link {{ $currentPath === 'idp' ? 'active' : '' }}" href="/idp">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">IDP</span>
                                 </a>
                             </div>
@@ -285,7 +285,7 @@
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">IDP</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -313,7 +313,7 @@
                             @if (auth()->user()->employee->position == 'GM' || auth()->user()->employee->position == 'Director')
                                 <div class="menu-item">
                                     <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                         <span class="menu-title ps-1">RTC</span>
                                     </a>
                                 </div>
@@ -322,7 +322,7 @@
                             <div class="menu-item menu-accordion {{ $isRtc ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-rtc">
                                 <span class="menu-link {{ $isRtc ? 'active' : '' }}">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">RTC</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -371,7 +371,7 @@
                             id="menu-employee-profile">
                             <span
                                 class="menu-link {{ request()->is('master/employee/aii') || request()->is('master/employee/aiia') ? 'active' : '' }}">
-                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                 <span class="menu-title ps-1">Employee</span>
                                 <span class="menu-arrow"></span>
                             </span>
@@ -424,7 +424,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
                                 href="/master/grade">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">Grade</span>
                             </a>
                         </div>
@@ -434,7 +434,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
                                 href="/master/plant">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">Plant</span>
                             </a>
                         </div>
@@ -444,7 +444,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
                                 href="/master/division">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">Division</span>
                             </a>
                         </div>
@@ -453,7 +453,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
                                 href="/master/department">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">Department</span>
                             </a>
                         </div>
@@ -462,7 +462,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/section') ? 'active' : '' }}"
                                 href="/master/section">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">Section</span>
                             </a>
                         </div>
@@ -471,7 +471,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/subSection') ? 'active' : '' }}"
                                 href="/master/subSection">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">Sub Section</span>
                             </a>
                         </div>
@@ -494,27 +494,27 @@
                     <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
 
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}" href="#">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                            <a class="menu-link {{ request()->is('approval/idp') ? 'active' : '' }}"
+                                href="{{ route('idp.approval') }}">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">IDP</span>
                             </a>
                         </div>
 
 
                         <!-- plant -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}" href="#">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                                <span class="menu-title ps-1">HAV</span>
-                            </a>
-                        </div>
+                        <a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
+                            href="{{ route('hav.approval') }}">
+                            {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                            <span class="menu-title ps-1">HAV</span>
+                        </a>
 
 
                         <!-- Division -->
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
                                 href="#">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
                         </div>
@@ -538,7 +538,7 @@
 
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}" href="#">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">IDP</span>
                             </a>
                         </div>
@@ -547,7 +547,7 @@
                         <!-- plant -->
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}" href="#">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">HAV</span>
                             </a>
                         </div>
@@ -557,7 +557,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
                                 href="#">
-                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
                         </div>
@@ -624,14 +624,18 @@
         style="position: sticky; bottom: 0; background-color: #1e1e2d;">
         <div class="d-flex align-items-center">
             <div class="symbol symbol-40px">
-                <img src="{{ asset('assets/media/avatars/user.jpg') }}" class="rounded-3" alt="user" />
+                <img src="{{ auth()->user()->employee && auth()->user()->employee->photo
+                    ? asset('storage/' . auth()->user()->employee->photo)
+                    : asset('assets/media/avatars/user.jpg') }}"
+                    class="rounded-3" alt="user" style="width: 40px; height: 40px; object-fit: cover;" />
             </div>
             <div class="ms-3">
                 <div class="fw-bold text-white">{{ auth()->user()->name }}</div>
-                <div class="text-muted fs-8">{{ auth()->user()->employee->position }}</div>
+                <div class="text-muted fs-8">{{ auth()->user()->employee->position ?? '-' }}</div>
             </div>
         </div>
     </div>
+
 </div>
 <!--end::Sidebar-->
 <script>

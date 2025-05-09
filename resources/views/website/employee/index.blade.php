@@ -25,42 +25,43 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                        data-kt-menu-placement="bottom-end">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
+                    <form method="GET" action="{{ route('employee.index') }}" class="d-flex align-items-center">
+                        <input type="text" name="search" id="searchInput" class="form-control me-2"
+                            placeholder="Search Employee..." style="width: 200px;" value="{{ request('search') }}">
+
+                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
+                            <i class="fas fa-search"></i> Search
+                        </button>
+
+                        <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
+                            data-kt-menu-placement="bottom-end">
+                            <i class="fas fa-filter"></i> Filter
+                        </button>
+                    </form>
                 </div>
             </div>
 
             <div class="card-body">
-                @if (auth()->user()->role == 'HRD')
-                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                        role="tablist" style="cursor:pointer">
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                    role="tablist" style="cursor:pointer">
+                    {{-- Tab Show All --}}
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            Show All
+                        </a>
+                    </li>
+
+                    {{-- Tab Dinamis --}}
+                    @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 active filter-tab" data-filter="all">Show All</a>
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                {{ $position }}
+                            </a>
                         </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Manager">Manager</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Supervisor">Supervisor</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Leader">Leader</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="JP">JP</a>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 filter-tab" data-filter="Operator">Operator</a>
-                        </li>
-                    </ul>
-                @endif
+                    @endforeach
+                </ul>
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -70,7 +71,7 @@
                             <th>Employee Name</th>
                             <th>Company</th>
                             <th>Position</th>
-                            <th>Department</th>
+                            <th>Department</th> {{-- Tetap static --}}
                             <th>Grade</th>
                             <th>Age</th>
                             <th class="text-center">Actions</th>
@@ -78,9 +79,15 @@
                     </thead>
                     <tbody>
                         @forelse ($employees as $index => $employee)
+                            @php
+                                $unit = match ($employee->position) {
+                                    'Direktur' => $employee->plant?->name,
+                                    'GM', 'Act GM' => $employee->division?->name,
+                                    default => $employee->department?->name,
+                                };
+                            @endphp
                             <tr data-position="{{ $employee->position }}">
                                 <td>{{ $employees->firstItem() + $index }}</td>
-
                                 <td class="text-center">
                                     <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
@@ -90,7 +97,7 @@
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
                                 <td>{{ $employee->position }}</td>
-                                <td>{{ $employee->department?->name }}</td>
+                                <td>{{ $unit }}</td> {{-- Dinamis berdasarkan posisi --}}
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-center">
@@ -194,9 +201,6 @@
             }
 
             // Event Pencarian
-            searchInput.addEventListener("keyup", function() {
-                filterTable();
-            });
 
             // Event Filter Dropdown
             filterItems.forEach(item => {

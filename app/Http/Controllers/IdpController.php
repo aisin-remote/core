@@ -558,5 +558,8 @@ class IdpController extends Controller
         return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
     }
     
-
+    public function approval()
+    {
+        return view('website.approval.idp.index');
+    }
 }

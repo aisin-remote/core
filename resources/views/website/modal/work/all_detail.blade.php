@@ -10,8 +10,8 @@
             <div class="modal-body">
                 @forelse ($workExperiences as $exp)
                     <div class="mb-3">
-                        <div class="fw-bold">{{ $exp->position }}</div>
-                        <div class="text-muted small">{{ $exp->company }}</div>
+                        <div class="fw-bold">{{ $exp->department }}</div>
+                        <div class="text-muted small">{{ $exp->position }}</div>
                         <div class="text-muted small">
                             {{ \Carbon\Carbon::parse($exp->start_date)->format('Y') }} -
                             {{ $exp->end_date ? \Carbon\Carbon::parse($exp->end_date)->format('Y') : 'Present' }}

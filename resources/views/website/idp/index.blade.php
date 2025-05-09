@@ -98,7 +98,6 @@
                                             @foreach ($alcs as $id => $title)
                                                 <th class="text-center" style="width: 100px">{{ $title }}</th>
                                             @endforeach
-                                            <th class="text-center">Status</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -173,25 +172,6 @@
                                                         @endif
                                                     </td>
                                                 @endforeach
-                                                <td class="text-center">
-                                                    @php
-                                                        // count assesment yang skor < 3
-                                                        $below = 0;
-                                                        foreach ($assessment->details as $alc) {
-                                                            if ((int) $alc->score < 3) {
-                                                                $below++;
-                                                            }
-                                                        }
-                                                    @endphp
-
-                                                    @if ($below > $assessment->idp->count())
-                                                        <!-- IDP sudah dikirim -->
-                                                        <span class="badge badge-lg badge-info">Waiting</span>
-                                                    @elseif ($below == $assessment->idp->count())
-                                                        <!-- IDP belum dikirim, status Pending -->
-                                                        <span class="badge badge-lg badge-warning">Pending</span>
-                                                    @endif
-                                                </td>
                                                 <td class="text-center" style="width: 50px">
                                                     <div class="d-flex gap-2 justify-content-center">
                                                         <button type="button" class="btn btn-sm btn-primary"
@@ -492,6 +472,41 @@
                 </div>
             @endforeach
 
+            <!-- Modal History Komentar -->
+            <div class="modal fade" id="notesHistory" tabindex="-1" aria-labelledby="notesHistoryLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="notesHistoryLabel">Comment History</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-4">
+                                <h6>Employee: <span id="employeeName">Ferry Avianto</span></h6>
+                            </div>
+                            <!-- List of comments -->
+                            <div class="list-group" id="commentHistory">
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <h6 class="fw-bold">Customer Focus</h6>
+                                    <p>Dokumen kurang lengkap.</p>
+                                    <small class="text-muted">Date: 2023-05-01 10:00 AM</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <h6 class="fw-bold">Analysis & Judgment</h6>
+                                    <p>Dokumen tidak lengkap</p>
+                                    <small class="text-muted">Date: 2023-05-02 11:30 AM</small>
+                                </a>
+                                <!-- More comments can be added dynamically -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Modal -->
             @foreach ($assessments as $assessment)
