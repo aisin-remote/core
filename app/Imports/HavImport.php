@@ -34,9 +34,12 @@ class HavImport implements WithMultipleSheets, WithEvents
                 }
 
                 DB::transaction(function () use ($employee, $sheet) {
+
                     $hav = new Hav();
                     $hav->employee_id = $employee->id;
-                    $hav->save();
+                    $hav->status = 0; // 0 = Create
+                    $hav->year = $sheet->getCell('C13')->getCalculatedValue();
+
 
                     $scoreMap = [
                         1 => 'D15',
@@ -49,7 +52,7 @@ class HavImport implements WithMultipleSheets, WithEvents
                         8 => 'Q25',
                     ];
 
-                    (new HavQuadrant())->updateHavFromAssessment(
+                    $quadrant = (new HavQuadrant())->updateHavFromAssessment(
                         $employee->id,
                         $sheet->getCell('C13')->getCalculatedValue(),
                         $sheet->getCell($scoreMap[1])->getCalculatedValue(),
@@ -61,6 +64,8 @@ class HavImport implements WithMultipleSheets, WithEvents
                         $sheet->getCell($scoreMap[7])->getCalculatedValue(),
                         $sheet->getCell($scoreMap[8])->getCalculatedValue(),
                     );
+                    $hav->quadrant = $quadrant;
+                    $hav->save();
 
                     foreach ($scoreMap as $index => $cell) {
                         $alc = Alc::find($index);
