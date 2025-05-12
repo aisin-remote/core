@@ -192,8 +192,12 @@ class HavController extends Controller
                         $query->where('company_name', $company);
                     }
                     if ($filter && $filter !== 'all') {
-                        $query->where('position', $filter);
+                        $query->where(function ($q) use ($filter) {
+                            $q->where('position', $filter)
+                              ->orWhere('position', 'like', "Act %{$filter}");
+                        });
                     }
+                    
                     if ($search) {
                         $query->where('name', 'like', '%' . $search . '%');
                     }
@@ -214,8 +218,12 @@ class HavController extends Controller
                     ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
                         $query->where('company_name', $employee->company_name); // tetap batasi berdasarkan company milik atasan
                         if ($filter && $filter !== 'all') {
-                            $query->where('position', $filter);
+                            $query->where(function ($q) use ($filter) {
+                                $q->where('position', $filter)
+                                  ->orWhere('position', 'like', "Act %{$filter}");
+                            });
                         }
+                        
                         if ($search) {
                             $query->where('name', 'like', '%' . $search . '%');
                         }
@@ -480,6 +488,8 @@ class HavController extends Controller
     }
     public function approval(Request $request,$company = null)
     {
+        $company = $request->query('company');
+
         $title = 'Add Employee';
         $user = auth()->user();
         $filter = $request->input('filter', 'all');
