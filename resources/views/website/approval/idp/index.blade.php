@@ -64,9 +64,6 @@
                                 <td>{{ $employee->department?->name ?? '-' }}</td>
                                 <td>{{ $employee->position ?? '-' }}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-danger btn-revise">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
                                     <button class="btn btn-sm btn-warning btn-export"
                                         onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $employee->id]) }}'">
                                         <i class="fas fa-upload"></i>
@@ -128,6 +125,9 @@
                                                         </table>
 
                                                         <!-- Tombol Approve per IDP -->
+                                                        <button class="btn btn-sm btn-danger btn-revise">
+                                                            <i class="fas fa-edit"></i>Revise
+                                                        </button>
                                                         <button class="btn btn-sm btn-success btn-approve"
                                                             data-idp-id="{{ $idp->id }}">
                                                             <i class="fas fa-check-circle"></i> Approve
