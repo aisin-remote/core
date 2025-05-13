@@ -1151,7 +1151,7 @@
                     $('#department-group').removeClass('d-none');
                 } else if (['GM', 'Act GM']) {
                     $('#division-group').removeClass('d-none');
-                } else if (position === 'Direktur') {
+                } else if (['Direktur']) {
                     $('#plant-group').removeClass('d-none');
                 }
             }
