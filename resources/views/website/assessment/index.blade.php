@@ -105,6 +105,7 @@
                                 {{ $assessments->total() }} entries</span>
                             {{ $assessments->links('pagination::bootstrap-5') }}
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -230,13 +231,13 @@
                                     Detail
                                 </a>
                               ${`
-                                                                                            <a class="btn btn-primary btn-sm"
-                                                                                                target="_blank"
-                                                                                                href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
-                                                                                                onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                                                                View PDF
-                                                                                            </a>
-                                                                                `}
+                                                                                                                                    <a class="btn btn-primary btn-sm"
+                                                                                                                                        target="_blank"
+                                                                                                                                        href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                                                                                                                        onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                                                                                                        View PDF
+                                                                                                                                    </a>
+                                                                                                                        `}
 
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
                                 data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
@@ -245,11 +246,12 @@
                                 data-date="${assessment.date}"
                                 data-description="${assessment.description}"
                                 data-upload="${assessment.upload}"
-                                data-scores='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.score)))}'
-                                data-alcs='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
-                                data-alc_name='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
-                                data-strengths='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
-                                data-weaknesses='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'>
+                                  data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
+                                data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
+                                data-alc_name='${btoa(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
+                                data-strengths='${btoa(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
+                                data-weaknesses='${btoa(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
+                                >
                                 Edit
                             </button>
 
@@ -284,11 +286,13 @@
                     let description = $(this).data("description");
                     let upload = $(this).data("upload");
 
-                    let scores = JSON.parse(decodeURIComponent($(this).attr("data-scores")));
-                    let alcs = JSON.parse(decodeURIComponent($(this).attr("data-alcs")));
-                    let alcNames = JSON.parse(decodeURIComponent($(this).attr("data-alc_name")));
-                    let strengths = JSON.parse(decodeURIComponent($(this).attr("data-strengths")));
-                    let weaknesses = JSON.parse(decodeURIComponent($(this).attr("data-weaknesses")));
+                    let scores = JSON.parse(atob($(this).attr("data-scores")));
+                    let alcs = JSON.parse(atob($(this).attr("data-alcs")));
+                    let alcNames = JSON.parse(atob($(this).attr("data-alc_name")));
+                    let strengths = JSON.parse(atob($(this).attr("data-strengths")));
+                    let weaknesses = JSON.parse(atob($(this).attr("data-weaknesses")));
+
+
 
                     $("#update_assessment_id").val(assessmentId);
                     $("#update_employee_id").val(employeeId);
@@ -332,15 +336,20 @@
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];
                         let alcName = alcNames[index];
-                        let description = (score >= 3) ? strengths[alcId] : weaknesses[
-                            alcId]; // Ambil deskripsi berdasarkan skor
+                        let description = (score >= 3) ? strengths[index] : weaknesses[index]; // FIXED
 
-                        // Tentukan apakah ALC ini masuk ke strength atau weakness
                         let type = score >= 3 ? "strength" : "weakness";
                         let containerId = type === "strength" ? "update-strengths-wrapper" :
                             "update-weaknesses-wrapper";
+                        console.log({
+                            scores,
+                            alcs,
+                            alcNames,
+                            strengths,
+                            weaknesses
+                        });
 
-                        // Tambahkan ALC sesuai dengan kategori yang sesuai
+
                         addAssessmentCard(type, containerId, alcId, description, alcName);
                     });
 
@@ -377,7 +386,7 @@
                     templateCard.innerHTML = `
                                 <div class="mb-3">
                                     <label>ALC</label>
-                                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
                                         <option value="">Pilih ALC</option>
                                         @foreach ($alcs as $alc)
                                             <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
@@ -492,17 +501,30 @@
                 }
 
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+                // $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                //     setTimeout(() => {
+                //         $(".modal-backdrop").remove(); // Hapus overlay modal update
+                //         $("body").removeClass("modal-open");
+
+                //         $("#detailAssessmentModal").modal("hide");
+
+                //         // Tambahkan overlay kembali untuk modal history
+                //         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+                //     }, 300);
+                // });
                 $("#updateAssessmentModal").on("hidden.bs.modal", function() {
                     setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal update
+                        // Tutup semua modal yang mungkin masih terbuka
+                        $(".modal").modal("hide");
+
+                        // Hapus semua backdrop
+                        $(".modal-backdrop").remove();
+
+                        // Hapus kelas modal-open dari body
                         $("body").removeClass("modal-open");
-
-                        $("#detailAssessmentModal").modal("show");
-
-                        // Tambahkan overlay kembali untuk modal history
-                        $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
                     }, 300);
                 });
+
 
 
                 // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====

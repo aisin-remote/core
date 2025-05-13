@@ -135,7 +135,7 @@
                 </div>
                 <div class="mb-3">
                     <label>Description</label>
-                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2" required></textarea>
+                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2" ></textarea>
                 </div>
             `;
 
@@ -249,28 +249,7 @@
                 }
             });
 
-            strengthDescriptions.forEach(textarea => {
-                if (!textarea.value.trim()) {
-                    isValid = false;
-                    textarea.classList.add('is-invalid');
-                } else {
-                    textarea.classList.remove('is-invalid');
-                }
-            });
 
-            weaknessDescriptions.forEach(textarea => {
-                if (!textarea.value.trim()) {
-                    isValid = false;
-                    textarea.classList.add('is-invalid');
-                } else {
-                    textarea.classList.remove('is-invalid');
-                }
-            });
-
-            if (!isValid) {
-                e.preventDefault();
-                alert('Harap isi semua field Strength dan Weakness dengan lengkap.');
-            }
         });
 
         updateDropdownOptions();

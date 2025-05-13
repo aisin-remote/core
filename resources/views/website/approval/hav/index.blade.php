@@ -103,18 +103,14 @@
                                 <td>{{ $item->employee->department?->name }}</td>
                                 <td>{{ $item->employee->grade }}</td>
                                 <td>
-                                    @if ($item->status == 0)
-                                        <span class="badge bg-warning">Pending</span>
-                                    @elseif ($item->status == 2)
-                                        <span class="badge bg-success">Approved</span>
-                                    @elseif ($item->status == 1)
-                                        <span class="badge bg-danger">Rejected</span>
-                                    @endif
+                                    @if ($item->hav_status == 0)
+                                    <span class="badge bg-warning fw-normal">Pending</span>
+                                @elseif ($item->hav_status == 2)
+                                    <span class="badge bg-success fw-normal">Approved</span>
+                                @elseif ($item->hav_status == 1)
+                                    <span class="badge bg-danger fw-normal">Rejected</span>
+                                @endif
                                 </td>
-                                <td>
-                                    STATUS: {{ $item->status }} | TYPE: {{ gettype($item->status) }}
-                                </td>
-
 
 
 
@@ -124,21 +120,17 @@
                                         class="btn btn-info btn-sm">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    <form action="{{ route('hav.approve', $item->id) }}" method="POST" class="d-inline">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="btn btn-success btn-sm">
-                                            <i class="fas fa-check"></i> Approve
-                                        </button>
-                                    </form>
+                                    @if ($item->hav_status == 0)
+                                    <!-- Tombol APPROVE -->
+                                    <button type="button" class="btn btn-success btn-sm" onclick="confirmApprove({{ $item->id }})">
+                                        <i class="fas fa-check"></i> Approve
+                                    </button>
 
-                                    <form action="{{ route('hav.reject', $item->id) }}" method="POST" class="d-inline ms-1">
-                                        @csrf
-                                        @method('PATCH')
-                                        <button type="submit" class="btn btn-danger btn-sm">
-                                            <i class="fas fa-times"></i> Reject
-                                        </button>
-                                    </form>
+                                    <!-- Tombol REJECT -->
+                                    <button type="button" class="btn btn-danger btn-sm ms-1" onclick="confirmReject({{ $item->id }})">
+                                        <i class="fas fa-times"></i> Reject
+                                    </button>
+                                @endif
 
                                 </td>
                             </tr>
@@ -152,43 +144,56 @@
 @endsection
 <!-- Pastikan jQuery & SweetAlert sudah terpasang -->
 <script>
-    function confirmApproval(id, action) {
-        const isApprove = action === 'approve';
-        const title = isApprove ? 'Setujui Data?' : 'Tolak Data?';
-        const text = isApprove
-            ? 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.'
-            : 'Data ini akan ditolak dan tidak akan diproses.';
-        const confirmButton = isApprove ? 'Ya, Setujui' : 'Ya, Tolak';
-        const successMessage = isApprove ? 'Data berhasil disetujui.' : 'Data berhasil ditolak.';
-        const url = isApprove ? `/hav/approve/${id}` : `/hav/reject/${id}`;
-
+    function confirmApprove(id) {
         Swal.fire({
-            title: title,
-            text: text,
-            icon: isApprove ? 'success' : 'warning',
+            title: 'Approve Data?',
+            input: 'textarea',
+            inputPlaceholder: 'Comment...',
             showCancelButton: true,
-            confirmButtonText: confirmButton,
-            cancelButtonText: 'Batal'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // Kirim ke server via AJAX
-                $.ajax({
-                    url: url,
+            confirmButtonText: 'Yes, Approve',
+            cancelButtonText: 'Cancel',
+            preConfirm: (comment) => {
+                return $.ajax({
+                    url: `/hav/approve/${id}`,
                     method: 'PATCH',
                     data: {
-                        _token: '{{ csrf_token() }}'
-                    },
-                    success: function () {
-                        Swal.fire('Berhasil!', successMessage, 'success')
-                            .then(() => {
-                                location.reload();
-                            });
-                    },
-                    error: function () {
-                        Swal.fire('Gagal!', 'Terjadi kesalahan saat memproses.', 'error');
+                        _token: '{{ csrf_token() }}',
+                        comment: comment
+
                     }
+                }).then(() => {
+                    Swal.fire('Berhasil!', 'Data berhasil disetujui.', 'success')
+                        .then(() => location.reload());
+                }).catch(() => {
+                    Swal.fire('Gagal!', 'Terjadi kesalahan saat menyimpan.', 'error');
                 });
             }
         });
     }
-    </script>
+
+    function confirmReject(id) {
+        Swal.fire({
+            title: 'Revise Data?',
+            input: 'textarea',
+            inputPlaceholder: 'Comment...',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, Revise',
+            cancelButtonText: 'Cancel',
+            preConfirm: (comment) => {
+                return $.ajax({
+                    url: `/hav/reject/${id}`,
+                    method: 'PATCH',
+                    data: {
+                        _token: '{{ csrf_token() }}'
+
+                    }
+                }).then(() => {
+                    Swal.fire('Berhasil!', 'Data berhasil direvisi.', 'success')
+                        .then(() => location.reload());
+                }).catch(() => {
+                    Swal.fire('Gagal!', 'Terjadi kesalahan saat menyimpan.', 'error');
+                });
+            }
+        });
+    }
+</script>
