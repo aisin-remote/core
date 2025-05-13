@@ -17,7 +17,7 @@ class RtcController extends Controller
         $employee = $user->employee;
 
         // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
-        if ($user->role === 'HRD' || $employee->position == 'Director') {
+        if ($user->role === 'HRD' || $employee->position == 'Direktur') {
             $table = 'Division';
             $divisions = Division::where('company', $company)->get();
             $employees = Employee::whereIn('position', ['Manager','Coordinator'])->get();
