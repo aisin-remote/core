@@ -129,7 +129,7 @@ class EmployeeController extends Controller
                       ->orWhere('position', 'like', "Act %{$filter}");
                 });
             })
-            
+
             ->paginate(10)
             ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
 
@@ -167,7 +167,7 @@ class EmployeeController extends Controller
                               ->orWhere('position', 'like', "Act %{$filter}");
                         });
                     }
-                    
+
 
                     // Paginate hasil
                     $employees = $query->paginate(10)->appends([
@@ -180,7 +180,7 @@ class EmployeeController extends Controller
                 }
             }
         }
-        
+
         $allPositions = [
             'Direktur',
             'GM',
@@ -453,7 +453,7 @@ class EmployeeController extends Controller
             })
             ->orderBy('date_end', 'desc') // Urut berdasarkan tanggal selesai terbaru
             ->get();
-            
+
         $externalTrainings = ExternalTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -641,7 +641,7 @@ class EmployeeController extends Controller
                     'act leader'       => 'leader',
                     'act jp'           => 'jp',
                     'act gm'           => 'gm',
-                ];                
+                ];
 
                 $promotionPaths = [
                     'operator' => ['leader' => ['clear' => 'sub_section_id']],
@@ -650,7 +650,7 @@ class EmployeeController extends Controller
                     'supervisor' => ['manager' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id']],
                     'manager'  => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
                     'gm'       => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
-                ];                
+                ];
 
                 $normalizePosition = function ($position) use ($positionAliasMap) {
                     $lower = strtolower($position);

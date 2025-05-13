@@ -23,11 +23,11 @@
                         <i class="fas fa-upload"></i>
                         Import
                     </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
+                    {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
                         data-bs-target="#kt_modal_create_app">
                         <i class="fas fa-upload"></i>
                         Import2
-                    </button>
+                    </button> --}}
                 </div>
             </div>
 
@@ -419,10 +419,10 @@
                             <td class="text-center">${hav.year}</td>
                             <td class="text-center">
                                 <a
-                                data-detail='${JSON.stringify(hav.details)}' 
-                                data-tahun='${hav.year}'  
-                                data-nama='${response.employee.name}' 
-                                data-employeeid='${response.employee.id}' 
+                                data-detail='${JSON.stringify(hav.details)}'
+                                data-tahun='${hav.year}'
+                                data-nama='${response.employee.name}'
+                                data-employeeid='${response.employee.id}'
                                 class="btn btn-info btn-sm btn-hav-detail" href="#">
                                     Detail
                                 </a>

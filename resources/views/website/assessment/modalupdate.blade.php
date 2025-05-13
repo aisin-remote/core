@@ -41,7 +41,8 @@
                                         @for ($i = 1; $i <= 5; $i++)
                                             <div class="form-check">
                                                 <input class="form-check-input update-score" type="radio"
-                                                    name="scores[{{ $alc->id }}]" id="update_score_{{ $alc->id }}_{{ $i }}"
+                                                    name="scores[{{ $alc->id }}]"
+                                                    id="update_score_{{ $alc->id }}_{{ $i }}"
                                                     value="{{ $i }}" required>
                                                 <label class="form-check-label"
                                                     for="update_score_{{ $alc->id }}_{{ $i }}">{{ $i }}</label>
@@ -74,22 +75,22 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         const updateForm = document.getElementById("updateAssessmentForm");
 
         // Event listener untuk form submit
-        updateForm.addEventListener("submit", function (event) {
+        updateForm.addEventListener("submit", function(event) {
             event.preventDefault(); // Mencegah halaman reload
 
             let formData = new FormData(updateForm); // Ambil semua data form
 
             fetch("/assessment/update", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    'Accept': 'application/json'
-                }
-            })
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                })
                 .then(response => response.json())
                 .then(data => {
                     if (data.message) { // Jika update berhasil
@@ -122,7 +123,7 @@
 
         // Load data ke modal saat tombol update diklik
         document.querySelectorAll(".updateAssessment").forEach(button => {
-            button.addEventListener("click", function () {
+            button.addEventListener("click", function() {
                 const id = this.dataset.id;
                 const employeeId = this.dataset.employeeId;
                 const date = this.dataset.date;
@@ -198,7 +199,7 @@
             templateCard.innerHTML = `
             <div class="mb-3">
                 <label>ALC</label>
-                <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                <select class="form-control alc-dropdown" name="${type}_alc_ids[]">
                     <option value="">Pilih ALC</option>
                     @foreach ($alcs as $alc)
                         <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
@@ -214,7 +215,7 @@
         `;
 
             let selectElement = templateCard.querySelector(".alc-dropdown");
-            selectElement.addEventListener("change", function () {
+            selectElement.addEventListener("change", function() {
                 updateDescriptionName(selectElement, type);
                 updateDropdownOptions();
             });
@@ -253,7 +254,7 @@
                             "me-2");
                         removeButton.textContent = "Hapus";
 
-                        removeButton.addEventListener("click", function () {
+                        removeButton.addEventListener("click", function() {
                             card.remove();
                             updateRemoveButtons(container);
                         });
@@ -264,7 +265,7 @@
             }
         }
 
-        $(document).on("change", ".update-score", function () {
+        $(document).on("change", ".update-score", function() {
             const radio = $(this);
             const idParts = radio.attr("id").split("_"); // e.g. update_score_3_4
             const alcId = idParts[2];
@@ -282,7 +283,8 @@
                 card = $(`#assessment_card_${alcId}`);
             } else {
                 // Card sudah ada → pindahkan dari wrapper lama ke wrapper baru
-                const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`).detach();
+                const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`)
+            .detach();
                 newWrapper.append(detachedCard);
                 card = detachedCard;
             }
@@ -306,7 +308,7 @@
             const alcId = select.val();
 
             // Contoh: Jika ALC untuk strength, dropdown hanya menampilkan ALC yang relevan
-            select.find("option").each(function () {
+            select.find("option").each(function() {
                 const option = $(this);
                 if (type === "strength" && option.val() !== alcId) {
                     option.prop("disabled", false); // ALC yang boleh dipilih
@@ -317,34 +319,36 @@
                 }
             });
         }
-        $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal update
-                        $("body").removeClass("modal-open");
+        $("#updateAssessmentModal").on("hidden.bs.modal", function () {
+    setTimeout(() => {
+        // Tutup semua modal yang mungkin masih terbuka
+        $(".modal").modal("hide");
 
-                        $("#detailAssessmentModal").modal("show");
+        // Hapus semua backdrop
+        $(".modal-backdrop").remove();
 
-                        // Tambahkan overlay kembali untuk modal history
-                        $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 300);
-                });
+        // Hapus kelas modal-open dari body
+        $("body").removeClass("modal-open");
+    }, 300);
+});
 
 
-                // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
-                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        if (!$("#updateAssessmentModal").hasClass("show")) {
-                            $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
-                            $("body").removeClass("modal-open");
-                        }
-                    }, 300);
-                });
 
-                // ===== CEGAH OVERLAY BERLAPIS =====
-                $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").last().css("z-index",
-                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
-                });
+        // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
+        $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+            setTimeout(() => {
+                if (!$("#updateAssessmentModal").hasClass("show")) {
+                    $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
+                    $("body").removeClass("modal-open");
+                }
+            }, 300);
+        });
+
+        // ===== CEGAH OVERLAY BERLAPIS =====
+        $(".modal").on("shown.bs.modal", function() {
+            $(".modal-backdrop").last().css("z-index",
+                1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+        });
 
 
 
