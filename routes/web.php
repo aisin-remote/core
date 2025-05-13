@@ -78,6 +78,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/{id}', [HavController::class, 'destroy'])->name('hav.destroy');
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
         Route::get('/history/{id}', [HavController::class, 'show'])->name('hav.show');
+        Route::get('/get3-last-performance/{id}/{year}', [HavController::class, 'get3LastPerformance'])->name('hav.get3LastPerformance');
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
         Route::patch('/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
         Route::patch('/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
@@ -90,8 +91,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
     Route::prefix('approval')->group(function () {
-        Route::get('/list-approval-HAV', [HavController::class, 'approval'])->name('hav.approval');
-        Route::get('/list-approval-IDP', [IdpController::class, 'approvalidp'])->name('idp.approvalidp');
+        Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
+        Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
     });
 
     Route::prefix('employee')->group(function () {
@@ -168,8 +169,8 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/summary', [RtcController::class, 'summary'])->name('rtc.summary');
+        Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/list', [RtcController::class, 'list'])->name('rtc.list');
         Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');

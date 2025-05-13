@@ -494,8 +494,8 @@
                     <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
 
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('approval/list-approval-IDP') ? 'active' : '' }}"
-                                href="#">
+                            <a class="menu-link {{ request()->is('approval/idp') ? 'active' : '' }}"
+                                href="{{ route('idp.approval') }}">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">IDP</span>
                             </a>
@@ -503,7 +503,7 @@
 
 
                         <!-- plant -->
-                        <a class="menu-link {{ request()->is('approval/list-approval-HAV') ? 'active' : '' }}"
+                        <a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
                             href="{{ route('hav.approval') }}">
                             {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                             <span class="menu-title ps-1">HAV</span>

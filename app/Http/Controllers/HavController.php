@@ -16,6 +16,7 @@ use App\Models\SubSection;
 use App\Models\HavQuadrant;
 
 use App\Models\KeyBehavior;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use Maatwebsite\Excel\Excel;
 use Illuminate\Support\Facades\DB;
@@ -26,7 +27,6 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Database\Events\TransactionBeginning;
-use Illuminate\Support\Str;
 
 
 class HavController extends Controller
@@ -473,13 +473,19 @@ class HavController extends Controller
      */
     public function import(Request $request)
     {
-        dd('ass');
         $request->validate([
             'file' => 'required|mimes:xlsx,xls',
         ]);
 
         try {
-            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport, $request->file('file'));
+            // Handle file upload here in the controller
+            $file = $request->file('file');
+            $fileName = 'hav_' . time() . '.' . $file->getClientOriginalExtension();
+            $filePath = $file->storeAs('public/hav_uploads', $fileName);
+
+            // Pass the file path to the import class
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport($filePath), $file);
+
             return back()->with('success', 'Import HAV berhasil.');
         } catch (\Throwable $e) {
             return back()->with('error', 'Gagal import: ' . $e->getMessage());
@@ -531,22 +537,22 @@ class HavController extends Controller
 
     }
     public function approve($id)
-{
-    $hav = Hav::findOrFail($id); // Langsung ambil berdasarkan ID HAV
-    $hav->status = 2;
-    $hav->save();
+    {
+        $hav = Hav::findOrFail($id); // Langsung ambil berdasarkan ID HAV
+        $hav->status = 2;
+        $hav->save();
 
-    return redirect()->back()->with('success', 'HAV berhasil disetujui.');
-}
+        return redirect()->back()->with('success', 'HAV berhasil disetujui.');
+    }
 
-public function reject($id)
-{
-    $hav = Hav::findOrFail($id);
-    $hav->status = 1;
-    $hav->save();
+    public function reject($id)
+    {
+        $hav = Hav::findOrFail($id);
+        $hav->status = 1;
+        $hav->save();
 
-    return redirect()->back()->with('success', 'HAV berhasil ditolak.');
-}
+        return redirect()->back()->with('success', 'HAV berhasil ditolak.');
+    }
 
 
     /**
@@ -576,6 +582,26 @@ public function reject($id)
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
+    public function get3LastPerformance($id, $year)
+    {
+        $performanceAppraisals = Employee::getLast3Performance($id, $year);
+        if ($performanceAppraisals->isEmpty()) {
+            return response()->json([
+                'error' => true,
+                'msg' => 'No performance appraisals found for this employee'
+            ], 404);
+        }
+        return response()->json([
+            'performanceAppraisals' => $performanceAppraisals
+        ]);
+    }
+
+    /**
+     * Show the form for editing the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
     public function edit($id)
     {
         //
@@ -589,6 +615,15 @@ public function reject($id)
      */
     public function destroy($id)
     {
-        //
+        $hav = Hav::findOrFail($id);
+
+        HavDetail::where('hav_id', $id)->delete();
+
+        $hav->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Hav berhasil dihapus.'
+        ]);
     }
 }

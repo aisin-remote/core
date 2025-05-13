@@ -71,7 +71,7 @@
                             <th>Employee Name</th>
                             <th>Company</th>
                             <th>Position</th>
-                            <th>Department</th>
+                            <th>Department</th> {{-- Tetap static --}}
                             <th>Grade</th>
                             <th>Age</th>
                             <th class="text-center">Actions</th>
@@ -79,9 +79,15 @@
                     </thead>
                     <tbody>
                         @forelse ($employees as $index => $employee)
+                            @php
+                                $unit = match ($employee->position) {
+                                    'Direktur' => $employee->plant?->name,
+                                    'GM', 'Act GM' => $employee->division?->name,
+                                    default => $employee->department?->name,
+                                };
+                            @endphp
                             <tr data-position="{{ $employee->position }}">
                                 <td>{{ $employees->firstItem() + $index }}</td>
-
                                 <td class="text-center">
                                     <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
@@ -91,7 +97,7 @@
                                 <td>{{ $employee->name }}</td>
                                 <td>{{ $employee->company_name }}</td>
                                 <td>{{ $employee->position }}</td>
-                                <td>{{ $employee->department?->name }}</td>
+                                <td>{{ $unit }}</td> {{-- Dinamis berdasarkan posisi --}}
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-center">

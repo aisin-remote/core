@@ -37,7 +37,7 @@ class Employee extends Model
 
     public function user()
     {
-        return $this->hasOne(User::class, 'employee_id', 'id');
+        return $this->belongsTo(User::class,'user_id');
     }
 
     public function promotionHistory()
@@ -240,19 +240,15 @@ class Employee extends Model
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
-
         } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
             $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
-
         } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
             $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-
         } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
             $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-
         } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
             $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
                 ->where('id', '!=', $employee->id)
@@ -322,7 +318,7 @@ class Employee extends Model
         if ($employee->leadingDivision && $employee->leadingDivision->plant && $employee->leadingDivision->plant->director_id) {
             return Employee::find($employee->leadingDivision->plant->director_id);
         }
-        
+
         if ($employee->leadingDepartment && $employee->leadingDepartment->division && $employee->leadingDepartment->division->gm_id) {
             return Employee::find($employee->leadingDepartment->division->gm_id);
         }
@@ -338,7 +334,7 @@ class Employee extends Model
         if ($employee->subSection && $employee->subSection->leader_id) {
             return Employee::find($employee->subSection->leader_id);
         }
-        
+
         // Fallback manual berdasarkan posisi
         $map = self::manualSuperiorMap();
         $myPosition = strtolower($employee->position);
@@ -359,7 +355,7 @@ class Employee extends Model
             default => 0,
         };
     }
-    
+
     public function getFirstApproval()
     {
         return match (strtolower($this->position)) {
@@ -376,5 +372,26 @@ class Employee extends Model
             default => 0,
         };
     }
-    
+
+    // Get average from 3 last performance appraisal history by employee_id
+    public static function getLast3Performance($employee_id, $year)
+    {
+        $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
+            ->whereIn(\DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
+            ->get();
+
+        return $performance;
+    }
+
+    // astra grade conversion
+    public function conversion()
+    {
+        return $this->hasOne(GradeConversion::class, 'aisin_grade', 'grade');
+    }
+
+    public function getAstraGradeAttribute()
+    {
+        $conversion = $this->conversion;
+        return $conversion ? $conversion->astra_grade : null;
+    }
 }

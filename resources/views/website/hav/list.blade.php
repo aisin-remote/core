@@ -14,19 +14,20 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">HAV List</h3>
                 <div class="d-flex align-items-center">
-                    <form method="GET" class="d-flex align-items-center">
-                        <input type="text" name="search" value="{{ request('search') }}" class="form-control me-2"
-                            placeholder="Search Employee..." style="width: 200px;">
-                        <input type="hidden" name="filter" value="{{ $filter }}">
-                        <button type="submit" class="btn btn-primary me-3">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                        <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
-                            data-bs-target="#importModal">
-                            <i class="fas fa-upload"></i>
-                            Import
-                        </button>
-                    </form>
+                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
+                        style="width: 200px;">
+                    <button type="button" class="btn btn-primary me-3" id="searchButton">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-upload"></i>
+                        Import
+                    </button>
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
+                        data-bs-target="#kt_modal_create_app">
+                        <i class="fas fa-upload"></i>
+                        Import2
+                    </button>
                 </div>
             </div>
 
@@ -143,7 +144,7 @@
                         <div class="alert alert-info small">
                             <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
                             Download template format import:
-                            <a href="{{ asset('/file/Import-HAV.xlsx') }}" target="_blank"
+                            <a href="{{ Storage::url('Import-HAV.xlsx') }}" target="_blank"
                                 class="fw-bold text-primary text-decoration-underline">Download Template</a>
                         </div>
 
@@ -157,7 +158,7 @@
         </div>
     </div>
 
-    <div class="modal fade" id="kt_modal_create_app" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="havDetail" tabindex="-1" aria-hidden="true">
         <!--begin::Modal dialog-->
         <div class="modal-dialog modal-dialog-centered mw-900px">
             <!--begin::Modal content-->
@@ -280,20 +281,7 @@
                                                         <th>Score</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody>
-                                                    <tr>
-                                                        <td>2022</td>
-                                                        <td>B+</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>2023</td>
-                                                        <td>B+</td>
-                                                    </tr>
-                                                    <tr>
-                                                        <td>2024</td>
-                                                        <td>B+</td>
-                                                    </tr>
-
+                                                <tbody id="performanceBody">
                                                 </tbody>
                                             </table>
                                         </div>
@@ -302,6 +290,51 @@
                                 </div>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Modal -->
+    <div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History Assessment</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <h1 class="text-center mb-4 fw-bold">History HAV</h1>
+
+                    <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
+                        <div class="col-auto">
+                            <p class="fs-5 fw-bold"><strong>NPK:</strong><span id="npkText"></span></p>
+                        </div>
+                        <div class="col-auto">
+                            <p class="fs-5 fw-bold"><strong>Position:</strong> <span id="positionText"></span></p>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-striped table-bordered align-middle table-hover fs-6"
+                            id="kt_table_assessments" width="100%">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center" width="10%">No</th>
+                                    <th class="text-center">Quadran</th>
+                                    <th class="text-center">Date</th>
+                                    <th class="text-center" width="40%">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -322,6 +355,29 @@
 
     <!-- DataTables JS -->
     <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
+    @if (session('success'))
+        <script>
+            Swal.fire({
+                icon: 'success',
+                title: 'Success!',
+                text: '{{ session('success') }}',
+                confirmButtonText: 'Ok'
+            });
+        </script>
+    @endif
+
+    @if (session('error'))
+        <script>
+            console.log("Error session:", '{{ session('error') }}'); // Debugging
+            Swal.fire({
+                icon: 'error',
+                title: 'Oops...',
+                text: '{{ session('error') }}',
+                confirmButtonText: 'Ok'
+            });
+        </script>
+    @endif
+
     <script>
         $(document).ready(function() {
             $(document).on("click", ".history-btn", function(event) {
@@ -363,18 +419,19 @@
                             <td class="text-center">${hav.year}</td>
                             <td class="text-center">
                                 <a
-                                data-detail='${JSON.stringify(hav.details)}'
-                                data-tahun='${hav.year}'
-                                data-nama='${response.employee.name}'
+                                data-detail='${JSON.stringify(hav.details)}' 
+                                data-tahun='${hav.year}'  
+                                data-nama='${response.employee.name}' 
+                                data-employeeid='${response.employee.id}' 
                                 class="btn btn-info btn-sm btn-hav-detail" href="#">
                                     Detail
                                 </a>
                               ${`<a class="btn btn-primary btn-sm"
-                                                    target="_blank"
-                                                    href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
-                                                    onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                    Revise
-                                                </a>`}
+                                                            target="_blank"
+                                                            href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
+                                                            onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                            Revise
+                                                        </a>`}
 
 
 
@@ -406,12 +463,45 @@
             $(document).on("click", ".btn-hav-detail", function() {
                 event.preventDefault();
 
-                // Ambil data dari atribut data-upload
 
                 const havDetails = $(this).data("detail");
+                const employee_id = $(this).data("employeeid");
                 const year = $(this).data("tahun");
                 const nama = $(this).data("nama");
                 $(`#nameTitle`).text(nama + ' - ' + year);
+                console.log("Employee ID:", employee_id); // Debug
+
+                // Ambil data dari atribut data-upload
+                let url = "{{ url('/hav/get3-last-performance') }}/" + employee_id + "/" + year;
+                $.ajax({
+                    url: url,
+                    type: "GET",
+                    processData: false,
+                    contentType: false,
+                    success: function(response) {
+                        console.log("Response received:", response);
+                        // Debug respons
+                        let rows = '';
+                        response.performanceAppraisals.forEach(function(item) {
+                            rows += `
+                                        <tr>
+                                            <td>${new Date(item.date).getFullYear()}</td>
+                                            <td>${item.score}</td>
+                                        </tr>
+                                    `;
+                        });
+                        $('#performanceBody').html(rows);
+                    },
+                    error: function(xhr, status, error) {
+                        rows = `
+                                <tr>
+                                    <td colspan="2" class="text-center text-muted">No performance data found</td>
+                                </tr>
+                            `;
+                        $('#performanceBody').html(rows);
+                    }
+                });
+
 
                 // Cek apakah data ada
                 if (havDetails) {
@@ -464,55 +554,54 @@
                     1050); // Atur overlay agar tidak bertumpuk terlalu tebal
             });
 
-        });
+            $(document).on("click", ".delete-btn", function() {
+                let assessmentId = $(this).data("id");
+                console.log("ID yang akan dihapus:", assessmentId); // Debugging
 
-        function rejectAction() {
-            Swal.fire({
-                title: 'Revisi Note?',
-                input: 'textarea',
-                inputLabel: 'Alasan Revisi',
-                inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
-                inputAttributes: {
-                    'aria-label': 'Catatan Revisi'
-                },
-                showCancelButton: true,
-                confirmButtonText: 'Revisi',
-                cancelButtonText: 'Batal',
-                inputValidator: (value) => {
-                    if (!value) {
-                        return 'Catatan wajib diisi untuk Revisi!';
+                if (!assessmentId) {
+                    console.error("ID Hav tidak ditemukan!");
+                    return;
+                }
+
+                Swal.fire({
+                    title: "Apakah Anda yakin?",
+                    text: "Data Hav ini akan dihapus secara permanen!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Ya, Hapus!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        console.log("Mengirim request DELETE untuk ID:", assessmentId); // Debugging
+
+                        fetch(`/hav/${assessmentId}`, {
+                                method: "DELETE",
+                                headers: {
+                                    "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr(
+                                        "content"),
+                                    "Content-Type": "application/json"
+                                }
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                console.log("Response dari server:", data); // Debugging
+
+                                if (data.success) {
+                                    Swal.fire("Terhapus!", data.message, "success")
+                                        .then(() => location.reload());
+                                } else {
+                                    Swal.fire("Error!", "Gagal menghapus data!", "error");
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error saat menghapus:", error);
+                                Swal.fire("Error!", "Terjadi kesalahan!", "error");
+                            });
                     }
-                }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire(
-                        'Revisi!',
-                        'Note: ' + result.value,
-                        'error'
-                    );
-                    // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
-                }
+                });
             });
-        }
 
-        function approve() {
-            Swal.fire({
-                title: "Are you sure?",
-                text: "",
-                icon: "warning",
-                showCancelButton: true,
-                confirmButtonColor: "#3085d6",
-                cancelButtonColor: "#d33",
-                confirmButtonText: "Yes, Approve it!"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({
-                        title: "Approved!",
-                        text: "HAV has been approved.",
-                        icon: "success"
-                    });
-                }
-            });
-        }
+        });
     </script>
 @endpush

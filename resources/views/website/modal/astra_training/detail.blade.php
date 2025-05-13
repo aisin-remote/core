@@ -23,7 +23,8 @@
                             <tbody class="text-gray-700">
                                 @foreach ($astraTrainings as $training)
                                     <tr>
-                                        <td class="text-center">{{ $training->year }}</td>
+                                        <td class="text-center">
+                                            {{ \Carbon\Carbon::parse($training->date_end)->format('Y') }}</td>
                                         <td class="text-center">{{ $training->program }}</td>
                                         <td class="text-center">{{ $training->ict_score }}</td>
                                         <td class="text-center">{{ $training->project_score }}</td>

@@ -69,7 +69,7 @@
                                                 class="btn btn-sm btn-primary" title="Detail">
                                                 <i class="fas fa-info-circle"></i>
                                             </a>
-                                            <a href="{{ route('rtc.summary', ['id' => $division->id]) }}"
+                                            <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
                                                 class="btn btn-sm btn-info" title="View">
                                                 <i class="fas fa-eye"></i>
                                             </a>
