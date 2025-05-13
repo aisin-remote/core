@@ -346,32 +346,54 @@ class Employee extends Model
         return null;
     }
 
+    public function getNormalizedPosition()
+    {
+        $aliasMap = [
+            'section head'     => 'supervisor',
+            'act section head' => 'supervisor',
+            'coordinator'      => 'manager',
+            'act coordinator'  => 'manager',
+            'act manager'      => 'manager',
+            'act supervisor'   => 'supervisor',
+            'act leader'       => 'leader',
+            'act jp'           => 'jp',
+            'act gm'           => 'gm',
+            'direktur'         => 'direktur',
+            'director'         => 'direktur'
+        ];
+
+        $position = strtolower($this->position);
+        return $aliasMap[$position] ?? $position;
+    }
+
     // mapping create authorization
     public function getCreateAuth()
     {
-        return match (strtolower($this->position)) {
+        return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 2,
-            'supervisor', 'manager', 'gm', 'section head' => 1,
+            'supervisor', 'manager', 'gm' => 1,
             default => 0,
         };
     }
 
     public function getFirstApproval()
     {
-        return match (strtolower($this->position)) {
+        return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 3,
             'supervisor', 'manager', 'gm' => 2,
             default => 0,
         };
     }
+
     public function getFinalApproval()
     {
-        return match (strtolower($this->position)) {
+        return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 4,
             'supervisor', 'manager', 'gm' => 3,
             default => 0,
         };
     }
+
 
     // Get average from 3 last performance appraisal history by employee_id
     public static function getLast3Performance($employee_id, $year)

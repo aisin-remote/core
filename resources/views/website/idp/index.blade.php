@@ -191,7 +191,7 @@
                                                             </button>
                                                         @endif
                                                         <button type="button" class="btn btn-sm btn-warning"
-                                                            onclick="sendDataConfirmation()">
+                                                            onclick="sendDataConfirmation({{ $assessment->employee->id }})">
                                                             <i class="fas fa-paper-plane"></i>
                                                         </button>
 
@@ -234,7 +234,9 @@
 
             @foreach ($assessments as $assessment)
                 @if (isset($assessment->employee))
-                    @php $employee = $assessment->employee; @endphp
+                    @php
+                        $employee = $assessment->employee;
+                    @endphp
                     @foreach ($alcs as $id => $title)
                         <div class="modal fade" id="kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
                             tabindex="-1" style="display: none;" aria-modal="true" role="dialog">
@@ -248,6 +250,7 @@
                                     </div>
 
                                     @php
+                                        set_time_limit(60);
                                         // Mengambil data IDP berdasarkan assessment_id dan alc_id
                                         $idp = DB::table('idp')
                                             ->where('assessment_id', $assessment->id)
@@ -260,11 +263,21 @@
                                                 'date',
                                             )
                                             ->first();
+
+                                        $assessment_detail_id = null;
+                                        foreach ($assessment->details as $detail) {
+                                            if ($idp) {
+                                                if ($detail->assesment_id == $idp?->id) {
+                                                    $assessment_detail_id = $details->id;
+                                                }
+                                            }
+                                        }
+
                                     @endphp
 
                                     <div class="modal-body scroll-y mx-2 mt-5">
                                         <input type="hidden" name="employee_id" value="{{ $assessment->id }}">
-                                        <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
+                                        <input type="hidden" name="assessment_id" value="{{ $assessment_detail_id }}">
                                         <input type="hidden" name="alc_id"
                                             id="alc_id_{{ $assessment->id }}_{{ $id }}"
                                             value="{{ $id }}">
@@ -1020,31 +1033,10 @@
                     });
                 });
 
-                function sendDataConfirmation() {
-                    Swal.fire({
-                        title: 'Kirim Data?',
-                        text: "Data akan dikirim ke atasan untuk ditindaklanjuti.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'Ya, Kirim!',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            Swal.fire(
-                                'Terkirim!',
-                                'Data berhasil dikirim ke atasan.',
-                                'success'
-                            )
-                            // TODO: Tambahkan AJAX atau redirect ke route pengiriman di sini
-                        }
-                    })
-                }
+                // const employeeId = "{{ $employees->first()->id }}"; // pastikan $employee dikirim dari controller
+                // alert(employeeId);
 
-                const employeeId = "{{ $employees->first()->id }}"; // pastikan $employee dikirim dari controller
-
-                function sendDataConfirmation() {
+                function sendDataConfirmation(employeeId) {
                     Swal.fire({
                         title: 'Kirim IDP ke atasan?',
                         text: 'Pastikan semua ALC bernilai < 3 sudah dibuat.',

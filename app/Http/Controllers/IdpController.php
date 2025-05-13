@@ -131,7 +131,7 @@ class IdpController extends Controller
                 $assessments = collect(); // Kosong jika tidak ada employee
             } else {
                 // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-                $viewLevel = $employee->getSubAuth();
+                $viewLevel = $employee->getCreateAuth();
                 $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
                 
                 // Ambil assessment terbaru hanya milik bawahannya
@@ -215,13 +215,6 @@ class IdpController extends Controller
 
     public function store(Request $request)
     {
-        // $request->validate([
-        //     'development_program' => 'required|array',
-        //     'category' => 'required|array',
-        //     'development_target' => 'required',
-        //     'date' => 'required',
-        // ]);
-
         $assessment = Assessment::where('id', $request->assessment_id)->first();
 
         try {
@@ -512,54 +505,89 @@ class IdpController extends Controller
 
     public function sendIdpToSupervisor(Request $request)
     {
-        $employeeId = $request->input('employee_id');
+        try {
+            $employeeId = $request->input('employee_id');
 
-        if (!$employeeId) {
-            return response()->json(['message' => 'Employee ID tidak valid.'], 400);
+            if (!$employeeId) {
+                return response()->json(['message' => 'Employee ID tidak valid.'], 400);
+            }
+
+            // Ambil semua detail assessment ALC untuk employee
+            $detailAssessments = DetailAssessment::whereHas('assessment', function ($query) use ($employeeId) {
+                $query->where('employee_id', $employeeId);
+            })->whereHas('alc')->get();
+
+            if ($detailAssessments->isEmpty()) {
+                return response()->json(['message' => 'Fitur ini belum dijadwalkan untuk pengembangan.'], 400);
+            }
+
+            // Filter nilai < 3
+            $belowThree = $detailAssessments->filter(function ($detail) {
+                return $detail->score < 3;
+            });
+
+            if ($belowThree->isEmpty()) {
+                return response()->json(['message' => 'Tidak ada ALC dengan nilai di bawah 3.'], 400);
+            }
+
+            // Pastikan semua ALC < 3 sudah dinilai (dihitung berdasarkan jumlah unik ALC)
+            $alcIdsBelowThree = $belowThree->pluck('alc_id')->unique();
+
+            $totalExpected = $alcIdsBelowThree->count();
+            $totalActual = DetailAssessment::whereIn('alc_id', $alcIdsBelowThree)
+                ->whereHas('assessment', function ($q) use ($employeeId) {
+                    $q->where('employee_id', $employeeId);
+                })->count();
+
+            if ($totalActual < $totalExpected) {
+                return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat.'], 400);
+            }
+
+            // Update semua IDP milik employee menjadi status = 2
+            IDP::with('assessment')
+                ->whereHas('assessment', function ($q) use ($employeeId){
+                    $q->where('employee_id', $employeeId);
+                })
+                ->update([
+                    'status' => 2
+                ]);
+
+            return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat mengirim IDP. Silakan coba lagi.',
+                'error' => $e->getMessage(), // Boleh dihapus di production
+            ], 500);
         }
-
-        // Ambil semua detail assessment ALC untuk employee
-        $detailAssessments = DetailAssessment::whereHas('assessment', function ($query) use ($employeeId) {
-            $query->where('employee_id', $employeeId);
-        })->whereHas('alc')->get();
-
-        if ($detailAssessments->isEmpty()) {
-            return response()->json(['message' => 'Belum ada data ALC yang dinilai.'], 400);
-        }
-
-        // Filter nilai < 3
-        $belowThree = $detailAssessments->filter(function ($detail) {
-            return $detail->score < 3;
-        });
-
-        if ($belowThree->isEmpty()) {
-            return response()->json(['message' => 'Tidak ada ALC dengan nilai di bawah 3.'], 400);
-        }
-
-        // Pastikan semua ALC < 3 sudah dinilai (dihitung berdasarkan jumlah unik ALC)
-        $alcIdsBelowThree = $belowThree->pluck('alc_id')->unique();
-
-        $totalExpected = $alcIdsBelowThree->count();
-        $totalActual = DetailAssessment::whereIn('alc_id', $alcIdsBelowThree)
-            ->whereHas('assessment', function ($q) use ($employeeId) {
-                $q->where('employee_id', $employeeId);
-            })->count();
-
-        if ($totalActual < $totalExpected) {
-            return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat.'], 400);
-        }
-
-        // Update semua IDP milik employee menjadi status = 2
-        IDP::where('employee_id', $employeeId)
-            ->update([
-                'status' => 2
-            ]);
-
-        return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
     }
+
     
     public function approval()
     {
-        return view('website.approval.idp.index');
+        $user = auth()->user();
+        $employee = $user->employee;
+        
+        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
+        $viewLevel = $employee->getFirstApproval();
+        $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
+
+        $idps = Idp::with('assessment.employee', 'assessment.details')
+                ->where('status', 2)
+                ->whereHas('assessment.employee', function ($q) use ($subordinates) {
+                    $q->whereIn('employee_id', $subordinates); // Menggunakan whereIn jika $subordinates adalah array
+                })
+                ->get();
+        
+        return view('website.approval.idp.index', compact('idps'));
+    }
+    public function approve($id)
+    {
+        $idp = Idp::findOrFail($id);
+        $idp->status = 3;
+        $idp->save();
+        
+        return response()->json([
+            'message' => 'Employee approved successfully.'
+        ]);
     }
 }

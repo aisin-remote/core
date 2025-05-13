@@ -309,8 +309,12 @@
                         @endif
 
                         {{-- RTC --}}
+                        @php
+                            $normalized = strtolower(auth()->user()->employee->getNormalizedPosition());
+                            $allowedPositions = ['gm', 'direktur'];
+                        @endphp
                         @if (auth()->user()->role == 'User')
-                            @if (auth()->user()->employee->position == 'GM' || auth()->user()->employee->position == 'Director')
+                            @if (in_array($normalized, $allowedPositions))
                                 <div class="menu-item">
                                     <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
                                         {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
@@ -481,7 +485,11 @@
             @endif
 
             {{-- approve --}}
-            @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
+            @php
+                $normalized = strtolower(auth()->user()->employee->getNormalizedPosition());
+                $allowedPositions = ['manager', 'gm', 'direktur'];
+            @endphp
+            @if (in_array($normalized, $allowedPositions))
                 <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                     id="menu-approval">
                     <span class="menu-link">
