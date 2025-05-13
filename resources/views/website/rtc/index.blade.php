@@ -65,7 +65,7 @@
                                         $file = null;
                                         if ($division->name == 'PRODUCTION & ELECTRIC') {
                                             $file = 'rtc_prod.xlsx';
-                                        } elseif ($division->name == 'Engineering') {
+                                        } elseif ($division->name == 'ENGINEERING') {
                                             $file = 'rtc_eng.xlsx';
                                         }
                                     @endphp
