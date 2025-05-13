@@ -61,6 +61,14 @@
                             </thead>
                             <tbody>
                                 @forelse ($divisions as $division)
+                                    @php
+                                        $file = null;
+                                        if ($division->name == 'PRODUCTION & ELECTRIC') {
+                                            $file = 'rtc_prod.xlsx';
+                                        } elseif ($division->name == 'Engineering') {
+                                            $file = 'rtc_eng.xlsx';
+                                        }
+                                    @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $division->name }}</td>
@@ -78,7 +86,8 @@
                                                 data-bs-target="#addPlanModal">
                                                 <i class="fas fa-plus-circle"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-warning" title="Export">
+                                            <a href="{{ asset($file) }}" class="btn btn-sm btn-warning" title="Export"
+                                                download>
                                                 <i class="fas fa-upload"></i>
                                             </a>
                                         </td>
