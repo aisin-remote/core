@@ -1140,6 +1140,8 @@
                 $('#subsection-group, #section-group, #department-group, #division-group, #plant-group').addClass(
                     'd-none');
 
+                console.log(position);
+
                 if (['Operator', 'Act JP', 'Act Leader'].includes(position)) {
                     $('#subsection-group').removeClass('d-none');
                 } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(
