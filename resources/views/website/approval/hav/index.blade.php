@@ -20,11 +20,11 @@
                         <button type="submit" class="btn btn-primary me-3">
                             <i class="fas fa-search"></i> Search
                         </button>
-                        <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
+                        {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
                             data-bs-target="#importModal">
                             <i class="fas fa-upload"></i>
                             Import
-                        </button>
+                        </button> --}}
                     </form>
                 </div>
             </div>
@@ -108,11 +108,9 @@
                                 @elseif ($item->hav_status == 2)
                                     <span class="badge bg-success fw-normal">Approved</span>
                                 @elseif ($item->hav_status == 1)
-                                    <span class="badge bg-danger fw-normal">Rejected</span>
+                                    <span class="badge bg-danger fw-normal">Revise</span>
                                 @endif
                                 </td>
-
-
 
                                 <td class="text-center">
                                     {{-- Summary --}}
@@ -128,7 +126,7 @@
 
                                     <!-- Tombol REJECT -->
                                     <button type="button" class="btn btn-danger btn-sm ms-1" onclick="confirmReject({{ $item->id }})">
-                                        <i class="fas fa-times"></i> Reject
+                                        <i class="fas fa-times"></i> Revise
                                     </button>
                                 @endif
 
@@ -184,7 +182,8 @@
                     url: `/hav/reject/${id}`,
                     method: 'PATCH',
                     data: {
-                        _token: '{{ csrf_token() }}'
+                        _token: '{{ csrf_token() }}',
+                        comment: comment
 
                     }
                 }).then(() => {
