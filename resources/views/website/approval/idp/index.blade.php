@@ -56,6 +56,7 @@
                         @forelse($groupedIdps as $employeeId => $employeeIdps)
                             @php
                                 $employee = $employeeIdps->first()->assessment->employee;
+                                dd($groupedIdps);
                             @endphp
                             <tr>
                                 <td>{{ $no++ }}</td>
@@ -64,8 +65,11 @@
                                 <td>{{ $employee->department?->name ?? '-' }}</td>
                                 <td>{{ $employee->position ?? '-' }}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-warning btn-revise">
+                                    <button class="btn btn-sm btn-danger btn-revise">
                                         <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-warning btn-export">
+                                        <i class="fas fa-upload"></i>
                                     </button>
                                     <button class="btn btn-sm btn-info btn-toggle-accordion"
                                         data-employee-id="{{ $employeeId }}" data-bs-target="#collapse{{ $employeeId }}"

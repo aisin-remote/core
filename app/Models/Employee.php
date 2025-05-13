@@ -371,7 +371,7 @@ class Employee extends Model
     {
         return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 2,
-            'supervisor', 'manager', 'gm' => 1,
+            'supervisor', 'manager', 'gm', 'direktur' => 1,
             default => 0,
         };
     }
