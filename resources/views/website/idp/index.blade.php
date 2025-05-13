@@ -342,11 +342,11 @@
                                                                 {{ $comment->employee->name ?? 'Unknown Employee' }}
                                                                 —
                                                                 <small class="text-muted">
-                                                                    {{ \Carbon\Carbon::parse($comment->first()->created_at)->format('d M Y H:i') }}
+                                                                    {{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}
                                                                 </small>
                                                             </div>
                                                             <div class="text-muted fst-italic">
-                                                                {{ $comment->first()->comment }}
+                                                                {{ $comment->comment }}
                                                             </div>
                                                         </div>
                                                     @endforeach
