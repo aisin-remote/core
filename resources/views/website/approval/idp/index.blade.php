@@ -56,7 +56,6 @@
                         @forelse($groupedIdps as $employeeId => $employeeIdps)
                             @php
                                 $employee = $employeeIdps->first()->assessment->employee;
-                                dd($groupedIdps);
                             @endphp
                             <tr>
                                 <td>{{ $no++ }}</td>
@@ -68,12 +67,14 @@
                                     <button class="btn btn-sm btn-danger btn-revise">
                                         <i class="fas fa-edit"></i>
                                     </button>
-                                    <button class="btn btn-sm btn-warning btn-export">
+                                    <button class="btn btn-sm btn-warning btn-export"
+                                        onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $employee->id]) }}'">
                                         <i class="fas fa-upload"></i>
                                     </button>
                                     <button class="btn btn-sm btn-info btn-toggle-accordion"
-                                        data-employee-id="{{ $employeeId }}" data-bs-target="#collapse{{ $employeeId }}"
-                                        aria-expanded="false" aria-controls="collapse{{ $employeeId }}">
+                                        data-employee-id="{{ $employeeId }}"
+                                        data-bs-target="#collapse{{ $employeeId }}" aria-expanded="false"
+                                        aria-controls="collapse{{ $employeeId }}">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </td>
