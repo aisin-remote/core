@@ -332,7 +332,7 @@
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Astra Grade</label>
-                                                    <input readonly type="text" name="grade"
+                                                    <input readonly type="text"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Grade" value="{{ $employee->astra_grade }}">
                                                 </div>
