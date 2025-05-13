@@ -586,15 +586,15 @@ class EmployeeController extends Controller
             $oldPosition = $employee->position;
 
             $validatedData = $request->validate([
-                'npk' => 'required|string|max:255|unique:employees,npk,' . $employee->id,
-                'name' => 'required|string|max:255',
-                'birthday_date' => 'required|date',
-                'gender' => 'required|in:Male,Female',
-                'company_name' => 'required|string',
-                'aisin_entry_date' => 'required|date',
-                'company_group' => 'required|string',
-                'position' => 'required|string',
-                'grade' => 'required|string',
+                'npk' => 'nullable|string|max:255|unique:employees,npk,' . $employee->id,
+                'name' => 'nullable|string|max:255',
+                'birthday_date' => 'nullable|date',
+                'gender' => 'nullable|in:Male,Female',
+                'company_name' => 'nullable|string',
+                'aisin_entry_date' => 'nullable|date',
+                'company_group' => 'nullable|string',
+                'position' => 'nullable|string',
+                'grade' => 'nullable|string',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
                 'plant_id' => 'nullable|exists:plants,id',

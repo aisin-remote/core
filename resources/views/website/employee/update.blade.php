@@ -212,7 +212,7 @@
                                                                 'Act Leader' => 'Act Leader',
                                                                 'Act JP' => 'Act JP',
                                                                 'Operator' => 'Operator',
-                                                                'Director' => 'Director',
+                                                                'Direktur' => 'Direktur',
                                                             ];
                                                         @endphp
                                                         @foreach ($positions as $value => $label)
@@ -1149,7 +1149,7 @@
                     $('#department-group').removeClass('d-none');
                 } else if (['GM', 'Act GM']) {
                     $('#division-group').removeClass('d-none');
-                } else if (position === 'Director') {
+                } else if (position === 'Direktur') {
                     $('#plant-group').removeClass('d-none');
                 }
             }
