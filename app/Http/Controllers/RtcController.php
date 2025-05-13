@@ -16,6 +16,10 @@ class RtcController extends Controller
         $user = auth()->user();
         $employee = $user->employee;
 
+        if($company == null){
+            $company = $user->employee->company_name;
+        }
+
         // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
         if ($user->role === 'HRD' || $employee->position == 'Direktur') {
             $table = 'Division';
