@@ -23,11 +23,6 @@
                         <i class="fas fa-upload"></i>
                         Import
                     </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
-                        data-bs-target="#kt_modal_create_app">
-                        <i class="fas fa-upload"></i>
-                        Import2
-                    </button>
                 </div>
             </div>
 
@@ -103,18 +98,10 @@
                     <h5 class="modal-title" id="commentHistoryModalLabel">Comment History</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
                 </div>
+                
                 <div class="modal-body">
-                    <!-- Ganti bagian ini sesuai kebutuhan -->
                     <ul class="list-group" id="commentList">
-                        <li class="list-group-item">
-                            <strong>Dedi:</strong> Dokumen kurang lengkap
-                            <br><small class="text-muted">01 Mei 2025 - 10:15</small>
-                        </li>
-                        <li class="list-group-item">
-                            <strong>Aristoni:</strong> Dokumen tidak terbaca.
-                            <br><small class="text-muted">02 Mei 2025 - 14:22</small>
-                        </li>
-                        <!-- Tambahan komentar lain -->
+                        <!-- Comments will be dynamically loaded here -->
                     </ul>
                 </div>
             </div>
@@ -426,19 +413,15 @@
                                 class="btn btn-info btn-sm btn-hav-detail" href="#">
                                     Detail
                                 </a>
-                              ${`<a class="btn btn-primary btn-sm"
-                                                            target="_blank"
-                                                            href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
-                                                            onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                            Revise
-                                                        </a>`}
-
-
-
-                                            <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                                data-id="${hav.id}">Delete</button>
-                                        </td>
-                                    </tr>
+                              ${`<a
+                                data-id="${hav.id}"
+                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                    History
+                                </a>`}
+                                <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                    data-id="${hav.id}">Delete</button>
+                            </td>
+                        </tr>
                                 `;
                                 $("#kt_table_assessments tbody").append(row);
                             });
@@ -462,8 +445,6 @@
 
             $(document).on("click", ".btn-hav-detail", function() {
                 event.preventDefault();
-
-
                 const havDetails = $(this).data("detail");
                 const employee_id = $(this).data("employeeid");
                 const year = $(this).data("tahun");
@@ -526,6 +507,62 @@
 
             });
 
+            $(document).on("click", ".btn-hav-comment", function() {
+                let hav_id = $(this).data("id"); // Get the employee ID from the button's data attribute
+                console.log("Fetching comment history for Employee ID:", hav_id); // Debugging
+                
+                // Clear any previous comment history in the modal
+                $("#commentList").empty();
+
+                // Make an AJAX request to get the comment history
+                $.ajax({
+                    url: "{{ url('/hav/get-history') }}/" + hav_id,  // Change this URL to your correct route
+                    type: "GET",
+                    success: function(response) {
+                        console.log("Response received:", response.comment); // Debugging the response
+
+                        // Check if we have comment history
+                        if (response.comment && response.comment.length > 0) {
+                            // Loop through the comments and append them to the modal
+                            response.comment.forEach(function(comment) {
+                                console.log("Comment:", comment); // Debugging each comment
+                                let commentHtml = `
+                                    <li class="list-group-item">
+                                        <strong>${comment.employee.name} :</strong> <br> ${comment.comment}
+                                        <br><small class="text-muted">${comment.created_at}</small><br>
+                                        <a href="{{ Storage::url('${comment.upload}') }}" target="_blank"
+                                        class="fw-bold text-primary text-decoration-underline">View Excel</a>
+                                    </li>
+                                `;
+                                $("#commentList").append(commentHtml);
+                            });
+                        } else {
+                            // If no comments found, display a message
+                            $("#commentList").append('<li class="list-group-item text-muted">No comments found.</li>');
+                        }
+
+                        // Show the modal
+                        $("#detailAssessmentModal").modal("hide");
+                        $('#commentHistoryModal').modal('show');
+                    },
+                    error: function(xhr, status, error) {
+                        console.error("Error fetching comment history:", error);
+                        alert("Failed to load comment history.");
+                    }
+                });
+
+            });
+
+            $("#commentHistoryModal").on("hidden.bs.modal", function() {
+                setTimeout(() => {
+                    $(".modal-backdrop").remove(); // Hapus overlay modal update
+                    $("body").removeClass("modal-open");
+
+                    $("#detailAssessmentModal").modal("show");
+                }, 300);
+            });
+
+
             // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
             $("#havDetail").on("hidden.bs.modal", function() {
                 setTimeout(() => {
@@ -534,8 +571,8 @@
 
                     $("#detailAssessmentModal").modal("show");
 
-                    // Tambahkan overlay kembali untuk modal history
-                    $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+                    // Tambahkan overlay kembali untuk havDetail
+                    // $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
                 }, 300);
             });
 

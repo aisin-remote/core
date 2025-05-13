@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Maatwebsite\Excel\Excel;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\HavCommentHistory;
 use App\Models\HavDetailKeyBehavior;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Yajra\DataTables\Facades\DataTables;
@@ -256,7 +257,7 @@ class HavController extends Controller
             : [];
 
 
-        return view('website.hav.list', compact('title', 'employees', 'filter', 'company', 'search','visiblePositions'));
+        return view('website.hav.list', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }
 
 
@@ -484,7 +485,7 @@ class HavController extends Controller
         }
         return redirect()->back();
     }
-    public function approval(Request $request,$company = null)
+    public function approval(Request $request, $company = null)
     {
         $title = 'Add Employee';
         $user = auth()->user();
@@ -505,7 +506,6 @@ class HavController extends Controller
                     }
                 })
                 ->get();
-
         } else {
             $employee = Employee::where('user_id', $user->id)->first();
 
@@ -514,17 +514,15 @@ class HavController extends Controller
             } else {
 
                 $approvallevel = (auth()->user()->employee->getFirstApproval());
-                $subordinate=  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
+                $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
 
                 $employees = Hav::with('employee')
                     ->whereIn('employee_id', $subordinate)
                     ->get();
-
             }
         }
 
         return view('website.approval.approvalhav', compact('title', 'employees', 'filter', 'company', 'search'));
-
     }
     public function approve($id)
     {
@@ -614,6 +612,27 @@ class HavController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Hav berhasil dihapus.'
+        ]);
+    }
+
+
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function getComment($hav_id)
+    {
+        $hav = HavCommentHistory::where('hav_id', $hav_id)->with('employee')->get();
+        if (!$hav) {
+            return response()->json([
+                'error' => true,
+                'msg' => 'No comment found for this employee'
+            ], 404);
+        }
+        return response()->json([
+            'comment' => $hav
         ]);
     }
 }

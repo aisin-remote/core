@@ -36,17 +36,27 @@ class HavImport implements WithMultipleSheets, WithEvents
                 $npk = $sheet->getCell('C7')->getValue();
 
                 $employee = Employee::where('npk', $npk)->first();
+                $comment = $sheet->getCell('C12')->getValue();
+                $year = $sheet->getCell('C13')->getCalculatedValue();
 
                 if (!$employee) {
                     throw new \Exception("NPK {$npk} tidak ditemukan.");
                 }
 
-                DB::transaction(function () use ($employee, $sheet) {
+                if ($comment == '') {
+                    throw new \Exception("Comment tidak boleh kosong pada cell C12");
+                }
+
+                if ($year == '') {
+                    throw new \Exception("Tahun tidak boleh kosong pada cell C13");
+                }
+
+                DB::transaction(function () use ($employee, $year, $comment, $sheet) {
 
                     $hav = new Hav();
                     $hav->employee_id = $employee->id;
                     $hav->status = 0; // 0 = Create
-                    $hav->year = $sheet->getCell('C13')->getCalculatedValue();
+                    $hav->year = $year;
 
 
                     $scoreMap = [
@@ -88,7 +98,6 @@ class HavImport implements WithMultipleSheets, WithEvents
                     }
 
                     // Step 4: Save Comment History (new functionality)
-                    $comment = $sheet->getCell('B18')->getValue(); // Get comment from sheet (assuming it's in B18)
 
                     // Step 5: Handle File Upload with Renamed File
                     if ($this->filePath) {
@@ -98,7 +107,7 @@ class HavImport implements WithMultipleSheets, WithEvents
                         // Store the file path and comment in hav_comment_histories table
                         HavCommentHistory::create([
                             'hav_id' => $hav->id,
-                            'employee_id' => $employee->id,
+                            'employee_id' => auth()->user()->employee->id,
                             'comment' => $comment,
                             'upload' => $filePath,  // Save file path in the database
                         ]);
