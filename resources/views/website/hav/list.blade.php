@@ -37,7 +37,7 @@
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
                         <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
-                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             Show All
                         </a>
                     </li>
@@ -46,7 +46,7 @@
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
-                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
                                 {{ $position }}
                             </a>
                         </li>

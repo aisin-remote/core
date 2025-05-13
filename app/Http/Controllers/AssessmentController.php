@@ -109,7 +109,13 @@ class AssessmentController extends Controller
         if ($user->role === 'HRD') {
             $employees = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
-                ->when($filter && $filter !== 'all', fn($query) => $query->where('position', $filter))
+                ->when($filter && $filter != 'all', function ($query) use ($filter) {
+                    $query->where(function ($q) use ($filter) {
+                        $q->where('position', $filter)
+                          ->orWhere('position', 'like', "Act %{$filter}");
+                    });
+                })
+                
                 ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
                 ->get();
         } else {
@@ -121,7 +127,13 @@ class AssessmentController extends Controller
                 $employees = collect();
             } else {
                 $employees = $this->getSubordinatesFromStructure($employee)
-                    ->when($filter && $filter !== 'all', fn($query) => $query->where('position', $filter))
+                ->when($filter && $filter != 'all', function ($query) use ($filter) {
+                    $query->where(function ($q) use ($filter) {
+                        $q->where('position', $filter)
+                          ->orWhere('position', 'like', "Act %{$filter}");
+                    });
+                })
+                
                     ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
                     ->get();
             }

@@ -553,12 +553,12 @@
 
 
                         <!-- plant -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}" href="#">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">HAV</span>
-                            </a>
-                        </div>
+                        <a class="menu-link {{ request()->is('approval/list-approval-HAV') ? 'active' : '' }}"
+                            href="{{ route('hav.approval') }}">
+                            {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                            <span class="menu-title ps-1">HAV</span>
+                        </a>
+
 
 
                         <!-- Division -->

@@ -124,8 +124,12 @@ class EmployeeController extends Controller
                 });
             })
             ->when($filter && $filter != 'all', function ($query) use ($filter) {
-                $query->where('position', $filter);  // Filter posisi jika diperlukan
+                $query->where(function ($q) use ($filter) {
+                    $q->where('position', $filter)
+                      ->orWhere('position', 'like', "Act %{$filter}");
+                });
             })
+            
             ->paginate(10)
             ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
 
@@ -158,8 +162,12 @@ class EmployeeController extends Controller
 
                     // Filter posisi jika diperlukan
                     if ($filter && $filter != 'all') {
-                        $query->where('position', $filter);
+                        $query->where(function ($q) use ($filter) {
+                            $q->where('position', $filter)
+                              ->orWhere('position', 'like', "Act %{$filter}");
+                        });
                     }
+                    
 
                     // Paginate hasil
                     $employees = $query->paginate(10)->appends([
