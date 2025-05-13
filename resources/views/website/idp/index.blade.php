@@ -328,6 +328,32 @@
                                                 class="form-control" value="{{ isset($idp) ? $idp->date : '' }}" />
                                         </div>
 
+                                        <div class="col-lg-12 fv-row mb-5">
+                                            <hr>
+                                        </div>
+
+                                        <div class="col-lg-12 fv-row mb-5">
+                                            <label class="fs-5 fw-bold form-label mb-2 required">Comment History</label>
+                                            @foreach ($idps as $idp)
+                                                @if (!$idp->commentHistory->isEmpty())
+                                                    @foreach ($idp->commentHistory as $comment)
+                                                        <div class="border rounded p-3 mb-3 bg-light">
+                                                            <div class="fw-semibold mb-2">
+                                                                {{ $comment->employee->name ?? 'Unknown Employee' }}
+                                                                —
+                                                                <small class="text-muted">
+                                                                    {{ \Carbon\Carbon::parse($comment->first()->created_at)->format('d M Y H:i') }}
+                                                                </small>
+                                                            </div>
+                                                            <div class="text-muted fst-italic">
+                                                                {{ $comment->first()->comment }}
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                @endif
+                                            @endforeach
+                                        </div>
+
                                         <div class="text-center pt-15">
                                             @if (!isset($idp))
                                                 <!-- Cek apakah IDP sudah ada di database -->
@@ -622,19 +648,19 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @foreach ($idps->where('employee_id', $assessment->employee->id) as $idp)
-                                                            <tr>
-                                                                <td class="text-justify px-3">{{ $idp->alc->name }}</td>
-                                                                <td class="text-justify px-3">{{ $idp->category }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $idp->development_program }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $idp->development_target }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ \Carbon\Carbon::parse($idp->date)->format('d-m-Y') }}
-                                                                </td>
-                                                            </tr>
-                                                        @endforeach
+                                                        <tr>
+                                                            <td class="text-justify px-3">
+                                                                {{ $assessment->idp?->first()?->alc->name }}</td>
+                                                            <td class="text-justify px-3">
+                                                                {{ $assessment->idp?->first()?->category }}</td>
+                                                            <td class="text-justify px-3">
+                                                                {{ $assessment->idp?->first()?->development_program }}</td>
+                                                            <td class="text-justify px-3">
+                                                                {{ $assessment->idp?->first()?->development_target }}</td>
+                                                            <td class="text-justify px-3">
+                                                                {{ optional(optional($assessment->idp)->first())->date ? \Carbon\Carbon::parse(optional($assessment->idp)->first()->date)->format('d-m-Y') : '' }}
+                                                            </td>
+                                                        </tr>
                                                     </tbody>
                                                 </table>
                                             </div>

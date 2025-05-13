@@ -322,9 +322,9 @@
                                                         <div class="fs-6 fw-bold">
                                                             {{ $experience->department }}
                                                         </div>
-                                                        <div class="fw-semibold text-gray-600">
+                                                        {{-- <div class="fw-semibold text-gray-600">
                                                             {{ $experience->position }}
-                                                        </div>
+                                                        </div> --}}
                                                     </div>
                                                     <div class="text-muted fs-7">
                                                         {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y') }}

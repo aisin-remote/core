@@ -26,4 +26,9 @@ class Idp extends Model
     {
         return $this->belongsTo(Alc::class, 'alc_id', 'id');
     }
+
+    public function commentHistory()
+    {
+        return $this->hasMany(IdpCommentHistory::class, 'idp_id');
+    }
 }

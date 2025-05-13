@@ -125,7 +125,8 @@
                                                         </table>
 
                                                         <!-- Tombol Approve per IDP -->
-                                                        <button class="btn btn-sm btn-danger btn-revise">
+                                                        <button class="btn btn-sm btn-danger btn-revise"
+                                                            data-id="{{ $idp->id }}">
                                                             <i class="fas fa-edit"></i>Revise
                                                         </button>
                                                         <button class="btn btn-sm btn-success btn-approve"
@@ -245,7 +246,7 @@
                 button.addEventListener('click', function() {
                     Swal.fire({
                         title: 'Enter reason for revision',
-                        input: 'text',
+                        input: 'textarea',
                         inputPlaceholder: 'Write your reason here...',
                         showCancelButton: true,
                         confirmButtonText: 'Submit',
@@ -255,15 +256,55 @@
                         }
                     }).then((result) => {
                         if (result.isConfirmed) {
+                            const revisionReason = result.value;
+                            const id = this.dataset
+                                .id; // Ambil ID dari atribut data-id pada tombol
+
+                            // Tampilkan pesan loading
                             Swal.fire({
-                                title: 'Revised!',
-                                text: 'Your revision note: ' + result.value,
-                                icon: 'info',
-                                timer: 2000,
-                                showConfirmButton: false
+                                title: 'Submitting...',
+                                allowOutsideClick: false,
+                                didOpen: () => {
+                                    Swal.showLoading();
+                                }
                             });
 
-                            // TODO: send revision reason to server
+                            fetch('idp/revise', {
+                                    method: 'POST',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                        'X-CSRF-TOKEN': document.querySelector(
+                                            'meta[name="csrf-token"]').getAttribute(
+                                            'content')
+                                    },
+                                    body: JSON.stringify({
+                                        id: id,
+                                        comment: revisionReason
+                                    })
+                                })
+                                .then(response => response.json())
+                                .then(data => {
+                                    Swal.fire({
+                                        title: 'Revised!',
+                                        text: data.message,
+                                        icon: 'success',
+                                        timer: 2000,
+                                        showConfirmButton: false
+                                    });
+
+                                    // Reload page setelah 1.5 detik (selesai swal)
+                                    setTimeout(() => {
+                                        location.reload();
+                                    }, 1500);
+                                })
+                                .catch(error => {
+                                    Swal.fire({
+                                        title: 'Error!',
+                                        text: 'Something went wrong.',
+                                        icon: 'error'
+                                    });
+                                    console.error(error);
+                                });
                         }
                     });
                 });

@@ -465,7 +465,7 @@
                                                         <div class="fs-6 fw-bold mb-2">{{ $experience->department }}</div>
                                                         <div
                                                             class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
-                                                            <span>{{ $experience->position }}</span>
+                                                            {{-- <span>{{ $experience->position }}</span> --}}
                                                             <span class="text-muted fs-7">
                                                                 [{{ \Carbon\Carbon::parse($experience->start_date)->format('Y') }}
                                                                 -

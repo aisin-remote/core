@@ -155,7 +155,7 @@ class IdpController extends Controller
         $employees = Employee::all();
 
         // Ambil IDP
-        $idps = Idp::with('assessment', 'employee')->get();
+        $idps = Idp::with('assessment', 'employee', 'commentHistory')->get();
 
         // Daftar program
         $programs = [
@@ -589,5 +589,30 @@ class IdpController extends Controller
         return response()->json([
             'message' => 'Employee approved successfully.'
         ]);
+    }
+
+    public function revise(Request $request)
+    {
+        $idp = Idp::findOrFail($request->id);
+
+        // Menyimpan status HAV sebagai disetujui
+        $idp->status = 1; // Status disetujui
+
+        // Ambil komentar dari input request
+        $comment = $request->input('comment');
+        $employee = auth()->user()->employee;
+        // Menyimpan komentar ke dalam tabel hav_comment_history
+        if ($employee) {
+            $idp->commentHistory()->create([
+                'comment' => $comment,
+                'employee_id' =>  $employee->id  // Menyimpan siapa yang memberikan komentar
+            ]);
+        }
+
+        // Simpan perubahan status HAV
+        $idp->save();
+
+        // Kembalikan respons JSON
+        return response()->json(['message' => 'Data berhasil direvisi.']);
     }
 }

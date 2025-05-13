@@ -94,6 +94,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
         Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
         Route::get('/idp/{id}', [IdpController::class, 'approve'])->name('idp.approve');
+        Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
     });
 
     Route::prefix('employee')->group(function () {

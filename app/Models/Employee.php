@@ -44,6 +44,11 @@ class Employee extends Model
     {
         return $this->hasMany(PromotionHistory::class, 'employee_id', 'id');
     }
+    
+    public function idpCommentHistory()
+    {
+        return $this->hasMany(IdpCommentHistory::class, 'employee_id', 'id');
+    }
 
     public function astratraining()
     {
