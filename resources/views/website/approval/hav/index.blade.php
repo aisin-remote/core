@@ -34,46 +34,46 @@
                     <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                         role="tablist" style="cursor:pointer">
                         <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
-                            href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             Show All
                         </a>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
                                 Direktur
                             </a>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
                                 Head</a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
                         </li>
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
+                                href="{{ route('hav.approval', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
                         </li>
                     </ul>
                 @endif
@@ -125,7 +125,7 @@
                                     </button>
 
                                     <!-- Tombol REJECT -->
-                                    <button type="button" class="btn btn-danger btn-sm ms-1" onclick="confirmReject({{ $item->id }})">
+                                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject({{ $item->id }})">
                                         <i class="fas fa-times"></i> Revise
                                     </button>
                                 @endif

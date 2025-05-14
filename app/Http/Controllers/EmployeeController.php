@@ -570,11 +570,12 @@ class EmployeeController extends Controller
             ->where('npk', $npk)
             ->firstOrFail();
         $departments = Department::all();
+        $positions = Employee::select('position')->distinct()->pluck('position');
         $divisions = Division::all();
         $plants = Plant::all();
         $sections = Section::all();
         $subSections = SubSection::all();
-        return view('website.employee.update', compact('employee', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
+        return view('website.employee.update', compact('employee','positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
     }
 
     public function update(Request $request, $npk)
@@ -1138,6 +1139,36 @@ class EmployeeController extends Controller
         }
     }
 
+     public function promotionUpdate(Request $request, $id)
+    {
+        $experience = PromotionHistory::findOrFail($id);
+
+        $request->validate([
+            'previous_grade'    => 'required',
+            'previous_position'    => 'required',
+            'current_grade' => 'required',
+            'current_position'   => 'required',
+            'last_promotion_date' => 'required',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            $experience->update([
+                'previous_grade'    => $request->previous_grade,
+                'previous_position'     => $request->previous_position,
+                'current_grade'     => $request->current_grade,
+                'current_position'  => $request->current_position,
+                'last_promotion_date'    =>  $request->last_promotion_date,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Promotion berhasil diupdate.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Promotion gagal diupdate.');
+        }
+    }
     public function promotionDestroy($id)
     {
         $promotion = PromotionHistory::findOrFail($id);

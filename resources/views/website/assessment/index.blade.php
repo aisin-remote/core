@@ -231,13 +231,13 @@
                                     Detail
                                 </a>
                               ${`
-                                                                                                                                    <a class="btn btn-primary btn-sm"
-                                                                                                                                        target="_blank"
-                                                                                                                                        href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
-                                                                                                                                        onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                                                                                                        View PDF
-                                                                                                                                    </a>
-                                                                                                                        `}
+                                                                                                                                                    <a class="btn btn-primary btn-sm"
+                                                                                                                                                        target="_blank"
+                                                                                                                                                        href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                                                                                                                                        onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                                                                                                                        View PDF
+                                                                                                                                                    </a>
+                                                                                                                                        `}
 
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
                                 data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
@@ -251,6 +251,7 @@
                                 data-alc_name='${btoa(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
                                 data-strengths='${btoa(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
                                 data-weaknesses='${btoa(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
+                                data-suggestion_development='${btoa(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'
                                 >
                                 Edit
                             </button>
@@ -291,7 +292,7 @@
                     let alcNames = JSON.parse(atob($(this).attr("data-alc_name")));
                     let strengths = JSON.parse(atob($(this).attr("data-strengths")));
                     let weaknesses = JSON.parse(atob($(this).attr("data-weaknesses")));
-
+                    let suggestion_development = JSON.parse(atob($(this).attr("data-suggestion_development")));
 
 
                     $("#update_assessment_id").val(assessmentId);
@@ -306,7 +307,8 @@
                     });
 
                     // Sinkronisasi dari skor ke strength dan weakness
-                    syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses);
+                    syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses,
+                        suggestion_development);
 
                     const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
                     modal.show();
@@ -325,35 +327,27 @@
                     }, 300);
                 });
 
-                function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses) {
+                function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses, suggestions) {
                     let strengthContainer = document.getElementById("update-strengths-wrapper");
                     let weaknessContainer = document.getElementById("update-weaknesses-wrapper");
 
-                    // Bersihkan kontainer strength dan weakness sebelum memperbarui
                     strengthContainer.innerHTML = "";
                     weaknessContainer.innerHTML = "";
 
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];
                         let alcName = alcNames[index];
-                        let description = (score >= 3) ? strengths[index] : weaknesses[index]; // FIXED
+                        let description = (score >= 3) ? strengths[index] : weaknesses[index];
+                        let suggestion = suggestions[index] || "";
 
                         let type = score >= 3 ? "strength" : "weakness";
                         let containerId = type === "strength" ? "update-strengths-wrapper" :
                             "update-weaknesses-wrapper";
-                        console.log({
-                            scores,
-                            alcs,
-                            alcNames,
-                            strengths,
-                            weaknesses
-                        });
 
-
-                        addAssessmentCard(type, containerId, alcId, description, alcName);
+                        addAssessmentCard(type, containerId, alcId, description, alcName, suggestion);
                     });
 
-                    updateDropdownOptions(); // Perbarui opsi dropdown ALC setelah sinkronisasi
+                    updateDropdownOptions();
                 }
 
                 function populateAssessmentCards(type, containerId, data, alcs, alcNames) {
@@ -373,33 +367,37 @@
                     updateDropdownOptions();
                 }
 
-                function addAssessmentCard(type, containerId, alcId = "", descriptions = "", alcName = "") {
+                function addAssessmentCard(type, containerId, alcId = "", description = "", alcName = "", suggestion =
+                    "") {
                     let container = document.getElementById(containerId);
                     let templateCard = document.createElement("div");
                     templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
-                    // Tentukan ID untuk card berdasarkan ALC
                     if (alcId) {
                         templateCard.setAttribute("id", `assessment_card_${alcId}`);
                     }
 
                     templateCard.innerHTML = `
-                                <div class="mb-3">
-                                    <label>ALC</label>
-                                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
-                                        <option value="">Pilih ALC</option>
-                                        @foreach ($alcs as $alc)
-                                            <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
-                                                {{ $alc->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label>Description</label>
-                                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${descriptions}</textarea>
-                                </div>
-                            `;
+        <div class="mb-3">
+            <label>ALC</label>
+            <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
+                <option value="">Pilih ALC</option>
+                @foreach ($alcs as $alc)
+                    <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
+                        {{ $alc->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="mb-3">
+            <label>Description</label>
+            <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${description}</textarea>
+        </div>
+        <div class="mb-3">
+            <label>Suggestion Development</label>
+            <textarea class="form-control suggestion-textarea" name="suggestion_development[${alcId}]" rows="2">${suggestion}</textarea>
+        </div>
+    `;
 
                     let selectElement = templateCard.querySelector(".alc-dropdown");
                     selectElement.addEventListener("change", function() {
@@ -454,9 +452,11 @@
 
                     // Update nama untuk textarea dan select agar sesuai dengan kategori
                     const textarea = card.find("textarea");
+                    const suggestion = card.find("textarea.suggestion-textarea");
                     const select = card.find("select");
 
                     textarea.attr("name", `${newType}[${alcId}]`);
+                    suggestion.attr("name", `suggestion_development[${alcId}]`);
                     select.attr("name", `${newType}_alc_ids[]`);
 
                     // Update class card untuk memastikan gaya sesuai kategori

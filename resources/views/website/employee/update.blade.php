@@ -914,6 +914,10 @@
                                             {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y, g:i A') }}
                                         </td>
                                         <td class="text-center">
+                                            <button class="btn btn-sm btn-light-warning me-1" data-bs-toggle="modal"
+                                                data-bs-target="#editPromotionModal{{ $promotionHistory->id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
                                             <button class="btn btn-sm btn-light-danger delete-experience-btn"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#deletePromotionModal{{ $promotionHistory->id }}">
@@ -921,7 +925,7 @@
                                             </button>
                                         </td>
                                     </tr>
-
+                                  @include('website.modal.promotion_history.update', ['experience' => $promotionHistory])
                                     {{-- delete modal --}}
                                     @include('website.modal.promotion_history.delete', [
                                         'promotionHistory' => $promotionHistory,
