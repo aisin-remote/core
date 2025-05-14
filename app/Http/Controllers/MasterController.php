@@ -67,7 +67,6 @@ class MasterController extends Controller
             }
         }
 
-
         return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company'));
     }
 

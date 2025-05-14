@@ -319,36 +319,7 @@
                 }
             });
         }
-        $("#updateAssessmentModal").on("hidden.bs.modal", function () {
-    setTimeout(() => {
-        // Tutup semua modal yang mungkin masih terbuka
-        $(".modal").modal("hide");
 
-        // Hapus semua backdrop
-        $(".modal-backdrop").remove();
-
-        // Hapus kelas modal-open dari body
-        $("body").removeClass("modal-open");
-    }, 300);
-});
-
-
-
-        // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
-        $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-            setTimeout(() => {
-                if (!$("#updateAssessmentModal").hasClass("show")) {
-                    $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
-                    $("body").removeClass("modal-open");
-                }
-            }, 300);
-        });
-
-        // ===== CEGAH OVERLAY BERLAPIS =====
-        $(".modal").on("shown.bs.modal", function() {
-            $(".modal-backdrop").last().css("z-index",
-                1050); // Atur overlay agar tidak bertumpuk terlalu tebal
-        });
 
 
 

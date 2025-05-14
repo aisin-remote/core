@@ -115,7 +115,7 @@ class AssessmentController extends Controller
                           ->orWhere('position', 'like', "Act %{$filter}");
                     });
                 })
-                
+
                 ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
                 ->get();
         } else {
@@ -133,7 +133,7 @@ class AssessmentController extends Controller
                           ->orWhere('position', 'like', "Act %{$filter}");
                     });
                 })
-                
+
                     ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
                     ->get();
             }
@@ -335,6 +335,7 @@ class AssessmentController extends Controller
             'scores.*' => 'nullable|string|max:2',
             'strenght' => 'nullable|array',
             'weakness' => 'nullable|array',
+            'suggestion_development' => 'nullable|array',
         ]);
 
         // Simpan file jika ada
@@ -365,39 +366,40 @@ class AssessmentController extends Controller
                         'score' => $request->scores[$alc_id] ?? "0",  // Ambil nilai score berdasarkan ALC ID
                         'strength' => $request->strength[$alc_id] ?? "", // Ambil nilai strength berdasarkan ALC ID
                         'weakness' => $request->weakness[$alc_id] ?? "",
+                         'suggestion_development' => $request->suggestion_development[$alc_id] ?? "",
                         'updated_at' => now()
                     ]
                 );
         }
-        $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
+        // $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
 
-        $user = Auth::user();
-        $employee = $user->employee; // ambil employee yang login
-        $rawNumber = $employee->phone_number ?? null;
-        $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
+        // $user = Auth::user();
+        // $employee = $user->employee; // ambil employee yang login
+        // $rawNumber = $employee->phone_number ?? null;
+        // $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
 
-        if (!$formattedNumber) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nomor HP Anda tidak tersedia.',
-            ]);
-        }
+        // if (!$formattedNumber) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Nomor HP Anda tidak tersedia.',
+        //     ]);
+        // }
 
-        $message = sprintf(
-            "Hallo Apakah Benar ini Nomor?"
+        // $message = sprintf(
+        //     "Hallo Apakah Benar ini Nomor?"
             // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
             // $assessment->id,
             // $assessment->date,
             // $assessment->name ?? 'Anda'
-        );
+        // );
 
-        $whatsappResponse = Http::asForm()
-            ->withOptions(['verify' => false])
-            ->post('https://app.ruangwa.id/api/send_message', [
-                'token' => $token,
-                'number' => $formattedNumber,
-                'message' => $message
-            ]);
+        // $whatsappResponse = Http::asForm()
+        //     ->withOptions(['verify' => false])
+        //     ->post('https://app.ruangwa.id/api/send_message', [
+        //         'token' => $token,
+        //         'number' => $formattedNumber,
+        //         'message' => $message
+        //     ]);
 
 
 
@@ -459,11 +461,13 @@ class AssessmentController extends Controller
             ]),
             'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'descriptions' => $d->strength
+                'descriptions' => $d->strength,
+                'suggestion_development' => $d->suggestion_development
             ])->values(),
             'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'descriptions' => $d->weakness
+                'descriptions' => $d->weakness,
+                  'suggestion_development' => $d->suggestion_development
             ])->values(),
             'alc_options' => Alc::select('id', 'name')->get()
         ]);
@@ -481,6 +485,7 @@ class AssessmentController extends Controller
             'scores' => 'required|array',
             'strength' => 'nullable|array',
             'weakness' => 'nullable|array',
+             'suggestion_development' => 'nullable|array',
             'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
         ]);
 
@@ -508,7 +513,8 @@ class AssessmentController extends Controller
                 'alc_id' => $alc_id,
                 'score' => $score,
                 'strength' => $request->strength[$alc_id] ?? null,
-                'weakness' => $request->weakness[$alc_id] ?? null
+                'weakness' => $request->weakness[$alc_id] ?? null,
+                 'suggestion_development' => $request->suggestion_development[$alc_id] ?? null
             ]);
         }
 

@@ -101,9 +101,12 @@
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('employee.edit', $employee->npk) }}" class="btn btn-warning btn-sm">
-                                        <i class="fa fa-pencil-alt"></i>
-                                    </a>
+                                    @if (auth()->user()->role == 'HRD')
+                                        <a href="{{ route('employee.edit', $employee->npk) }}"
+                                            class="btn btn-warning btn-sm">
+                                            <i class="fa fa-pencil-alt"></i>
+                                        </a>
+                                    @endif
                                     <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
                                         <i class="fa fa-eye"></i>
                                     </a>
