@@ -239,7 +239,7 @@ class HavController extends Controller
                     $employees = Hav::with('employee')
                         ->whereIn('employee_id', $subordinateIds)
                         ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
-                            $query->where('company_name', $employee->company_name);
+
                             if ($filter && $filter !== 'all') {
                                 $query->where(function ($q) use ($filter) {
                                     $q->where('position', $filter)
@@ -577,16 +577,6 @@ class HavController extends Controller
         if ($latestComment && $latestComment->upload) {
             // Lokasi penyimpanan file (sesuai path yang diberikan)
             $filePath = public_path('hav_uploads/' . $latestComment->upload);
-
-            // Mengecek apakah file ada
-            if (file_exists($filePath)) {
-                // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
-                // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
-                // Contoh: melakukan log
-                Log::info("File path: " . $filePath);
-            } else {
-                Log::warning("File tidak ditemukan: " . $filePath);
-            }
         }
 
         // Menyimpan komentar ke dalam tabel hav_comment_history
@@ -626,16 +616,6 @@ class HavController extends Controller
         if ($latestComment && $latestComment->upload) {
             // Lokasi penyimpanan file (sesuai path yang diberikan)
             $filePath = public_path('hav_uploads/' . $latestComment->upload);
-
-            // Mengecek apakah file ada
-            if (file_exists($filePath)) {
-                // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
-                // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
-                // Contoh: melakukan log
-                Log::info("File path: " . $filePath);
-            } else {
-                Log::warning("File tidak ditemukan: " . $filePath);
-            }
         }
 
         // Menyimpan komentar ke dalam tabel hav_comment_history

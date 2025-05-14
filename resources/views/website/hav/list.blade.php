@@ -417,19 +417,16 @@
                                 class="btn btn-info btn-sm btn-hav-detail" href="#">
                                     Detail
                                 </a>
-                              ${`<a class="btn btn-primary btn-sm"
-                                                                target="_blank"
-                                                                href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
-                                                                onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                                Revise
-                                                            </a>`}
-
-
-
-                                            <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                                data-id="${hav.id}">Delete</button>
-                                        </td>
-                                    </tr>
+                                ${`<a
+                                    data-id="${hav.id}"
+                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                        History
+                                    </a>`}
+                                <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                    data-id="${hav.id}">Delete</button>
+                            </td>
+                        </tr>
+                                                                
                                 `;
                                 $("#kt_table_assessments tbody").append(row);
                             });
@@ -538,7 +535,7 @@
                                 console.log("Comment:",
                                 comment); // Debugging each comment
                                 let commentHtml = `
-                                    <li class="list-group-item">
+                                    <li class="list-group-item mb-2">
                                         <strong>${comment.employee.name} :</strong> <br> ${comment.comment}
                                         <br><small class="text-muted">${comment.created_at}</small><br>
                                         <a href="{{ Storage::url('${comment.upload}') }}" target="_blank"
