@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Employee;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class HavCommentHistory extends Model
 {
@@ -13,5 +14,10 @@ class HavCommentHistory extends Model
     public function hav()
     {
         return $this->belongsTo(Hav::class);
+    }
+    // Many-to-One: Hav -> Employee
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
 }

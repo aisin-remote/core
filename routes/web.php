@@ -82,9 +82,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
         Route::patch('/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
         Route::patch('/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
+        Route::get('/get-history/{hav_id}', [HavController::class, 'getComment'])->name('hav.getComment');
 
-        Route::get('/hav/test-import', function () {
-        });
+        Route::get('/hav/test-import', function () {});
 
         // Pindahkan ke atas
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
