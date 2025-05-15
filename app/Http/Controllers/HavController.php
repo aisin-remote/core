@@ -186,19 +186,20 @@ class HavController extends Controller
         $filter = $request->input('filter', 'all');
         $search = $request->input('search'); // ambil input search dari request
 
-        if ($user->role === 'HRD') {
+        // Ambil npk dari query string
+        $npk = $request->query('npk'); // Jika npk ada di query string
+
+        if ($npk) {
+            // Jika ada npk, tampilkan hanya data untuk npk tersebut
             $employees = Hav::with('employee')
-                ->whereHas('employee', function ($query) use ($company, $filter, $search) {
-                    if ($company) {
-                        $query->where('company_name', $company);
-                    }
+                ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
+                    $query->where('npk', $npk); // Filter berdasarkan npk
                     if ($filter && $filter !== 'all') {
                         $query->where(function ($q) use ($filter) {
                             $q->where('position', $filter)
-                              ->orWhere('position', 'like', "Act %{$filter}");
+                                ->orWhere('position', 'like', "Act %{$filter}");
                         });
                     }
-
                     if ($search) {
                         $query->where('name', 'like', '%' . $search . '%');
                     }
@@ -207,24 +208,19 @@ class HavController extends Controller
                 ->unique('employee_id')
                 ->values();
         } else {
-            $employee = Employee::where('user_id', $user->id)->first();
-
-            if (!$employee) {
-                $employees = collect();
-            } else {
-                $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
-
+            // Logika untuk HRD atau selain HRD
+            if ($user->role === 'HRD') {
                 $employees = Hav::with('employee')
-                    ->whereIn('employee_id', $subordinateIds)
-                    ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
-                        $query->where('company_name', $employee->company_name); // tetap batasi berdasarkan company milik atasan
+                    ->whereHas('employee', function ($query) use ($company, $filter, $search) {
+                        if ($company) {
+                            $query->where('company_name', $company);
+                        }
                         if ($filter && $filter !== 'all') {
                             $query->where(function ($q) use ($filter) {
                                 $q->where('position', $filter)
-                                  ->orWhere('position', 'like', "Act %{$filter}");
+                                    ->orWhere('position', 'like', "Act %{$filter}");
                             });
                         }
-
                         if ($search) {
                             $query->where('name', 'like', '%' . $search . '%');
                         }
@@ -232,8 +228,36 @@ class HavController extends Controller
                     ->get()
                     ->unique('employee_id')
                     ->values();
+            } else {
+                $employee = Employee::where('user_id', $user->id)->first();
+
+                if (!$employee) {
+                    $employees = collect();
+                } else {
+                    $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
+
+                    $employees = Hav::with('employee')
+                        ->whereIn('employee_id', $subordinateIds)
+                        ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
+                            $query->where('company_name', $employee->company_name);
+                            if ($filter && $filter !== 'all') {
+                                $query->where(function ($q) use ($filter) {
+                                    $q->where('position', $filter)
+                                        ->orWhere('position', 'like', "Act %{$filter}");
+                                });
+                            }
+                            if ($search) {
+                                $query->where('name', 'like', '%' . $search . '%');
+                            }
+                        })
+                        ->get()
+                        ->unique('employee_id')
+                        ->values();
+                }
             }
         }
+
+        // Daftar posisi
         $allPositions = [
             'Direktur',
             'GM',
@@ -251,19 +275,14 @@ class HavController extends Controller
             ? trim(str_replace('Act', '', $rawPosition))
             : $rawPosition;
 
-        // Cari index posisi saat ini
         $positionIndex = array_search($currentPosition, $allPositions);
-
-        // Fallback jika tidak ditemukan
         if ($positionIndex === false) {
             $positionIndex = array_search('Operator', $allPositions);
         }
 
-        // Ambil posisi di bawahnya (tanpa posisi user)
         $visiblePositions = $positionIndex !== false
             ? array_slice($allPositions, $positionIndex)
             : [];
-
 
         return view('website.hav.list', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }
@@ -535,106 +554,105 @@ class HavController extends Controller
 
 
         return view('website.approval.hav.index', compact('title', 'employees', 'filter', 'company', 'search'));
-
     }
     public function approve(Request $request, $id)
-{
-    // Mencari data HAV berdasarkan ID
-    $hav = Hav::findOrFail($id);
+    {
+        // Mencari data HAV berdasarkan ID
+        $hav = Hav::findOrFail($id);
 
-    // Menyimpan status HAV sebagai disetujui
-    $hav->status = 2;
+        // Menyimpan status HAV sebagai disetujui
+        $hav->status = 2;
 
-    // Ambil komentar dari input request
-    $comment = $request->input('comment');
-    $employee = auth()->user()->employee;
+        // Ambil komentar dari input request
+        $comment = $request->input('comment');
+        $employee = auth()->user()->employee;
 
-    // Deklarasi variabel $filePath terlebih dahulu
-    $filePath = null;
+        // Deklarasi variabel $filePath terlebih dahulu
+        $filePath = null;
 
-    // Ambil file terbaru dari comment history berdasarkan HAV ID
-    $latestComment = $hav->commentHistory()->latest()->first(); // urutkan berdasarkan created_at DESC
+        // Ambil file terbaru dari comment history berdasarkan HAV ID
+        $latestComment = $hav->commentHistory()->latest()->first(); // urutkan berdasarkan created_at DESC
 
-    // Memastikan ada file upload
-    if ($latestComment && $latestComment->upload) {
-        // Lokasi penyimpanan file (sesuai path yang diberikan)
-        $filePath = public_path('hav_uploads/' . $latestComment->upload);
+        // Memastikan ada file upload
+        if ($latestComment && $latestComment->upload) {
+            // Lokasi penyimpanan file (sesuai path yang diberikan)
+            $filePath = public_path('hav_uploads/' . $latestComment->upload);
 
-        // Mengecek apakah file ada
-        if (file_exists($filePath)) {
-            // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
-            // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
-            // Contoh: melakukan log
-            Log::info("File path: " . $filePath);
-        } else {
-            Log::warning("File tidak ditemukan: " . $filePath);
+            // Mengecek apakah file ada
+            if (file_exists($filePath)) {
+                // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
+                // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
+                // Contoh: melakukan log
+                Log::info("File path: " . $filePath);
+            } else {
+                Log::warning("File tidak ditemukan: " . $filePath);
+            }
         }
-    }
 
-    // Menyimpan komentar ke dalam tabel hav_comment_history
-    if ($employee) {
-        // Menyimpan path lengkap ke dalam kolom upload
-        $hav->commentHistory()->create([
-            'comment' => $comment,
-            'employee_id' => $employee->id,
-            'upload' => $filePath ? str_replace(public_path(), 'public', $filePath) : null  // Menyimpan path lengkap jika ada
-        ]);
-    }
-
-    // Simpan perubahan status HAV
-    $hav->save();
-
-    return response()->json(['message' => 'Data berhasil disetujui.']);
-}
-public function reject(Request $request, $id)
-{
-    // Mencari data HAV berdasarkan ID
-    $hav = Hav::findOrFail($id);
-
-    // Menyimpan status HAV sebagai disetujui
-    $hav->status = 1;
-
-    // Ambil komentar dari input request
-    $comment = $request->input('comment');
-    $employee = auth()->user()->employee;
-
-    // Deklarasi variabel $filePath terlebih dahulu
-    $filePath = null;
-
-    // Ambil file terbaru dari comment history berdasarkan HAV ID
-    $latestComment = $hav->commentHistory()->latest()->first(); // urutkan berdasarkan created_at DESC
-
-    // Memastikan ada file upload
-    if ($latestComment && $latestComment->upload) {
-        // Lokasi penyimpanan file (sesuai path yang diberikan)
-        $filePath = public_path('hav_uploads/' . $latestComment->upload);
-
-        // Mengecek apakah file ada
-        if (file_exists($filePath)) {
-            // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
-            // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
-            // Contoh: melakukan log
-            Log::info("File path: " . $filePath);
-        } else {
-            Log::warning("File tidak ditemukan: " . $filePath);
+        // Menyimpan komentar ke dalam tabel hav_comment_history
+        if ($employee) {
+            // Menyimpan path lengkap ke dalam kolom upload
+            $hav->commentHistory()->create([
+                'comment' => $comment,
+                'employee_id' => $employee->id,
+                'upload' => $filePath ? str_replace(public_path(), 'public', $filePath) : null  // Menyimpan path lengkap jika ada
+            ]);
         }
+
+        // Simpan perubahan status HAV
+        $hav->save();
+
+        return response()->json(['message' => 'Data berhasil disetujui.']);
     }
+    public function reject(Request $request, $id)
+    {
+        // Mencari data HAV berdasarkan ID
+        $hav = Hav::findOrFail($id);
 
-    // Menyimpan komentar ke dalam tabel hav_comment_history
-    if ($employee) {
-        // Menyimpan path lengkap ke dalam kolom upload
-        $hav->commentHistory()->create([
-            'comment' => $comment,
-            'employee_id' => $employee->id,
-            'upload' => $filePath ? str_replace(public_path(), 'public', $filePath) : null  // Menyimpan path lengkap jika ada
-        ]);
+        // Menyimpan status HAV sebagai disetujui
+        $hav->status = 1;
+
+        // Ambil komentar dari input request
+        $comment = $request->input('comment');
+        $employee = auth()->user()->employee;
+
+        // Deklarasi variabel $filePath terlebih dahulu
+        $filePath = null;
+
+        // Ambil file terbaru dari comment history berdasarkan HAV ID
+        $latestComment = $hav->commentHistory()->latest()->first(); // urutkan berdasarkan created_at DESC
+
+        // Memastikan ada file upload
+        if ($latestComment && $latestComment->upload) {
+            // Lokasi penyimpanan file (sesuai path yang diberikan)
+            $filePath = public_path('hav_uploads/' . $latestComment->upload);
+
+            // Mengecek apakah file ada
+            if (file_exists($filePath)) {
+                // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
+                // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
+                // Contoh: melakukan log
+                Log::info("File path: " . $filePath);
+            } else {
+                Log::warning("File tidak ditemukan: " . $filePath);
+            }
+        }
+
+        // Menyimpan komentar ke dalam tabel hav_comment_history
+        if ($employee) {
+            // Menyimpan path lengkap ke dalam kolom upload
+            $hav->commentHistory()->create([
+                'comment' => $comment,
+                'employee_id' => $employee->id,
+                'upload' => $filePath ? str_replace(public_path(), 'public', $filePath) : null  // Menyimpan path lengkap jika ada
+            ]);
+        }
+
+        // Simpan perubahan status HAV
+        $hav->save();
+
+        return response()->json(['message' => 'Data berhasil disetujui.']);
     }
-
-    // Simpan perubahan status HAV
-    $hav->save();
-
-    return response()->json(['message' => 'Data berhasil disetujui.']);
-}
 
 
     /**

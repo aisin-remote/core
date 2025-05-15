@@ -8,10 +8,10 @@
         border-bottom: 3px solid #000;
         margin: 20px 0;
     }
-    .is-invalid {
-    border-color: red !important;
-}
 
+    .is-invalid {
+        border-color: red !important;
+    }
 </style>
 
 <div class="modal fade" id="addAssessmentModal" tabindex="-1" aria-labelledby="addAssessmentModalLabel" aria-hidden="true">
@@ -76,9 +76,11 @@
                     <div class="section-title">Weakness</div>
                     <div id="weakness-container"></div>
 
+
                     <div class="mb-4">
                         <label for="upload" class="form-label">Upload File Assessment (PDF, JPG, PNG)</label>
-                        <input type="file" class="form-control" id="upload" name="upload" accept=".pdf,.jpg,.png">
+                        <input type="file" class="form-control" id="upload" name="upload"
+                            accept=".pdf,.jpg,.png">
                     </div>
 
                     <button type="submit" class="btn btn-primary" id="btnSubmit">Simpan</button>
@@ -88,7 +90,7 @@
     </div>
 </div>
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
         function updateDescriptionName(selectElement, type) {
             const card = selectElement.closest('.assessment-card');
             const textarea = card.querySelector(`.${type}-textarea`);
@@ -116,7 +118,8 @@
             document.querySelectorAll('.alc-dropdown').forEach(select => {
                 const currentValue = select.value;
                 select.querySelectorAll('option').forEach(option => {
-                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses.has(option.value)) && option.value !== currentValue;
+                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
+                        .has(option.value)) && option.value !== currentValue;
                 });
             });
         }
@@ -137,12 +140,16 @@
                     <label>Description</label>
                     <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2" ></textarea>
                 </div>
+                  <div class="mb-3">
+                    <label>Suggestion Development</label>
+                    <textarea class="form-control" name="suggestion_development[${alcId}]" rows="2"></textarea>
+                </div>
             `;
 
             container.appendChild(card);
 
             const dropdown = card.querySelector('.alc-dropdown');
-            dropdown.addEventListener('change', function () {
+            dropdown.addEventListener('change', function() {
                 updateDescriptionName(this, type);
                 updateDropdownOptions();
             });
@@ -153,7 +160,8 @@
         function handleAutoWeakness(alcId, alcName, score) {
             if (score < 3) {
                 const container = document.getElementById('weakness-container');
-                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select.value === alcId);
+                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
+                    .value === alcId);
                 if (!existing) createAssessmentCard('weakness', alcId, alcName);
                 removeStrengthIfExists(alcId);
             }
@@ -162,7 +170,8 @@
         function handleAutoStrength(alcId, alcName, score) {
             if (score >= 3) {
                 const container = document.getElementById('strength-container');
-                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select.value === alcId);
+                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
+                    .value === alcId);
                 if (!existing) createAssessmentCard('strength', alcId, alcName);
                 removeWeaknessIfExists(alcId);
             }
@@ -186,12 +195,14 @@
 
         // Saat user memilih skor
         document.querySelectorAll('input[type=radio][name^="scores"]').forEach(radio => {
-            radio.addEventListener('change', function () {
+            radio.addEventListener('change', function() {
                 const match = this.name.match(/scores\[(\d+)\]/);
                 if (match) {
                     const alcId = match[1];
                     const score = parseInt(this.value);
-                    const alcName = document.querySelector(`input[name="alc_ids[]"][value="${alcId}"]`)?.closest('.card')?.querySelector('h6')?.innerText;
+                    const alcName = document.querySelector(
+                            `input[name="alc_ids[]"][value="${alcId}"]`)?.closest('.card')
+                        ?.querySelector('h6')?.innerText;
 
                     if (alcName) {
                         if (score < 3) {
@@ -205,7 +216,7 @@
         });
 
         // Reset modal saat ditutup
-        document.getElementById('addAssessmentModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('addAssessmentModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('assessmentForm').reset();
 
             ['strength', 'weakness'].forEach(type => {
@@ -224,7 +235,7 @@
         });
 
         // Validasi sebelum submit
-        document.getElementById('assessmentForm').addEventListener('submit', function (e) {
+        document.getElementById('assessmentForm').addEventListener('submit', function(e) {
             let isValid = true;
             const strengthDropdowns = document.querySelectorAll('#strength-container .alc-dropdown');
             const weaknessDropdowns = document.querySelectorAll('#weakness-container .alc-dropdown');

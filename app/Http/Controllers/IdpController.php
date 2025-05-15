@@ -27,11 +27,11 @@ class IdpController extends Controller
     private function getSubordinatesFromStructure(Employee $employee)
     {
         $subordinateIds = collect();
-        
+
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
-            
+
             $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
 
@@ -94,10 +94,11 @@ class IdpController extends Controller
         return $subordinateIds->merge($operatorIds);
     }
 
-    public function index($company = null, $reviewType = 'mid_year')
+    public function index(Request $request, $company = null, $reviewType = 'mid_year')
     {
         $user = auth()->user();
         $employee = $user->employee;
+        $npk = $request->query('npk');
         $alcs = [
             1 => 'Vision & Business Sense',
             2 => 'Customer Focus',
@@ -122,6 +123,11 @@ class IdpController extends Controller
                     fn($query) =>
                     $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                 )
+                ->when(
+                    $npk,
+                    fn($query) =>
+                    $query->whereHas('employee', fn($q) => $q->where('npk', $npk))
+                )
                 ->orderByDesc('created_at')
                 ->paginate(10);
         } else {
@@ -133,7 +139,7 @@ class IdpController extends Controller
                 // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
                 $viewLevel = $employee->getCreateAuth();
                 $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
-                
+
                 // Ambil assessment terbaru hanya milik bawahannya
                 $assessments = Assessment::with(['employee', 'details', 'idp'])
                     ->whereIn('employee_id', $subordinates)
@@ -141,6 +147,11 @@ class IdpController extends Controller
                         $company,
                         fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                    )
+                    ->when(
+                        $npk,
+                        fn($query) =>
+                        $query->whereHas('employee', fn($q) => $q->where('npk', $npk))
                     )
                     ->whereIn('id', function ($query) {
                         $query->selectRaw('id')
@@ -562,7 +573,7 @@ class IdpController extends Controller
 
             // Update semua IDP milik employee menjadi status = 2
             IDP::with('assessment')
-                ->whereHas('assessment', function ($q) use ($employeeId){
+                ->whereHas('assessment', function ($q) use ($employeeId) {
                     $q->where('employee_id', $employeeId);
                 })
                 ->update([
@@ -578,23 +589,23 @@ class IdpController extends Controller
         }
     }
 
-    
+
     public function approval()
     {
         $user = auth()->user();
         $employee = $user->employee;
-        
+
         // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
         $viewLevel = $employee->getFirstApproval();
         $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
 
         $idps = Idp::with('assessment.employee', 'assessment.details')
-                ->where('status', 2)
-                ->whereHas('assessment.employee', function ($q) use ($subordinates) {
-                    $q->whereIn('employee_id', $subordinates); // Menggunakan whereIn jika $subordinates adalah array
-                })
-                ->get();
-        
+            ->where('status', 2)
+            ->whereHas('assessment.employee', function ($q) use ($subordinates) {
+                $q->whereIn('employee_id', $subordinates); // Menggunakan whereIn jika $subordinates adalah array
+            })
+            ->get();
+
         return view('website.approval.idp.index', compact('idps'));
     }
     public function approve($id)
@@ -602,7 +613,7 @@ class IdpController extends Controller
         $idp = Idp::findOrFail($id);
         $idp->status = 3;
         $idp->save();
-        
+
         return response()->json([
             'message' => 'Employee approved successfully.'
         ]);

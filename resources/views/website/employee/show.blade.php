@@ -451,9 +451,10 @@
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <a class="fw-semibold"
-                                                        href="{{ route('hav.index', $employee->npk) }}">
+                                                        href="{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
                                                         Go to hav page
                                                     </a>
+
                                                 </div>
                                             @endif
                                         </div>
@@ -506,6 +507,25 @@
                                                     <td colspan="3" class="text-center text-muted">No data available
                                                     </td>
                                                 </tr>
+                                            @else
+                                                @for ($i = 0; $i < $maxSlots; $i++)
+                                                    @if (isset($astraTrainings[$i]))
+                                                        @php $training = $astraTrainings[$i]; @endphp
+                                                        <tr>
+                                                            <td class="text-center">
+                                                                {{ \Illuminate\Support\Carbon::parse($training->date_end)->format('Y') }}
+                                                            </td>
+                                                            <td class="text-center">{{ $training->program }}</td>
+                                                            <td class="text-center">
+                                                                {{ $training->ict_score }}/{{ $training->project_score }}/{{ $training->total_score }}
+                                                            </td>
+                                                        </tr>
+                                                    @endif
+                                                @endfor
+                                            @endif
+
+                                            {{-- Tampilkan 1 tombol di akhir jika jumlah pelatihan < maxSlots --}}
+                                            @if ($trainingCount < $maxSlots)
                                                 <tr>
                                                     <td colspan="3">
                                                         <div
@@ -517,35 +537,8 @@
                                                         </div>
                                                     </td>
                                                 </tr>
-                                            @else
-                                                @for ($i = 0; $i < $maxSlots; $i++)
-                                                    @if (isset($astraTrainings[$i]))
-                                                        @php $training = $astraTrainings[$i]; @endphp
-                                                        <tr>
-
-                                                            <td class="text-center">
-                                                                {{ \Illuminate\Support\Carbon::parse($training->date_end)->format('Y') }}
-                                                            </td>
-                                                            <td class="text-center">{{ $training->program }}</td>
-                                                            <td class="text-center">
-                                                                {{ $training->ict_score }}/{{ $training->project_score }}/{{ $training->total_score }}
-                                                            </td>
-                                                        </tr>
-                                                    @else
-                                                        <tr>
-                                                            <td colspan="3">
-                                                                <div
-                                                                    class="d-flex justify-content-between align-items-center gap-3">
-                                                                    <a class="fw-semibold text-primary"
-                                                                        href="{{ route('employee.edit', $employee->npk) }}">
-                                                                        Go to employee edit page
-                                                                    </a>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
-                                                    @endif
-                                                @endfor
                                             @endif
+
                                         </tbody>
                                     </table>
                                 </div>
@@ -750,6 +743,20 @@
                                     @endforeach
                                 @endif
                             </div>
+                            <div class="card-footer">
+                                @if ($assessment && $assessment->date)
+                                    <a class="fw-semibold"
+                                        href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                        Go to assessment detail
+                                    </a>
+                                @else
+                                    <button class="fw-semibold btn btn-link text-primary p-0"
+                                        onclick="showAssessmentAlert()">
+                                        Go to assessment detail
+                                    </button>
+                                @endif
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -833,6 +840,15 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="card-footer">
+
+                    <a class="fw-semibold"
+                           href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                        Go to IDP detail
+                    </a>
+
+
+                </div>
             </div>
 
             <!-- Tombol Back di bagian bawah card -->
@@ -889,5 +905,14 @@
                 $(this).siblings(".show-more").removeClass("d-none");
             });
         });
+
+        function showAssessmentAlert() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Assessment Not Found',
+                text: 'Assessment belum tersedia untuk data ini.',
+                confirmButtonText: 'OK'
+            });
+        }
     </script>
 @endpush

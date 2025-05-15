@@ -14,9 +14,17 @@
                     @method('PUT')
                     <div class="mb-3">
                         <label class="form-label">Position</label>
-                        <input type="text" class="form-control" name="position" value="{{ $experience->position }}"
-                            required>
+                        <select name="position" class="form-control" required>
+                            <option value="">-- Pilih Position --</option>
+                            @foreach ($positions as $position)
+                                <option value="{{ $position }}"
+                                    {{ $experience->position === $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Company</label>
                         <input type="text" class="form-control" name="company" value="{{ $experience->company }}"

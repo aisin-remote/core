@@ -52,7 +52,6 @@
                         </li>
                     @endforeach
                 </ul>
-
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -418,15 +417,19 @@
                                 class="btn btn-info btn-sm btn-hav-detail" href="#">
                                     Detail
                                 </a>
-                              ${`<a
-                                    data-id="${hav.id}"
-                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                        History
-                                    </a>`}
-                                <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                    data-id="${hav.id}">Delete</button>
-                            </td>
-                        </tr>
+                              ${`<a class="btn btn-primary btn-sm"
+                                                                target="_blank"
+                                                                href="${hav.upload ? `/storage/${hav.upload}` : '#'}"
+                                                                onclick="${!hav.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                                                Revise
+                                                            </a>`}
+
+
+
+                                            <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                                data-id="${hav.id}">Delete</button>
+                                        </td>
+                                    </tr>
                                 `;
                                 $("#kt_table_assessments tbody").append(row);
                             });
