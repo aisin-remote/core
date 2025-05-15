@@ -218,32 +218,48 @@ class IdpController extends Controller
         $assessment = Assessment::where('id', $request->assessment_id)->first();
 
         try {
+            DB::beginTransaction();
             $idp = Idp::where('assessment_id', $request->assessment_id)
                 ->where('alc_id', $request->alc_id)
                 ->first();
 
-            if ($idp) {
-                $idp->update([
-                    'development_program' => $request->development_program,
-                    'category' => $request->category,
-                    'development_target' => $request->development_target,
-                    'date' => $request->date,
-                ]);
-                return redirect()->route('idp.index')->with('success', 'Development updated successfully.');
-            } else {
-                Idp::create([
-                    'alc_id' => $request->alc_id,
-                    'assessment_id' => $request->assessment_id,
-                    'employee_id' => $assessment->employee_id,
-                    'development_program' => $request->development_program,
-                    'category' => $request->category,
-                    'development_target' => $request->development_target,
-                    'status' => 1,
-                    'date' => $request->date,
-                ]);
-                return redirect()->route('idp.index')->with('success', 'Development added successfully.');
-            }
+                if ($idp) {
+                    $idp->update([
+                        'development_program' => $request->development_program ?? $idp->development_program,
+                        'category' => $request->category ?? $idp->category,
+                        'development_target' => $request->development_target ?? $idp->development_target,
+                        'date' => $request->date ?? $idp->date,
+                    ]);
+                    
+                    DB::commit();              
+                
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'Development updated successfully.',
+                        'idp' => $idp, // opsional: kirim data IDP terbaru
+                    ]);
+                } else {
+                    $newIdp = Idp::create([
+                        'alc_id' => $request->alc_id,
+                        'assessment_id' => $request->assessment_id,
+                        'employee_id' => $assessment->employee_id,
+                        'development_program' => $request->development_program,
+                        'category' => $request->category,
+                        'development_target' => $request->development_target,
+                        'status' => 1,
+                        'date' => $request->date,
+                    ]);
+                    
+                    DB::commit();              
+                
+                    return response()->json([
+                        'status' => 'success',
+                        'message' => 'Development added successfully.',
+                        'idp' => $newIdp, // opsional: kirim data IDP yang baru dibuat
+                    ]);
+                }  
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', $e->getMessage());
         }
     }
@@ -513,10 +529,11 @@ class IdpController extends Controller
             }
 
             // Ambil semua detail assessment ALC untuk employee
-            $detailAssessments = DetailAssessment::whereHas('assessment', function ($query) use ($employeeId) {
+            $detailAssessments = DetailAssessment::whereHas('assessment.idp', function ($query) use ($employeeId) {
                 $query->where('employee_id', $employeeId);
             })->whereHas('alc')->get();
 
+            
             if ($detailAssessments->isEmpty()) {
                 return response()->json(['message' => 'Fitur ini belum dijadwalkan untuk pengembangan.'], 400);
             }
