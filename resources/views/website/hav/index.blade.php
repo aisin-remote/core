@@ -70,11 +70,11 @@
                             ? number_format(($havList->count() / $orderedHavGrouped->flatten(1)->count()) * 100, 1) . '%'
                             : '0.0%';
                             $jsonData = $havList->map(function ($h) {
+                                // dd($h);
                                 return [
                                     'npk' => $h->employee->npk ?? '-',
                                     'name' => $h->employee->name ?? '-',
                                     'department' => $h->employee->departments[0]->name ?? '-',
-                                    'status' => $h->status,
                                     'grade' => $h->employee->grade ?? '-',
                                 ];
                             });
@@ -141,6 +141,8 @@
                 let title = $(this).data('title');
                 let data = $(this).data('hav'); // sudah array of objects
                 $('#addAssessmentModalLabel').text(title);
+
+                console.log(data);
         
                 // Build HTML table
                 if (data.length === 0) {
@@ -156,7 +158,6 @@
                                 <th>Nama</th>
                                 <th>Department</th>
                                 <th>Grade</th>
-                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -169,7 +170,6 @@
                             <td>${item.name}</td>
                             <td>${item.department}</td>
                             <td>${item.grade}</td>
-                            <td>${item.status}</td>
                         </tr>
                     `;
                 });

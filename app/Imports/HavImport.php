@@ -44,11 +44,17 @@ class HavImport implements WithMultipleSheets, WithEvents
                 }
 
                 if ($comment == '') {
-                    throw new \Exception("Comment tidak boleh kosong pada cell C12");
+                    throw new \Exception("Kolom Comment tidak boleh kosong");
                 }
 
                 if ($year == '') {
-                    throw new \Exception("Tahun tidak boleh kosong pada cell C13");
+                    throw new \Exception("Kolom Tahun tidak boleh kosong");
+                }
+
+                $cekpk = (new HavQuadrant())->getValidatedPerformanceScores($employee->id, $sheet->getCell('C13')->getCalculatedValue());
+
+                if (is_string($cekpk)) {
+                    throw new \Exception($cekpk);
                 }
 
                 DB::transaction(function () use ($employee, $year, $comment, $sheet) {
