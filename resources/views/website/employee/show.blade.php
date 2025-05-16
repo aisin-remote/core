@@ -283,10 +283,12 @@
                                                 No educational background data available.
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center gap-3">
-                                                <a class="fw-semibold text-primary"
-                                                    href="{{ route('employee.edit', $employee->npk) }}">
-                                                    Go to employee edit page
-                                                </a>
+                                                @if (auth()->user()->role == 'HRD')
+                                                    <a class="fw-semibold text-primary"
+                                                        href="{{ route('employee.edit', $employee->npk) }}">
+                                                        Go to employee edit page
+                                                    </a>
+                                                @endif
                                             </div>
                                         @endif
                                     </div>
@@ -342,10 +344,12 @@
                                                 No work experience data available.
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center gap-3">
-                                                <a class="fw-semibold text-primary"
-                                                    href="{{ route('employee.edit', $employee->npk) }}">
-                                                    Go to employee edit page
-                                                </a>
+                                                @if (auth()->user()->role == 'HRD')
+                                                    <a class="fw-semibold text-primary"
+                                                        href="{{ route('employee.edit', $employee->npk) }}">
+                                                        Go to employee edit page
+                                                    </a>
+                                                @endif
                                             </div>
                                         @endif
                                     </div>
@@ -394,10 +398,13 @@
                                                 No performance appraisal data available.
                                             </div>
                                             <div class="d-flex justify-content-between align-items-center gap-3">
-                                                <a class="fw-semibold text-primary"
-                                                    href="{{ route('employee.edit', $employee->npk) }}">
-                                                    Go to employee edit page
-                                                </a>
+
+                                                @if (auth()->user()->role == 'HRD')
+                                                    <a class="fw-semibold text-primary"
+                                                        href="{{ route('employee.edit', $employee->npk) }}">
+                                                        Go to employee edit page
+                                                    </a>
+                                                @endif
                                             </div>
                                         @endif
                                     </div>
@@ -408,7 +415,7 @@
 
                     @include('website.modal.appraisal.all_detail')
 
-                    @if (auth()->user()->role == 'HRD')
+
                         <div class="row">
                             <!-- Card 2: Historical Human Assets Value -->
                             <div class="col-md-12">
@@ -462,7 +469,7 @@
                                 </div>
                             </div>
                         </div>
-                    @endif
+
                 </div>
             </div>
 
@@ -530,10 +537,12 @@
                                                     <td colspan="3">
                                                         <div
                                                             class="d-flex justify-content-between align-items-center gap-3">
-                                                            <a class="fw-semibold text-primary"
-                                                                href="{{ route('employee.edit', $employee->npk) }}">
-                                                                Go to employee edit page
-                                                            </a>
+                                                            @if (auth()->user()->role == 'HRD')
+                                                                <a class="fw-semibold text-primary"
+                                                                    href="{{ route('employee.edit', $employee->npk) }}">
+                                                                    Go to employee edit page
+                                                                </a>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -592,10 +601,12 @@
                                                     <td colspan="3">
                                                         <div
                                                             class="d-flex justify-content-between align-items-center gap-3">
-                                                            <a class="fw-semibold text-primary"
-                                                                href="{{ route('employee.edit', $employee->npk) }}">
-                                                                Go to employee edit page
-                                                            </a>
+                                                            @if (auth()->user()->role == 'HRD')
+                                                                <a class="fw-semibold text-primary"
+                                                                    href="{{ route('employee.edit', $employee->npk) }}">
+                                                                    Go to employee edit page
+                                                                </a>
+                                                            @endif
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -616,10 +627,12 @@
                                                             <td colspan="3">
                                                                 <div
                                                                     class="d-flex justify-content-between align-items-center gap-3">
-                                                                    <a class="fw-semibold text-primary"
-                                                                        href="{{ route('employee.edit', $employee->npk) }}">
-                                                                        Go to employee edit page
-                                                                    </a>
+                                                                    @if (auth()->user()->role == 'HRD')
+                                                                        <a class="fw-semibold text-primary"
+                                                                            href="{{ route('employee.edit', $employee->npk) }}">
+                                                                            Go to employee edit page
+                                                                        </a>
+                                                                    @endif
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -843,7 +856,7 @@
                 <div class="card-footer">
 
                     <a class="fw-semibold"
-                           href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                        href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
                         Go to IDP detail
                     </a>
 

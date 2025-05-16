@@ -63,8 +63,9 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Name</th>
+                            <th>Name Division</th>
                             <th>Plant</th>
+                              <th>Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -74,7 +75,12 @@
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $division->name }}</td>
                                 <td>{{ $division->plant->name }}</td>
+                                 <td>{{ $division->gm->name }}</td>
                                 <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal"
+                                        data-bs-target="#editDivisionModal{{ $division->id }}">
+                                        Edit
+                                    </button>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $division->id }}">Delete</button>
                                 </td>
@@ -131,9 +137,6 @@
                             <label for="name" class="form-label">Division Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
-                    </div>
-
-                    <div class="modal-body">
                         <div class="mb-3">
                             <label for="plant_id" class="form-label">Pilih Plant</label>
                             <select name="plant_id" id="plant_id" class="form-select" required>
@@ -143,6 +146,16 @@
                                 @endforeach
                             </select>
                         </div>
+                        <div class="mb-3">
+                            <label for="gm_id" class="form-label">Pilih GM</label>
+                            <select name="gm_id" id="gm_id" class="form-select" required>
+                                <option value="">Pilih GM</option>
+                                @foreach ($gms as $gm)
+                                    <option value="{{ $gm->id }}">{{ $gm->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                     </div>
 
                     <div class="modal-footer">
@@ -153,6 +166,63 @@
             </div>
         </div>
     </div>
+    @foreach ($divisions as $division)
+        <div class="modal fade" id="editDivisionModal{{ $division->id }}" tabindex="-1"
+            aria-labelledby="editDivisionLabel{{ $division->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <form action="{{ route('division.master.update', $division->id) }}" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editDivisionLabel{{ $division->id }}">Edit Division</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="name{{ $division->id }}" class="form-label">Division Name</label>
+                                <input type="text" class="form-control" id="name{{ $division->id }}" name="name"
+                                    value="{{ $division->name }}" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="plant_id{{ $division->id }}" class="form-label">Pilih Plant</label>
+                                <select name="plant_id" id="plant_id{{ $division->id }}" class="form-select" required>
+                                    <option value="">Pilih Plant</option>
+                                    @foreach ($plants as $plant)
+                                        <option value="{{ $plant->id }}"
+                                            {{ $plant->id == $division->plant_id ? 'selected' : '' }}>
+                                            {{ $plant->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="gm_id{{ $division->id }}" class="form-label">Pilih GM</label>
+                                <select name="gm_id" id="gm_id{{ $division->id }}" class="form-select" required>
+                                    <option value="">Pilih GM</option>
+                                    @foreach ($gms as $gm)
+                                        <option value="{{ $gm->id }}"
+                                            {{ $gm->id == $division->gm_id ? 'selected' : '' }}>
+                                            {{ $gm->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
 @endsection
 
 @push('scripts')

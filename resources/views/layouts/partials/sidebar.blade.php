@@ -520,7 +520,7 @@
 
                         <!-- Division -->
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
                                 href="#">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>
@@ -563,7 +563,7 @@
 
                         <!-- Division -->
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
                                 href="#">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>
