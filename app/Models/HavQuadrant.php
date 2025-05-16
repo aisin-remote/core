@@ -110,4 +110,45 @@ class HavQuadrant extends Model
         $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
         $this->generateHavQuadrant($employee_id, $getHavQuadrant->assessment_score ?? 1, $pkScore);
     }
+
+    public function getValidatedPerformanceScores($employee_id, $year)
+    {
+        $years = [$year, $year - 1, $year - 2];
+        $missingYears = [];
+
+        // Ambil semua data appraisal 3 tahun
+        $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
+            ->whereIn(DB::raw('YEAR(date)'), $years)
+            ->get();
+
+        // Kelompokkan berdasarkan tahun
+        $grouped = $performance->groupBy(function ($item) {
+            return date('Y', strtotime($item->date));
+        });
+
+        // Cek tahun yang tidak ditemukan
+        foreach ($years as $y) {
+            if (!isset($grouped[$y])) {
+                $missingYears[] = $y;
+            }
+        }
+
+        if (!empty($missingYears)) {
+            return 'Data performace appraisal tidak ditemukan untuk tahun: ' . implode(', ', $missingYears);
+        }
+
+        // Validasi dan hitung score
+        $scores = [];
+        foreach ($performance as $value) {
+            $scoreModel = PerformanceMaster::select('score')->where('code', $value->score)->first();
+
+            if (!$scoreModel || $scoreModel->score === null) {
+                return 'Score tidak ditemukan atau kosong untuk appraisal pada tanggal: ' . $value->date;
+            }
+
+            $scores[] = $scoreModel->score;
+        }
+
+        return array_sum($scores);
+    }
 }

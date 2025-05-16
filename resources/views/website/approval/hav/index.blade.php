@@ -128,7 +128,15 @@
                                     <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject({{ $item->id }})">
                                         <i class="fas fa-times"></i> Revise
                                     </button>
-                                @endif
+                                    @endif
+
+                                    @if ($item->hav_status == 1)
+                                    <button type="button" class="btn btn-warning btn-sm" onclick="reupload({{ $item->id }})">
+                                        <i class="fas fa-upload"></i> Revise
+                                    </button>
+                                    @endif
+
+
 
                                 </td>
                             </tr>
@@ -139,6 +147,43 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="importModalLabel">Import HAV Employee Data</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
+                        @csrf
+
+                        <div class="mb-3">
+                            <label for="importFile" class="form-label">Pilih File Excel</label>
+                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls"
+                                required>
+                            <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
+                        </div>
+
+                        <div class="alert alert-info small">
+                            <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
+                            Download template format import:
+                            <a href="{{ Storage::url('Import-HAV.xlsx') }}" target="_blank"
+                                class="fw-bold text-primary text-decoration-underline">Download Template</a>
+                        </div>
+
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-primary">Upload</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
 @endsection
 <!-- Pastikan jQuery & SweetAlert sudah terpasang -->
 <script>

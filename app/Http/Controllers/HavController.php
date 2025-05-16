@@ -18,7 +18,8 @@ use App\Models\HavQuadrant;
 use App\Models\KeyBehavior;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use Maatwebsite\Excel\Excel;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\HavSummaryExport;
 use App\Models\HavCommentHistory;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -142,7 +143,7 @@ class HavController extends Controller
 
             $subordinates = auth()->user()->subordinate()->unique()->values();
 
-            $havGrouped = HavQuadrant::whereIn('employee_id', $subordinates)->with('employee')->get()->groupBy('quadrant');
+            $havGrouped = HavQuadrant::whereIn('employee_id', $subordinates)->with('employee', 'employee.departments')->get()->groupBy('quadrant');
 
             // Quadrant ID => Judul
             $titles = [
@@ -239,7 +240,7 @@ class HavController extends Controller
                     $employees = Hav::with('employee')
                         ->whereIn('employee_id', $subordinateIds)
                         ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
-                            $query->where('company_name', $employee->company_name);
+
                             if ($filter && $filter !== 'all') {
                                 $query->where(function ($q) use ($filter) {
                                     $q->where('position', $filter)
@@ -407,6 +408,7 @@ class HavController extends Controller
 
         $subordinates = auth()->user()->subordinate()->unique()->values();
         $employees = Employee::with([
+            'departments',
             'assessments.details',
             'havQuadrants' => function ($q) {
                 $q->orderByDesc('created_at');
@@ -420,7 +422,7 @@ class HavController extends Controller
 
         foreach ($employees as $i => $emp) {
             $row = $startRow + $i;
-            $assessment = $emp->assessments->sortByDesc('created_at')->first();
+            $assessment = $emp->hav->sortByDesc('created_at')->first();
             $details = $assessment ? $assessment->details->keyBy('alc_id') : collect();
 
             // Total Score
@@ -439,11 +441,12 @@ class HavController extends Controller
                 ->values();
 
             // Mapping kolom (semua geser 1 ke kanan)
+            $sheet->setCellValue("A{$row}", $i + 1);
             $sheet->setCellValue("B{$row}", $emp->npk);
             $sheet->setCellValue("C{$row}", $emp->name);
             $sheet->setCellValue("D{$row}", $emp->function);
-            $sheet->setCellValue("E{$row}", $emp->foundation_group); // Divisi
-            $sheet->setCellValue("F{$row}", $emp->company_group); // Departemen
+            $sheet->setCellValue("E{$row}", $emp->division->name); // Divisi
+            $sheet->setCellValue("F{$row}", $emp->departments[0]->name); // Departemen
             $sheet->setCellValue("G{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia
             $sheet->setCellValue("H{$row}", $emp->grade); // Sub Gol
             $sheet->setCellValue("I{$row}", $emp->working_period); // Masa kerja
@@ -459,21 +462,23 @@ class HavController extends Controller
             $sheet->setCellValue("S{$row}", $totalScorePercent);
 
             // Kolom Appraisal 3 Tahun (T, U, V)
-            $sheet->setCellValue("T{$row}", $appraisals[0]->score ?? '');
-            $sheet->setCellValue("U{$row}", $appraisals[1]->score ?? '');
-            $sheet->setCellValue("V{$row}", $appraisals[2]->score ?? '');
+            // dd(substr($appraisals[0]->date, 0, 4));
+            $sheet->setCellValue("U11", substr($appraisals[0]->date, 0, 4) ?? '');
+            $sheet->setCellValue("V11", substr($appraisals[0]->date, 0, 4) ?? '');
+            $sheet->setCellValue("W11", substr($appraisals[0]->date, 0, 4) ?? '');
+            $sheet->setCellValue("X11", substr($appraisals[0]->date, 0, 4) ?? '');
+            $sheet->setCellValue("Y11", substr($appraisals[0]->date, 0, 4) ?? '');
+            $sheet->setCellValue("Z11", substr($appraisals[0]->date, 0, 4) ?? '');
+            $sheet->setCellValue("U{$row}", $appraisals[0]->score ?? '');
+            $sheet->setCellValue("V{$row}", $appraisals[1]->score ?? '');
+            $sheet->setCellValue("W{$row}", $appraisals[2]->score ?? '');
+
+            $sheet->setCellValue("X{$row}", $appraisals[0]->score ?? '');
+            $sheet->setCellValue("Y{$row}", $appraisals[1]->score ?? '');
+            $sheet->setCellValue("Z{$row}", $appraisals[2]->score ?? '');
 
             // HAV terakhir (W, X, Y)
-            $sheet->setCellValue("W{$row}", $hav->assessment_score ?? '');
-            $sheet->setCellValue("X{$row}", $hav->performance_score ?? '');
-            $sheet->setCellValue("Y{$row}", $quadrant);
-
-            // Breakdown score terbaru (Z - AG)
-            $breakdownCol = 'Z';
-            for ($j = 1; $j <= 8; $j++) {
-                $sheet->setCellValue("{$breakdownCol}{$row}", $details[$j]->score ?? '');
-                $breakdownCol++;
-            }
+            $sheet->setCellValue("AD{$row}", $quadrant);
         }
 
 
@@ -482,6 +487,8 @@ class HavController extends Controller
         $writer->save(public_path($filename));
 
         return response()->download(public_path($filename))->deleteFileAfterSend(true);
+
+        // return Excel::download(new HavSummaryExport, 'HAV_Summary_Exported.xlsx');
     }
 
 
@@ -577,16 +584,6 @@ class HavController extends Controller
         if ($latestComment && $latestComment->upload) {
             // Lokasi penyimpanan file (sesuai path yang diberikan)
             $filePath = public_path('hav_uploads/' . $latestComment->upload);
-
-            // Mengecek apakah file ada
-            if (file_exists($filePath)) {
-                // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
-                // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
-                // Contoh: melakukan log
-                Log::info("File path: " . $filePath);
-            } else {
-                Log::warning("File tidak ditemukan: " . $filePath);
-            }
         }
 
         // Menyimpan komentar ke dalam tabel hav_comment_history
@@ -626,16 +623,6 @@ class HavController extends Controller
         if ($latestComment && $latestComment->upload) {
             // Lokasi penyimpanan file (sesuai path yang diberikan)
             $filePath = public_path('hav_uploads/' . $latestComment->upload);
-
-            // Mengecek apakah file ada
-            if (file_exists($filePath)) {
-                // Misalnya, Anda bisa melakukan beberapa tindakan dengan file tersebut
-                // Seperti menduplikat file, memindahkannya, atau bahkan mengirimkannya kembali ke pengguna.
-                // Contoh: melakukan log
-                Log::info("File path: " . $filePath);
-            } else {
-                Log::warning("File tidak ditemukan: " . $filePath);
-            }
         }
 
         // Menyimpan komentar ke dalam tabel hav_comment_history

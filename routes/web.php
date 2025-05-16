@@ -92,6 +92,8 @@ Route::middleware('auth')->group(function () {
     });
     Route::prefix('approval')->group(function () {
         Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
+        Route::patch('/hav/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
+        Route::patch('/hav/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
         Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
         Route::get('/idp/{id}', [IdpController::class, 'approve'])->name('idp.approve');
         Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
@@ -113,7 +115,6 @@ Route::middleware('auth')->group(function () {
         Route::prefix('promotion')->group(function () {
             Route::delete('/delete/{id}', [EmployeeController::class, 'promotionDestroy'])->name('promotion.destroy');
             Route::put('/update/{id}', [EmployeeController::class, 'promotionUpdate'])->name('promotion.update');
-
         });
 
         // work experience
