@@ -23,10 +23,12 @@ use App\Exports\HavSummaryExport;
 use App\Models\HavCommentHistory;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\AstraTraining;
 use App\Models\HavDetailKeyBehavior;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
+use App\Models\QuadranMaster;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Database\Events\TransactionBeginning;
 
@@ -402,7 +404,7 @@ class HavController extends Controller
      */
     public function export()
     {
-        $templatePath = public_path('assets/file/HAV_Summary.xlsx');
+        $templatePath = public_path('assets/file/HAV_Summary.xls');
         $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
@@ -419,6 +421,8 @@ class HavController extends Controller
         ])->whereHas('havQuadrants')->whereIn('id', $subordinates)->get();
 
         $startRow = 13;
+        $sheet->setCellValue("C6", auth()->user()->employee->name);
+        $sheet->setCellValue("C7", date('d-m-Y H:i:s'));
 
         foreach ($employees as $i => $emp) {
             $row = $startRow + $i;
@@ -454,7 +458,7 @@ class HavController extends Controller
             // ALCs
             $col = 'J';
             for ($j = 1; $j <= 8; $j++) {
-                $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '');
+                $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '-');
                 $col++;
             }
 
@@ -463,22 +467,59 @@ class HavController extends Controller
 
             // Kolom Appraisal 3 Tahun (T, U, V)
             // dd(substr($appraisals[0]->date, 0, 4));
-            $sheet->setCellValue("U11", substr($appraisals[0]->date, 0, 4) ?? '');
-            $sheet->setCellValue("V11", substr($appraisals[0]->date, 0, 4) ?? '');
-            $sheet->setCellValue("W11", substr($appraisals[0]->date, 0, 4) ?? '');
-            $sheet->setCellValue("X11", substr($appraisals[0]->date, 0, 4) ?? '');
-            $sheet->setCellValue("Y11", substr($appraisals[0]->date, 0, 4) ?? '');
-            $sheet->setCellValue("Z11", substr($appraisals[0]->date, 0, 4) ?? '');
-            $sheet->setCellValue("U{$row}", $appraisals[0]->score ?? '');
-            $sheet->setCellValue("V{$row}", $appraisals[1]->score ?? '');
-            $sheet->setCellValue("W{$row}", $appraisals[2]->score ?? '');
+            $sheet->setCellValue("U11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("V11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("W11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("X11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("Y11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("Z11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("U{$row}", $appraisals[0]->score ?? '-');
+            $sheet->setCellValue("V{$row}", $appraisals[1]->score ?? '-');
+            $sheet->setCellValue("W{$row}", $appraisals[2]->score ?? '-');
 
-            $sheet->setCellValue("X{$row}", $appraisals[0]->score ?? '');
-            $sheet->setCellValue("Y{$row}", $appraisals[1]->score ?? '');
-            $sheet->setCellValue("Z{$row}", $appraisals[2]->score ?? '');
+            $sheet->setCellValue("X{$row}", $appraisals[0]->score ?? '-');
+            $sheet->setCellValue("Y{$row}", $appraisals[1]->score ?? '-');
+            $sheet->setCellValue("Z{$row}", $appraisals[2]->score ?? '-');
 
             // HAV terakhir (W, X, Y)
-            $sheet->setCellValue("AD{$row}", $quadrant);
+            $sheet->setCellValue("AD{$row}", QuadranMaster::where('id', $quadrant)->first()->name ?? '-'); // Quadrant
+
+            $getLastAssessment = $emp->assessments->sortByDesc('date')->first();
+
+            $withWeakness = $getLastAssessment->details->filter(fn($item) => !empty($item['weakness']))
+                ->values() // reset index agar rapi
+                ->take(2);
+            $withStrength = $getLastAssessment->details->filter(fn($item) => !empty($item['strength']))
+                ->values() // reset index agar rapi
+                ->take(3);
+
+            $sheet->setCellValue("AE{$row}", $withStrength[0]->alc->name ?? '-');
+            $sheet->setCellValue("AF{$row}", $withStrength[1]->alc->name ?? '-');
+            $sheet->setCellValue("AG{$row}", $withStrength[2]->alc->name ?? '-');
+            $sheet->setCellValue("AH{$row}", $withWeakness[0]->alc->name ?? '-');
+            $sheet->setCellValue("AI{$row}", $withWeakness[1]->alc->name ?? '-');
+
+            $getLast3AstraTraining = AstraTraining::where('employee_id', $emp->id)
+                ->orderBy('created_at', 'desc')
+                ->take(3)
+                ->get();
+
+            $sheet->setCellValue("AJ{$row}", $getLast3AstraTraining[0]->training_name ?? '-');
+            $sheet->setCellValue("AK{$row}", $getLast3AstraTraining[1]->training_name ?? '-');
+            $sheet->setCellValue("AL{$row}", $getLast3AstraTraining[2]->training_name ?? '-');
+
+
+            $getLastHav = Hav::where('employee_id', $emp->id)
+                ->orderBy('created_at', 'desc')
+                ->first();
+            $sheet->setCellValue("AM{$row}", $getLastHav->details[0]->evidence ?? '-');
+            $sheet->setCellValue("AN{$row}", $getLastHav->details[1]->evidence ?? '-');
+            $sheet->setCellValue("AO{$row}", $getLastHav->details[2]->evidence ?? '-');
+            $sheet->setCellValue("AP{$row}", $getLastHav->details[3]->evidence ?? '-');
+            $sheet->setCellValue("AQ{$row}", $getLastHav->details[4]->evidence ?? '-');
+            $sheet->setCellValue("AR{$row}", $getLastHav->details[5]->evidence ?? '-');
+            $sheet->setCellValue("AS{$row}", $getLastHav->details[6]->evidence ?? '-');
+            $sheet->setCellValue("AT{$row}", $getLastHav->details[7]->evidence ?? '-');
         }
 
 

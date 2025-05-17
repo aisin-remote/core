@@ -76,6 +76,17 @@ class HavImport implements WithMultipleSheets, WithEvents
                         8 => 'Q25',
                     ];
 
+                    $evidenceMap = [
+                        1 => 'E17',
+                        2 => 'I17',
+                        3 => 'N17',
+                        4 => 'R17',
+                        5 => 'E27',
+                        6 => 'I27',
+                        7 => 'N27',
+                        8 => 'R27',
+                    ];
+
                     $quadrant = (new HavQuadrant())->updateHavFromAssessment(
                         $employee->id,
                         $sheet->getCell('C13')->getCalculatedValue(),
@@ -99,7 +110,7 @@ class HavImport implements WithMultipleSheets, WithEvents
                             'hav_id' => $hav->id,
                             'alc_id' => $alc->id,
                             'score' => floatval($sheet->getCell($cell)->getCalculatedValue()),
-                            'evidence' => '',
+                            'evidence' => $sheet->getCell($evidenceMap[$index])->getCalculatedValue(),
                         ]);
                     }
 
