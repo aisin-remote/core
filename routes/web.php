@@ -243,6 +243,9 @@ Route::middleware('auth')->group(function () {
         Route::prefix('subSection')->group(function () {
             Route::get('/', [MasterController::class, 'subSection'])->name('subSection.master.index');
             Route::post('/store', [MasterController::class, 'subSectionStore'])->name('subSection.master.store');
+
+            Route::put('/update/{id}', [MasterController    ::class, 'subSectionUpdate'])->name('sub-section.master.update');
+
             Route::delete('/delete/{id}', [MasterController::class, 'subSectionDestroy'])->name('subSection.master.destroy');
         });
 

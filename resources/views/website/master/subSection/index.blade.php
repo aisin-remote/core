@@ -75,6 +75,10 @@
                                 <td>{{ $subSection->name }}</td>
                                 <td>{{ $subSection->section->name }}</td>
                                 <td class="text-center">
+                                <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#editSubSectionModal{{ $subSection->id }}">
+                                        Edit
+                                    </button>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $subSection->id }}">Delete</button>
                                 </td>
@@ -134,18 +138,28 @@
                             <label for="name" class="form-label">Sub Section Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
-                    </div>
 
-                    <div class="modal-body">
+
+                   
                         <div class="mb-3">
                             <label for="section_id" class="form-label">Section</label>
                             <select name="section_id" id="section_id" class="form-select" required>
                                 <option value="">Pilih Section</option>
-                                @foreach ($sections as $sections)
-                                    <option value="{{ $sections->id }}">{{ $sections->name }}</option>
+                                @foreach ($sections as $section)
+                                    <option value="{{ $section->id }}">{{ $section->name }}</option>
                                 @endforeach
                             </select>
                         </div>
+                        <div class="mb-3">
+                            <label for="section_id" class="form-label">Leader</label>
+                            <select name="section_id" id="section_id" class="form-select" required>
+                                <option value="">Pilih Section</option>
+                                @foreach ($leaders as $leader)
+                                    <option value="{{ $leader->id }}">{{ $leader->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -155,6 +169,67 @@
             </div>
         </div>
     </div>
+    @foreach ($subSections as $subSection)
+    <div class="modal fade" id="editSubSectionModal{{ $subSection->id }}" tabindex="-1"
+        aria-labelledby="editSubSectionLabel{{ $subSection->id }}" aria-hidden="true">
+        <div class="modal-dialog">
+            <form action="{{ route('sub-section.master.update', $subSection->id) }}" method="POST">
+                @csrf
+                @method('PUT')
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editSubSectionLabel{{ $subSection->id }}">Edit Sub Section</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"
+                            aria-label="Close"></button>
+                    </div>
+
+                    <div class="modal-body">
+                        {{-- Sub Section Name --}}
+                        <div class="mb-3">
+                            <label for="name{{ $subSection->id }}" class="form-label">Sub Section Name</label>
+                            <input type="text" class="form-control" id="name{{ $subSection->id }}" name="name"
+                                value="{{ $subSection->name }}" required>
+                        </div>
+
+                        {{-- Section --}}
+                        <div class="mb-3">
+                            <label for="section_id{{ $subSection->id }}" class="form-label">Pilih Section</label>
+                            <select name="section_id" id="section_id{{ $subSection->id }}" class="form-select" required>
+                                <option value="">Pilih Section</option>
+                                @foreach ($sections as $section)
+                                    <option value="{{ $section->id }}"
+                                        {{ $subSection->section_id == $section->id ? 'selected' : '' }}>
+                                        {{ $section->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        {{-- Leader --}}
+                        <div class="mb-3">
+                            <label for="leader_id{{ $subSection->id }}" class="form-label">Pilih Leader</label>
+                            <select name="leader_id" id="leader_id{{ $subSection->id }}" class="form-select" required>
+                                <option value="">Pilih Leader</option>
+                                @foreach ($leaders as $leader)
+                                    <option value="{{ $leader->id }}"
+                                        {{ $subSection->leader_id == $leader->id ? 'selected' : '' }}>
+                                        {{ $leader->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Update</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+@endforeach
+
 @endsection
 
 @push('scripts')

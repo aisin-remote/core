@@ -261,14 +261,16 @@ class MasterController extends Controller
     public function subSectionStore(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255|unique:sub_sections,name',
+            'name' => 'required|string',
             'section_id' => 'required|string|max:255',
+            'leader_id' => 'required|string|max:255',
         ]);
 
         try {
             SubSection::create([
                 'name' => $request->name,
-                'section_id' => $request->section_id
+                'section_id' => $request->section_id,
+                'leader_id' => $request->leader_id
             ]);
 
             return redirect()->back()->with('success', 'Sub Section berhasil ditambahkan.');
@@ -276,6 +278,29 @@ class MasterController extends Controller
             return redirect()->back()->with('error', 'Gagal menambahkan Sub Section: ' . $e->getMessage());
         }
     }
+
+    public function subSectionUpdate(Request $request, $id)
+{
+    $request->validate([
+        'name' => 'required|string',
+        'section_id' => 'required',
+        'leader_id' => 'string',
+    ]);
+
+    try {
+        $subSection = SubSection::findOrFail($id);
+
+        $subSection->update([
+            'name' => $request->name,
+            'section_id' => $request->section_id,
+            'leader_id' => $request->leader_id
+        ]);
+
+        return redirect()->back()->with('success', 'Sub Section berhasil diperbarui.');
+    } catch (\Exception $e) {
+        return redirect()->back()->with('error', 'Gagal memperbarui Sub Section: ' . $e->getMessage());
+    }
+}
 
     public function subSectionDestroy($id)
     {
@@ -318,9 +343,10 @@ class MasterController extends Controller
 
     public function subSection()
     {
+        $leaders = Employee::whereIn('position', ['Leader', 'Act Leader'])->get();
         $sections = Section::all();
-        $subSections = SubSection::paginate(10);
-        return view('website.master.subSection.index', compact('subSections', 'sections'));
+        $subSections = SubSection::with('leader','section')->paginate(10);
+        return view('website.master.subSection.index', compact('subSections','leaders', 'sections'));
     }
 
 
