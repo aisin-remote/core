@@ -229,13 +229,13 @@ class Employee extends Model
             }
 
             if ($nextEmployees->isEmpty()) {
-                break;
+                // break;
+                return collect();  // langsung return kosong kalau gak ada bawahan di iterasi ini
             }
 
             $currentEmployees = $nextEmployees;
         }
 
-        // 🔥 Tambahkan filter ini agar hanya ambil posisi yang relevan (bawahan)
         return $currentEmployees->filter(function ($employee) {
             $normalized = $employee->getNormalizedPosition();
             return in_array($normalized, ['manager', 'supervisor', 'leader', 'jp', 'operator']);
