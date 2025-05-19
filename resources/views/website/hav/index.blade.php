@@ -74,7 +74,7 @@
                                 return [
                                     'npk' => $h->employee->npk ?? '-',
                                     'name' => $h->employee->name ?? '-',
-                                    'department' => $h->employee->departments[0]->name ?? '-',
+                                    'department' => $h->employee->department?->name ?? '-',
                                     'grade' => $h->employee->grade ?? '-',
                                 ];
                             });
