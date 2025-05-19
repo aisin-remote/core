@@ -40,6 +40,18 @@
 </style>
 
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div id="kt_app_content_container" class="app-container  container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -148,27 +160,17 @@
                                                                 {{ $score }}
                                                             </span>
                                                         @else
-                                                            @if ($isSuperior)
-                                                                {{-- Boleh klik --}}
-                                                                <span class="badge badge-lg badge-danger d-block w-100"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
-                                                                    data-title="Update IDP - {{ $title }}"
-                                                                    data-assessment="{{ $assessment->id }}"
-                                                                    data-alc="{{ $id }}"
-                                                                    style="cursor: pointer;">
-                                                                    {{ $score }}
-                                                                    <i
-                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
-                                                                </span>
-                                                            @else
-                                                                {{-- Tidak boleh klik --}}
-                                                                <span class="badge badge-lg badge-danger d-block w-100">
-                                                                    {{ $score }}
-                                                                    <i
-                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
-                                                                </span>
-                                                            @endif
+                                                            {{-- Boleh klik --}}
+                                                            <span class="badge badge-lg badge-danger d-block w-100"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
+                                                                data-title="Update IDP - {{ $title }}"
+                                                                data-assessment="{{ $assessment->id }}"
+                                                                data-alc="{{ $id }}" style="cursor: pointer;">
+                                                                {{ $score }}
+                                                                <i
+                                                                    class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                            </span>
                                                         @endif
                                                     </td>
                                                 @endforeach
@@ -251,6 +253,7 @@
 
                                     @php
                                         set_time_limit(60);
+                                        $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
                                         // Mengambil data IDP berdasarkan assessment_id dan alc_id
                                         $idp = DB::table('idp')
                                             ->where('assessment_id', $assessment->id)
@@ -268,7 +271,7 @@
                                         foreach ($assessment->details as $detail) {
                                             if ($idp) {
                                                 if ($detail->assesment_id == $idp?->id) {
-                                                    $assessment_detail_id = $details->id;
+                                                    $assessment_detail_id = $detail->id;
                                                 }
                                             }
                                         }
@@ -283,12 +286,31 @@
                                             value="{{ $id }}">
 
                                         <div class="col-lg-12 mb-10">
+                                            <label class="fs-5 fw-bold form-label mb-2">Weakness in
+                                                {{ $title }}</label>
+                                            <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
+                                                class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->weakness }}</textarea>
+                                            <small class="text-danger">*make sure you have read everything</small>
+                                        </div>
+
+                                        <div class="col-lg-12 mb-10">
+                                            <label class="fs-5 fw-bold form-label mb-2">Suggestion Development</label>
+                                            <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
+                                                class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->suggestion_development }}</textarea>
+                                            <small class="text-danger">*make sure you have read everything</small>
+                                        </div>
+
+                                        <div class="col-lg-12 mb-10">
+                                            <hr>
+                                        </div>
+
+                                        <div class="col-lg-12 mb-10">
                                             <label class="fs-5 fw-bold form-label mb-2"><span
                                                     class="required">Category</span></label>
                                             <select id="category_select_{{ $assessment->id }}_{{ $id }}"
                                                 name="category" aria-label="Select Category" data-control="select2"
                                                 data-placeholder="Select categories..."
-                                                class="form-select form-select-solid form-select-lg fw-semibold">
+                                                class="form-select form-select-lg fw-semibold">
                                                 <option value="">Select Category</option>
                                                 @foreach (['Feedback', 'Self Development', 'Shadowing', 'On Job Development', 'Mentoring', 'Training'] as $category)
                                                     <option value="{{ $category }}"
@@ -304,7 +326,7 @@
                                             <select id="program_select_{{ $assessment->id }}_{{ $id }}"
                                                 name="development_program" aria-label="Select Development Program"
                                                 data-control="select2" data-placeholder="Select Programs..."
-                                                class="form-select form-select-solid form-select-lg fw-semibold">
+                                                class="form-select form-select-lg fw-semibold">
                                                 <option value="">Select Development Program</option>
                                                 @foreach (['Superior (DGM & GM)', 'Book Reading', 'FIGURE LEADER', 'Team Leader', 'SR PROJECT', 'People Development Program', 'Leadership', 'Developing Sub Ordinate'] as $program)
                                                     <option value="{{ $program }}"
@@ -355,17 +377,14 @@
                                         </div>
 
                                         <div class="text-center pt-15">
-                                            @if (!isset($idp))
-                                                <!-- Cek apakah IDP sudah ada di database -->
-                                                <button type="button" class="btn btn-primary btn-create-idp"
-                                                    data-assessment="{{ $assessment->id }}"
-                                                    data-alc="{{ $id }}">
-                                                    Submit
-                                                </button>
-                                            @else
-                                                <button type="button" class="btn btn-secondary"
-                                                    disabled>Submitted</button>
-                                            @endif
+                                            <!-- Cek apakah IDP sudah ada di database -->
+                                            <button type="button"
+                                                id="confirm-button-{{ $assessment->id }}-{{ $id }}"
+                                                class="btn btn-primary btn-create-idp"
+                                                data-assessment="{{ $assessment->id }}" data-alc="{{ $id }}"
+                                                disabled>
+                                                Submit
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -654,7 +673,8 @@
                                                             <td class="text-justify px-3">
                                                                 {{ $assessment->idp?->first()?->category }}</td>
                                                             <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->development_program }}</td>
+                                                                {{ $assessment->idp?->first()?->development_program }}
+                                                            </td>
                                                             <td class="text-justify px-3">
                                                                 {{ $assessment->idp?->first()?->development_target }}</td>
                                                             <td class="text-justify px-3">
@@ -684,7 +704,7 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @foreach ($mid->where('employee_id', $assessment->employee->id) as $items)
+                                                        @foreach ($mid->where('employee_id', $assessment->employee_id) as $items)
                                                             <tr>
                                                                 <td class="text-justify px-3">
                                                                     {{ $items->development_program }}</td>
@@ -739,408 +759,433 @@
                     </div>
                 </div>
             @endforeach
-        @endsection
+        </div>
+    </div>
+@endsection
 
-        @push('scripts')
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-            <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-            <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-            <script>
-                // document.addEventListener("DOMContentLoaded", function() {
-                //     document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
-                //         button.addEventListener('click', function() {
-                //             var targetModalId = this.getAttribute('data-bs-target');
-                //             var title = this.getAttribute('data-title');
-                //             var alc = this.getAttribute('data-alc');
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        // document.addEventListener("DOMContentLoaded", function() {
+        //     document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
+        //         button.addEventListener('click', function() {
+        //             var targetModalId = this.getAttribute('data-bs-target');
+        //             var title = this.getAttribute('data-title');
+        //             var alc = this.getAttribute('data-alc');
 
-                //             const modalAlcInput = document.querySelector(targetModalId +
-                //                 ' input[name=\"alc\"]');
-                //             if (modalAlcInput) {
-                //                 modalAlcInput.value = alc;
-                //             }
+        //             const modalAlcInput = document.querySelector(targetModalId +
+        //                 ' input[name=\"alc\"]');
+        //             if (modalAlcInput) {
+        //                 modalAlcInput.value = alc;
+        //             }
 
-                //             const modalTitle = document.querySelector(targetModalId + ' .modal-header h2');
-                //             if (modalAlcInput) {
-                //                 modalAlcInput.value = alc;
-                //             }
-                //             if (title && modalTitle) {
-                //                 modalTitle.textContent = title;
-                //             }
+        //             const modalTitle = document.querySelector(targetModalId + ' .modal-header h2');
+        //             if (modalAlcInput) {
+        //                 modalAlcInput.value = alc;
+        //             }
+        //             if (title && modalTitle) {
+        //                 modalTitle.textContent = title;
+        //             }
 
-                //             const alcInput = document.querySelector(
-                //                 `${targetModalId} input[name="alc_id"]`);
-                //             if (alcInput) {
-                //                 alcInput.value = alc;
-                //             }
-                //         });
-                //     });
-                // });
+        //             const alcInput = document.querySelector(
+        //                 `${targetModalId} input[name="alc_id"]`);
+        //             if (alcInput) {
+        //                 alcInput.value = alc;
+        //             }
+        //         });
+        //     });
+        // });
+        document.addEventListener("DOMContentLoaded", function() {
+            const textareas = document.querySelectorAll(".weakness-textarea");
 
-                document.addEventListener("DOMContentLoaded", function() {
-                    const maxAge = 5 * 60 * 1000;
+            textareas.forEach(textarea => {
+                const textareaId = textarea.id.replace("weakness-textarea-", "");
+                const button = document.getElementById(`confirm-button-${textareaId}`);
 
-                    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
-                        button.addEventListener('click', function() {
-                            const alc = this.getAttribute('data-alc');
-                            const assessmentId = this.getAttribute('data-assessment');
-                            const modalTarget = this.getAttribute('data-bs-target');
-                            const title = this.getAttribute('data-title');
-
-                            const modal = document.querySelector(modalTarget);
-                            if (!modal) return;
-
-                            const modalTitle = modal.querySelector('.modal-header h2');
-                            if (title && modalTitle) {
-                                modalTitle.textContent = title;
-                            }
-
-                            const alcInput = modal.querySelector(
-                                `input[id="alc_id_${assessmentId}_${alc}"]`);
-                            if (alcInput) alcInput.value = alc;
-
-                            const key = `idp_modal_${assessmentId}_${alc}`;
-                            const savedData = JSON.parse(localStorage.getItem(key));
-                            const now = Date.now();
-
-                            const categorySelect = modal.querySelector(
-                                `select[id="category_select_${assessmentId}_${alc}"]`);
-                            const programSelect = modal.querySelector(
-                                `select[id="program_select_${assessmentId}_${alc}"]`);
-                            const targetInput = modal.querySelector(
-                                `textarea[id="target_${assessmentId}_${alc}"]`);
-                            const dueDateInput = modal.querySelector(
-                                `input[id="due_date_${assessmentId}_${alc}"]`);
-
-
-
-                            if (savedData && (now - savedData.timestamp < maxAge)) {
-                                if (categorySelect) {
-                                    categorySelect.value = savedData.category;
-                                    $(categorySelect).trigger('change');
-                                }
-                                if (programSelect) {
-                                    programSelect.value = savedData.program;
-                                    $(programSelect).trigger('change');
-                                }
-                                if (targetInput) targetInput.value = savedData.target ?? '';
-                                if (dueDateInput) dueDateInput.value = savedData.date ?? '';
-                            } else {
-                                $.ajax({
-                                    url: '/idp/getData',
-                                    method: 'GET',
-                                    data: {
-                                        assessment_id: assessmentId,
-                                        alc_id: alc
-                                    },
-                                    success: function(response) {
-                                        if (response.idp) {
-                                            if (categorySelect) {
-                                                categorySelect.value = response.idp.category;
-                                                $(categorySelect).trigger('change');
-                                            }
-                                            if (programSelect) {
-                                                programSelect.value = response.idp
-                                                    .development_program;
-                                                $(programSelect).trigger('change');
-                                            }
-                                            if (targetInput) targetInput.value = response.idp
-                                                .development_target ?? '';
-                                            if (dueDateInput) dueDateInput.value = response.idp
-                                                .date ?? '';
-                                        } else {
-                                            if (categorySelect) categorySelect.value = '';
-                                            if (programSelect) programSelect.value = '';
-
-                                        }
-                                    }
-                                });
-                            }
-                        });
-                    });
-
-
-                    document.querySelectorAll('.btn-create-idp').forEach(button => {
-                        button.addEventListener('click', function() {
-                            const assessmentId = this.getAttribute('data-assessment');
-                            const alcId = this.getAttribute('data-alc');
-
-                            const category = document.getElementById(
-                                `category_select_${assessmentId}_${alcId}`).value;
-                            const program = document.getElementById(
-                                `program_select_${assessmentId}_${alcId}`).value;
-                            const target = document.getElementById(`target_${assessmentId}_${alcId}`).value;
-                            const date = document.getElementById(`due_date_${assessmentId}_${alcId}`).value;
-
-
-
-                            const key = `idp_modal_${assessmentId}_${alcId}`;
-
-                            localStorage.setItem(key, JSON.stringify({
-                                assessment_id: assessmentId,
-                                alc_id: alcId,
-                                category: category,
-                                program: program,
-                                target: target,
-                                date: date,
-                                timestamp: Date.now()
-                            }));
-
-                            $.ajax({
-                                url: "{{ route('idp.store') }}",
-                                type: "POST",
-                                data: {
-                                    alc_id: alcId,
-                                    assessment_id: assessmentId,
-                                    development_program: program,
-                                    category: category,
-                                    development_target: target,
-                                    date: date,
-                                    '_token': "{{ csrf_token() }}",
-                                },
-                                success: function(response) {
-                                    Swal.fire({
-                                        title: "Berhasil!",
-                                        text: "IDP berhasil diperbarui!",
-                                        icon: "success",
-                                        confirmButtonText: "OK"
-                                    }).then(() => {
-                                        localStorage.removeItem(key);
-                                        $(`#kt_modal_warning_${assessmentId}_${alcId}`)
-                                            .modal('hide');
-                                        location.reload();
-                                    });
-                                },
-                                error: function(xhr, status, error) {
-                                    alert(error);
-                                }
-                            });
-                        });
-                    });
-                });
-                // document.addEventListener("DOMContentLoaded", function() {
-                //     document.querySelectorAll("form").forEach(form => {
-                //         form.addEventListener("submit", function(e) {
-                //             let isValid = true;
-
-                //             // Cek apakah kategori dan program dipilih
-                //             const category = form.querySelector('select[name="category[]"]').value;
-                //             const program = form.querySelector('select[name="development_program[]"]')
-                //                 .value;
-                //             const dueDate = form.querySelector('input[name="due_date"]').value;
-
-                //             if (!category || !program || !dueDate) {
-                //                 isValid = false;
-                //                 alert("Semua bidang wajib diisi!");
-                //             }
-
-                //             if (!isValid) {
-                //                 e.preventDefault(); // Hentikan submit jika ada error
-                //             }
-                //         });
-                //     });
-                // });
-
-                document.addEventListener("DOMContentLoaded", function() {
-                    // Fungsi pencarian
-                    document.getElementById("searchButton").addEventListener("click", function() {
-                        var searchValue = document.getElementById("searchInput").value.toLowerCase();
-                        var table = document.getElementById("kt_table_users").getElementsByTagName("tbody")[0];
-                        var rows = table.getElementsByTagName("tr");
-
-                        for (var i = 0; i < rows.length; i++) {
-                            var nameCell = rows[i].getElementsByTagName("td")[1];
-                            if (nameCell) {
-                                var nameText = nameCell.textContent || nameCell.innerText;
-                                rows[i].style.display = nameText.toLowerCase().includes(searchValue) ? "" : "none";
-                            }
-                        }
-                    });
-
-                    // document.addEventListener("DOMContentLoaded", function() {
-                    //     document.querySelectorAll(".score").forEach(function(badge) {
-                    //         badge.addEventListener("click", function() {
-                    //             var title = this.getAttribute("data-title");
-                    //             var assessmentId = this.getAttribute("data-assessment");
-
-                    //             if (assessmentId) {
-                    //                 var modalTitle = document.querySelector("#modal-title-" +
-                    //                     assessmentId);
-                    //                 if (modalTitle) {
-                    //                     modalTitle.textContent = title;
-                    //                 }
-                    //             }
-                    //         });
-                    //     });
-                    // });
-
-
-                    document.addEventListener("DOMContentLoaded", function() {
-                        document.querySelectorAll(".open-modal").forEach(button => {
-                            button.addEventListener("click", function() {
-                                let id = this.getAttribute("data-id");
-                                let modal = new bootstrap.Modal(document.getElementById(
-                                    `notes_${id}`));
-                                modal.show();
-                            });
-                        });
-                    });
-
-
-
-                    // SweetAlert untuk tombol delete
-                    document.querySelectorAll('.delete-btn').forEach(button => {
-                        button.addEventListener('click', function() {
-                            let employeeId = this.getAttribute('data-id');
-
-                            Swal.fire({
-                                title: "Are you sure?",
-                                text: "You won't be able to revert this!",
-                                icon: "warning",
-                                showCancelButton: true,
-                                confirmButtonColor: "#d33",
-                                cancelButtonColor: "#3085d6",
-                                confirmButtonText: "Yes, delete it!"
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    let form = document.createElement('form');
-                                    form.method = 'POST';
-                                    form.action = `/employee/${employeeId}`;
-
-                                    let csrfToken = document.createElement('input');
-                                    csrfToken.type = 'hidden';
-                                    csrfToken.name = '_token';
-                                    csrfToken.value = '{{ csrf_token() }}';
-
-                                    let methodField = document.createElement('input');
-                                    methodField.type = 'hidden';
-                                    methodField.name = '_method';
-                                    methodField.value = 'DELETE';
-
-                                    form.appendChild(csrfToken);
-                                    form.appendChild(methodField);
-                                    document.body.appendChild(form);
-                                    form.submit();
-                                }
-                            });
-                        });
-                    });
-                });
-
-                document.addEventListener('DOMContentLoaded', function() {
-                    const dateInput = document.getElementById('kt_datepicker_7');
-
-                    flatpickr(dateInput, {
-                        altInput: true,
-                        altFormat: "F j, Y",
-                        dateFormat: "Y-m-d",
-                        mode: "range"
-                    });
-                });
-
-                document.addEventListener("DOMContentLoaded", function() {
-                    let dueDateInput = document.getElementById("kt_datepicker_7");
-
-                    let startDate = new Date(2025, 11, 8).toISOString().split("T")[0];
-                    let endDate = new Date(2025, 11, 17).toISOString().split("T")[0];
-
-                    dueDateInput.value = startDate;
-                    dueDateInput.min = startDate;
-                    dueDateInput.max = endDate;
-                });
-
-                document.addEventListener("DOMContentLoaded", function() {
-                    document.querySelectorAll(".open-modal").forEach(button => {
-                        button.addEventListener("click", function() {
-                            let id = this.getAttribute("data-id");
-                            let modal = new bootstrap.Modal(document.getElementById(
-                                `notes_${id}`));
-                            modal.show();
-                        });
-                    });
-                });
-
-                // const employeeId = "{{ $employees->first()->id }}"; // pastikan $employee dikirim dari controller
-                // alert(employeeId);
-
-                function sendDataConfirmation(employeeId) {
-                    Swal.fire({
-                        title: 'Kirim IDP ke atasan?',
-                        text: 'Pastikan semua ALC bernilai < 3 sudah dibuat.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Kirim',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            fetch("{{ route('send.idp') }}", {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                        "X-CSRF-TOKEN": document.querySelector('meta[name=\"csrf-token\"]')
-                                            .getAttribute('content')
-                                    },
-                                    body: JSON.stringify({
-                                        employee_id: employeeId
-                                    })
-                                })
-                                .then(async res => {
-                                    const data = await res.json();
-                                    if (!res.ok) {
-                                        throw new Error(data.message || "Terjadi kesalahan.");
-                                    }
-                                    Swal.fire('Berhasil!', data.message, 'success');
-                                })
-                                .catch(err => {
-                                    Swal.fire('Gagal', err.message || 'Terjadi kesalahan saat mengirim IDP.', 'error');
-                                    console.error(err);
-                                });
-                        }
-                    });
+                if (!textarea.value.trim()) {
+                    // Jika kosong, langsung enable tombol
+                    if (button) button.disabled = false;
+                    return; // tidak perlu pasang scroll listener
                 }
 
-                // function approveAction() {
-                //     Swal.fire({
-                //         title: 'Setujui Data?',
-                //         icon: 'success',
-                //         text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
-                //         showCancelButton: true,
-                //         confirmButtonText: 'Ya, Setujui',
-                //         cancelButtonText: 'Batal'
-                //     }).then((result) => {
-                //         if (result.isConfirmed) {
-                //             Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
-                //             // TODO: Kirim ke server via AJAX atau redirect di sini
-                //         }
-                //     });
-                // }
+                // Kalau ada isinya, cek scroll
+                textarea.addEventListener("scroll", function() {
+                    const isScrolledToBottom = this.scrollTop + this.clientHeight >= this
+                        .scrollHeight;
+                    if (isScrolledToBottom && button) {
+                        button.disabled = false;
+                    }
+                });
+            });
+        });
 
-                // function rejectAction() {
-                //     Swal.fire({
-                //         title: 'Revisi Data?',
-                //         input: 'textarea',
-                //         inputLabel: 'Alasan Revisi',
-                //         inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
-                //         inputAttributes: {
-                //             'aria-label': 'Catatan Revisi'
-                //         },
-                //         showCancelButton: true,
-                //         confirmButtonText: 'Revisi',
-                //         cancelButtonText: 'Batal',
-                //         inputValidator: (value) => {
-                //             if (!value) {
-                //                 return 'Catatan wajib diisi untuk Revisi!';
-                //             }
-                //         }
-                //     }).then((result) => {
-                //         if (result.isConfirmed) {
-                //             Swal.fire(
-                //                 'Revisi!',
-                //                 'Note: ' + result.value,
-                //                 'error'
-                //             );
-                //             // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
-                //         }
-                //     });
-                // }
-            </script>
-        @endpush
+        document.addEventListener("DOMContentLoaded", function() {
+            const maxAge = 5 * 60 * 1000;
+
+            document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const alc = this.getAttribute('data-alc');
+                    const assessmentId = this.getAttribute('data-assessment');
+                    const modalTarget = this.getAttribute('data-bs-target');
+                    const title = this.getAttribute('data-title');
+
+                    const modal = document.querySelector(modalTarget);
+                    if (!modal) return;
+
+                    const modalTitle = modal.querySelector('.modal-header h2');
+                    if (title && modalTitle) {
+                        modalTitle.textContent = title;
+                    }
+
+                    const alcInput = modal.querySelector(
+                        `input[id="alc_id_${assessmentId}_${alc}"]`);
+                    if (alcInput) alcInput.value = alc;
+
+                    const key = `idp_modal_${assessmentId}_${alc}`;
+                    const savedData = JSON.parse(localStorage.getItem(key));
+                    const now = Date.now();
+
+                    const categorySelect = modal.querySelector(
+                        `select[id="category_select_${assessmentId}_${alc}"]`);
+                    const programSelect = modal.querySelector(
+                        `select[id="program_select_${assessmentId}_${alc}"]`);
+                    const targetInput = modal.querySelector(
+                        `textarea[id="target_${assessmentId}_${alc}"]`);
+                    const dueDateInput = modal.querySelector(
+                        `input[id="due_date_${assessmentId}_${alc}"]`);
+
+
+
+                    if (savedData && (now - savedData.timestamp < maxAge)) {
+                        if (categorySelect) {
+                            categorySelect.value = savedData.category;
+                            $(categorySelect).trigger('change');
+                        }
+                        if (programSelect) {
+                            programSelect.value = savedData.program;
+                            $(programSelect).trigger('change');
+                        }
+                        if (targetInput) targetInput.value = savedData.target ?? '';
+                        if (dueDateInput) dueDateInput.value = savedData.date ?? '';
+                    } else {
+                        $.ajax({
+                            url: '/idp/getData',
+                            method: 'GET',
+                            data: {
+                                assessment_id: assessmentId,
+                                alc_id: alc
+                            },
+                            success: function(response) {
+                                if (response.idp) {
+                                    if (categorySelect) {
+                                        categorySelect.value = response.idp.category;
+                                        $(categorySelect).trigger('change');
+                                    }
+                                    if (programSelect) {
+                                        programSelect.value = response.idp
+                                            .development_program;
+                                        $(programSelect).trigger('change');
+                                    }
+                                    if (targetInput) targetInput.value = response.idp
+                                        .development_target ?? '';
+                                    if (dueDateInput) dueDateInput.value = response.idp
+                                        .date ?? '';
+                                } else {
+                                    if (categorySelect) categorySelect.value = '';
+                                    if (programSelect) programSelect.value = '';
+
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+
+
+            document.querySelectorAll('.btn-create-idp').forEach(button => {
+                button.addEventListener('click', function() {
+                    const assessmentId = this.getAttribute('data-assessment');
+                    const alcId = this.getAttribute('data-alc');
+
+                    const category = document.getElementById(
+                        `category_select_${assessmentId}_${alcId}`).value;
+                    const program = document.getElementById(
+                        `program_select_${assessmentId}_${alcId}`).value;
+                    const target = document.getElementById(`target_${assessmentId}_${alcId}`).value;
+                    const date = document.getElementById(`due_date_${assessmentId}_${alcId}`).value;
+
+
+
+                    const key = `idp_modal_${assessmentId}_${alcId}`;
+
+                    localStorage.setItem(key, JSON.stringify({
+                        assessment_id: assessmentId,
+                        alc_id: alcId,
+                        category: category,
+                        program: program,
+                        target: target,
+                        date: date,
+                        timestamp: Date.now()
+                    }));
+
+                    $.ajax({
+                        url: "{{ route('idp.store') }}",
+                        type: "POST",
+                        data: {
+                            alc_id: alcId,
+                            assessment_id: assessmentId,
+                            development_program: program,
+                            category: category,
+                            development_target: target,
+                            date: date,
+                            '_token': "{{ csrf_token() }}",
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                title: "Berhasil!",
+                                text: response.message,
+                                icon: "success",
+                                confirmButtonText: "OK"
+                            }).then(() => {
+                                localStorage.removeItem(key);
+                                $(`#kt_modal_warning_${assessmentId}_${alcId}`)
+                                    .modal('hide');
+                                location.reload();
+                            });
+                        },
+                        error: function(xhr, status, error) {
+                            alert(error);
+                        }
+                    });
+                });
+            });
+        });
+        // document.addEventListener("DOMContentLoaded", function() {
+        //     document.querySelectorAll("form").forEach(form => {
+        //         form.addEventListener("submit", function(e) {
+        //             let isValid = true;
+
+        //             // Cek apakah kategori dan program dipilih
+        //             const category = form.querySelector('select[name="category[]"]').value;
+        //             const program = form.querySelector('select[name="development_program[]"]')
+        //                 .value;
+        //             const dueDate = form.querySelector('input[name="due_date"]').value;
+
+        //             if (!category || !program || !dueDate) {
+        //                 isValid = false;
+        //                 alert("Semua bidang wajib diisi!");
+        //             }
+
+        //             if (!isValid) {
+        //                 e.preventDefault(); // Hentikan submit jika ada error
+        //             }
+        //         });
+        //     });
+        // });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Fungsi pencarian
+            document.getElementById("searchButton").addEventListener("click", function() {
+                var searchValue = document.getElementById("searchInput").value.toLowerCase();
+                var table = document.getElementById("kt_table_users").getElementsByTagName("tbody")[0];
+                var rows = table.getElementsByTagName("tr");
+
+                for (var i = 0; i < rows.length; i++) {
+                    var nameCell = rows[i].getElementsByTagName("td")[1];
+                    if (nameCell) {
+                        var nameText = nameCell.textContent || nameCell.innerText;
+                        rows[i].style.display = nameText.toLowerCase().includes(searchValue) ? "" : "none";
+                    }
+                }
+            });
+
+            // document.addEventListener("DOMContentLoaded", function() {
+            //     document.querySelectorAll(".score").forEach(function(badge) {
+            //         badge.addEventListener("click", function() {
+            //             var title = this.getAttribute("data-title");
+            //             var assessmentId = this.getAttribute("data-assessment");
+
+            //             if (assessmentId) {
+            //                 var modalTitle = document.querySelector("#modal-title-" +
+            //                     assessmentId);
+            //                 if (modalTitle) {
+            //                     modalTitle.textContent = title;
+            //                 }
+            //             }
+            //         });
+            //     });
+            // });
+
+
+            document.addEventListener("DOMContentLoaded", function() {
+                document.querySelectorAll(".open-modal").forEach(button => {
+                    button.addEventListener("click", function() {
+                        let id = this.getAttribute("data-id");
+                        let modal = new bootstrap.Modal(document.getElementById(
+                            `notes_${id}`));
+                        modal.show();
+                    });
+                });
+            });
+
+
+
+            // SweetAlert untuk tombol delete
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    let employeeId = this.getAttribute('data-id');
+
+                    Swal.fire({
+                        title: "Are you sure?",
+                        text: "You won't be able to revert this!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#3085d6",
+                        confirmButtonText: "Yes, delete it!"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            let form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = `/employee/${employeeId}`;
+
+                            let csrfToken = document.createElement('input');
+                            csrfToken.type = 'hidden';
+                            csrfToken.name = '_token';
+                            csrfToken.value = '{{ csrf_token() }}';
+
+                            let methodField = document.createElement('input');
+                            methodField.type = 'hidden';
+                            methodField.name = '_method';
+                            methodField.value = 'DELETE';
+
+                            form.appendChild(csrfToken);
+                            form.appendChild(methodField);
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    });
+                });
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('kt_datepicker_7');
+
+            flatpickr(dateInput, {
+                altInput: true,
+                altFormat: "F j, Y",
+                dateFormat: "Y-m-d",
+                mode: "range"
+            });
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            let dueDateInput = document.getElementById("kt_datepicker_7");
+
+            let startDate = new Date(2025, 11, 8).toISOString().split("T")[0];
+            let endDate = new Date(2025, 11, 17).toISOString().split("T")[0];
+
+            dueDateInput.value = startDate;
+            dueDateInput.min = startDate;
+            dueDateInput.max = endDate;
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".open-modal").forEach(button => {
+                button.addEventListener("click", function() {
+                    let id = this.getAttribute("data-id");
+                    let modal = new bootstrap.Modal(document.getElementById(
+                        `notes_${id}`));
+                    modal.show();
+                });
+            });
+        });
+
+        // const employeeId = "{{ $employees->first()->id }}"; // pastikan $employee dikirim dari controller
+        // alert(employeeId);
+
+        function sendDataConfirmation(employeeId) {
+            Swal.fire({
+                title: 'Kirim IDP ke atasan?',
+                text: 'Pastikan semua ALC bernilai < 3 sudah dibuat.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Kirim',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch("{{ route('send.idp') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": document.querySelector('meta[name=\"csrf-token\"]')
+                                    .getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                employee_id: employeeId
+                            })
+                        })
+                        .then(async res => {
+                            const data = await res.json();
+                            if (!res.ok) {
+                                throw new Error(data.message || "Terjadi kesalahan.");
+                            }
+                            Swal.fire('Berhasil!', data.message, 'success');
+                        })
+                        .catch(err => {
+                            Swal.fire('Gagal', err.message || 'Terjadi kesalahan saat mengirim IDP.', 'error');
+                            console.error(err);
+                        });
+                }
+            });
+        }
+
+        // function approveAction() {
+        //     Swal.fire({
+        //         title: 'Setujui Data?',
+        //         icon: 'success',
+        //         text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
+        //         showCancelButton: true,
+        //         confirmButtonText: 'Ya, Setujui',
+        //         cancelButtonText: 'Batal'
+        //     }).then((result) => {
+        //         if (result.isConfirmed) {
+        //             Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
+        //             // TODO: Kirim ke server via AJAX atau redirect di sini
+        //         }
+        //     });
+        // }
+
+        // function rejectAction() {
+        //     Swal.fire({
+        //         title: 'Revisi Data?',
+        //         input: 'textarea',
+        //         inputLabel: 'Alasan Revisi',
+        //         inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+        //         inputAttributes: {
+        //             'aria-label': 'Catatan Revisi'
+        //         },
+        //         showCancelButton: true,
+        //         confirmButtonText: 'Revisi',
+        //         cancelButtonText: 'Batal',
+        //         inputValidator: (value) => {
+        //             if (!value) {
+        //                 return 'Catatan wajib diisi untuk Revisi!';
+        //             }
+        //         }
+        //     }).then((result) => {
+        //         if (result.isConfirmed) {
+        //             Swal.fire(
+        //                 'Revisi!',
+        //                 'Note: ' + result.value,
+        //                 'error'
+        //             );
+        //             // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+        //         }
+        //     });
+        // }
+    </script>
+@endpush

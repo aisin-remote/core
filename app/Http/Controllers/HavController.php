@@ -194,7 +194,9 @@ class HavController extends Controller
 
         if ($npk) {
             // Jika ada npk, tampilkan hanya data untuk npk tersebut
+
             $employees = Hav::with('employee')
+
                 ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
                     $query->where('npk', $npk); // Filter berdasarkan npk
                     if ($filter && $filter !== 'all') {
@@ -207,6 +209,7 @@ class HavController extends Controller
                         $query->where('name', 'like', '%' . $search . '%');
                     }
                 })
+
                 ->get()
                 ->unique('employee_id')
                 ->values();
@@ -237,10 +240,11 @@ class HavController extends Controller
                 if (!$employee) {
                     $employees = collect();
                 } else {
-                    $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
+                    $approvallevel = (auth()->user()->employee->getCreateAuth());
+                    $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
 
                     $employees = Hav::with('employee')
-                        ->whereIn('employee_id', $subordinateIds)
+                        ->whereIn('employee_id', $subordinate)
                         ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
 
                             if ($filter && $filter !== 'all') {
@@ -576,7 +580,10 @@ class HavController extends Controller
                         $query->where('company_name', $company);
                     }
                     if ($filter && $filter !== 'all') {
-                        $query->where('position', $filter);
+                        $query->where(function ($q) use ($filter) {
+                            $q->where('position', $filter)
+                                ->orWhere('position', 'like', "Act %{$filter}");
+                        });
                     }
                     if ($search) {
                         $query->where('name', 'like', '%' . $search . '%');
@@ -615,7 +622,6 @@ class HavController extends Controller
         $comment = $request->input('comment');
         $employee = auth()->user()->employee;
 
-        // Deklarasi variabel $filePath terlebih dahulu
         $filePath = null;
 
         // Ambil file terbaru dari comment history berdasarkan HAV ID
@@ -623,17 +629,19 @@ class HavController extends Controller
 
         // Memastikan ada file upload
         if ($latestComment && $latestComment->upload) {
-            // Lokasi penyimpanan file (sesuai path yang diberikan)
-            $filePath = public_path('hav_uploads/' . $latestComment->upload);
+            // Lokasi penyimpanan file (menggunakan relative path dari kolom upload)
+            $filePath = public_path($latestComment->upload);
         }
 
         // Menyimpan komentar ke dalam tabel hav_comment_history
         if ($employee) {
-            // Menyimpan path lengkap ke dalam kolom upload
+            // Dapatkan hanya relative path jika $filePath tersedia
+            $relativePath = $filePath ? str_replace(public_path() . '/', '', $filePath) : null;
+
             $hav->commentHistory()->create([
                 'comment' => $comment,
                 'employee_id' => $employee->id,
-                'upload' => $filePath ? str_replace(public_path(), 'public', $filePath) : null  // Menyimpan path lengkap jika ada
+                'upload' => $relativePath,
             ]);
         }
 
@@ -662,17 +670,19 @@ class HavController extends Controller
 
         // Memastikan ada file upload
         if ($latestComment && $latestComment->upload) {
-            // Lokasi penyimpanan file (sesuai path yang diberikan)
-            $filePath = public_path('hav_uploads/' . $latestComment->upload);
+            // Lokasi penyimpanan file (menggunakan relative path dari kolom upload)
+            $filePath = public_path($latestComment->upload);
         }
 
         // Menyimpan komentar ke dalam tabel hav_comment_history
         if ($employee) {
-            // Menyimpan path lengkap ke dalam kolom upload
+            // Dapatkan hanya relative path jika $filePath tersedia
+            $relativePath = $filePath ? str_replace(public_path() . '/', '', $filePath) : null;
+
             $hav->commentHistory()->create([
                 'comment' => $comment,
                 'employee_id' => $employee->id,
-                'upload' => $filePath ? str_replace(public_path(), 'public', $filePath) : null  // Menyimpan path lengkap jika ada
+                'upload' => $relativePath,
             ]);
         }
 

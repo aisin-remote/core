@@ -348,6 +348,13 @@
                                 </div>
                             </div>
                         @endif
+
+                        <div class="menu-item">
+                            <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
+                                {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
+                                <span class="menu-title ps-1">To Do List</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -520,7 +527,7 @@
 
                         <!-- Division -->
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
                                 href="#">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>
@@ -563,7 +570,7 @@
 
                         <!-- Division -->
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
+                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
                                 href="#">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>

@@ -39,8 +39,8 @@
                         <thead class="table-dark">
                             <tr>
                                 <th class="text-center" style="width: 5%;">#</th>
-                                <th class="text-center" style="width: 45%;">Strength</th>
-                                <th class="text-center" style="width: 45%;">Description</th>
+                                <th class="text-center" style="width: 20%;">Strength</th>
+                                <th class="text-center" style="width: 70%;">Description</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -69,8 +69,8 @@
                         <thead class="table-dark">
                             <tr>
                                 <th class="text-center" style="width: 5%;">#</th>
-                                <th class="text-center" style="width: 45%;">Weakness</th>
-                                <th class="text-center" style="width: 45%;">Description</th>
+                                <th class="text-center" style="width: 20%;">Weakness</th>
+                                <th class="text-center" style="width: 75%;">Description</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -92,6 +92,32 @@
                         </tbody>
                     </table>
                 </div>
+                <div class="card mt-4 p-3">
+                    <h4 class="text-center">Suggestion Development</h4>
+                    <table class="table table-bordered">
+                        <thead class="table-dark">
+                            <tr>
+                                <th class="text-center" style="width: 5%;">#</th>
+                                <th class="text-center" style="width: 20%;">ALC</th>
+                                <th class="text-center" style="width: 75%;">Suggestion Development</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @php
+                                $suggests = $details->filter(fn($item) => !empty($item->suggestion_development))->values();
+                            @endphp
+
+                            @foreach ($suggests as $index => $item)
+                                <tr>
+                                    <td class="text-center">{{ $index + 1 }}</td>
+                                    <td><strong>{{ $item->alc_name }}</strong></td>
+                                    <td>{{ $item->suggestion_development }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+
 
                 <div class="card-footer text-end">
                     <a href="{{ url()->previous() }}" class="btn btn-secondary">Back</a>
@@ -104,7 +130,7 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             var canvas = document.getElementById('assessmentChart');
             if (!canvas) {
                 console.error("Canvas 'assessmentChart' tidak ditemukan.");

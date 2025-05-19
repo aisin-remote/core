@@ -63,8 +63,10 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Name</th>
+                            <th>Name Department</th>
                             <th>Division</th>
+                            <th>Company</th>
+                            <th>Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -73,8 +75,14 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $department->name }}</td>
-                                <td>{{ $department->division->name ?? '-'  }}</td>
+                                <td>{{ $department->division->name ?? '-' }}</td>
+                                <td>{{ $department->company }}</td>
+                                <td>{{ $department->manager->name }}</td>
                                 <td class="text-center">
+                                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#editDepartmentModal{{ $department->id }}">
+                                        Edit
+                                    </button>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $department->id }}">Delete</button>
                                 </td>
@@ -134,17 +142,36 @@
                             <label for="name" class="form-label">Department Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
-                    </div>
-                    <div class="modal-body">
+
+
                         <div class="mb-3">
                             <label for="division_id" class="form-label">Division</label>
                             <select name="division_id" id="division_id" class="form-select" required>
                                 <option value="">Pilih Division</option>
-                                @foreach ($division as $division)
+                                @foreach ($divisions as $division)
                                     <option value="{{ $division->id }}">{{ $division->name }}</option>
                                 @endforeach
                             </select>
                         </div>
+                        <div class="mb-3">
+                            <label for="company" class="form-label">Company</label>
+                            <select name="company" id="company" class="form-select" required>
+                                <option value="">Pilih Company</option>
+                                <option value="AII">AII</option>
+                                <option value="AIIA">AIIA</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="manager_id" class="form-label">Pilih Manager</label>
+                            <select name="manager_id" id="manager_id" class="form-select" required>
+                                <option value="">Pilih Manager</option>
+                                @foreach ($managers as $manager)
+                                    <option value="{{ $manager->id }}">{{ $manager->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -154,6 +181,82 @@
             </div>
         </div>
     </div>
+    @foreach ($departments as $department)
+        <div class="modal fade" id="editDepartmentModal{{ $department->id }}" tabindex="-1"
+            aria-labelledby="editDepartmentModalLabel{{ $department->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <form action="{{ route('department.master.update', $department->id) }}" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editDepartmentModalLabel{{ $department->id }}">Edit Department
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            {{-- Department Name --}}
+                            <div class="mb-3">
+                                <label for="name{{ $department->id }}" class="form-label">Department Name</label>
+                                <input type="text" class="form-control" id="name{{ $department->id }}"
+                                    name="name" value="{{ $department->name }}" required>
+                            </div>
+
+                            {{-- Division --}}
+                            <div class="mb-3">
+                                <label for="division_id{{ $department->id }}" class="form-label">Division</label>
+                                <select name="division_id" id="division_id{{ $department->id }}" class="form-select"
+                                    required>
+                                    <option value="">Pilih Division</option>
+                                    @foreach ($divisions as $division)
+                                        <option value="{{ $division->id }}"
+                                            {{ $division->id == $department->division_id ? 'selected' : '' }}>
+                                            {{ $division->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Company --}}
+                            <div class="mb-3">
+                                <label for="company{{ $department->id }}" class="form-label">Company</label>
+                                <select name="company" id="company{{ $department->id }}" class="form-select" required>
+                                    <option value="">Pilih Company</option>
+                                    <option value="AII" {{ $department->company == 'AII' ? 'selected' : '' }}>AII
+                                    </option>
+                                    <option value="AIIA" {{ $department->company == 'AIIA' ? 'selected' : '' }}>AIIA
+                                    </option>
+                                </select>
+                            </div>
+
+                            {{-- Manager --}}
+                            <div class="mb-3">
+                                <label for="manager_id{{ $department->id }}" class="form-label">Pilih Manager</label>
+                                <select name="manager_id" id="manager_id{{ $department->id }}" class="form-select"
+                                    required>
+                                    <option value="">Pilih Manager</option>
+                                    @foreach ($managers as $manager)
+                                        <option value="{{ $manager->id }}"
+                                            {{ $manager->id == $department->manager_id? 'selected' : '' }}>
+                                            {{ $manager->name }}
+                                        </option>
+                                    @endforeach
+
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
 @endsection
 
 @push('scripts')

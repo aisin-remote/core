@@ -63,8 +63,10 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Name</th>
-                            <th>Section</th>
+                            <th>Name Section</th>
+                            <th>Department</th>
+                             <th>Company</th>
+                              <th>Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -74,7 +76,14 @@
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $section->name }}</td>
                                 <td>{{ $section->department->name }}</td>
+                                 <td>{{ $section->company }}</td>
+                                   <td>{{ $section->supervisor->name }}</td>
+
                                 <td class="text-center">
+                                     <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#editSectionModal{{ $section->id }}">
+                                        Edit
+                                    </button>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $section->id }}">Delete</button>
                                 </td>
@@ -134,15 +143,32 @@
                             <label for="name" class="form-label">Section Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
-                    </div>
 
-                    <div class="modal-body">
+
+
                         <div class="mb-3">
                             <label for="department_id" class="form-label">Pilih Department</label>
                             <select name="department_id" id="department_id" class="form-select" required>
                                 <option value="">Pilih Department</option>
-                                @foreach ($department as $department)
+                                @foreach ($departments as $department)
                                     <option value="{{ $department->id }}">{{ $department->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="company" class="form-label">Company</label>
+                            <select name="company" id="company" class="form-select" required>
+                                <option value="">Pilih Company</option>
+                                <option value="AII">AII</option>
+                                <option value="AIIA">AIIA</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="supervisor_id" class="form-label">Pilih Supervisor</label>
+                            <select name="supervisor_id" id="supervisor_id" class="form-select" required>
+                                <option value="">Pilih Supervisor</option>
+                                @foreach ($supervisors as $manager)
+                                    <option value="{{ $manager->id }}">{{ $manager->name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -156,6 +182,79 @@
             </div>
         </div>
     </div>
+    @foreach ($sections as $section)
+        <div class="modal fade" id="editSectionModal{{ $section->id }}" tabindex="-1"
+            aria-labelledby="editSectionLabel{{ $section->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <form action="{{ route('section.master.update', $section->id) }}" method="POST">
+                    @csrf
+                    @method('PUT')
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editSectionLabel{{ $section->id }}">Edit Section</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            {{-- Section Name --}}
+                            <div class="mb-3">
+                                <label for="name{{ $section->id }}" class="form-label">Section Name</label>
+                                <input type="text" class="form-control" id="name{{ $section->id }}" name="name"
+                                    value="{{ $section->name }}" required>
+                            </div>
+
+                            {{-- Department --}}
+                            <div class="mb-3">
+                                <label for="department_id{{ $section->id }}" class="form-label">Pilih Department</label>
+                                <select name="department_id" id="department_id{{ $section->id }}" class="form-select"
+                                    required>
+                                    <option value="">Pilih Department</option>
+                                    @foreach ($departments as $dept)
+                                        <option value="{{ $dept->id }}"
+                                            {{ $section->department_id == $dept->id ? 'selected' : '' }}>
+                                            {{ $dept->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- Company --}}
+                            <div class="mb-3">
+                                <label for="company{{ $section->id }}" class="form-label">Company</label>
+                                <select name="company" id="company{{ $section->id }}" class="form-select" required>
+                                    <option value="">Pilih Company</option>
+                                    <option value="AII" {{ $section->company == 'AII' ? 'selected' : '' }}>AII</option>
+                                    <option value="AIIA" {{ $section->company == 'AIIA' ? 'selected' : '' }}>AIIA
+                                    </option>
+                                </select>
+                            </div>
+
+                            {{-- Supervisor --}}
+                            <div class="mb-3">
+                                <label for="supervisor_id{{ $section->id }}" class="form-label">Pilih Supervisor</label>
+                                <select name="supervisor_id" id="supervisor_id{{ $section->id }}" class="form-select"
+                                    required>
+                                    <option value="">Pilih Supervisor</option>
+                                    @foreach ($supervisors as $supervisor)
+                                        <option value="{{ $supervisor->id }}"
+                                            {{ $section->supervisor_id == $supervisor->id ? 'selected' : '' }}>
+                                            {{ $supervisor->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
 @endsection
 
 @push('scripts')

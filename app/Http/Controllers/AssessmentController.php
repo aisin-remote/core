@@ -112,7 +112,7 @@ class AssessmentController extends Controller
                 ->when($filter && $filter != 'all', function ($query) use ($filter) {
                     $query->where(function ($q) use ($filter) {
                         $q->where('position', $filter)
-                          ->orWhere('position', 'like', "Act %{$filter}");
+                            ->orWhere('position', 'like', "Act %{$filter}");
                     });
                 })
 
@@ -127,12 +127,12 @@ class AssessmentController extends Controller
                 $employees = collect();
             } else {
                 $employees = $this->getSubordinatesFromStructure($employee)
-                ->when($filter && $filter != 'all', function ($query) use ($filter) {
-                    $query->where(function ($q) use ($filter) {
-                        $q->where('position', $filter)
-                          ->orWhere('position', 'like', "Act %{$filter}");
-                    });
-                })
+                    ->when($filter && $filter != 'all', function ($query) use ($filter) {
+                        $query->where(function ($q) use ($filter) {
+                            $q->where('position', $filter)
+                                ->orWhere('position', 'like', "Act %{$filter}");
+                        });
+                    })
 
                     ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
                     ->get();
@@ -262,7 +262,7 @@ class AssessmentController extends Controller
             ->select('id', 'date',  'description', 'employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
-                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
+                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness','suggestion_development')
                     ->with(['alc:id,name']);
             }])
             ->get();
@@ -310,6 +310,7 @@ class AssessmentController extends Controller
                 'detail_assessments.score' // Ambil score dari detail_assessment
             )
             ->get();
+
 
         return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details'));
     }
@@ -366,7 +367,7 @@ class AssessmentController extends Controller
                         'score' => $request->scores[$alc_id] ?? "0",  // Ambil nilai score berdasarkan ALC ID
                         'strength' => $request->strength[$alc_id] ?? "", // Ambil nilai strength berdasarkan ALC ID
                         'weakness' => $request->weakness[$alc_id] ?? "",
-                         'suggestion_development' => $request->suggestion_development[$alc_id] ?? "",
+                        'suggestion_development' => $request->suggestion_development[$alc_id] ?? "",
                         'updated_at' => now()
                     ]
                 );
@@ -387,10 +388,10 @@ class AssessmentController extends Controller
 
         // $message = sprintf(
         //     "Hallo Apakah Benar ini Nomor?"
-            // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
-            // $assessment->id,
-            // $assessment->date,
-            // $assessment->name ?? 'Anda'
+        // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
+        // $assessment->id,
+        // $assessment->date,
+        // $assessment->name ?? 'Anda'
         // );
 
         // $whatsappResponse = Http::asForm()
@@ -448,29 +449,25 @@ class AssessmentController extends Controller
     public function edit($id)
     {
         $assessment = Assessment::with('details.alc')->findOrFail($id);
-
+          \Log::info("DETAILS: ", $assessment->details->toArray()); // Tambah ini
         return response()->json([
             'id' => $assessment->id,
             'employee_id' => $assessment->employee_id,
             'date' => $assessment->date,
             'description' => $assessment->description,
             'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
-            'scores' => $assessment->details->map(fn($d) => [
+            'details' => $assessment->details->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'score' => $d->score
+                'score' => $d->score,
+                'strength' => $d->strength,
+                'weakness' => $d->weakness,
+                'suggestion_development' => $d->suggestion_development,
+                'alc' => $d->alc
             ]),
-            'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
-                'alc_id' => $d->alc_id,
-                'descriptions' => $d->strength,
-                'suggestion_development' => $d->suggestion_development
-            ])->values(),
-            'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
-                'alc_id' => $d->alc_id,
-                'descriptions' => $d->weakness,
-                  'suggestion_development' => $d->suggestion_development
-            ])->values(),
+
             'alc_options' => Alc::select('id', 'name')->get()
         ]);
+
     }
 
 
@@ -485,7 +482,7 @@ class AssessmentController extends Controller
             'scores' => 'required|array',
             'strength' => 'nullable|array',
             'weakness' => 'nullable|array',
-             'suggestion_development' => 'nullable|array',
+            'suggestion_development' => 'nullable|array',
             'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
         ]);
 
@@ -514,7 +511,7 @@ class AssessmentController extends Controller
                 'score' => $score,
                 'strength' => $request->strength[$alc_id] ?? null,
                 'weakness' => $request->weakness[$alc_id] ?? null,
-                 'suggestion_development' => $request->suggestion_development[$alc_id] ?? null
+                'suggestion_development' => $request->suggestion_development[$alc_id] ?? null
             ]);
         }
 
