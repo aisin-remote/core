@@ -63,7 +63,8 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Name</th>
+                            <th>Name Plant</th>
+                              <th>Name Director</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -72,7 +73,14 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $plant->name }}</td>
+                                 <td>{{ $plant->director->name }}</td>
+
                                 <td class="text-center">
+                                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#editModal{{ $plant->id }}">
+                                        Edit
+                                    </button>
+
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
                                         data-id="{{ $plant->id }}">Delete</button>
                                 </td>
@@ -129,6 +137,17 @@
                             <label for="name" class="form-label">Plant Name</label>
                             <input type="text" class="form-control" id="name" name="name" required>
                         </div>
+
+                        <div class="mb-3">
+                            <label for="director_id" class="form-label">Director</label>
+                            <select class="form-control" id="director_id" name="director_id" required>
+                                <option value="" disabled selected>-- Select Director --</option>
+                                @foreach ($directors as $director)
+                                    <option value="{{ $director->id }}">{{ $director->name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -138,6 +157,51 @@
             </div>
         </div>
     </div>
+    @foreach ($plants as $plant)
+        <!-- Modal Edit -->
+        <div class="modal fade" id="editModal{{ $plant->id }}" tabindex="-1"
+            aria-labelledby="editModalLabel{{ $plant->id }}" aria-hidden="true">
+            <div class="modal-dialog">
+                <form action="{{ route('plant.master.update', $plant->id) }}" method="POST">
+                    @csrf
+                    @method('PUT') <!-- Gunakan PUT untuk update -->
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="editModalLabel{{ $plant->id }}">Edit Plant</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="mb-3">
+                                <label for="name{{ $plant->id }}" class="form-label">Plant Name</label>
+                                <input type="text" class="form-control" id="name{{ $plant->id }}" name="name"
+                                    value="{{ $plant->name }}" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="director_id{{ $plant->id }}" class="form-label">Director</label>
+                                <select class="form-control" id="director_id{{ $plant->id }}" name="director_id"
+                                    required>
+                                    @foreach ($directors as $director)
+                                        <option value="{{ $director->id }}"
+                                            {{ $plant->director_id == $director->id ? 'selected' : '' }}>
+                                            {{ $director->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                            <button type="submit" class="btn btn-primary">Update</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    @endforeach
 @endsection
 
 @push('scripts')

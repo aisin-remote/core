@@ -192,7 +192,9 @@ class HavController extends Controller
 
         if ($npk) {
             // Jika ada npk, tampilkan hanya data untuk npk tersebut
+
             $employees = Hav::with('employee')
+
                 ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
                     $query->where('npk', $npk); // Filter berdasarkan npk
                     if ($filter && $filter !== 'all') {
@@ -205,6 +207,7 @@ class HavController extends Controller
                         $query->where('name', 'like', '%' . $search . '%');
                     }
                 })
+
                 ->get()
                 ->unique('employee_id')
                 ->values();
@@ -235,10 +238,11 @@ class HavController extends Controller
                 if (!$employee) {
                     $employees = collect();
                 } else {
-                    $subordinateIds = $this->getSubordinatesFromStructure($employee)->pluck('id');
+                    $approvallevel = (auth()->user()->employee->getFirstApproval());
+                    $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
 
                     $employees = Hav::with('employee')
-                        ->whereIn('employee_id', $subordinateIds)
+                        ->whereIn('employee_id', $subordinate)
                         ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
 
                             if ($filter && $filter !== 'all') {

@@ -652,9 +652,10 @@
                                                 </div>
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <a class="fw-semibold"
-                                                        href="{{ route('hav.index', $employee->npk) }}">
+                                                        href="{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
                                                         Go to hav page
                                                     </a>
+
                                                 </div>
                                             @endif
                                         </div>
@@ -1083,6 +1084,14 @@
                             @endforeach
                         </tbody>
                     </table>
+                </div>
+                   <div class="card-footer">
+
+                    <a class="fw-semibold"
+                        href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                        Go to IDP detail
+                    </a>
+
                 </div>
             </div>
 

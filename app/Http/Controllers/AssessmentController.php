@@ -310,6 +310,7 @@ class AssessmentController extends Controller
                 'detail_assessments.score' // Ambil score dari detail_assessment
             )
             ->get();
+            
 
         return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details'));
     }
