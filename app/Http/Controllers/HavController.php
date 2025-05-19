@@ -512,7 +512,7 @@ class HavController extends Controller
             // Handle file upload here in the controller
             $file = $request->file('file');
             $fileName = 'hav_' . time() . '.' . $file->getClientOriginalExtension();
-            $filePath = $file->storeAs('public/hav_uploads', $fileName);
+            $filePath = $file->storeAs('/hav_uploads', $fileName);
 
             // Pass the file path to the import class
             \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport($filePath), $file);
