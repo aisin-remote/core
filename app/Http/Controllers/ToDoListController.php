@@ -58,6 +58,7 @@ class ToDoListController extends Controller
         $employeeCompany = $assessments->pluck('employee.company_name','employee_id')->toArray();
         $notExistInIdp = [];
         
+        // idp yang belum di create
         foreach ($emp as $employeeId => $items) {
             foreach ($items as $item) {
                 $exists = Idp::where('assessment_id', $item['assessment_id'])
@@ -73,29 +74,65 @@ class ToDoListController extends Controller
                         'alc_id' => $item['alc_id'],
                         'alc_name' => $item['alc_name'] ?? 'Unknown',
                     ];
+                    break; // ✅ Langsung lanjut ke karyawan berikutnya
                 }
             }
-        }     
+        }            
 
         // ambil idp yang yang statusnya masih 1 (need check or first approval)
-        $checkIdps = Employee::with('assessments.idp')
+        $checkIdps = Employee::with(['assessments' => function ($query) {
+                $query->whereHas('idp', function ($q) {
+                    $q->where('status', 1);
+                })->with(['idp' => function ($q) {
+                    $q->where('status', 1);
+                }])->orderBy('created_at')->take(1);
+            }])
             ->whereIn('id', $subCheck)
             ->whereHas('assessments.idp', function ($query) {
                 $query->where('status', 1);
             })
             ->get();
-
-        // ambil idp yang statusnya 2 (final approval)
-        $approveIdps = Employee::with('assessments.idp')
+    
+        $approveIdps = Employee::with(['assessments' => function ($query) {
+                $query->whereHas('idp', function ($q) {
+                    $q->where('status', 2);
+                })->with(['idp' => function ($q) {
+                    $q->where('status', 2);
+                }])->orderBy('created_at')->take(1);
+            }])
             ->whereIn('id', $subApprove)
             ->whereHas('assessments.idp', function ($query) {
                 $query->where('status', 2);
             })
             ->get();
-
-        // Gabungkan keduanya
+        
+        // Gabungkan keduanya (idp yang perlu di aprove)
         $pendingIdps = $checkIdps->merge($approveIdps);
         
-        return view('website.todolist.index', compact('notExistInIdp', 'pendingIdps'));
+        // Tambahkan 'type' untuk unassigned
+        $unassignedIdps = collect($notExistInIdp)->map(function ($item) {
+            $item['type'] = 'unassigned';
+            return $item;
+        });
+
+        // Tambahkan 'type' untuk pending IDPs (status 1 atau 2)
+        $pendingIdpCollection = $pendingIdps->map(function ($employee) {
+            $idp = optional($employee->assessments->first()->idp->first());
+            return [
+                'type' => $idp?->status === 1 ? 'need_check' : 'need_approval',
+                'employee_name' => $employee->name,
+                'employee_npk' => $employee->npk,
+                'employee_company' => $employee->company_name,
+                'category' => $idp?->category ?? '-',
+                'program' => $idp?->development_program ?? '-',
+                'target' => $idp?->development_target ?? '-',
+            ];
+        });
+
+        // Gabungkan menjadi satu koleksi
+        $allIdpTasks = $unassignedIdps->merge($pendingIdpCollection);
+
+        // Kirim ke view
+        return view('website.todolist.index', compact('allIdpTasks'));
     }
 }
