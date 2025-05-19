@@ -37,33 +37,45 @@
         <div class="row">
             <div class="col-4">
                 <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center bg-light-danger text-white">
-                        <h3 class="card-title mb-0"><i class="fas fa-tasks me-2"></i>Unassigned IDP -
-                            [{{ count($notExistInIdp) }} Items]</h3>
+                    <div class="card-header bg-light text-white">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-tasks me-2"></i><span class="fw-bold">IDP</span> - [{{ $allIdpTasks->count() }}
+                            Items]
+                        </h3>
                     </div>
-
-                    <div class="card-body overflow-auto" style="max-height: 400px;">
+                    <div class="card-body overflow-auto" style="max-height: 600px;">
                         <div class="row g-3">
-                            @forelse ($notExistInIdp as $item)
-                                @php
-                                    $url = route('idp.index', [
-                                        'company' => $item['employee_company'],
-                                        'npk' => $item['employee_npk'],
-                                    ]);
-                                @endphp
+                            @forelse ($allIdpTasks as $item)
                                 <div class="col-md-12">
-                                    <a href="{{ $url }}" class="text-decoration-none text-dark">
-                                        <div class="card border-0 shadow-sm bg-danger-subtle hover-shadow">
+                                    <a href="{{ route('idp.index', ['company' => $item['employee_company'], 'npk' => $item['employee_npk']]) }}"
+                                        class="text-decoration-none text-dark">
+                                        <div
+                                            class="card border-0 shadow-sm
+                                            @if ($item['type'] === 'unassigned') bg-danger-subtle
+                                            @elseif($item['type'] === 'need_check') bg-warning-subtle
+                                            @elseif($item['type'] === 'need_approval') bg-info-subtle
+                                            @else bg-light @endif
+                                            hover-shadow">
                                             <div class="card-body d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <h5 class="mb-2">{{ $item['employee_name'] }}</h5>
-                                                    <small>
-                                                        Assessment ID: {{ $item['assessment_id'] }}<br>
-                                                        ALC: {{ $item['alc_name'] }}
-                                                    </small>
                                                 </div>
-                                                <span class="badge bg-danger rounded-pill px-3 py-2">
-                                                    <i class="fas fa-exclamation-circle me-1"></i> Not Yet Created
+                                                <span
+                                                    class="badge
+                                                    @if ($item['type'] === 'unassigned') badge-danger
+                                                    @elseif($item['type'] === 'need_check') badge-warning
+                                                    @elseif($item['type'] === 'need_approval') badge-info
+                                                    @else badge-secondary @endif
+                                                    rounded-pill px-3 py-2">
+                                                    @if ($item['type'] === 'unassigned')
+                                                        <i class="fas fa-exclamation-circle me-2"></i> To Be Assign
+                                                    @elseif($item['type'] === 'need_check')
+                                                        <i class="fas fa-exclamation-circle me-2"></i> Need Check
+                                                    @elseif($item['type'] === 'need_approval')
+                                                        <i class="fas fa-hourglass-half me-2"></i> Need Approval
+                                                    @else
+                                                        Unknown
+                                                    @endif
                                                 </span>
                                             </div>
                                         </div>
@@ -80,53 +92,7 @@
                     </div>
                 </div>
             </div>
-
-            {{-- pending idp --}}
-            <div class="col-4">
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex justify-content-between align-items-center bg-light-warning text-white">
-                        <h3 class="card-title mb-0"><i class="fas fa-tasks me-2"></i>Pending IDP -
-                            [{{ count($pendingIdps) }} Items]</h3>
-                    </div>
-
-                    <div class="card-body overflow-auto" style="max-height: 400px;">
-                        <div class="row g-3">
-                            @forelse ($pendingIdps as $item)
-                                <div class="col-md-12">
-                                    <a href="{{ $url }}" class="text-decoration-none text-dark">
-                                        <div class="card border-0 shadow-sm bg-warning-subtle hover-shadow">
-                                            <div class="card-body d-flex justify-content-between align-items-center">
-                                                <div>
-                                                    <h5 class="mb-2">{{ $item->name }}</h5>
-                                                    <small>
-                                                        Category :
-                                                        {{ $item->assessments->first()->idp->first()->category }}<br>
-                                                        Program:
-                                                        {{ $item->assessments->first()->idp->first()->development_program }}<br>
-                                                        Target:
-                                                        {{ $item->assessments->first()->idp->first()->development_target }}
-                                                    </small>
-                                                </div>
-                                                <span class="badge bg-warning rounded-pill px-3 py-2">
-                                                    <i class="fas fa-exclamation-circle me-1"></i>Need Approve
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </a>
-                                </div>
-                            @empty
-                                <div class="col-12">
-                                    <div class="alert alert-success text-center">
-                                        <i class="fas fa-check-circle me-1"></i> No Task .
-                                    </div>
-                                </div>
-                            @endforelse
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
-
     </div>
 
     <!-- Add Todo Modal -->
