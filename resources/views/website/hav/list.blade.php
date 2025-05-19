@@ -420,7 +420,7 @@
                                 ${`<a
                                     data-id="${hav.id}"
                                     class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                        History
+                                        Comments
                                     </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
