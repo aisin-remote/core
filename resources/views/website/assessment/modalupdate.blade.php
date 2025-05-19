@@ -122,71 +122,10 @@
         });
 
         // Load data ke modal saat tombol update diklik
-        document.querySelectorAll(".updateAssessment").forEach(button => {
-            button.addEventListener("click", function() {
-                const id = this.dataset.id;
-                const employeeId = this.dataset.employeeId;
-                const date = this.dataset.date;
-                const description = this.dataset.description;
-                const upload = this.dataset.upload;
-                const scores = JSON.parse(this.dataset.scores);
-                const alcs = JSON.parse(this.dataset.alcs);
-                const strengths = JSON.parse(this.dataset.strengths);
-                const weaknesses = JSON.parse(this.dataset.weaknesses);
 
-                document.getElementById("update_assessment_id").value = id;
-                document.getElementById("update_employee_id").value = employeeId;
-                document.getElementById("update_date").value = date;
-                document.getElementById("update_description").value = description;
-                document.getElementById("update-upload-info").textContent = upload ?
-                    `File: ${upload}` : "";
 
-                // Set nilai radio button untuk scores
-                alcs.forEach((alcId, index) => {
-                    const score = scores[index];
-                    const radio = document.getElementById(
-                        `update_score_${alcId}_${score}`);
-                    if (radio) {
-                        radio.checked = true;
-                    }
-                });
-
-                // Mengisi Strengths
-                const strengthContainer = document.getElementById("update-strengths-wrapper");
-                strengthContainer.innerHTML = "";
-                strengths.forEach((strength, idx) => {
-                    if (strength) {
-                        addAssessmentCard("strength", "update-strengths-wrapper", alcs[
-                            idx], strength);
-                    }
-                });
-
-                if (strengths.length === 0) {
-                    addAssessmentCard("strength", "update-strengths-wrapper");
-                }
-
-                // Mengisi Weaknesses
-                const weaknessContainer = document.getElementById("update-weaknesses-wrapper");
-                weaknessContainer.innerHTML = "";
-                weaknesses.forEach((weakness, idx) => {
-                    if (weakness) {
-                        addAssessmentCard("weakness", "update-weaknesses-wrapper", alcs[
-                            idx], weakness);
-                    }
-                });
-
-                if (weaknesses.length === 0) {
-                    addAssessmentCard("weakness", "update-weaknesses-wrapper");
-                }
-
-                // Tampilkan modal
-                const modal = new bootstrap.Modal(document.getElementById(
-                    "updateAssessmentModal"));
-                modal.show();
-            });
-        });
-
-        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "") {
+        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "",suggestion =
+                    "") {
             let container = document.getElementById(containerId);
             let templateCard = document.createElement("div");
             templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
@@ -212,6 +151,11 @@
                 <label>Description</label>
                 <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
             </div>
+              <div class="mb-3">
+            <label>Suggestion Development</label>
+           <textarea class="form-control suggestion-textarea" name="suggestion_development[${selectedAlc}]" rows="2">${suggestion}</textarea>
+
+        </div>
         `;
 
             let selectElement = templateCard.querySelector(".alc-dropdown");
@@ -284,7 +228,7 @@
             } else {
                 // Card sudah ada → pindahkan dari wrapper lama ke wrapper baru
                 const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`)
-            .detach();
+                    .detach();
                 newWrapper.append(detachedCard);
                 card = detachedCard;
             }

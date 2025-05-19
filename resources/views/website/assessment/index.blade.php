@@ -262,6 +262,7 @@
                                                                             </tr>
                                                                         `;
                                     $("#kt_table_assessments tbody").append(row);
+
                                 });
                             } else {
                                 $("#kt_table_assessments tbody").append(`
@@ -531,7 +532,7 @@
                 $("#detailAssessmentModal").on("hidden.bs.modal", function() {
                     setTimeout(() => {
                         if (!$("#updateAssessmentModal").hasClass("show")) {
-                            $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
+
                             $("body").removeClass("modal-open");
                         }
                     }, 300);

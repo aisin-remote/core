@@ -11,7 +11,7 @@ class DetailAssessment extends Model
     protected $table = 'detail_assessments';
     protected $guarded = ['id'];
 
-    protected $fillable = ['assessment_id', 'alc_id', 'score', 'strength', 'weakness'];
+    protected $fillable = ['assessment_id', 'alc_id', 'score', 'strength', 'weakness','suggestion_development'];
 
     /**
      * Relasi ke model Assessment

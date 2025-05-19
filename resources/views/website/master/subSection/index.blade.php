@@ -140,7 +140,7 @@
                         </div>
 
 
-                   
+
                         <div class="mb-3">
                             <label for="section_id" class="form-label">Section</label>
                             <select name="section_id" id="section_id" class="form-select" required>
@@ -159,7 +159,7 @@
                                 @endforeach
                             </select>
                         </div>
-                        
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
