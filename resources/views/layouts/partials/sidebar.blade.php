@@ -348,6 +348,13 @@
                                 </div>
                             </div>
                         @endif
+
+                        <div class="menu-item">
+                            <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
+                                {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
+                                <span class="menu-title ps-1">To Do List</span>
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

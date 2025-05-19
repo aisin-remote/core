@@ -257,7 +257,7 @@ class IdpController extends Controller
                         'development_program' => $request->development_program,
                         'category' => $request->category,
                         'development_target' => $request->development_target,
-                        'status' => 1,
+                        'status' => 0,
                         'date' => $request->date,
                     ]);
                     
@@ -577,7 +577,7 @@ class IdpController extends Controller
                     $q->where('employee_id', $employeeId);
                 })
                 ->update([
-                    'status' => 2
+                    'status' => 1
                 ]);
 
             return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
@@ -596,22 +596,34 @@ class IdpController extends Controller
         $employee = $user->employee;
 
         // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-        $viewLevel = $employee->getFirstApproval();
-        $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
+        $checkLevel = $employee->getFirstApproval();
+        $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+        
+        $approveLevel = $employee->getFirstApproval();
+        $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
 
-        $idps = Idp::with('assessment.employee', 'assessment.details')
-            ->where('status', 2)
-            ->whereHas('assessment.employee', function ($q) use ($subordinates) {
-                $q->whereIn('employee_id', $subordinates); // Menggunakan whereIn jika $subordinates adalah array
+        $checkIdps = Idp::with('assessment.employee', 'assessment.details')
+            ->where('status', 1)
+            ->whereHas('assessment.employee', function ($q) use ($subCheck) {
+                $q->whereIn('employee_id', $subCheck); // Menggunakan whereIn jika $subordinates adalah array
             })
             ->get();
+            
+        $approveIdps = Idp::with('assessment.employee', 'assessment.details')
+            ->where('status', 2)
+            ->whereHas('assessment.employee', function ($q) use ($subApprove) {
+                $q->whereIn('employee_id', $subApprove); // Menggunakan whereIn jika $subordinates adalah array
+            })
+            ->get();
+
+        $idps = $checkIdps->merge($approveIdps);
 
         return view('website.approval.idp.index', compact('idps'));
     }
     public function approve($id)
     {
         $idp = Idp::findOrFail($id);
-        $idp->status = 3;
+        $idp->status = 2;
         $idp->save();
 
         return response()->json([
@@ -624,7 +636,7 @@ class IdpController extends Controller
         $idp = Idp::findOrFail($request->id);
 
         // Menyimpan status HAV sebagai disetujui
-        $idp->status = 1; // Status disetujui
+        $idp->status = 0; // Status disetujui
 
         // Ambil komentar dari input request
         $comment = $request->input('comment');

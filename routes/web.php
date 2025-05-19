@@ -11,6 +11,7 @@ use App\Http\Controllers\PlantController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\ToDoListController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\EmpCompetencyController;
@@ -69,6 +70,10 @@ Route::middleware('auth')->group(function () {
         return view('website.dashboard.people');
     })->name('people.index');
 
+    Route::prefix('todolist')->group(function () {
+        Route::get('/', [ToDoListController::class, 'index'])->name('todolist.index');
+    });
+
     Route::prefix('hav')->group(function () {
         Route::get('/list-create', [HavController::class, 'listCreate'])->name('hav.list-create');
         Route::get('/generate-create/{id}', [HavController::class, 'generateCreate'])->name('hav.generate-create');
@@ -80,8 +85,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/history/{id}', [HavController::class, 'show'])->name('hav.show');
         Route::get('/get3-last-performance/{id}/{year}', [HavController::class, 'get3LastPerformance'])->name('hav.get3LastPerformance');
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
-        Route::patch('/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
-        Route::patch('/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
+        // Route::patch('/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
+        // Route::patch('/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
         Route::get('/get-history/{hav_id}', [HavController::class, 'getComment'])->name('hav.getComment');
 
         Route::get('/hav/test-import', function () {});
@@ -90,6 +95,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
+    
     Route::prefix('approval')->group(function () {
         Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
         Route::patch('/hav/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');

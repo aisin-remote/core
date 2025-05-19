@@ -286,10 +286,17 @@
                                             value="{{ $id }}">
 
                                         <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2">Weakness -
+                                            <label class="fs-5 fw-bold form-label mb-2">Weakness in
                                                 {{ $title }}</label>
                                             <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
                                                 class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->weakness }}</textarea>
+                                            <small class="text-danger">*make sure you have read everything</small>
+                                        </div>
+
+                                        <div class="col-lg-12 mb-10">
+                                            <label class="fs-5 fw-bold form-label mb-2">Suggestion Development</label>
+                                            <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
+                                                class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->suggestion_development }}</textarea>
                                             <small class="text-danger">*make sure you have read everything</small>
                                         </div>
 
@@ -666,7 +673,8 @@
                                                             <td class="text-justify px-3">
                                                                 {{ $assessment->idp?->first()?->category }}</td>
                                                             <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->development_program }}</td>
+                                                                {{ $assessment->idp?->first()?->development_program }}
+                                                            </td>
                                                             <td class="text-justify px-3">
                                                                 {{ $assessment->idp?->first()?->development_target }}</td>
                                                             <td class="text-justify px-3">
