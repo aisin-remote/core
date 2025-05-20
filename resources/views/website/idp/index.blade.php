@@ -254,7 +254,6 @@
                                     @php
                                         set_time_limit(60);
                                         $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
-                                        // Mengambil data IDP berdasarkan assessment_id dan alc_id
                                         $idp = DB::table('idp')
                                             ->where('assessment_id', $assessment->id)
                                             ->where('alc_id', $id)
@@ -269,13 +268,10 @@
 
                                         $assessment_detail_id = null;
                                         foreach ($assessment->details as $detail) {
-                                            if ($idp) {
-                                                if ($detail->assesment_id == $idp?->id) {
-                                                    $assessment_detail_id = $detail->id;
-                                                }
+                                            if ($idp && $detail->assesment_id == $idp->id) {
+                                                $assessment_detail_id = $detail->id;
                                             }
                                         }
-
                                     @endphp
 
                                     <div class="modal-body scroll-y mx-2 mt-5">
@@ -285,11 +281,11 @@
                                             id="alc_id_{{ $assessment->id }}_{{ $id }}"
                                             value="{{ $id }}">
 
+                                        {{-- Weakness Section (always shown) --}}
                                         <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2">Weakness & Suggestion Development
+                                            <label class="fs-5 fw-bold form-label mb-4">Weakness & Suggestion Development
                                                 in {{ $title }}</label>
-
-                                            <div class="border p-4 rounded bg-light mb-4"
+                                            <div class="border p-4 rounded bg-light mb-5"
                                                 style="max-height: 400px; overflow-y: auto;">
                                                 <h6 class="fw-bold mb-">Weakness</h6>
                                                 <p class="mb-5">{{ $weaknessDetail->weakness }}</p>
@@ -298,102 +294,117 @@
                                                 <p>{{ $weaknessDetail->suggestion_development }}</p>
                                             </div>
 
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox"
-                                                    id="agreeCheckbox_{{ $assessment->id }}_{{ $id }}">
-                                                <label class="form-check-label"
+                                            <!-- Countdown Text -->
+                                            <div id="countdownText_{{ $assessment->id }}_{{ $id }}"
+                                                class="text-dark text-center mb-2">
+                                                Please wait <span class="countdown-seconds">for a</span> seconds...
+                                            </div>
+
+                                            <!-- Checkbox -->
+                                            <div class="form-check d-none"
+                                                id="checkboxWrapper_{{ $assessment->id }}_{{ $id }}">
+                                                <input class="form-check-input agree-checkbox" type="checkbox"
+                                                    id="agreeCheckbox_{{ $assessment->id }}_{{ $id }}"
+                                                    data-target="additionalContent_{{ $assessment->id }}_{{ $id }}">
+                                                <label class="form-check-label text-dark"
                                                     for="agreeCheckbox_{{ $assessment->id }}_{{ $id }}">
                                                     I have read and understood the content above.
                                                 </label>
                                             </div>
+
                                         </div>
 
-                                        <div class="col-lg-12 mb-10">
-                                            <hr>
-                                        </div>
+                                        {{-- Additional content (hidden by default) --}}
+                                        <div class="additional-content d-none"
+                                            id="additionalContent_{{ $assessment->id }}_{{ $id }}">
+                                            <div class="col-lg-12 mb-10">
+                                                <hr>
+                                            </div>
 
-                                        <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2"><span
-                                                    class="required">Category</span></label>
-                                            <select id="category_select_{{ $assessment->id }}_{{ $id }}"
-                                                name="category" aria-label="Select Category" data-control="select2"
-                                                data-placeholder="Select categories..."
-                                                class="form-select form-select-lg fw-semibold">
-                                                <option value="">Select Category</option>
-                                                @foreach (['Feedback', 'Self Development', 'Shadowing', 'On Job Development', 'Mentoring', 'Training'] as $category)
-                                                    <option value="{{ $category }}"
-                                                        {{ isset($idp) && $idp->category == $category ? 'selected' : '' }}>
-                                                        {{ $category }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2"><span class="required">Development
-                                                    Program</span></label>
-                                            <select id="program_select_{{ $assessment->id }}_{{ $id }}"
-                                                name="development_program" aria-label="Select Development Program"
-                                                data-control="select2" data-placeholder="Select Programs..."
-                                                class="form-select form-select-lg fw-semibold">
-                                                <option value="">Select Development Program</option>
-                                                @foreach (['Superior (DGM & GM)', 'Book Reading', 'FIGURE LEADER', 'Team Leader', 'SR PROJECT', 'People Development Program', 'Leadership', 'Developing Sub Ordinate'] as $program)
-                                                    <option value="{{ $program }}"
-                                                        {{ isset($idp) && $idp->development_program == $program ? 'selected' : '' }}>
-                                                        {{ $program }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
-
-                                        <div class="col-lg-12 fv-row mb-10">
-                                            <label for="target_{{ $assessment->id }}_{{ $id }}"
-                                                class="fs-5 fw-bold form-label mb-2 required">Development Target</label>
-                                            <textarea id="target_{{ $assessment->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
-                                        </div>
-
-                                        <div class="col-lg-12 fv-row mb-5">
-                                            <label for="due_date_{{ $assessment->id }}"
-                                                class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
-                                            <input type="date"
-                                                id="due_date_{{ $assessment->id }}_{{ $id }}" name="date"
-                                                class="form-control" value="{{ isset($idp) ? $idp->date : '' }}" />
-                                        </div>
-
-                                        <div class="col-lg-12 fv-row mb-5">
-                                            <hr>
-                                        </div>
-
-                                        <div class="col-lg-12 fv-row mb-5">
-                                            <label class="fs-5 fw-bold form-label mb-2 required">Comment History</label>
-                                            @foreach ($idps as $idp)
-                                                @if (!$idp->commentHistory->isEmpty())
-                                                    @foreach ($idp->commentHistory as $comment)
-                                                        <div class="border rounded p-3 mb-3 bg-light">
-                                                            <div class="fw-semibold mb-2">
-                                                                {{ $comment->employee->name ?? 'Unknown Employee' }}
-                                                                —
-                                                                <small class="text-muted">
-                                                                    {{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}
-                                                                </small>
-                                                            </div>
-                                                            <div class="text-muted fst-italic">
-                                                                {{ $comment->comment }}
-                                                            </div>
-                                                        </div>
+                                            <div class="col-lg-12 mb-10">
+                                                <label class="fs-5 fw-bold form-label mb-2"><span
+                                                        class="required">Category</span></label>
+                                                <select id="category_select_{{ $assessment->id }}_{{ $id }}"
+                                                    name="category" class="form-select form-select-lg fw-semibold"
+                                                    data-control="select2" data-placeholder="Select categories...">
+                                                    <option value="">Select Category</option>
+                                                    @foreach (['Feedback', 'Self Development', 'Shadowing', 'On Job Development', 'Mentoring', 'Training'] as $category)
+                                                        <option value="{{ $category }}"
+                                                            {{ isset($idp) && $idp->category == $category ? 'selected' : '' }}>
+                                                            {{ $category }}
+                                                        </option>
                                                     @endforeach
-                                                @endif
-                                            @endforeach
-                                        </div>
+                                                </select>
+                                            </div>
 
-                                        <div class="text-center pt-15">
-                                            <!-- Cek apakah IDP sudah ada di database -->
-                                            <button type="button"
-                                                id="confirm-button-{{ $assessment->id }}-{{ $id }}"
-                                                class="btn btn-primary btn-create-idp"
-                                                data-assessment="{{ $assessment->id }}" data-alc="{{ $id }}"
-                                                disabled>
-                                                Submit
-                                            </button>
-                                        </div>
+                                            <div class="col-lg-12 mb-10">
+                                                <label class="fs-5 fw-bold form-label mb-2"><span
+                                                        class="required">Development Program</span></label>
+                                                <select id="program_select_{{ $assessment->id }}_{{ $id }}"
+                                                    name="development_program"
+                                                    class="form-select form-select-lg fw-semibold" data-control="select2"
+                                                    data-placeholder="Select Programs...">
+                                                    <option value="">Select Development Program</option>
+                                                    @foreach (['Superior (DGM & GM)', 'Book Reading', 'FIGURE LEADER', 'Team Leader', 'SR PROJECT', 'People Development Program', 'Leadership', 'Developing Sub Ordinate'] as $program)
+                                                        <option value="{{ $program }}"
+                                                            {{ isset($idp) && $idp->development_program == $program ? 'selected' : '' }}>
+                                                            {{ $program }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
+
+                                            <div class="col-lg-12 fv-row mb-10">
+                                                <label for="target_{{ $assessment->id }}_{{ $id }}"
+                                                    class="fs-5 fw-bold form-label mb-2 required">Development
+                                                    Target</label>
+                                                <textarea id="target_{{ $assessment->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
+                                            </div>
+
+                                            <div class="col-lg-12 fv-row mb-5">
+                                                <label for="due_date_{{ $assessment->id }}_{{ $id }}"
+                                                    class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
+                                                <input type="date"
+                                                    id="due_date_{{ $assessment->id }}_{{ $id }}"
+                                                    name="date" class="form-control"
+                                                    value="{{ isset($idp) ? $idp->date : '' }}" />
+                                            </div>
+
+                                            <div class="col-lg-12 fv-row mb-5">
+                                                <hr>
+                                            </div>
+
+                                            <div class="col-lg-12 fv-row mb-5">
+                                                <label class="fs-5 fw-bold form-label mb-2 required">Comment
+                                                    History</label>
+                                                @foreach ($idps as $idp)
+                                                    @if (!$idp->commentHistory->isEmpty())
+                                                        @foreach ($idp->commentHistory as $comment)
+                                                            <div class="border rounded p-3 mb-3 bg-light">
+                                                                <div class="fw-semibold mb-2">
+                                                                    {{ $comment->employee->name ?? 'Unknown Employee' }} —
+                                                                    <small
+                                                                        class="text-muted">{{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}</small>
+                                                                </div>
+                                                                <div class="text-muted fst-italic">
+                                                                    {{ $comment->comment }}
+                                                                </div>
+                                                            </div>
+                                                        @endforeach
+                                                    @endif
+                                                @endforeach
+                                            </div>
+
+                                            <div class="text-center pt-15">
+                                                <button type="button"
+                                                    id="confirm-button-{{ $assessment->id }}-{{ $id }}"
+                                                    class="btn btn-primary btn-create-idp"
+                                                    data-assessment="{{ $assessment->id }}"
+                                                    data-alc="{{ $id }}" disabled>
+                                                    Submit
+                                                </button>
+                                            </div>
+                                        </div> <!-- end .additional-content -->
                                     </div>
                                 </div>
                             </div>
@@ -806,22 +817,119 @@
         //     });
         // });
         document.addEventListener('DOMContentLoaded', function() {
-            const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="agreeCheckbox_"]');
+            const modals = document.querySelectorAll('.modal');
 
-            checkboxes.forEach(function(checkbox) {
-                checkbox.addEventListener('change', function() {
-                    const checkboxId = this.id; // example: agreeCheckbox_2_5
-                    const parts = checkboxId.split('_');
-                    const assessmentId = parts[1];
-                    const alcId = parts[2];
-                    const button = document.getElementById(
-                        `confirm-button-${assessmentId}-${alcId}`);
+            modals.forEach(modal => {
+                let countdownInterval = null;
 
-                    if (this.checked) {
-                        button.removeAttribute('disabled');
-                    } else {
-                        button.setAttribute('disabled', 'disabled');
+                modal.addEventListener('shown.bs.modal', function() {
+                    const modalId = modal.getAttribute('id');
+                    const [_, __, ___, assessId, alcId] = modalId.split('_');
+
+                    const checkboxWrapper = document.getElementById(
+                        `checkboxWrapper_${assessId}_${alcId}`);
+                    const countdownText = document.getElementById(
+                        `countdownText_${assessId}_${alcId}`);
+                    const checkbox = document.getElementById(`agreeCheckbox_${assessId}_${alcId}`);
+                    const target = document.getElementById(
+                        `additionalContent_${assessId}_${alcId}`);
+                    const btn = document.getElementById(`confirm-button-${assessId}-${alcId}`);
+
+                    // Reset visual
+                    checkboxWrapper.classList.add('d-none');
+                    countdownText.classList.remove('d-none');
+                    checkbox.checked = false;
+                    btn.setAttribute('disabled', true);
+                    target.classList.add('d-none');
+
+                    // Jalankan countdown
+                    startCountdown(() => {
+                        countdownText.classList.add('d-none');
+                        checkboxWrapper.classList.remove('d-none');
+                    });
+
+                    // Checkbox listener
+                    checkbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            target.classList.remove('d-none');
+                            btn.removeAttribute('disabled');
+                        } else {
+                            target.classList.add('d-none');
+                            btn.setAttribute('disabled', true);
+
+                            // Ulang timer dan sembunyikan checkbox
+                            checkboxWrapper.classList.add('d-none');
+                            countdownText.classList.remove('d-none');
+                            startCountdown(() => {
+                                countdownText.classList.add('d-none');
+                                checkboxWrapper.classList.remove('d-none');
+                            });
+                        }
+                    });
+
+                    function startCountdown(callback) {
+                        clearInterval(countdownInterval); // prevent duplicate
+                        const totalSeconds = 10;
+                        let secondsLeft = totalSeconds;
+                        let messageToggle = true;
+
+                        updateMessage();
+
+                        countdownInterval = setInterval(() => {
+                            secondsLeft--;
+
+                            if (secondsLeft >= 0) {
+                                if (messageToggle) {
+                                    countdownText.innerHTML =
+                                        `Please wait <span class="countdown-seconds">for a</span> seconds...`;
+                                } else {
+                                    countdownText.textContent =
+                                        "Make sure you read all content above...";
+                                }
+
+                                if ((totalSeconds - secondsLeft) % 2 === 0) {
+                                    messageToggle = !messageToggle;
+                                }
+                            }
+
+                            if (secondsLeft <= 0) {
+                                clearInterval(countdownInterval);
+                                callback();
+                            }
+                        }, 1000);
+
+                        function updateMessage() {
+                            if (messageToggle) {
+                                countdownText.innerHTML =
+                                    `Please wait <span class="countdown-seconds">for a</span> seconds...`;
+                            } else {
+                                countdownText.textContent =
+                                    "Make sure you read all content above...";
+                            }
+                        }
                     }
+                });
+
+                modal.addEventListener('hidden.bs.modal', function() {
+                    clearInterval(countdownInterval);
+                    const modalId = modal.getAttribute('id');
+                    const [_, __, ___, assessId, alcId] = modalId.split('_');
+
+                    // Reset saat modal ditutup
+                    const checkboxWrapper = document.getElementById(
+                        `checkboxWrapper_${assessId}_${alcId}`);
+                    const countdownText = document.getElementById(
+                        `countdownText_${assessId}_${alcId}`);
+                    const checkbox = document.getElementById(`agreeCheckbox_${assessId}_${alcId}`);
+                    const target = document.getElementById(
+                        `additionalContent_${assessId}_${alcId}`);
+                    const btn = document.getElementById(`confirm-button-${assessId}-${alcId}`);
+
+                    checkboxWrapper.classList.add('d-none');
+                    countdownText.classList.remove('d-none');
+                    checkbox.checked = false;
+                    btn.setAttribute('disabled', true);
+                    target.classList.add('d-none');
                 });
             });
         });
