@@ -77,7 +77,8 @@
                                 </td>
                             </tr>
 
-                            <tr id="collapse{{ $employeeId }}" class="collapse">
+                            <tr id="collapse{{ $employeeId }}" class="accordion-collapse collapse"
+                                data-bs-parent="#kt_table_users">
                                 <td colspan="7">
                                     <div class="accordion accordion-icon-toggle" id="accordionFlush{{ $employeeId }}">
                                         @foreach ($employeeIdps as $index => $idp)
@@ -154,45 +155,25 @@
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- In your layout file -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            // Menangani klik tombol untuk membuka/tutup detail karyawan
-            $('.btn-toggle-accordion').click(function() {
-                var target = $(this).attr(
-                    'data-bs-target'); // Ambil target collapse berdasarkan data-bs-target
-                var $targetCollapse = $(target); // Target collapse (accordion)
+            // Let Bootstrap handle all accordion toggles automatically
 
-                // Cek apakah collapse sedang terbuka atau tidak
-                if ($targetCollapse.hasClass('show')) {
-                    // Jika collapse sedang terbuka, kita tutup
-                    $targetCollapse.collapse('hide');
-                    $(this).attr('aria-expanded', 'false'); // Update status aria-expanded ke false
-                } else {
-                    // Jika collapse sedang tertutup, kita buka
-                    $targetCollapse.collapse('show');
-                    $(this).attr('aria-expanded', 'true'); // Update status aria-expanded ke true
-                }
-            });
-
-            // Menangani tombol untuk membuka/menutup accordion dalam detail IDP
-            $('.accordion-button').click(function() {
-                var collapseTarget = $(this).attr('data-bs-target');
-                var collapseElement = $(collapseTarget);
-
-                if (collapseElement.hasClass('show')) {
-                    // Jika accordion sudah terbuka, kita tutup
-                    collapseElement.collapse('hide');
-                } else {
-                    // Jika accordion tertutup, kita buka
-                    collapseElement.collapse('show');
-                }
-            });
-
-            // Menangani tombol approve jika diperlukan
+            // Only keep your custom functionality
             $('.btn-approve').click(function() {
                 var idpId = $(this).data('idp-id');
                 console.log('Approved IDP ID: ' + idpId);
-                // Tambahkan aksi untuk approval (misalnya AJAX)
+                // Your approval logic here
+            });
+
+            // Update the toggle button to use Bootstrap's native functionality
+            $('.btn-toggle-accordion').each(function() {
+                $(this).attr({
+                    'data-bs-toggle': 'collapse',
+                    'aria-expanded': 'false'
+                });
             });
         });
 

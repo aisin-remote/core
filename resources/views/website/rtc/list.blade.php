@@ -53,7 +53,7 @@
                     <div class="card-body">
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                             role="tablist" style="cursor:pointer">
-                            @if (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Director')
+                            @if (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Direktur')
                                 <li class="nav-item" role="presentation">
                                     <a class="nav-link text-active-primary pb-4 filter-tab active"
                                         data-filter="department">Department</a>
@@ -168,7 +168,7 @@
 
 
             let currentFilter
-            if (user.employee.position == 'Director' || user.role == 'HRD') {
+            if (user.employee.position == 'Direktur' || user.role == 'HRD') {
                 currentFilter = 'department'; // default tab
             } else {
                 currentFilter = 'section'; // default tab

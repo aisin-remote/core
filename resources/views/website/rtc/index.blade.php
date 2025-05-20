@@ -78,7 +78,7 @@
                                                 <i class="fas fa-info-circle"></i>
                                             </a>
                                             <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
-                                                class="btn btn-sm btn-info" title="View">
+                                                class="btn btn-sm btn-info" title="View" target="_blank">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             <a href="#" class="btn btn-sm btn-success open-add-plan-modal"

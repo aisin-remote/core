@@ -112,6 +112,8 @@ class RtcController extends Controller
             $departments = Department::where('division_id', $data->id)->get();
             $departmentIds = $departments->pluck('id');
             $managerIds = $departments->pluck('manager_id')->filter()->unique();
+        }else{
+            $data = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
         }
 
         $sections = Section::whereIn('department_id', $departmentIds)->get();
@@ -137,6 +139,8 @@ class RtcController extends Controller
             $employee->superiors = $employee->getSuperiorsByLevel($approvalLevel);
         }
 
+        $filter = strtolower($filter);
+        
         return view('website.rtc.detail', compact('data', 'filter', 'bawahans'));
     }
 

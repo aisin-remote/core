@@ -363,7 +363,7 @@ class MasterController extends Controller
         $user = auth()->user();
         $employee = $user->employee;
 
-        if ($user->role === 'HRD' || $employee->position == 'Director') {
+        if ($user->role === 'HRD' || $employee->position == 'Direktur') {
             switch ($filter) {
                 case 'department':
                     $data = Department::where('division_id', $division_id)->get();
