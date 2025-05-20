@@ -145,9 +145,13 @@
                                     </a>
                                 </div>
                             @empty
-                                <div class="col-12">
-                                    <div class="alert alert-success text-center">
-                                        <i class="fas fa-check-circle me-1"></i> No Task.
+                                <div class="col-md-12 py-1">
+                                    <div class="card border-0 bg-light-success hover-shadow">
+                                        <div class="card-body text-center">
+                                            <h5 class="mb-0 text-success">
+                                                <i class="fas fa-check-circle me-2"></i> No Task.
+                                            </h5>
+                                        </div>
                                     </div>
                                 </div>
                             @endforelse
@@ -205,9 +209,13 @@
                                         </a>
                                     </div>
                                 @empty
-                                    <div class="col-12">
-                                        <div class="alert alert-success text-center">
-                                            <i class="fas fa-check-circle me-1"></i> No Task.
+                                    <div class="col-md-12 py-1">
+                                        <div class="card border-0 bg-light-success hover-shadow">
+                                            <div class="card-body text-center">
+                                                <h5 class="mb-0 text-success">
+                                                    <i class="fas fa-check-circle me-2"></i> No Task.
+                                                </h5>
+                                            </div>
                                         </div>
                                     </div>
                                 @endforelse

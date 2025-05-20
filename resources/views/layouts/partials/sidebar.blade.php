@@ -349,7 +349,7 @@
                             </div>
                         @endif
 
-                        <style>
+                        {{-- <style>
                             .blinking-dot {
                                 animation: blink 1s infinite;
                             }
@@ -365,7 +365,7 @@
                                     opacity: 0;
                                 }
                             }
-                        </style>
+                        </style> --}}
 
                         <div class="menu-item">
                             <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
