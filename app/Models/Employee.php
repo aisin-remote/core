@@ -44,7 +44,7 @@ class Employee extends Model
     {
         return $this->hasMany(PromotionHistory::class, 'employee_id', 'id');
     }
-    
+
     public function idpCommentHistory()
     {
         return $this->hasMany(IdpCommentHistory::class, 'employee_id', 'id');
@@ -240,7 +240,7 @@ class Employee extends Model
             $normalized = $employee->getNormalizedPosition();
             return in_array($normalized, ['manager', 'supervisor', 'leader', 'jp', 'operator']);
         });
-    }
+    }       
 
 
     private function getDirectSubordinatesOf(Employee $employee)
@@ -252,7 +252,7 @@ class Employee extends Model
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
         } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
             $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
-            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);            
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
         } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
             $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);

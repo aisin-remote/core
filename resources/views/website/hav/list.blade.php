@@ -135,7 +135,7 @@
                         <div class="alert alert-info small">
                             <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
                             Download template format import:
-                            <a href="{{ Storage::url('Import-HAV.xlsx') }}" target="_blank"
+                            <a href="{{ asset('assets/file/Import-HAV.xlsx') }}" target="_blank"
                                 class="fw-bold text-primary text-decoration-underline">Download Template</a>
                         </div>
 
@@ -420,7 +420,7 @@
                                 ${`<a
                                     data-id="${hav.id}"
                                     class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                        History
+                                        Comments
                                     </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>

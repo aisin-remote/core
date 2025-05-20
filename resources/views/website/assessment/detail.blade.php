@@ -93,25 +93,25 @@
                     </table>
                 </div>
                 <div class="card mt-4 p-3">
-                    <h4 class="text-center">Suggest Development</h4>
+                    <h4 class="text-center">Suggestion Development</h4>
                     <table class="table table-bordered">
                         <thead class="table-dark">
                             <tr>
                                 <th class="text-center" style="width: 5%;">#</th>
                                 <th class="text-center" style="width: 20%;">ALC</th>
-                                <th class="text-center" style="width: 75%;">Suggest Development</th>
+                                <th class="text-center" style="width: 75%;">Suggestion Development</th>
                             </tr>
                         </thead>
                         <tbody>
                             @php
-                                $suggests = $details->filter(fn($item) => !empty($item->suggest_development))->values();
+                                $suggests = $details->filter(fn($item) => !empty($item->suggestion_development))->values();
                             @endphp
 
                             @foreach ($suggests as $index => $item)
                                 <tr>
                                     <td class="text-center">{{ $index + 1 }}</td>
                                     <td><strong>{{ $item->alc_name }}</strong></td>
-                                    <td>{{ $item->suggest_development }}</td>
+                                    <td>{{ $item->suggestion_development }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
