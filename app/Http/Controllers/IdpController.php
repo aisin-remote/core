@@ -99,6 +99,7 @@ class IdpController extends Controller
         $user = auth()->user();
         $employee = $user->employee;
         $npk = $request->query('npk');
+        $search = $request->query('search');
         $alcs = [
             1 => 'Vision & Business Sense',
             2 => 'Customer Focus',
@@ -123,11 +124,12 @@ class IdpController extends Controller
                     fn($query) =>
                     $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                 )
-                ->when(
-                    $npk,
-                    fn($query) =>
-                    $query->whereHas('employee', fn($q) => $q->where('npk', $npk))
-                )
+                ->when($search, function ($query) use ($search) {
+                    $query->whereHas('employee', function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('npk', 'like', '%' . $search . '%');
+                    });
+                })
                 ->orderByDesc('created_at')
                 ->paginate(10);
         } else {
@@ -148,11 +150,12 @@ class IdpController extends Controller
                         fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                     )
-                    ->when(
-                        $npk,
-                        fn($query) =>
-                        $query->whereHas('employee', fn($q) => $q->where('npk', $npk))
-                    )
+                    ->when($search, function ($query) use ($search) {
+                        $query->whereHas('employee', function ($q) use ($search) {
+                            $q->where('name', 'like', '%' . $search . '%')
+                                ->orWhere('npk', 'like', '%' . $search . '%');
+                        });
+                    })
                     ->whereIn('id', function ($query) {
                         $query->selectRaw('id')
                             ->from('assessments as a')
@@ -234,41 +237,41 @@ class IdpController extends Controller
                 ->where('alc_id', $request->alc_id)
                 ->first();
 
-                if ($idp) {
-                    $idp->update([
-                        'development_program' => $request->development_program ?? $idp->development_program,
-                        'category' => $request->category ?? $idp->category,
-                        'development_target' => $request->development_target ?? $idp->development_target,
-                        'date' => $request->date ?? $idp->date,
-                    ]);
-                    
-                    DB::commit();              
-                
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => 'Development updated successfully.',
-                        'idp' => $idp, // opsional: kirim data IDP terbaru
-                    ]);
-                } else {
-                    $newIdp = Idp::create([
-                        'alc_id' => $request->alc_id,
-                        'assessment_id' => $request->assessment_id,
-                        'employee_id' => $assessment->employee_id,
-                        'development_program' => $request->development_program,
-                        'category' => $request->category,
-                        'development_target' => $request->development_target,
-                        'status' => 0,
-                        'date' => $request->date,
-                    ]);
-                    
-                    DB::commit();              
-                
-                    return response()->json([
-                        'status' => 'success',
-                        'message' => 'Development added successfully.',
-                        'idp' => $newIdp, // opsional: kirim data IDP yang baru dibuat
-                    ]);
-                }  
+            if ($idp) {
+                $idp->update([
+                    'development_program' => $request->development_program ?? $idp->development_program,
+                    'category' => $request->category ?? $idp->category,
+                    'development_target' => $request->development_target ?? $idp->development_target,
+                    'date' => $request->date ?? $idp->date,
+                ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Development updated successfully.',
+                    'idp' => $idp, // opsional: kirim data IDP terbaru
+                ]);
+            } else {
+                $newIdp = Idp::create([
+                    'alc_id' => $request->alc_id,
+                    'assessment_id' => $request->assessment_id,
+                    'employee_id' => $assessment->employee_id,
+                    'development_program' => $request->development_program,
+                    'category' => $request->category,
+                    'development_target' => $request->development_target,
+                    'status' => 0,
+                    'date' => $request->date,
+                ]);
+
+                DB::commit();
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Development added successfully.',
+                    'idp' => $newIdp, // opsional: kirim data IDP yang baru dibuat
+                ]);
+            }
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', $e->getMessage());
@@ -544,7 +547,7 @@ class IdpController extends Controller
                 $query->where('employee_id', $employeeId);
             })->whereHas('alc')->get();
 
-            
+
             if ($detailAssessments->isEmpty()) {
                 return response()->json(['message' => 'Fitur ini belum dijadwalkan untuk pengembangan.'], 400);
             }
@@ -598,7 +601,7 @@ class IdpController extends Controller
         // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
         $checkLevel = $employee->getFirstApproval();
         $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
-        
+
         $approveLevel = $employee->getFirstApproval();
         $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
 
@@ -608,7 +611,7 @@ class IdpController extends Controller
                 $q->whereIn('employee_id', $subCheck); // Menggunakan whereIn jika $subordinates adalah array
             })
             ->get();
-            
+
         $approveIdps = Idp::with('assessment.employee', 'assessment.details')
             ->where('status', 2)
             ->whereHas('assessment.employee', function ($q) use ($subApprove) {
