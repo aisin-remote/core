@@ -389,8 +389,8 @@ class Employee extends Model
     public function getFirstApproval()
     {
         return match ($this->getNormalizedPosition()) {
-            'jp', 'operator', 'leader' => 3,
-            'supervisor', 'manager', 'gm', 'direktur' => 2,
+            'jp', 'operator', 'leader', 'manager' => 3,
+            'supervisor', 'gm', 'direktur' => 2,
             default => 0,
         };
     }

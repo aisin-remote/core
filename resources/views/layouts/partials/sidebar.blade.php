@@ -349,12 +349,35 @@
                             </div>
                         @endif
 
+                        <style>
+                            .blinking-dot {
+                                animation: blink 1s infinite;
+                            }
+
+                            @keyframes blink {
+
+                                0%,
+                                100% {
+                                    opacity: 1;
+                                }
+
+                                50% {
+                                    opacity: 0;
+                                }
+                            }
+                        </style>
+
                         <div class="menu-item">
                             <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
-                                <span class="menu-title ps-1">To Do List</span>
-                                @if ($allIdpTasks->count() > 0)
-                                    <span class="badge badge-danger ms-2">{{ $allIdpTasks->count() }}</span>
-                                @endif
+                                <span class="menu-title ps-1 position-relative d-inline-block"
+                                    style="padding-right: 16px;">
+                                    To Do List
+                                    @if ($allIdpTasks->count() > 0 || $allHavTasks->count() > 0)
+                                        <span
+                                            class="blinking-dot position-absolute top-50 end-0 translate-middle-y bg-danger rounded-circle"
+                                            style="width: 8px; height: 8px;"></span>
+                                    @endif
+                                </span>
                             </a>
                         </div>
                     </div>

@@ -35,6 +35,8 @@
     @endif
     <div id="kt_app_content_container" class="app-container container-fluid">
         <div class="row">
+
+            {{-- IDP --}}
             <div class="col-4">
                 <div class="card shadow-sm">
                     <div class="card-header bg-light text-white">
@@ -47,7 +49,9 @@
                         <div class="row g-3">
                             @forelse ($allIdpTasks as $item)
                                 <div class="col-md-12">
-                                    <a href="{{ route('idp.index', ['company' => $item['employee_company'], 'npk' => $item['employee_npk']]) }}"
+                                    <a href="{{ in_array($item['type'], ['need_check', 'need_approval'])
+                                        ? route('idp.approval')
+                                        : route('idp.index', ['company' => $item['employee_company'], 'npk' => $item['employee_npk']]) }}"
                                         class="text-decoration-none text-dark">
                                         <div
                                             class="card border-0 shadow-sm
@@ -82,6 +86,65 @@
                                     </a>
                                 </div>
                             @empty
+                                <div class="col-md-12 py-1">
+                                    <div class="card border-0 bg-light-success hover-shadow">
+                                        <div class="card-body text-center">
+                                            <h5 class="mb-0 text-success">
+                                                <i class="fas fa-check-circle me-2"></i> No Task.
+                                            </h5>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforelse
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{-- end of IDP --}}
+
+            {{-- HAV --}}
+            <div class="col-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light text-white">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-tasks me-2"></i><span class="fw-bold">HAV</span> - [{{ $allHavTasks->count() }}
+                            Items]
+                        </h3>
+                    </div>
+                    <div class="card-body overflow-auto" style="max-height: 600px;">
+                        <div class="row g-3">
+                            @forelse ($allHavTasks as $item)
+                                <div class="col-md-12">
+                                    <a href="{{ route('hav.approval') }}" class="text-decoration-none text-dark">
+                                        <div
+                                            class="card border-0 shadow-sm
+                                            @if ($item->getRawOriginal('status') === 1) bg-danger-subtle
+                                            @elseif($item->getRawOriginal('status') === 0) bg-warning-subtle
+                                            @else bg-light @endif
+                                            hover-shadow">
+                                            <div class="card-body d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h5 class="mb-2">{{ $item->employee->name }}</h5>
+                                                </div>
+                                                <span
+                                                    class="badge
+                                                    @if ($item->getRawOriginal('status') === 1) badge-danger
+                                                    @elseif($item->getRawOriginal('status') === 0) badge-warning
+                                                    @else badge-secondary @endif
+                                                    rounded-pill px-3 py-2">
+                                                    @if ($item->getRawOriginal('status') === 1)
+                                                        <i class="fas fa-exclamation-circle me-2"></i> To Be Assign
+                                                    @elseif($item->getRawOriginal('status') === 0)
+                                                        <i class="fas fa-exclamation-circle me-2"></i> Need Approve
+                                                    @else
+                                                        Unknown
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @empty
                                 <div class="col-12">
                                     <div class="alert alert-success text-center">
                                         <i class="fas fa-check-circle me-1"></i> No Task.
@@ -92,6 +155,69 @@
                     </div>
                 </div>
             </div>
+            {{-- end of HAV --}}
+
+            {{-- Assessment --}}
+            @if (auth()->user()->role === 'HRD')
+                <div class="col-4">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-light text-white">
+                            <h3 class="card-title mb-0">
+                                <i class="fas fa-tasks me-2"></i><span class="fw-bold">Assessment</span> -
+                                [{{ $allHavTasks->count() }}
+                                Items]
+                            </h3>
+                        </div>
+                        <div class="card-body overflow-auto" style="max-height: 600px;">
+                            <div class="row g-3">
+                                @forelse ($allHavTasks as $item)
+                                    <div class="col-md-12">
+                                        <a href="{{ in_array($item['type'], ['need_check', 'need_approval'])
+                                            ? route('idp.approval')
+                                            : route('idp.index', ['company' => $item['employee_company'], 'npk' => $item['employee_npk']]) }}"
+                                            class="text-decoration-none text-dark">
+                                            <div
+                                                class="card border-0 shadow-sm
+                                            @if ($item->getRawOriginal('status') === 1) bg-danger-subtle
+                                            @elseif($item->getRawOriginal('status') === 0) bg-warning-subtle
+                                            @else bg-light @endif
+                                            hover-shadow">
+                                                <div class="card-body d-flex justify-content-between align-items-center">
+                                                    <div>
+                                                        <h5 class="mb-2">{{ $item->employee->name }}</h5>
+                                                    </div>
+                                                    <span
+                                                        class="badge
+                                                    @if ($item->getRawOriginal('status') === 1) badge-danger
+                                                    @elseif($item->getRawOriginal('status') === 0) badge-warning
+                                                    @else badge-secondary @endif
+                                                    rounded-pill px-3 py-2">
+                                                        @if ($item->getRawOriginal('status') === 1)
+                                                            <i class="fas fa-exclamation-circle me-2"></i> To Be Assign
+                                                        @elseif($item->getRawOriginal('status') === 0)
+                                                            <i class="fas fa-exclamation-circle me-2"></i> Need Approve
+                                                        @else
+                                                            Unknown
+                                                        @endif
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </a>
+                                    </div>
+                                @empty
+                                    <div class="col-12">
+                                        <div class="alert alert-success text-center">
+                                            <i class="fas fa-check-circle me-1"></i> No Task.
+                                        </div>
+                                    </div>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+            {{-- end of Assessment --}}
+
         </div>
     </div>
 

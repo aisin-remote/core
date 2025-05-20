@@ -286,18 +286,26 @@
                                             value="{{ $id }}">
 
                                         <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2">Weakness in
-                                                {{ $title }}</label>
-                                            <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
-                                                class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->weakness }}</textarea>
-                                            <small class="text-danger">*make sure you have read everything</small>
-                                        </div>
+                                            <label class="fs-5 fw-bold form-label mb-2">Weakness & Suggestion Development
+                                                in {{ $title }}</label>
 
-                                        <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2">Suggestion Development</label>
-                                            <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
-                                                class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->suggestion_development }}</textarea>
-                                            <small class="text-danger">*make sure you have read everything</small>
+                                            <div class="border p-4 rounded bg-light mb-4"
+                                                style="max-height: 400px; overflow-y: auto;">
+                                                <h6 class="fw-bold mb-">Weakness</h6>
+                                                <p class="mb-5">{{ $weaknessDetail->weakness }}</p>
+
+                                                <h6 class="fw-bold mb-2">Suggestion Development</h6>
+                                                <p>{{ $weaknessDetail->suggestion_development }}</p>
+                                            </div>
+
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox"
+                                                    id="agreeCheckbox_{{ $assessment->id }}_{{ $id }}">
+                                                <label class="form-check-label"
+                                                    for="agreeCheckbox_{{ $assessment->id }}_{{ $id }}">
+                                                    I have read and understood the content above.
+                                                </label>
+                                            </div>
                                         </div>
 
                                         <div class="col-lg-12 mb-10">
@@ -797,25 +805,22 @@
         //         });
         //     });
         // });
-        document.addEventListener("DOMContentLoaded", function() {
-            const textareas = document.querySelectorAll(".weakness-textarea");
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"][id^="agreeCheckbox_"]');
 
-            textareas.forEach(textarea => {
-                const textareaId = textarea.id.replace("weakness-textarea-", "");
-                const button = document.getElementById(`confirm-button-${textareaId}`);
+            checkboxes.forEach(function(checkbox) {
+                checkbox.addEventListener('change', function() {
+                    const checkboxId = this.id; // example: agreeCheckbox_2_5
+                    const parts = checkboxId.split('_');
+                    const assessmentId = parts[1];
+                    const alcId = parts[2];
+                    const button = document.getElementById(
+                        `confirm-button-${assessmentId}-${alcId}`);
 
-                if (!textarea.value.trim()) {
-                    // Jika kosong, langsung enable tombol
-                    if (button) button.disabled = false;
-                    return; // tidak perlu pasang scroll listener
-                }
-
-                // Kalau ada isinya, cek scroll
-                textarea.addEventListener("scroll", function() {
-                    const isScrolledToBottom = this.scrollTop + this.clientHeight >= this
-                        .scrollHeight;
-                    if (isScrolledToBottom && button) {
-                        button.disabled = false;
+                    if (this.checked) {
+                        button.removeAttribute('disabled');
+                    } else {
+                        button.setAttribute('disabled', 'disabled');
                     }
                 });
             });

@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\Hav;
 use App\Models\Idp;
 use App\Models\Employee;
 use App\Models\Assessment;
@@ -146,9 +147,16 @@ class AppServiceProvider extends ServiceProvider
                 ];
             });
 
+            // HAV //
+            $allHavTasks = Hav::with('employee')
+                ->whereIn('employee_id', $subCheck)
+                ->where('status', 0)
+                ->get();
+
             $allIdpTasks = $unassignedIdps->merge($pendingIdpCollection);
 
             $view->with('allIdpTasks', $allIdpTasks);
+            $view->with('allHavTasks', $allHavTasks);
         });
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Hav;
 use App\Models\Idp;
 use App\Models\Employee;
 use App\Models\Assessment;
@@ -132,7 +133,15 @@ class ToDoListController extends Controller
         // Gabungkan menjadi satu koleksi
         $allIdpTasks = $unassignedIdps->merge($pendingIdpCollection);
 
+        // HAV //
+        $allHavTasks = Hav::with('employee')
+            ->whereIn('employee_id', $subCheck)
+            ->where('status', 0)
+            ->get()
+            ->unique('employee_id')
+            ->values();
+
         // Kirim ke view
-        return view('website.todolist.index', compact('allIdpTasks'));
+        return view('website.todolist.index', compact('allIdpTasks','allHavTasks'));
     }
 }
