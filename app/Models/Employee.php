@@ -385,7 +385,7 @@ class Employee extends Model
             default => 0,
         };
     }
-                                    
+
     public function getFirstApproval()
     {
         return match ($this->getNormalizedPosition()) {

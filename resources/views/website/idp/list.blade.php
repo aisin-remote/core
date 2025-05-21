@@ -180,26 +180,19 @@
                                                 @endforeach
                                                 <td class="text-center" style="width: 50px">
                                                     <div class="d-flex gap-2 justify-content-center">
-                                                        <button type="button" class="btn btn-sm btn-primary"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
-                                                            <i class="fas fa-pencil-alt"></i>
-                                                        </button>
+
                                                         <button type="button" class="btn btn-sm btn-info"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#notes_{{ $assessment->employee->id }}">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
-                                                        @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
-                                                            <button type="button" class="btn btn-sm btn-success"
-                                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                                <i class="fas fa-file-export"></i>
-                                                            </button>
-                                                        @endif
-                                                        <button type="button" class="btn btn-sm btn-warning"
-                                                            onclick="sendDataConfirmation({{ $assessment->employee->id }})">
-                                                            <i class="fas fa-paper-plane"></i>
+
+                                                        <button type="button" class="btn btn-sm btn-success"
+                                                            onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
+                                                            <i class="fas fa-file-export"></i>
                                                         </button>
+
+
 
                                                         {{-- <button type="button" class="btn btn-sm btn-success"
                                                             onclick="approveAction()">
@@ -304,15 +297,13 @@
                                         <div class="col-lg-12 mb-10">
                                             <label class="fs-5 fw-bold form-label mb-2">Weakness in
                                                 {{ $title }}</label>
-                                            <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
-                                                class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->weakness }}</textarea>
+                                            <textarea readonly class="form-control form-control-solid weakness-textarea mb-5" rows="4">{{ $weaknessDetail->weakness }}</textarea>
                                             <small class="text-danger">*make sure you have read everything</small>
                                         </div>
 
                                         <div class="col-lg-12 mb-10">
                                             <label class="fs-5 fw-bold form-label mb-2">Suggestion Development</label>
-                                            <textarea id="weakness-textarea-{{ $assessment->id }}-{{ $id }}"
-                                                class="form-control form-control-solid weakness-textarea mb-5" rows="4" readonly>{{ $weaknessDetail->suggestion_development }}</textarea>
+                                            <textarea readonly class="form-control form-control-solid weakness-textarea mb-5" rows="4">{{ $weaknessDetail->suggestion_development }}</textarea>
                                             <small class="text-danger">*make sure you have read everything</small>
                                         </div>
 
@@ -323,15 +314,14 @@
                                         <div class="col-lg-12 mb-10">
                                             <label class="fs-5 fw-bold form-label mb-2"><span
                                                     class="required">Category</span></label>
-                                            <select id="category_select_{{ $assessment->id }}_{{ $id }}"
-                                                name="category" aria-label="Select Category" data-control="select2"
-                                                data-placeholder="Select categories..."
-                                                class="form-select form-select-lg fw-semibold">
+                                            <select disabled class="form-select form-select-lg fw-semibold"
+                                                aria-label="Select Category">
                                                 <option value="">Select Category</option>
                                                 @foreach (['Feedback', 'Self Development', 'Shadowing', 'On Job Development', 'Mentoring', 'Training'] as $category)
                                                     <option value="{{ $category }}"
                                                         {{ isset($idp) && $idp->category == $category ? 'selected' : '' }}>
-                                                        {{ $category }}</option>
+                                                        {{ $category }}
+                                                    </option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -339,31 +329,27 @@
                                         <div class="col-lg-12 mb-10">
                                             <label class="fs-5 fw-bold form-label mb-2"><span class="required">Development
                                                     Program</span></label>
-                                            <select id="program_select_{{ $assessment->id }}_{{ $id }}"
-                                                name="development_program" aria-label="Select Development Program"
-                                                data-control="select2" data-placeholder="Select Programs..."
-                                                class="form-select form-select-lg fw-semibold">
+                                            <select disabled class="form-select form-select-lg fw-semibold"
+                                                aria-label="Select Development Program">
                                                 <option value="">Select Development Program</option>
                                                 @foreach (['Superior (DGM & GM)', 'Book Reading', 'FIGURE LEADER', 'Team Leader', 'SR PROJECT', 'People Development Program', 'Leadership', 'Developing Sub Ordinate'] as $program)
                                                     <option value="{{ $program }}"
                                                         {{ isset($idp) && $idp->development_program == $program ? 'selected' : '' }}>
-                                                        {{ $program }}</option>
+                                                        {{ $program }}
+                                                    </option>
                                                 @endforeach
                                             </select>
                                         </div>
 
                                         <div class="col-lg-12 fv-row mb-10">
-                                            <label for="target_{{ $assessment->id }}_{{ $id }}"
-                                                class="fs-5 fw-bold form-label mb-2 required">Development Target</label>
-                                            <textarea id="target_{{ $assessment->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
+                                            <label class="fs-5 fw-bold form-label mb-2 required">Development Target</label>
+                                            <textarea readonly class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
                                         </div>
 
                                         <div class="col-lg-12 fv-row mb-5">
-                                            <label for="due_date_{{ $assessment->id }}"
-                                                class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
-                                            <input type="date"
-                                                id="due_date_{{ $assessment->id }}_{{ $id }}" name="date"
-                                                class="form-control" value="{{ isset($idp) ? $idp->date : '' }}" />
+                                            <label class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
+                                            <input readonly type="date" class="form-control"
+                                                value="{{ isset($idp) ? $idp->date : '' }}" />
                                         </div>
 
                                         <div class="col-lg-12 fv-row mb-5">
@@ -377,405 +363,396 @@
                                                     @foreach ($idp->commentHistory as $comment)
                                                         <div class="border rounded p-3 mb-3 bg-light">
                                                             <div class="fw-semibold mb-2">
-                                                                {{ $comment->employee->name ?? 'Unknown Employee' }}
-                                                                —
-                                                                <small class="text-muted">
-                                                                    {{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}
-                                                                </small>
+                                                                {{ $comment->employee->name ?? 'Unknown Employee' }} —
+                                                                <small
+                                                                    class="text-muted">{{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}</small>
                                                             </div>
-                                                            <div class="text-muted fst-italic">
-                                                                {{ $comment->comment }}
+                                                            <div class="text-muted fst-italic">{{ $comment->comment }}
                                                             </div>
                                                         </div>
                                                     @endforeach
                                                 @endif
                                             @endforeach
                                         </div>
+                                    </div>
 
-                                        <div class="text-center pt-15">
-                                            <!-- Cek apakah IDP sudah ada di database -->
-                                            <button type="button"
-                                                id="confirm-button-{{ $assessment->id }}-{{ $id }}"
-                                                class="btn btn-primary btn-create-idp"
-                                                data-assessment="{{ $assessment->id }}" data-alc="{{ $id }}"
-                                                disabled>
-                                                Submit
-                                            </button>
-                                        </div>
+
+                                    <div class="text-center pt-15">
+                                        <!-- Cek apakah IDP sudah ada di database -->
+                                        <button type="button" class="btn btn-primary btn-create-idp" disabled>
+                                            Submit
+                                        </button>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    @endforeach
-                @endif
-            @endforeach
+        </div>
+        @endforeach
+        @endif
+        @endforeach
 
-            @foreach ($assessments as $assessment)
-                <div class="modal fade" id="addEntryModal-{{ $assessment->employee->id }}" tabindex="-1"
-                    aria-labelledby="addEntryModalLabel-{{ $assessment->employee->id }}" aria-hidden="true">
-                    <div class="modal-dialog">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h5 class="modal-title">Add Development for {{ $assessment->employee->name }}</h5>
-                            </div>
-                            <div class="modal-body">
-                                <!-- Tab Navigation -->
-                                <ul class="nav nav-tabs" id="developmentTabs-{{ $assessment->employee->id }}"
-                                    role="tablist">
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link active" id="midYear-tab-{{ $assessment->employee->id }}"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#midYear-{{ $assessment->employee->id }}" type="button"
-                                            role="tab">Mid Year</button>
-                                    </li>
-                                    <li class="nav-item" role="presentation">
-                                        <button class="nav-link" id="oneYear-tab-{{ $assessment->employee->id }}"
-                                            data-bs-toggle="tab"
-                                            data-bs-target="#oneYear-{{ $assessment->employee->id }}" type="button"
-                                            role="tab">One Year</button>
-                                    </li>
-                                </ul>
-
-                                <!-- Tab Content -->
-                                <div class="tab-content mt-3">
-                                    <!-- MID YEAR TAB -->
-                                    <div class="tab-pane fade show active" id="midYear-{{ $assessment->employee->id }}"
-                                        role="tabpanel">
-                                        <form
-                                            action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}"
-                                            method="POST">
-                                            @csrf
-                                            <input type="hidden" name="employee_id"
-                                                value="{{ $assessment->employee->id }}">
-                                            <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
-
-                                            <div id="programContainerMid_{{ $assessment->employee->id }}">
-                                                @if (!empty($assessment->recommendedProgramsMidYear))
-                                                    @foreach ($assessment->recommendedProgramsMidYear as $index => $program)
-                                                        <div class="programItem">
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Development
-                                                                    Program</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="development_program[]"
-                                                                    value="{{ $program['program'] }}" readonly>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Date</label>
-                                                                <input type="text" class="form-control"
-                                                                    value="{{ $program['date'] }}" readonly>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Development
-                                                                    Achievement</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="development_achievement[]"
-                                                                    placeholder="Enter achievement" required>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Next Action</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="next_action[]" placeholder="Enter next action"
-                                                                    required>
-                                                            </div>
-                                                            <hr>
-                                                        </div>
-                                                    @endforeach
-                                                @else
-                                                    <p class="text-center text-muted">No data available</p>
-                                                @endif
-                                            </div>
-                                            <button type="submit" class="btn btn-primary">Save</button>
-                                        </form>
-                                    </div>
-
-
-                                    <div class="tab-pane fade" id="oneYear-{{ $assessment->employee->id }}"
-                                        role="tabpanel">
-                                        <form id="reviewForm2-{{ $assessment->employee->id }}"
-                                            action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}"
-                                            method="POST">
-                                            @csrf
-                                            <input type="hidden" name="employee_id"
-                                                value="{{ $assessment->employee->id }}">
-
-                                            <div id="programContainerOne_{{ $assessment->employee->id }}"
-                                                class="programContainer">
-                                                @if (!empty($assessment->recommendedProgramsOneYear))
-                                                    @foreach ($assessment->recommendedProgramsOneYear as $index => $program)
-                                                        <div class="programItem">
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Development
-                                                                    Program</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="development_program[{{ $assessment->employee->id }}][]"
-                                                                    value="{{ $program['program'] }}" readonly>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Date</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="date[{{ $assessment->employee->id }}][]"
-                                                                    value="{{ $program['date'] }}" readonly>
-                                                            </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Evaluation Result</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="evaluation_result[{{ $assessment->employee->id }}][]"
-                                                                    placeholder="Evaluation Result" required>
-                                                            </div>
-                                                        </div>
-                                                    @endforeach
-                                                @else
-                                                    <p class="text-center text-muted">No data available</p>
-                                                @endif
-                                            </div>
-
-                                            <div class="d-flex justify-content-between mt-2">
-                                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
-                                            </div>
-                                        </form>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- Modal Footer -->
-                            <div class="modal-footer">
-                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            @endforeach
-
-            <!-- Modal History Komentar -->
-            <div class="modal fade" id="notesHistory" tabindex="-1" aria-labelledby="notesHistoryLabel"
-                aria-hidden="true">
-                <div class="modal-dialog modal-lg">
+        @foreach ($assessments as $assessment)
+            <div class="modal fade" id="addEntryModal-{{ $assessment->employee->id }}" tabindex="-1"
+                aria-labelledby="addEntryModalLabel-{{ $assessment->employee->id }}" aria-hidden="true">
+                <div class="modal-dialog">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="notesHistoryLabel">Comment History</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
+                            <h5 class="modal-title">Add Development for {{ $assessment->employee->name }}</h5>
                         </div>
                         <div class="modal-body">
-                            <div class="mb-4">
-                                <h6>Employee: <span id="employeeName">Ferry Avianto</span></h6>
-                            </div>
-                            <!-- List of comments -->
-                            <div class="list-group" id="commentHistory">
-                                <a href="#" class="list-group-item list-group-item-action">
-                                    <h6 class="fw-bold">Customer Focus</h6>
-                                    <p>Dokumen kurang lengkap.</p>
-                                    <small class="text-muted">Date: 2023-05-01 10:00 AM</small>
-                                </a>
-                                <a href="#" class="list-group-item list-group-item-action">
-                                    <h6 class="fw-bold">Analysis & Judgment</h6>
-                                    <p>Dokumen tidak lengkap</p>
-                                    <small class="text-muted">Date: 2023-05-02 11:30 AM</small>
-                                </a>
-                                <!-- More comments can be added dynamically -->
+                            <!-- Tab Navigation -->
+                            <ul class="nav nav-tabs" id="developmentTabs-{{ $assessment->employee->id }}"
+                                role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="midYear-tab-{{ $assessment->employee->id }}"
+                                        data-bs-toggle="tab" data-bs-target="#midYear-{{ $assessment->employee->id }}"
+                                        type="button" role="tab">Mid Year</button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="oneYear-tab-{{ $assessment->employee->id }}"
+                                        data-bs-toggle="tab" data-bs-target="#oneYear-{{ $assessment->employee->id }}"
+                                        type="button" role="tab">One Year</button>
+                                </li>
+                            </ul>
+
+                            <!-- Tab Content -->
+                            <div class="tab-content mt-3">
+                                <!-- MID YEAR TAB -->
+                                <div class="tab-pane fade show active" id="midYear-{{ $assessment->employee->id }}"
+                                    role="tabpanel">
+                                    <form
+                                        action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee->id]) }}"
+                                        method="POST">
+                                        @csrf
+                                        <input type="hidden" name="employee_id"
+                                            value="{{ $assessment->employee->id }}">
+                                        <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
+
+                                        <div id="programContainerMid_{{ $assessment->employee->id }}">
+                                            @if (!empty($assessment->recommendedProgramsMidYear))
+                                                @foreach ($assessment->recommendedProgramsMidYear as $index => $program)
+                                                    <div class="programItem">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Development
+                                                                Program</label>
+                                                            <input type="text" class="form-control"
+                                                                name="development_program[]"
+                                                                value="{{ $program['program'] }}" readonly>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Date</label>
+                                                            <input type="text" class="form-control"
+                                                                value="{{ $program['date'] }}" readonly>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Development
+                                                                Achievement</label>
+                                                            <input type="text" class="form-control"
+                                                                name="development_achievement[]"
+                                                                placeholder="Enter achievement" required>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Next Action</label>
+                                                            <input type="text" class="form-control"
+                                                                name="next_action[]" placeholder="Enter next action"
+                                                                required>
+                                                        </div>
+                                                        <hr>
+                                                    </div>
+                                                @endforeach
+                                            @else
+                                                <p class="text-center text-muted">No data available</p>
+                                            @endif
+                                        </div>
+                                        <button type="submit" class="btn btn-primary">Save</button>
+                                    </form>
+                                </div>
+
+
+                                <div class="tab-pane fade" id="oneYear-{{ $assessment->employee->id }}" role="tabpanel">
+                                    <form id="reviewForm2-{{ $assessment->employee->id }}"
+                                        action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee->id]) }}"
+                                        method="POST">
+                                        @csrf
+                                        <input type="hidden" name="employee_id"
+                                            value="{{ $assessment->employee->id }}">
+
+                                        <div id="programContainerOne_{{ $assessment->employee->id }}"
+                                            class="programContainer">
+                                            @if (!empty($assessment->recommendedProgramsOneYear))
+                                                @foreach ($assessment->recommendedProgramsOneYear as $index => $program)
+                                                    <div class="programItem">
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Development
+                                                                Program</label>
+                                                            <input type="text" class="form-control"
+                                                                name="development_program[{{ $assessment->employee->id }}][]"
+                                                                value="{{ $program['program'] }}" readonly>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Date</label>
+                                                            <input type="text" class="form-control"
+                                                                name="date[{{ $assessment->employee->id }}][]"
+                                                                value="{{ $program['date'] }}" readonly>
+                                                        </div>
+                                                        <div class="mb-3">
+                                                            <label class="form-label fw-bold">Evaluation Result</label>
+                                                            <input type="text" class="form-control"
+                                                                name="evaluation_result[{{ $assessment->employee->id }}][]"
+                                                                placeholder="Evaluation Result" required>
+                                                        </div>
+                                                    </div>
+                                                @endforeach
+                                            @else
+                                                <p class="text-center text-muted">No data available</p>
+                                            @endif
+                                        </div>
+
+                                        <div class="d-flex justify-content-between mt-2">
+                                            <button type="submit" class="btn btn-primary btn-sm">Save</button>
+                                        </div>
+                                    </form>
+                                </div>
                             </div>
                         </div>
+                        <!-- Modal Footer -->
                         <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
                 </div>
             </div>
+        @endforeach
 
-            <!-- Modal -->
-            @foreach ($assessments as $assessment)
-                <div class="modal fade" id="notes_{{ $assessment->employee->id }}" tabindex="-1" aria-modal="true"
-                    role="dialog">
-                    <div class="modal-dialog modal-dialog-centered mw-1000px">
-                        <div class="modal-content">
-                            <div class="modal-header">
-                                <h2 class="fw-bold">Summary {{ $assessment->employee->name }}</h2>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
-                            </div>
+        <!-- Modal History Komentar -->
+        <div class="modal fade" id="notesHistory" tabindex="-1" aria-labelledby="notesHistoryLabel"
+            aria-hidden="true">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="notesHistoryLabel">Comment History</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-4">
+                            <h6>Employee: <span id="employeeName">Ferry Avianto</span></h6>
+                        </div>
+                        <!-- List of comments -->
+                        <div class="list-group" id="commentHistory">
+                            <a href="#" class="list-group-item list-group-item-action">
+                                <h6 class="fw-bold">Customer Focus</h6>
+                                <p>Dokumen kurang lengkap.</p>
+                                <small class="text-muted">Date: 2023-05-01 10:00 AM</small>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action">
+                                <h6 class="fw-bold">Analysis & Judgment</h6>
+                                <p>Dokumen tidak lengkap</p>
+                                <small class="text-muted">Date: 2023-05-02 11:30 AM</small>
+                            </a>
+                            <!-- More comments can be added dynamically -->
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-                            <div class="modal-body scroll-y mx-2">
-                                <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h3 class="card-title">I. Development Program</h3>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle">
-                                                    <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-center">Strength</th>
-                                                            <th class="text-center">Description</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $strengths = $assessment->details
-                                                                ->filter(fn($item) => !empty($item->strength))
-                                                                ->values();
-                                                        @endphp
+        <!-- Modal -->
+        @foreach ($assessments as $assessment)
+            <div class="modal fade" id="notes_{{ $assessment->employee->id }}" tabindex="-1" aria-modal="true"
+                role="dialog">
+                <div class="modal-dialog modal-dialog-centered mw-1000px">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 class="fw-bold">Summary {{ $assessment->employee->name }}</h2>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
 
-                                                        @foreach ($strengths as $detail)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->alc->name ?? '-' }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->strength ?? '-' }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                        <div class="modal-body scroll-y mx-2">
+                            <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title">I. Development Program</h3>
                                         </div>
-                                    </div>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle">
+                                                <thead>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-center">Strength</th>
+                                                        <th class="text-center">Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @php
+                                                        $strengths = $assessment->details
+                                                            ->filter(fn($item) => !empty($item->strength))
+                                                            ->values();
+                                                    @endphp
 
-
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle">
-                                                    <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-center">Weakness</th>
-                                                            <th class="text-center">Description</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $weakness = $assessment->details
-                                                                ->filter(fn($item) => !empty($item->weakness))
-                                                                ->values();
-                                                        @endphp
-
-                                                        @foreach ($weakness as $detail)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->alc->name ?? '-' }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->weakness ?? '-' }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Individual Development Program -->
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h3 class="card-title">II. Individual Development Program</h3>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                                    <thead>
-                                                        <tr>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-center">Development Area</th>
-                                                            <th class="text-center">Category</th>
-                                                            <th class="text-center">Development Program</th>
-                                                            <th class="text-center">Development Target</th>
-                                                            <th class="text-center">Due Date</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
+                                                    @foreach ($strengths as $detail)
                                                         <tr>
                                                             <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->alc->name }}</td>
+                                                                {{ $detail->alc->name ?? '-' }}</td>
                                                             <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->category }}</td>
+                                                                {{ $detail->strength ?? '-' }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header">
+                                        </div>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle">
+                                                <thead>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-center">Weakness</th>
+                                                        <th class="text-center">Description</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @php
+                                                        $weakness = $assessment->details
+                                                            ->filter(fn($item) => !empty($item->weakness))
+                                                            ->values();
+                                                    @endphp
+
+                                                    @foreach ($weakness as $detail)
+                                                        <tr>
                                                             <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->development_program }}
+                                                                {{ $detail->alc->name ?? '-' }}</td>
+                                                            <td class="text-justify px-3">
+                                                                {{ $detail->weakness ?? '-' }}</td>
+                                                        </tr>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Individual Development Program -->
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title">II. Individual Development Program</h3>
+                                        </div>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
+                                                <thead>
+                                                    <tr>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-center">Development Area</th>
+                                                        <th class="text-center">Category</th>
+                                                        <th class="text-center">Development Program</th>
+                                                        <th class="text-center">Development Target</th>
+                                                        <th class="text-center">Due Date</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    <tr>
+                                                        <td class="text-justify px-3">
+                                                            {{ $assessment->idp?->first()?->alc->name }}</td>
+                                                        <td class="text-justify px-3">
+                                                            {{ $assessment->idp?->first()?->category }}</td>
+                                                        <td class="text-justify px-3">
+                                                            {{ $assessment->idp?->first()?->development_program }}
+                                                        </td>
+                                                        <td class="text-justify px-3">
+                                                            {{ $assessment->idp?->first()?->development_target }}</td>
+                                                        <td class="text-justify px-3">
+                                                            {{ optional(optional($assessment->idp)->first())->date ? \Carbon\Carbon::parse(optional($assessment->idp)->first()->date)->format('d-m-Y') : '' }}
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Mid Year Review -->
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header">
+                                            <h3 class="card-title">III. Mid Year Review</h3>
+                                        </div>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
+                                                <thead>
+                                                    <tr>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-justify px-3">Development Program</th>
+                                                        <th class="text-justify px-3">Development Achievement</th>
+                                                        <th class="text-justify px-3">Next Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach ($mid->where('employee_id', $assessment->employee_id) as $items)
+                                                        <tr>
+                                                            <td class="text-justify px-3">
+                                                                {{ $items->development_program }}</td>
+                                                            <td class="text-justify px-3">
+                                                                {{ $items->development_achievement }}</td>
+                                                            <td class="text-justify px-3">{{ $items->next_action }}
                                                             </td>
-                                                            <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->development_target }}</td>
-                                                            <td class="text-justify px-3">
-                                                                {{ optional(optional($assessment->idp)->first())->date ? \Carbon\Carbon::parse(optional($assessment->idp)->first()->date)->format('d-m-Y') : '' }}
-                                                            </td>
                                                         </tr>
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
+                                </div>
 
-                                    <!-- Mid Year Review -->
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h3 class="card-title">III. Mid Year Review</h3>
+                                <div class="row mt-8">
+                                    <div class="card">
+                                        <div class="card-header d-flex justify-content-between align-items-center">
+                                            <h3 class="card-title">IV. One Year Review</h3>
+                                            <div class="d-flex align-items-center">
                                             </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                                    <thead>
+                                        </div>
+                                        <div class="card-body table-responsive">
+                                            <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
+                                                id="kt_table_users">
+                                                <thead>
+                                                    <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <th class="text-justify px-3" style="width: 50px">
+                                                            Development Program
+                                                        </th>
+                                                        <th class="text-justify px-3" style="width: 50px">
+                                                            Evaluation Result
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    @foreach ($details->where('employee_id', $assessment->employee->id) as $item)
                                                         <tr>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-justify px-3">Development Program</th>
-                                                            <th class="text-justify px-3">Development Achievement</th>
-                                                            <th class="text-justify px-3">Next Action</th>
+                                                            <td class="text-justify px-3">
+                                                                {{ $item->development_program }}</td>
+                                                            <td class="text-justify px-3">
+                                                                {{ $item->evaluation_result }}</td>
                                                         </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($mid->where('employee_id', $assessment->employee_id) as $items)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $items->development_program }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $items->development_achievement }}</td>
-                                                                <td class="text-justify px-3">{{ $items->next_action }}
-                                                                </td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                    @endforeach
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
-
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header d-flex justify-content-between align-items-center">
-                                                <h3 class="card-title">IV. One Year Review</h3>
-                                                <div class="d-flex align-items-center">
-                                                </div>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                                    id="kt_table_users">
-                                                    <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-justify px-3" style="width: 50px">
-                                                                Development Program
-                                                            </th>
-                                                            <th class="text-justify px-3" style="width: 50px">
-                                                                Evaluation Result
-                                                            </th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($details->where('employee_id', $assessment->employee->id) as $item)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $item->development_program }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $item->evaluation_result }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
-                            </div>
+                                </div>
                         </div>
                     </div>
                 </div>
-            @endforeach
-        </div>
+            </div>
+        @endforeach
+    </div>
     </div>
 @endsection
 
@@ -1164,6 +1141,14 @@
                 document.getElementById('searchButton').click();
             }
         });
+        document.querySelectorAll('.modal-body input, .modal-body textarea').forEach(el => {
+            el.setAttribute('readonly', 'readonly');
+        });
+
+        document.querySelectorAll('.modal-body select').forEach(el => {
+            el.setAttribute('disabled', 'disabled');
+        });
+
 
         // function approveAction() {
         //     Swal.fire({

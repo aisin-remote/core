@@ -227,6 +227,151 @@ class IdpController extends Controller
         ));
     }
 
+    public function list(Request $request, $company = null, $reviewType = 'mid_year')
+    {
+        $user = auth()->user();
+        $employee = $user->employee;
+        $npk = $request->query('npk');
+        $search = $request->query('search');
+        $alcs = [
+            1 => 'Vision & Business Sense',
+            2 => 'Customer Focus',
+            3 => 'Interpersonal Skill',
+            4 => 'Analysis & Judgment',
+            5 => 'Planning & Driving Action',
+            6 => 'Leading & Motivating',
+            7 => 'Teamwork',
+            8 => 'Drive & Courage'
+        ];
+
+        // Ambil assessment terbaru berdasarkan created_at
+        if ($user->role === 'HRD') {
+            $assessments = Assessment::whereIn('id', function ($query) {
+                $query->selectRaw('id')
+                    ->from('assessments as a')
+                    ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM assessments WHERE employee_id = a.employee_id)');
+            })
+                ->with(['employee', 'details', 'idp'])
+                ->when(
+                    $company,
+                    fn($query) =>
+                    $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                )
+                ->when($search, function ($query) use ($search) {
+                    $query->whereHas('employee', function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('npk', 'like', '%' . $search . '%');
+                    });
+                })
+                ->orderByDesc('created_at')
+                ->paginate(10);
+        } else {
+            // Ambil employee berdasarkan user login
+            $emp = Employee::with([
+                'subSection.section.department.division.plant',
+                'leadingSection.department.division.plant',
+                'leadingDepartment.division.plant',
+                'leadingPlant'
+            ])->where('user_id', $user->id)->first();
+
+            if (!$emp) {
+                $assessments = collect(); // Kosong jika tidak ada employee
+            } else {
+                // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
+                $subordinatesQuery = $this->getSubordinatesFromStructure($emp);
+                $subordinates = $subordinatesQuery->pluck('id')->toArray();  // ambil array ID saja
+
+                $latestAssessmentIds = Assessment::selectRaw('MAX(id) as id')
+                    ->whereIn('employee_id', $subordinates)
+                    ->groupBy('employee_id')
+                    ->pluck('id')
+                    ->toArray();
+
+
+                // Ambil assessment terbaru hanya milik bawahannya
+                $assessments = Assessment::with(['employee', 'details', 'idp'])
+                    ->whereIn('id', $latestAssessmentIds)
+                    ->when(
+                        $company,
+                        fn($query) =>
+                        $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                    )
+                    ->when($search, function ($query) use ($search) {
+                        $query->whereHas('employee', function ($q) use ($search) {
+                            $q->where('name', 'like', '%' . $search . '%')
+                                ->orWhere('npk', 'like', '%' . $search . '%');
+                        });
+                    })
+                    ->get();
+            }
+        }
+
+        // Ambil semua karyawan
+        $employees = Employee::all();
+
+        // Ambil IDP
+        $idps = Idp::with('assessment', 'employee', 'commentHistory')->get();
+
+        // Daftar program
+        $programs = [
+            'Superior (DGM & GM) + DIC PUR + BOD Member',
+            'Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)',
+            'To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team --> Sharing Success Tips',
+            'Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project  (CAPACITY UP) & (AIIA) EV Project',
+            'SR Project (Structural Reform -->DM & SCM)',
+            'PEOPLE Development Program of Team members (ICT, IDP)',
+            '(Leadership) --> Courageously & Situational Leadership',
+            '(Developing Sub Ordinate) --> Coaching Skill / Developing Talents'
+        ];
+
+        $details = DevelopmentOne::all();
+        $mid = Development::all();
+
+        foreach ($assessments as $assessment) {
+            // Ambil semua program IDP yang tersimpan
+            $savedPrograms = $assessment->idp->map(function ($idp) {
+                return [
+                    'program' => $idp->development_program,
+                    'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
+                ];
+            });
+
+            // Pisahkan berdasarkan due date
+            $midYearPrograms = [];
+            $oneYearPrograms = [];
+            $currentDate = Carbon::now();
+
+            foreach ($savedPrograms as $program) {
+                $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
+                $midYearPrograms[] = $program;
+                $oneYearPrograms[] = $program;
+            }
+
+            // Simpan ke objek assessment agar bisa diakses di Blade
+            $assessment->recommendedProgramsMidYear = $midYearPrograms;
+            $assessment->recommendedProgramsOneYear = $oneYearPrograms;
+
+            // Tambahkan strengths & weaknesses
+            $assessment->strengths = $assessment->strength;
+            $assessment->weaknesses = $assessment->weakness;
+        }
+
+
+        return view('website.idp.list', compact(
+            'employees',
+            'assessments',
+            'alcs',
+            'programs',
+            'details',
+            'mid',
+            'idps',
+            'company'
+        ));
+    }
+
+
+
+
     public function store(Request $request)
     {
         $assessment = Assessment::where('id', $request->assessment_id)->first();

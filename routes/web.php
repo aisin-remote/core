@@ -82,6 +82,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
         Route::delete('/{id}', [HavController::class, 'destroy'])->name('hav.destroy');
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
+        Route::get('/download-upload/{havId}', [HavController::class, 'downloadLatestUpload'])
+            ->name('download.upload');
         Route::get('/history/{id}', [HavController::class, 'show'])->name('hav.show');
         Route::get('/get3-last-performance/{id}/{year}', [HavController::class, 'get3LastPerformance'])->name('hav.get3LastPerformance');
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
@@ -93,7 +95,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
-    
+
     Route::prefix('approval')->group(function () {
         Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
         Route::patch('/hav/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
@@ -186,6 +188,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('idp')->group(function () {
+         Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
         Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
         Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
@@ -226,8 +229,6 @@ Route::middleware('auth')->group(function () {
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
             Route::get('/get-managers/{company}', [MasterController::class, 'getManagers']);
             Route::put('/update/{id}', [MasterController::class, 'departmentUpdate'])->name('department.master.update');
-
-
         });
 
         Route::prefix('division')->group(function () {
@@ -243,14 +244,14 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
             Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
-              Route::put('/update/{id}', [MasterController::class, 'sectionUpdate'])->name('section.master.update');
+            Route::put('/update/{id}', [MasterController::class, 'sectionUpdate'])->name('section.master.update');
         });
 
         Route::prefix('subSection')->group(function () {
             Route::get('/', [MasterController::class, 'subSection'])->name('subSection.master.index');
             Route::post('/store', [MasterController::class, 'subSectionStore'])->name('subSection.master.store');
 
-            Route::put('/update/{id}', [MasterController    ::class, 'subSectionUpdate'])->name('sub-section.master.update');
+            Route::put('/update/{id}', [MasterController::class, 'subSectionUpdate'])->name('sub-section.master.update');
 
             Route::delete('/delete/{id}', [MasterController::class, 'subSectionDestroy'])->name('subSection.master.destroy');
         });
