@@ -21,7 +21,7 @@
                     </button>
                     <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="fas fa-upload"></i>
-                        Import
+                        + Add
                     </button>
                     {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
                         data-bs-target="#kt_modal_create_app">
@@ -418,10 +418,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                    data-id="${hav.id}"
-                                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                        History
-                                                    </a>`}
+                                                        data-id="${hav.id}"
+                                                        class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                            History
+                                                        </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>

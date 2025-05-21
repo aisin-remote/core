@@ -560,6 +560,7 @@ class HavController extends Controller
 
         if ($user->role === 'HRD') {
             $employees = Hav::with('employee')
+             ->whereIn('status', [0, 1])
                 ->whereHas('employee', function ($query) use ($company, $filter, $search) {
                     if ($company) {
                         $query->where('company_name', $company);
@@ -588,6 +589,7 @@ class HavController extends Controller
                 $employees = Hav::with('employee')
                     ->select('havs.*', 'havs.status as hav_status')
                     ->whereIn('employee_id', $subordinate)
+                     ->whereIn('status', [0, 1])
                     ->get();
             }
         }

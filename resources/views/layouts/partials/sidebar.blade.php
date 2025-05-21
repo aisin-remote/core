@@ -284,7 +284,7 @@
 
                         {{-- IDP --}}
                         @if (auth()->user()->role == 'User')
-                           <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
+                            <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
                                     {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
@@ -293,22 +293,22 @@
                                 </span>
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'idp/list' ? 'active' : '' }}"
-                                            href="{{ route('idp.list', ['company' => null]) }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">IDP List</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item">
                                         <a class="menu-link {{ $currentPath === 'idp' ? 'active' : '' }}"
                                             href="/idp">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">IDP Assign</span>
                                         </a>
                                     </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'idp/list' ? 'active' : '' }}"
+                                            href="{{ route('idp.list', ['company' => null]) }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">IDP List</span>
+                                        </a>
+                                    </div>
+
                                 </div>
                             </div>
-
                         @else
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
@@ -555,8 +555,7 @@
 
                         <!-- Division -->
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
-                                href="#">
+                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}" href="#">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
@@ -598,8 +597,7 @@
 
                         <!-- Division -->
                         <div class="menu-item">
-                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
-                                href="#">
+                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}" href="#">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                                 <span class="menu-title ps-1">RTC</span>
                             </a>

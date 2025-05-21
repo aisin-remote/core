@@ -199,6 +199,7 @@ Route::middleware('auth')->group(function () {
         Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
         Route::get('/getData', [IdpController::class, 'getData'])->name('idp.getData');
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
+        Route::get('/history/{id}', [IdpController::class, 'show'])->name('idp.show');
         Route::get('/', function () {
             $employee = Employee::all(); // Ambil semua data karyawan
             return view('website.idp.index', [

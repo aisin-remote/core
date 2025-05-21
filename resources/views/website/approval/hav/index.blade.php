@@ -8,7 +8,6 @@
     {{ $title ?? 'Approval' }}
 @endsection
 @section('main')
-
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -129,13 +128,7 @@
                                             onclick="confirmReject({{ $item->id }})">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                    @endif
 
-                                    @if ($item->hav_status == 1)
-                                        <button type="button" class="btn btn-sm btn-danger btn-revise"
-                                            onclick="reupload({{ $item->id }})">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
                                     @endif
                                 </td>
 
