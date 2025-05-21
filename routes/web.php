@@ -12,9 +12,11 @@ use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\ChecksheetController;
 use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
+use App\Http\Controllers\ChecksheetAssessmentController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -28,17 +30,20 @@ use App\Http\Controllers\GroupCompetencyController;
 
 
 /* Employee Competency */
-Route::get('/employeeCompetencies', [EmployeeCompetencyController::class, 'index'])->name('employeeCompetencies.index');
-Route::get('/employeeCompetencies/create', [EmployeeCompetencyController::class, 'create'])->name('employeeCompetencies.create');
-Route::put('employeeCompetencies/{employeeCompetency}', [EmployeeCompetencyController::class, 'update'])->name('employeeCompetencies.update');
-Route::delete('employeeCompetencies/{employeeCompetency}', [EmployeeCompetencyController::class, 'destroy'])->name('employeeCompetencies.destroy');
-Route::post('/employeeCompetencies/store', [EmployeeCompetencyController::class, 'store'])->name('employeeCompetencies.store');
-Route::get('/employee-competencies/get-employees', [EmployeeCompetencyController::class, 'getEmployees']);
-Route::get('/employee-competencies/get-competencies', [EmployeeCompetencyController::class, 'getCompetencies']);
-Route::get('/employeeCompetencies/employee/{employee}', [EmployeeCompetencyController::class, 'show'])->name('employeeCompetencies.show');
-Route::patch('/employeeCompetencies/{id}/approve', [EmployeeCompetencyController::class, 'approve'])->name('employeeCompetencies.approve');
-Route::patch('/employee-competencies/{id}/unapprove', [EmployeeCompetencyController::class, 'unapprove'])->name('employeeCompetencies.unapprove');
-
+Route::prefix('employeeCompetencies')->group(function () {
+    Route::resource('/', EmployeeCompetencyController::class);
+    Route::get('/{company?}', [EmployeeCompetencyController::class, 'index'])->name('employeeCompetencies.index');
+    Route::get('/create', [EmployeeCompetencyController::class, 'create'])->name('employeeCompetencies.create');
+    Route::put('/{employeeCompetency}', [EmployeeCompetencyController::class, 'update'])->name('employeeCompetencies.update');
+    Route::delete('/{employeeCompetency}', [EmployeeCompetencyController::class, 'destroy'])->name('employeeCompetencies.destroy');
+    Route::post('/store', [EmployeeCompetencyController::class, 'store'])->name('employeeCompetencies.store');
+    Route::get('/get-employees', [EmployeeCompetencyController::class, 'getEmployees']);
+    Route::get('/get-competencies', [EmployeeCompetencyController::class, 'getCompetencies']);
+    Route::get('/employee/{employee}', [EmployeeCompetencyController::class, 'show'])->name('employeeCompetencies.show');
+    Route::delete('/delete-all/{employee}', [EmployeeCompetencyController::class, 'destroyAll'])->name('employeeCompetencies.destroyAll');
+    Route::get('/{id}/checksheet', [EmployeeCompetencyController::class,'checksheet']);
+});
+    
 /* Group Competency */
 Route::resource('group_competency', GroupCompetencyController::class);
 Route::resource('competency', CompetencyController::class);
@@ -50,6 +55,19 @@ Route::post('/competencies/store', [CompetencyController::class, 'store'])->name
 Route::get('/competencies/{competency}/edit', [CompetencyController::class, 'edit'])->name('competencies.edit');
 Route::put('/competencies/{competency}', [CompetencyController::class, 'update'])->name('competencies.update');
 Route::delete('/competencies/{competency}', [CompetencyController::class, 'destroy'])->name('competencies.destroy');
+
+/* Checksheet */
+Route::get('/checksheet', [ChecksheetController::class, 'index'])->name('checksheet.index');
+Route::get('/checksheet/create', [ChecksheetController::class, 'create'])->name('checksheet.create');
+Route::post('/checksheet/store', [ChecksheetController::class, 'store'])->name('checksheet.store');
+Route::delete('/checksheet/{checksheet}', [ChecksheetController::class, 'destroy'])->name('checksheet.destroy');
+
+/* Checksheet Assessment */
+Route::get('/checksheet-assessment/{competency}', [ChecksheetAssessmentController::class, 'index'])
+     ->name('checksheet-assessment.index');
+Route::post('/checksheet-assessment', [ChecksheetAssessmentController::class, 'store'])
+     ->name('checksheet-assessment.store'); 
+
 
 Route::middleware('guest')->group(function () {
     Route::prefix('register')->group(function () {

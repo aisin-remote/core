@@ -12,7 +12,7 @@
     <div class="container">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">Competency List</h3>
+                <h3 class="card-title">Checksheet List</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" style="width: 200px;" class="form-control me-2" id="searchInput"
                         placeholder="Search..." onkeyup="searchData()">
@@ -20,7 +20,7 @@
                         <i class="fas fa-search"></i> Search
                     </button>
                     <button class="btn btn-primary" id="openAddModal">
-                        <i class="fas fa-plus"></i> Add Competency
+                        <i class="fas fa-plus"></i> Add Checksheet
                     </button>
                 </div>
             </div>
@@ -29,97 +29,30 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Competency</th>
-                            <th>Group Competency</th>
+                            <th>Category</th>
+                            <th>Name</th>
                             <th>Position</th>
-                            <th>Sub Section</th>
                             <th>Department</th>
-                            <th>Weight</th>
-                            <th>Plan</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($competencies as $i => $c)
+                        @forelse ($checksheets as $index => $checksheet)
                             <tr>
-                                <td>{{ $i+1 }}</td>
-                                <td>{{ $c->name }}</td>
-                                <td class="text-center">{{ $c->group_competency->name }}</td>
-                                <td class="text-center">{{ $c->position }}</td>
-                            
-                                {{-- Sub Section --}}
-                                <td class="text-center">{{ $c->sub_section?->name ?? '-' }}</td>
-                            
-                                {{-- Section --}}
-                                {{-- <td>
-                                    @if($c->sub_section)
-                                        {{ $c->sub_section->section->name }}
-                                    @elseif($c->section)
-                                        {{ $c->section->name }}
-                                    @else
-                                        -
-                                    @endif
-                                </td> --}}
-                            
-                                {{-- Department --}}
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $checksheet->competency->name }}</td>
+                                <td>{{ $checksheet->name }}</td>
+                                <td>{{ $checksheet->department->name }}</td>
+                                <td>{{ $checksheet->position }}</td>
                                 <td class="text-center">
-                                    @if($c->sub_section)
-                                        {{ $c->sub_section->section->department->name }}
-                                    @elseif($c->section)
-                                        {{ $c->section->department->name }}
-                                    @elseif($c->department)
-                                        {{ $c->department->name }}
-                                    @else
-                                        -
-                                    @endif
-                                </td>
-                            
-                                {{-- Division --}}
-                                {{-- <td>
-                                    @if($c->sub_section)
-                                        {{ $c->sub_section->section->department->division->name }}
-                                    @elseif($c->section)
-                                        {{ $c->section->department->division->name }}
-                                    @elseif($c->department)
-                                        {{ $c->department->division->name }}
-                                    @elseif($c->division)
-                                        {{ $c->division->name }}
-                                    @else
-                                        -
-                                    @endif
-                                </td> --}}
-                            
-                                {{-- Plant --}}
-                                {{-- <td>
-                                    @if($c->sub_section)
-                                        {{ $c->sub_section->section->department->division->plant->name }}
-                                    @elseif($c->section)
-                                        {{ $c->section->department->division->plant->name }}
-                                    @elseif($c->department)
-                                        {{ $c->department->division->plant->name }}
-                                    @elseif($c->division)
-                                        {{ $c->division->plant->name }}
-                                    @elseif($c->plant)
-                                        {{ $c->plant->name }}
-                                    @else
-                                        -
-                                    @endif
-                                </td> --}}
-                                <td class="text-center">{{ $c->weight }}</td>
-                                <td class="text-center">{{ $c->plan   }}</td>
-                                <td class="text-center">
-                                    <button class="btn btn-warning btn-sm edit-btn" data-bs-target="#editmodal"
-                                        data-id="{{ $c->id }}">
-                                        <i class="bi bi-pencil"></i>
-                                    </button>
-                                    <button class="btn btn-danger btn-sm delete-btn" data-id="{{ $c->id }}">
-                                        <i class="bi bi-trash"></i> 
+                                    <button class="btn btn-danger btn-sm delete-btn" data-id="{{ $checksheet->id }}">
+                                        <i class="bi bi-trash"></i> Delete
                                     </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="12" class="text-center text-muted">No competencies found</td>
+                                <td colspan="7" class="text-center text-muted">No Checksheet found</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -127,8 +60,7 @@
             </div>
         </div>
     </div>
-    @include('website.competency.modal')
-    @include('website.competency.update')
+    @include('website.checksheet.modal')
 @endsection
 
 
@@ -139,7 +71,7 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Inisialisasi Select2
-            $('#group_competency_id, #department_id, #employee_id').select2({
+            $('#department_id').select2({
                 placeholder: "Select an option",
                 allowClear: true,
                 minimumResultsForSearch: Infinity
@@ -170,7 +102,7 @@
                 event.preventDefault();
                 let formData = new FormData(addForm);
 
-                fetch("{{ route('competencies.store') }}", {
+                fetch("{{ route('checksheet.store') }}", {
                         method: "POST",
                         body: formData,
                         headers: {
@@ -188,8 +120,6 @@
             // Delegasi Event untuk tombol Edit dan Delete
             document.addEventListener('click', function(event) {
                 let target = event.target;
-
-                // Jika tombol delete diklik
                 if (target.classList.contains('delete-btn')) {
                     let competencyId = target.getAttribute('data-id');
 
@@ -203,7 +133,7 @@
                         confirmButtonText: "Yes, delete it!"
                     }).then((result) => {
                         if (result.isConfirmed) {
-                            fetch(`{{ url('competencies') }}/${competencyId}`, {
+                            fetch(`{{ url('checksheet') }}/${competencyId}`, {
                                     method: "DELETE",
                                     headers: {
                                         "X-CSRF-TOKEN": document.querySelector(

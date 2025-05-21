@@ -9,15 +9,9 @@
             <div class="modal-body">
                 <form id="editForm">
                     <input type="hidden" id="edit_id">
-
                     <div class="mb-3">
                         <label for="edit_name" class="form-label">Name</label>
                         <input type="text" class="form-control" id="edit_name" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="edit_description" class="form-label">Description</label>
-                        <textarea class="form-control" id="edit_description"></textarea>
                     </div>
 
                     <div class="mb-3">
@@ -35,10 +29,25 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="edit_position" class="form-label">Position</label>
-                        <select class="form-control" id="edit_position">
+                    <label for="edit_position" class="form-label">Position</label>
+                        <select id="edit_position" class="form-select" required>
                             <option value="">Select Position</option>
+                            @foreach (['Director','GM','Manager','Coordinator','Section Head','Supervisor','Leader','JP','Operator'] as $pos)
+                            <option value="{{ $pos }}">{{ $pos }}</option>
+                            @endforeach
                         </select>
+                    </div>
+
+                    <div id="edit_additional_fields" class="mb-3"></div>
+
+                    <div class="mb-3">
+                        <label for="edit_weight" class="form-label">Weight</label>
+                        <input type="number" class="form-control" id="edit_weight" max="4" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="edit_plan" class="form-label">Plan</label>
+                        <input type="number" class="form-control" id="edit_plan" max="4" required>
                     </div>
 
                     <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -50,57 +59,89 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-        const editForm = document.getElementById("editForm");
+        // Data PHP → JS
+        window.subSections = @json($subSections);
+        window.sections    = @json($sections);
+        window.departments = @json($departments);
+        window.divisions   = @json($divisions);
+        window.plants      = @json($plants);
+
+        const editForm     = document.getElementById("editForm");
+        const posEditSel   = document.getElementById("edit_position");
+        const editFields   = document.getElementById("edit_additional_fields");
+
+        // helper untuk rebuild dropdown sesuai posisi
+        function rebuildEditAdditional(pos, data) {
+            let label, name, options;
+            switch(pos) {
+            case 'Operator': case 'JP': case 'Leader':
+                label   = 'Sub Section'; name='sub_section_id'; options=data.subSections; break;
+            case 'Supervisor': case 'Section Head':
+                label   = 'Section';     name='section_id';     options=data.sections;    break;
+            case 'Manager': case 'Coordinator':
+                label   = 'Department';  name='department_id';  options=data.departments; break;
+            case 'GM':
+                label   = 'Division';    name='division_id';    options=data.divisions;   break;
+            case 'Director':
+                label   = 'Plant';       name='plant_id';       options=data.plants;      break;
+            default:
+                editFields.innerHTML=''; return;
+            }
+            editFields.innerHTML = `
+            <label class="form-label">${label}</label>
+            <select name="${name}" id="edit_${name}" class="form-select">
+                <option value="">-- Select ${label} --</option>
+                ${options.map(o => `<option value="${o.id}" ${data.current[name]==o.id?'selected':''}>${o.name}</option>`).join('')}
+            </select>`;
+        }
 
         // Fungsi untuk menampilkan data di modal edit
-        document.addEventListener("click", async function(event) {
-            if (event.target.classList.contains("edit-btn")) {
-                let competencyId = event.target.getAttribute("data-id");
+         document.addEventListener("click", async e => {
+            if (!e.target.classList.contains("edit-btn")) return;
+            const id = e.target.getAttribute("data-id");
+            const res= await fetch(`/competencies/${id}/edit`, { headers:{Accept:"application/json"} });
+            const d  = await res.json();
 
-                try {
-                    let response = await fetch(`/competencies/${competencyId}/edit`, {
-                        headers: {
-                            "Accept": "application/json"
-                        }
-                    });
+            // isi form dasar
+            document.getElementById("edit_id").value = d.id;
+            document.getElementById("edit_name").value = d.name;
+            document.getElementById("edit_weight").value = d.weight;
+            document.getElementById("edit_plan").value = d.plan;
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! Status: ${response.status}`);
-                    }
+            // build dropdown group & department statis
+            const grp = document.getElementById("edit_group_competency_id");
+            grp.innerHTML = '<option value="">Select Group</option>';
+            d.all_groups.forEach(g=>
+            grp.innerHTML += `<option value="${g.id}" ${g.id==d.group_competency_id?'selected':''}>${g.name}</option>`
+            );
 
-                    let data = await response.json();
+            // set pilihan posisi
+            posEditSel.value = d.position;
 
-                    document.getElementById("edit_id").value = data.id;
-                    document.getElementById("edit_name").value = data.name;
-                    document.getElementById("edit_description").value = data.description;
+            // panggil dynamic dropdown
+            rebuildEditAdditional(d.position, {
+            subSections: d.all_sub_sections,
+            sections:    d.all_sections,
+            departments: d.all_departments,
+            divisions:   d.all_divisions,
+            plants:      d.all_plants,
+            current:     d
+            });
 
-                    let groupSelect = document.getElementById("edit_group_competency_id");
-                    let departmentSelect = document.getElementById("edit_department_id");
-                    let positionSelect = document.getElementById("edit_position");
+            // lalu show modal
+            new bootstrap.Modal(document.getElementById("editModal")).show();
+        });
 
-                    groupSelect.innerHTML = '<option value="">Select Group</option>';
-                    data.all_groups.forEach(group => {
-                        groupSelect.innerHTML +=
-                            `<option value="${group.id}" ${group.id == data.group_competency_id ? "selected" : ""}>${group.name}</option>`;
-                    });
-
-                    departmentSelect.innerHTML = '<option value="">Select Department</option>';
-                    data.all_departments.forEach(department => {
-                        departmentSelect.innerHTML +=
-                            `<option value="${department.id}" ${department.id == data.department_id ? "selected" : ""}>${department.name}</option>`;
-                    });
-
-                    positionSelect.innerHTML = '<option value="">Select Position</option>';
-                    data.all_positions.forEach(pos => {
-                        positionSelect.innerHTML +=
-                            `<option value="${pos}" ${pos == data.position ? "selected" : ""}>${pos}</option>`;
-                    });
-
-                    new bootstrap.Modal(document.getElementById("editModal")).show();
-                } catch (error) {
-                    console.error("Error fetching data:", error);
-                }
-            }
+        // ketika user ubah posisi di edit modal, rebuild dropdown
+        posEditSel.addEventListener("change", () => {
+            rebuildEditAdditional(posEditSel.value, {
+            subSections: window.subSections,
+            sections:    window.sections,
+            departments: window.departments,
+            divisions:   window.divisions,
+            plants:      window.plants,
+            current:     { sub_section_id:null, section_id:null, department_id:null, division_id:null, plant_id:null }
+            });
         });
 
         // Handle submit form edit
@@ -113,16 +154,20 @@
             let groupId = document.getElementById("edit_group_competency_id").value;
             let departmentId = document.getElementById("edit_department_id").value;
             let position = document.getElementById("edit_position").value;
+            let weight = document.getElementById("edit_weight").value;
+            let plan = document.getElementById("edit_plan").value;
 
             console.log("Submitting Data:", {
                 name,
                 description,
                 groupId,
                 departmentId,
-                position
+                position,
+                weight,
+                plan
             });
 
-            if (!name || !groupId || !departmentId || !position) {
+            if (!name || !groupId || !departmentId || !position || !weight || !plan) {
                 Swal.fire("Error", "Please fill in all required fields!", "error");
                 return;
             }
@@ -133,6 +178,8 @@
             formData.append("group_competency_id", groupId);
             formData.append("department_id", departmentId);
             formData.append("position", position);
+            formData.append("weight", weight);
+            formData.append("plan", plan);
             formData.append("_method", "PUT");
 
             try {

@@ -59,6 +59,7 @@
                 $currentPath = request()->path();
                 $currentMenu = explode('/', $currentPath)[0];
 
+                $isEmployeeCompetencies = str_starts_with($currentPath, 'employeeCompetencies');
                 $isEmployee = str_starts_with($currentPath, 'dashboard');
                 $isEmployee = str_starts_with($currentPath, 'employee');
                 $isAssessment = str_starts_with($currentPath, 'assessment');
@@ -363,252 +364,6 @@
                         <span class="menu-icon">
                             <i class="fas fa-cog"></i>
                         </span>
-<<<<<<< HEAD
-                        <!-- End: Menu Link -->
-
-
-                        <!-- Begin: Menu Sub -->
-                        <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
-                            style="display: none; overflow: hidden;">
-                            <!-- Menu Item: FAQ Classic -->
-                            <div class="menu-item">
-                                <a class="menu-link" href="/hav/list-create">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                    <span class="menu-title">HAV Entry</span>
-                                </a>
-                            </div>
-
-                            <!-- Menu Item: FAQ Extended -->
-                            <div class="menu-item">
-                                <a class="menu-link {{ request()->is('hav') ? 'active' : '' }}" href="/hav">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                    <span class="menu-title">HAV Quadran</span>
-                                </a>
-                            </div>
-                        </div>
-                        <!-- End: Menu Sub -->
-                    </div>
-
-
-                    @if (auth()->user()->role == 'User')
-                        <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link {{ request()->is('idp') ? 'active' : '' }}" href="/idp">
-                                <span class="menu-icon">
-                                    <i class="fas fa-code-branch"></i>
-                                </span>
-                                <span class="menu-title ps-1">IDP</span>
-                            </a>
-                            <!--end:Menu link-->
-                        </div>
-                    @else
-                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
-                            <!-- Begin: Menu Link -->
-                            <span class="menu-link">
-                                <span class="menu-icon">
-                                    <i class="fas fa-code-branch"></i>
-                                </span>
-                                <span class="menu-title ps-1">IDP</span>
-                                <span class="menu-arrow"></span>
-                            </span>
-                            <!-- End: Menu Link -->
-
-
-                            <!-- Begin: Menu Sub -->
-                            <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
-                                style="display: none; overflow: hidden;">
-                                <!-- Menu Item: FAQ Classic -->
-                                <div class="menu-item">
-                                    <a class="menu-link" href="/idp/aii">
-                                        <span class="menu-bullet">
-                                            <span class="bullet bullet-dot"></span>
-                                        </span>
-                                        <span class="menu-title">AII</span>
-                                    </a>
-                                </div>
-
-                                <!-- Menu Item: FAQ Extended -->
-                                <div class="menu-item">
-                                    <a class="menu-link" href="/idp/aiia">
-                                        <span class="menu-bullet">
-                                            <span class="bullet bullet-dot"></span>
-                                        </span>
-                                        <span class="menu-title">AIIA</span>
-                                    </a>
-                                </div>
-                            </div>
-                            <!-- End: Menu Sub -->
-                        </div>
-                    @endif
-
-                    @if (auth()->user()->role == 'User')
-                        <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link {{ request()->is('rtc') ? 'active' : '' }}" href="/rtc">
-                                <span class="menu-icon">
-                                    <i class="fas fa-sitemap"></i>
-                                </span>
-                                <span class="menu-title ps-1">RTC</span>
-                            </a>
-                            <!--end:Menu link-->
-                        </div>
-                    @else
-                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
-                            <!-- Begin: Menu Link -->
-                            <span class="menu-link">
-                                <span class="menu-icon">
-                                    <i class="fas fa-sitemap"></i>
-                                </span>
-                                <span class="menu-title ps-1">RTC</span>
-                                <span class="menu-arrow"></span>
-                            </span>
-                            <!-- End: Menu Link -->
-
-
-                            <!-- Begin: Menu Sub -->
-                            <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
-                                style="display: none; overflow: hidden;">
-                                <!-- Menu Item: FAQ Classic -->
-                                <div class="menu-item">
-                                    <a class="menu-link" href="/rtc/aii">
-                                        <span class="menu-bullet">
-                                            <span class="bullet bullet-dot"></span>
-                                        </span>
-                                        <span class="menu-title">AII</span>
-                                    </a>
-                                </div>
-
-                                <!-- Menu Item: FAQ Extended -->
-                                <div class="menu-item">
-                                    <a class="menu-link" href="/rtc/aiia">
-                                        <span class="menu-bullet">
-                                            <span class="bullet bullet-dot"></span>
-                                        </span>
-                                        <span class="menu-title">AIIA</span>
-                                    </a>
-                                </div>
-                            </div>
-                            <!-- End: Menu Sub -->
-                        </div>
-                    @endif
-
-                    <div class="menu-item pt-5">
-                        <!--begin:Menu content-->
-                        <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Master</span>
-                        </div>
-                        <!--end:Menu content-->
-                    </div>
-
-                    <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
-                        <!-- Begin: Menu Link -->
-                        <span class="menu-link {{ request()->is('Competency') ? 'active' : '' }}">
-                            <span class="menu-icon">
-                                <i class="fas fa-chalkboard-teacher"></i>
-                            </span>
-                            <span class="menu-title ps-1">Training</span>
-                            <span class="menu-arrow"></span>
-                        </span>
-                        <!-- End: Menu Link -->
-
-                        <!-- Begin: Menu Sub -->
-                        <div class="menu-sub menu-sub-accordion menu-active-bg" kt-hidden-height="84"
-                            style="display: none; overflow: hidden;">
-                            <!-- Menu Item: FAQ Classic -->
-                            <div class="menu-item">
-                                <a class="menu-link" href="/group_competency">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                    <span class="menu-title">Group Competency</span>
-                                </a>
-                            </div>
-
-                            <!-- Menu Item: FAQ Extended -->
-                            <div class="menu-item">
-                                <a class="menu-link" href="/competencies">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                    <span class="menu-title">Competency</span>
-                                </a>
-                            </div>
-
-                            <div class="menu-item">
-                                <a class="menu-link" href="/group_competency">
-                                    <span class="menu-bullet">
-                                        <span class="bullet bullet-dot"></span>
-                                    </span>
-                                    <span class="menu-title">Group Competency</span>
-                                </a>
-                            </div>
-                        </div>
-                        <!-- End: Menu Sub -->
-                    </div>
-
-                    <div class="menu-item pt-5">
-                        <!--begin:Menu content-->
-                        <div class="menu-content"><span class="menu-heading fw-bold text-uppercase fs-7">Master</span>
-                        </div>
-                        <!--end:Menu content-->
-                    </div>
-
-                    @if (auth()->user()->role == 'User')
-                </div>
-            @endif
-
-            {{-- approve --}}
-            @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
-                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                    id="menu-approval">
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="fas fa-check  "></i>
-                        </span>
-                        <span class="menu-title ps-1">Approval</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('approval/list-approval-IDP') ? 'active' : '' }}"
-                                href="{{ route('idp.approvalidp') }}">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">IDP</span>
-                            </a>
-                        </div>
-
-
-                        <!-- plant -->
-                        <a class="menu-link {{ request()->is('approval/list-approval-HAV') ? 'active' : '' }}"
-                            href="{{ route('hav.approval') }}">
-                            {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                            <span class="menu-title ps-1">HAV</span>
-                        </a>
-
-
-                        <!-- Division -->
-                        <div class="menu-item">
-                            <!--begin:Menu link-->
-                            <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
-                                <span class="menu-icon">
-                                    <i class="fas fa-user-tie"></i>
-                                </span>
-                                <span class="menu-title ps-1">Employee Profile</span>
-                            </a>
-                            <!--end:Menu link-->
-                        </div>
-                    @else
-                        <div data-kt-menu-trigger="click" class="menu-item menu-accordion">
-                            <!-- Begin: Menu Link -->
-                            <span class="menu-link">
-                                <span class="menu-icon">
-                                    <i class="fas fa-user-tie"></i>
-                                </span>
-=======
                         <span class="menu-title ps-1">Master</span>
                         <span class="menu-arrow"></span>
                     </span>
@@ -618,7 +373,6 @@
                             <span
                                 class="menu-link {{ request()->is('master/employee/aii') || request()->is('master/employee/aiia') ? 'active' : '' }}">
                                 {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
->>>>>>> e85aabd47395a02d9af2357608a35919116883db
                                 <span class="menu-title ps-1">Employee</span>
                                 <span class="menu-arrow"></span>
                             </span>
@@ -676,6 +430,32 @@
                             </a>
                         </div>
 
+                        <!-- checksheet -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('/checksheet') ? 'active' : '' }}"
+                                href="/checksheet">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-title ps-1">Checksheet</span>
+                            </a>
+                        </div>
+
+                        <!-- Group Competency -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
+                                href="/group_competency">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-title ps-1">Group Competency</span>
+                            </a>
+                        </div>
+
+                        <!-- checksheet -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('/competency') ? 'active' : '' }}"
+                                href="/competency">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-title ps-1">Competency</span>
+                            </a>
+                        </div>
 
                         <!-- plant -->
                         <div class="menu-item">
@@ -727,8 +507,56 @@
                 </div>
             @endif
 
+            {{-- Training --}}
+            @if (auth()->user()->role == 'HRD')
+                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                    id="menu-approval">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </span>
+                        <span class="menu-title ps-1">Training</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+                        {{-- Employee Competency --}}
+                        @if (auth()->user()->role == 'User')
+                        <div class="menu-item">
+                            <a class="menu-link {{ $currentPath === 'employeeCompetencies' ? 'active' : '' }}" href="/employeeCompetencies">
+                                <span class="menu-title ps-1">Employee Competency</span>
+                            </a>
+                        </div>
+                        @else
+                        <div class="menu-item menu-accordion {{ $isEmployeeCompetencies ? 'show' : '' }}" data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                            <span class="menu-link {{ $isEmployeeCompetencies ? 'active' : '' }}">
+                                <span class="menu-title ps-1">Employee Competency</span>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('employeeCompetencies/aii') ? 'active' : '' }}" 
+                                    href="{{ route('employeeCompetencies.index', ['company' => 'aii']) }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AII</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('employeeCompetencies/aiia') ? 'active' : '' }}" 
+                                    href="{{ route('employeeCompetencies.index', ['company' => 'aiia']) }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AIIA</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+
             {{-- approve --}}
-            @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
+                @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
                 <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                     id="menu-approval">
                     <span class="menu-link">
@@ -748,14 +576,12 @@
                             </a>
                         </div>
 
-
                         <!-- plant -->
                         <a class="menu-link {{ request()->is('approval/list-approval-HAV') ? 'active' : '' }}"
                             href="{{ route('hav.approval') }}">
                             {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                             <span class="menu-title ps-1">HAV</span>
                         </a>
-
 
                         <!-- Division -->
                         <div class="menu-item">
@@ -765,6 +591,7 @@
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
                         </div>
+
 
                         <!-- Department -->
 
@@ -815,51 +642,6 @@
                     </div>
                 </div>
             @endif
-
-            {{-- <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                id="menu-master">
-                <span class="menu-link">
-                    <span class="menu-icon">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                    </span>
-                    <span class="menu-title ps-1">Training</span>
-                    <span class="menu-arrow"></span>
-                </span>
-                <!-- End: Menu Link -->
-
-                <!-- Begin: Menu Sub -->
-                <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                    <!-- Menu Item: FAQ Classic -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('/emp_competency') ? 'active' : '' }}"
-                            href="/emp_competency">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Section</span>
-                        </a>
-                    </div>
-
-                    <!-- Menu Item: FAQ Extended -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('/competencies') ? 'active' : '' }}"
-                            href="/competencies">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Competency</span>
-                        </a>
-                    </div>
-
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
-                            href="/group_competency">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Group Competency</span>
-                        </a>
-                    </div>
-                </div>
-
-            </div> --}}
-            <!--end:Master Menu Accordion-->
-
-            <!--end:Master Section-->
         </div>
         <!-- Sidebar User Panel -->
         <!--begin::User info sidebar bottom-->

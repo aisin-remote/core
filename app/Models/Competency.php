@@ -14,6 +14,11 @@ class Competency extends Model
     protected $table = 'competency';
     protected $guarded = ['id'];
 
+    public function checkSheets()
+    {
+        return $this->hasMany(CheckSheet::class, 'competency_id', 'id');
+    }
+
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
@@ -27,5 +32,25 @@ class Competency extends Model
     public function group_competency()
     {
         return $this->belongsTo(GroupCompetency::class, 'group_competency_id', 'id');
+    }
+
+    public function section()
+    {
+        return $this->belongsTo(Section::class, 'section_id', 'id');
+    }
+
+    public function sub_section()
+    {
+        return $this->belongsTo(SubSection::class, 'sub_section_id', 'id');
+    }
+
+    public function division()     
+    { 
+        return $this->belongsTo(Division::class, 'division_id', 'id'); 
+    }
+
+    public function plant()        
+    {   
+        return $this->belongsTo(Plant::class, 'plant_id', 'id'); 
     }
 }

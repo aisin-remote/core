@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\EmployeeCompetency;
-use App\Models\Department;
 use App\Models\Competency;
 use App\Models\Employee;
+use App\Models\GroupCompetency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class EmployeeCompetencyController extends Controller
 {
@@ -16,18 +17,35 @@ class EmployeeCompetencyController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index($company = null)
     {
         $title = 'Employee Competency';
+        $emps = Employee::with('employeeCompetencies.competency.group_competency')
+            ->when($company, function ($query) use ($company) {
+                $query->where('company_name', $company);
+            })
+            ->get();
 
-        $employees = Employee::has('employeeCompetencies')
-            ->with(['employeeCompetencies.competency.department', 'departments'])
-            ->paginate(10);
-    
-        $departments = Department::all();
-        $competencies = Competency::all();
-    
-        return view('website.employee_competency.index', compact('employees', 'competencies', 'departments', 'title'));
+        $matrixData = $emps->map(function($e){
+            return [
+                'id'       => $e->id,
+                'name'     => $e->name,
+                'position' => $e->position,
+                'comps'    => $e->employeeCompetencies->map(function($ec){
+                    return [
+                        'group' => $ec->competency->group_competency->name,
+                        'name'  => $ec->competency->name,
+                        'act'   => $ec->act,
+                        'plan'  => $ec->competency->plan,
+                    ];
+                })->toArray(),
+            ];
+        })->toArray();
+        $groups = GroupCompetency::pluck('name')->toArray();
+
+        return view('website.employee_competency.index', compact(
+            'title', 'matrixData', 'groups', 'company'
+        ));
     }
 
     /**
@@ -37,12 +55,11 @@ class EmployeeCompetencyController extends Controller
      */
     public function create()
     {
-        $competencies = Competency::all();
-        $departments = Department::all();
         $employees = Employee::all();
-
-        return view('website.employee_competency.create', compact('competencies', 'departments', 'employees'));
+            
+        return view('website.employee_competency.create', compact('employees'));
     }
+
 
     /**
      * Store a newly created resource in storage.
@@ -53,51 +70,85 @@ class EmployeeCompetencyController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'employee_id' => 'required|exists:employees,id',
+            'employee_id' => 'required|array',
             'employee_id.*' => 'exists:employees,id',
-            'competency_id' => 'required|array',
-            'competency_id.*' => 'exists:competency,id',
-            'weight' => 'nullable|integer',
-            'plan' => 'nullable|integer',
-            'act' => 'nullable|integer',
             'due_date' => 'required|date|after_or_equal:today'
         ]);
 
         $createdCount = 0;
-        
+
         foreach ($request->employee_id as $employeeId) {
-            foreach ($request->competency_id as $competencyId) {
-                $exists = EmployeeCompetency::where('employee_id', $employeeId)
-                    ->where('competency_id', $competencyId)
-                    ->exists();
-                
-                if (!$exists) {
-                    EmployeeCompetency::create([
-                        'employee_id' => $employeeId,
-                        'competency_id' => $competencyId,
-                        'weight' => $request->weight,
-                        'plan' => $request->plan,
-                        'act' => $request->act,
-                        'due_date' => $request->due_date
-                    ]);
-                    $createdCount++;
+            $employee = Employee::with('departments')->findOrFail($employeeId);
+            $department = $employee->departments->first();
+
+            // ambil competency yang cocok
+            $competencies = collect();
+            if ($department) {
+                $competencies = Competency::where([
+                    'department_id' => $department->id,
+                    'position' => $employee->position
+                ])->get();
+            }
+
+            // **Hanya** buat record kalau ada competency
+            if ($competencies->isNotEmpty()) {
+                foreach ($competencies as $competency) {
+                    // hanya buat kalau belum ada
+                    if (! EmployeeCompetency::where([
+                        'employee_id'   => $employeeId,
+                        'competency_id' => $competency->id
+                    ])->exists()) {
+                        EmployeeCompetency::create([
+                            'employee_id'   => $employeeId,
+                            'competency_id' => $competency->id,
+                            'due_date'      => $request->due_date,
+                            'weight'        => 0,
+                            'plan'          => 0,
+                            'act'           => 0,
+                        ]);
+                        $createdCount++;
+                    }
                 }
             }
         }
 
+        // Response
+        $message = $createdCount
+            ? "Berhasil menambahkan {$createdCount} competency."
+            : "Tidak ada competency yang cocok untuk ditambahkan.";
+
         if ($request->wantsJson()) {
             return response()->json([
-                'message' => $createdCount > 0 
-                    ? 'Employee Competency added successfully!' 
-                    : 'No new competencies added',
-                'redirect' => route('employeeCompetencies.index')
-            ], 200);
+                'success'  => true,
+                'message'  => $message,
+                'redirect' => route('employeeCompetencies.index'),
+            ]);
         }
 
-        return redirect()->route('employeeCompetencies.index')
-            ->with('success', $createdCount > 0 
-                ? 'Employee Competency added successfully!' 
-                : 'No new competencies added');
+        return redirect()
+            ->route('employeeCompetencies.index')
+            ->with('success', $message);
+    }
+
+    public function checksheet($id)
+    {
+        $employee = Employee::with(['employeeCompetencies.competency.checkSheets'])->findOrFail($id);
+        
+        $competencies = $employee->employeeCompetencies->map(function($ec) {
+            return [
+                'id' => $ec->competency->id,
+                'name' => $ec->competency->name,
+                'checksheets' => $ec->competency->checkSheets->map(function($cs) {
+                    return [
+                        'id' => $cs->id,
+                        'name' => $cs->name,
+                        'date' => $cs->created_at->format('Y-m-d'),
+                    ];
+                })
+            ];
+        });
+
+        return response()->json(['competencies' => $competencies]);
     }
 
     public function getEmployees(Request $request)
@@ -108,13 +159,12 @@ class EmployeeCompetencyController extends Controller
         $employees = Employee::where('position', $position)
             ->whereHas('departments', function($query) use ($departmentId) {
                 $query->where('department_id', $departmentId);
-            })
-            ->whereDoesntHave('employeeCompetencies')
-            ->get();
+            })->get();
 
         return response()->json($employees);
     }
 
+    
     public function getCompetencies(Request $request)
     {
         $position = $request->input('position');
@@ -140,8 +190,23 @@ class EmployeeCompetencyController extends Controller
      */
     public function show($id)
     {
-        $employee = Employee::with(['employeeCompetencies.competency.department'])->findOrFail($id);
-        return view('website.employee_competency.show', compact('employee'));
+        $employee = Employee::with([
+            'employeeCompetencies.competency.department', 
+            'departments'
+        ])->findOrFail($id);
+
+        // Ambil department dan posisi karyawan
+        $department = $employee->departments->first();
+        $position = $employee->position;
+
+        // Query kompetensi berdasarkan department dan posisi
+        $competencies = Competency::when($department, function ($query) use ($department) {
+                $query->where('department_id', $department->id);
+            })
+            ->where('position', $position)
+            ->get();
+
+        return view('website.employee_competency.show', compact('employee', 'competencies'));
     }
 
     /**
@@ -165,7 +230,6 @@ class EmployeeCompetencyController extends Controller
             'weight' => $employee_competencies->weight,
             'plan' => $employee_competencies->plan,
             'act' => $employee_competencies->act,
-            'plan_date' => $employee_competencies->plan_date,
             'due_date' => $employee_competencies->due_date,
             'all_competency' => Competency::all(),
             'all_employee' => Employee::all()

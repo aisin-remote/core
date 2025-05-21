@@ -20,9 +20,9 @@ class EmployeeCompetency extends Model
 
     public function competency()
     {
-        return $this->belongsTo(Competency::class, 'competency_id', 'id');
-    }
-
+        return $this->belongsTo(Competency::class)->withDefault();
+    }   
+    
     public function departments()
     {
         return $this->belongsToMany(Department::class, 'employee_departments');
