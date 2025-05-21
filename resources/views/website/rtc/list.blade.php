@@ -72,6 +72,9 @@
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
                                     <th class="text-center">Name</th>
+                                    <th class="text-center">Short Term</th>
+                                    <th class="text-center">Mid Term</th>
+                                    <th class="text-center">Long Term</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>

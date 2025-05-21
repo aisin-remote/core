@@ -366,17 +366,17 @@ class MasterController extends Controller
         if ($user->role === 'HRD' || $employee->position == 'Direktur') {
             switch ($filter) {
                 case 'department':
-                    $data = Department::where('division_id', $division_id)->get();
+                    $data = Department::with('short','mid','long')->where('division_id', $division_id)->get();
                     break;
 
                 case 'section':
-                    $data = Section::whereHas('department', function ($q) use ($division_id) {
+                    $data = Section::with('short','mid','long')->whereHas('department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
                     })->get();
                     break;
 
                 case 'sub_section':
-                    $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                    $data = SubSection::with('short','mid','long')->whereHas('section.department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
                     })->get();
                     break;
@@ -388,10 +388,10 @@ class MasterController extends Controller
         } else {
             switch ($filter) {
                 case 'section':
-                    $data = Section::where('department_id', $division_id)->get();
+                    $data = Section::with('short','mid','long')->where('department_id', $division_id)->get();
                     break;
                 case 'sub_section':
-                    $data = SubSection::with('section')->whereHas('section', function ($q) use ($division_id) {
+                    $data = SubSection::with('section','short','mid','long')->whereHas('section', function ($q) use ($division_id) {
                         $q->where('department_id', $division_id);
                     })->get();
                     break;

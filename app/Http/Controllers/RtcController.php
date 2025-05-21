@@ -35,13 +35,17 @@ class RtcController extends Controller
                     ->where('plant_id', $plant->id)
                     ->get();
         
-                $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])->get();
+                $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                                        ->where('company_name', $employee->company_name)
+                                        ->get();
             } else {
                 $table = 'Department';
         
                 $division = Division::where('gm_id', $employee->id)->first();
                 $divisions = Department::where('division_id', $division?->id)->get();
-                $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])->get();
+                $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
+                                        ->where('company_name', $employee->company_name)
+                                        ->get();
             }
         }        
         
@@ -147,36 +151,48 @@ class RtcController extends Controller
 
     public function update(Request $request)
     {
-        $request->validate([
-            'short_term' => 'nullable|exists:employees,id',
-            'mid_term' => 'nullable|exists:employees,id',
-            'long_term' => 'nullable|exists:employees,id',
-        ]);
+        try {
+            $request->validate([
+                'short_term' => 'nullable|exists:employees,id',
+                'mid_term' => 'nullable|exists:employees,id',
+                'long_term' => 'nullable|exists:employees,id',
+            ]);
 
-        $filter = $request->input('filter');
-        $id = $request->input('id');
+            $filter = $request->input('filter');
+            $id = $request->input('id');
 
-        $modelClass = match ($filter) {
-            'division' => \App\Models\Division::class,
-            'department' => \App\Models\Department::class,
-            'section' => \App\Models\Section::class,
-            'sub_section' => \App\Models\SubSection::class,
-        };
+            $filter = strtolower($filter);
 
-        $record = $modelClass::findOrFail($id);
+            $modelClass = match ($filter) {
+                'division' => \App\Models\Division::class,
+                'department' => \App\Models\Department::class,
+                'section' => \App\Models\Section::class,
+                'sub_section' => \App\Models\SubSection::class,
+                default => throw new \Exception("Invalid filter value: $filter")
+            };
 
-        $updateData = collect(['short_term', 'mid_term', 'long_term'])
-            ->filter(fn($field) => $request->filled($field))
-            ->mapWithKeys(fn($field) => [$field => $request->input($field)])
-            ->toArray();
+            $record = $modelClass::findOrFail($id);
 
-        $record->update($updateData);
+            $updateData = collect(['short_term', 'mid_term', 'long_term'])
+                ->filter(fn($field) => $request->filled($field))
+                ->mapWithKeys(fn($field) => [$field => $request->input($field)])
+                ->toArray();
 
-        session()->flash('success', 'Plan updated successfully');
+            $record->update($updateData);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Plan updated successfully',
-        ]);
+            session()->flash('success', 'Plan updated successfully');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Plan updated successfully',
+            ]);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat memperbarui data: ' . $th->getMessage(),
+            ], 500);
+        }
     }
+
 }

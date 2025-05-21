@@ -98,6 +98,38 @@
 
                     <div class="menu-sub menu-sub-accordion menu-active-bg">
 
+                        <style>
+                            .blinking-dot {
+                                animation: blink 1s infinite;
+                            }
+
+                            @keyframes blink {
+
+                                0%,
+                                100% {
+                                    opacity: 1;
+                                }
+
+                                50% {
+                                    opacity: 0;
+                                }
+                            }
+                        </style>
+
+                        <div class="menu-item">
+                            <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
+                                <span class="menu-title ps-1 position-relative d-inline-block"
+                                    style="padding-right: 16px;">
+                                    To Do List
+                                    @if ($allIdpTasks->count() > 0 || $allHavTasks->count() > 0)
+                                        <span
+                                            class="blinking-dot position-absolute top-50 end-0 translate-middle-y bg-danger rounded-circle"
+                                            style="width: 8px; height: 8px;"></span>
+                                    @endif
+                                </span>
+                            </a>
+                        </div>
+
                         {{-- Dashboard --}}
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
@@ -284,7 +316,7 @@
 
                         {{-- IDP --}}
                         @if (auth()->user()->role == 'User')
-                           <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
+                            <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
                                     {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
@@ -308,7 +340,6 @@
                                     </div>
                                 </div>
                             </div>
-
                         @else
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
@@ -377,37 +408,6 @@
                             </div>
                         @endif
 
-                        <style>
-                            .blinking-dot {
-                                animation: blink 1s infinite;
-                            }
-
-                            @keyframes blink {
-
-                                0%,
-                                100% {
-                                    opacity: 1;
-                                }
-
-                                50% {
-                                    opacity: 0;
-                                }
-                            }
-                        </style>
-
-                        <div class="menu-item">
-                            <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
-                                <span class="menu-title ps-1 position-relative d-inline-block"
-                                    style="padding-right: 16px;">
-                                    To Do List
-                                    @if ($allIdpTasks->count() > 0 || $allHavTasks->count() > 0)
-                                        <span
-                                            class="blinking-dot position-absolute top-50 end-0 translate-middle-y bg-danger rounded-circle"
-                                            style="width: 8px; height: 8px;"></span>
-                                    @endif
-                                </span>
-                            </a>
-                        </div>
                     </div>
                 </div>
             </div>
