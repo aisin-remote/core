@@ -57,11 +57,15 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInputEmployee" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
+                    <form method="GET" action="{{ url()->current() }}" class="d-flex mb-3">
+                        <input type="text" id="searchInputEmployee" name="search" class="form-control me-2"
+                            placeholder="Search..." style="width: 250px;" value="{{ request('search') }}">
+                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
+                            Search
+                        </button>
+                    </form>
+
+
                 </div>
             </div>
 
@@ -219,6 +223,18 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div class="d-flex justify-content-between">
+                                @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator && $assessments->count())
+                                    <span>
+                                        Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
+                                        {{ $assessments->total() }} entries
+                                    </span>
+                                    {{ $assessments->links('pagination::bootstrap-5') }}
+                                @else
+                                    <span>No data found.</span>
+                                @endif
+                            </div>
+
                         </div>
                     @endforeach
                 </div>
@@ -1255,6 +1271,12 @@
                 }
             });
         }
+        document.getElementById('searchInputEmployee').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('searchButton').click();
+            }
+        });
 
         // function approveAction() {
         //     Swal.fire({

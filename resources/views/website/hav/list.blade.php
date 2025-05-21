@@ -15,7 +15,7 @@
                 <h3 class="card-title">HAV List</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
+                        style="width: 200px;" value="{{ request('search') }}">
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
@@ -418,15 +418,15 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                    data-id="${hav.id}"
-                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                        Comments
-                                    </a>`}
+                                                        data-id="${hav.id}"
+                                                        class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                            History
+                                                        </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>
                         </tr>
-                                                                
+
                                 `;
                                 $("#kt_table_assessments tbody").append(row);
                             });
@@ -522,18 +522,18 @@
                 // Make an AJAX request to get the comment history
                 $.ajax({
                     url: "{{ url('/hav/get-history') }}/" +
-                    hav_id, // Change this URL to your correct route
+                        hav_id, // Change this URL to your correct route
                     type: "GET",
                     success: function(response) {
                         console.log("Response received:", response
-                        .comment); // Debugging the response
+                            .comment); // Debugging the response
 
                         // Check if we have comment history
                         if (response.comment && response.comment.length > 0) {
                             // Loop through the comments and append them to the modal
                             response.comment.forEach(function(comment) {
                                 console.log("Comment:",
-                                comment); // Debugging each comment
+                                    comment); // Debugging each comment
                                 let commentHtml = `
                                     <li class="list-group-item mb-2">
                                         <strong>${comment.employee.name} :</strong> <br> ${comment.comment}
@@ -548,7 +548,7 @@
                             // If no comments found, display a message
                             $("#commentList").append(
                                 '<li class="list-group-item text-muted">No comments found.</li>'
-                                );
+                            );
                         }
 
                         // Show the modal
@@ -649,6 +649,29 @@
                 });
             });
 
+        });
+
+        function performSearch() {
+            const searchInput = document.getElementById('searchInput').value;
+            const url = new URL(window.location.href);
+
+            if (searchInput) {
+                url.searchParams.set('search', searchInput);
+            } else {
+                url.searchParams.delete('search');
+            }
+
+            window.location.href = url.toString();
+        }
+
+        // Event saat tombol Search diklik
+        document.getElementById('searchButton').addEventListener('click', performSearch);
+
+        // Event saat tekan Enter di input pencarian
+        document.getElementById('searchInput').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                performSearch(); // Trigger fungsi search langsung
+            }
         });
     </script>
 @endpush

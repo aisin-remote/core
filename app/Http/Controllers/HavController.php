@@ -14,21 +14,22 @@ use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
 use App\Models\HavQuadrant;
-
 use App\Models\KeyBehavior;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
-use Maatwebsite\Excel\Facades\Excel;
+
+use App\Models\AstraTraining;
+use App\Models\QuadranMaster;
 use App\Exports\HavSummaryExport;
 use App\Models\HavCommentHistory;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
-use App\Models\AstraTraining;
 use App\Models\HavDetailKeyBehavior;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
-use App\Models\QuadranMaster;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Database\Events\TransactionBeginning;
 
@@ -564,6 +565,31 @@ class HavController extends Controller
         }
         return redirect()->back();
     }
+   public function downloadLatestUpload($havId)
+{
+    $latestUpload = DB::table('hav_comment_histories')
+        ->where('hav_id', $havId)
+        ->orderBy('created_at', 'desc')
+        ->first();
+
+    if (!$latestUpload || !$latestUpload->upload) {
+        return abort(404, 'File upload tidak ditemukan.');
+    }
+
+    // ambil path upload dari DB, misal "public/hav_uploads/hav_1747706964.xlsx"
+    $filePath = $latestUpload->upload;
+
+    // cek file di disk 'public'
+    if (!Storage::disk('public')->exists(str_replace('public/', '', $filePath))) {
+        return abort(404, 'File tidak ditemukan di storage.');
+    }
+
+    // hapus "public/" dari path sebelum download
+    $downloadPath = str_replace('public/', '', $filePath);
+
+    return Storage::disk('public')->download($downloadPath);
+}
+
     public function approval(Request $request, $company = null)
     {
         $company = $request->query('company');
@@ -601,7 +627,7 @@ class HavController extends Controller
                 $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
 
                 $employees = Hav::with('employee')
-                    ->select('havs.*', 'havs.status as hav_status') // alias untuk status dari tabel havs
+                    ->select('havs.*', 'havs.status as hav_status')
                     ->whereIn('employee_id', $subordinate)
                     ->get();
             }
@@ -610,87 +636,59 @@ class HavController extends Controller
 
         return view('website.approval.hav.index', compact('title', 'employees', 'filter', 'company', 'search'));
     }
-    public function approve(Request $request, $id)
-    {
-        // Mencari data HAV berdasarkan ID
-        $hav = Hav::findOrFail($id);
+  public function approve(Request $request, $id)
+{
+    $hav = Hav::findOrFail($id);
+    $hav->status = 2;
 
-        // Menyimpan status HAV sebagai disetujui
-        $hav->status = 2;
+    $comment = $request->input('comment');
+    $employee = auth()->user()->employee;
 
-        // Ambil komentar dari input request
-        $comment = $request->input('comment');
-        $employee = auth()->user()->employee;
+    $filePath = null;
+    $latestComment = $hav->commentHistory()->latest()->first();
 
-        $filePath = null;
-
-        // Ambil file terbaru dari comment history berdasarkan HAV ID
-        $latestComment = $hav->commentHistory()->latest()->first(); // urutkan berdasarkan created_at DESC
-
-        // Memastikan ada file upload
-        if ($latestComment && $latestComment->upload) {
-            // Lokasi penyimpanan file (menggunakan relative path dari kolom upload)
-            $filePath = public_path($latestComment->upload);
-        }
-
-        // Menyimpan komentar ke dalam tabel hav_comment_history
-        if ($employee) {
-            // Dapatkan hanya relative path jika $filePath tersedia
-            $relativePath = $filePath ? str_replace(public_path() . '/', '', $filePath) : null;
-
-            $hav->commentHistory()->create([
-                'comment' => $comment,
-                'employee_id' => $employee->id,
-                'upload' => $relativePath,
-            ]);
-        }
-
-        // Simpan perubahan status HAV
-        $hav->save();
-
-        return response()->json(['message' => 'Data berhasil disetujui.']);
+    if ($latestComment && $latestComment->upload) {
+        $filePath = $latestComment->upload; // Jangan pakai public_path
     }
-    public function reject(Request $request, $id)
-    {
-        // Mencari data HAV berdasarkan ID
-        $hav = Hav::findOrFail($id);
 
-        // Menyimpan status HAV sebagai disetujui
-        $hav->status = 1;
-
-        // Ambil komentar dari input request
-        $comment = $request->input('comment');
-        $employee = auth()->user()->employee;
-
-        // Deklarasi variabel $filePath terlebih dahulu
-        $filePath = null;
-
-        // Ambil file terbaru dari comment history berdasarkan HAV ID
-        $latestComment = $hav->commentHistory()->latest()->first(); // urutkan berdasarkan created_at DESC
-
-        // Memastikan ada file upload
-        if ($latestComment && $latestComment->upload) {
-            // Lokasi penyimpanan file (menggunakan relative path dari kolom upload)
-            $filePath = public_path($latestComment->upload);
-        }
-
-        // Menyimpan komentar ke dalam tabel hav_comment_history
-        if ($employee) {
-            // Dapatkan hanya relative path jika $filePath tersedia
-            $relativePath = $filePath ? str_replace(public_path() . '/', '', $filePath) : null;
-
-            $hav->commentHistory()->create([
-                'comment' => $comment,
-                'employee_id' => $employee->id,
-                'upload' => $relativePath,
-            ]);
-        }
-
-        // Simpan perubahan status HAV
-        $hav->save();
-
-        return response()->json(['message' => 'Data berhasil disetujui.']);
+    if ($employee) {
+        $hav->commentHistory()->create([
+            'comment' => $comment,
+            'employee_id' => $employee->id,
+            'upload' => $filePath, // Langsung simpan relative path-nya
+        ]);
     }
+
+    $hav->save();
+    return response()->json(['message' => 'Data berhasil disetujui.']);
+}
+
+public function reject(Request $request, $id)
+{
+    $hav = Hav::findOrFail($id);
+    $hav->status = 1;
+
+    $comment = $request->input('comment');
+    $employee = auth()->user()->employee;
+
+    $filePath = null;
+    $latestComment = $hav->commentHistory()->latest()->first();
+
+    if ($latestComment && $latestComment->upload) {
+        $filePath = $latestComment->upload; // Langsung ambil relative path
+    }
+
+    if ($employee) {
+        $hav->commentHistory()->create([
+            'comment' => $comment,
+            'employee_id' => $employee->id,
+            'upload' => $filePath,
+        ]);
+    }
+
+    $hav->save();
+    return response()->json(['message' => 'Data berhasil disetujui.']);
+}
 
 
     /**

@@ -282,14 +282,7 @@
                                             <div class="text-center text-muted mb-3">
                                                 No educational background data available.
                                             </div>
-                                            <div class="d-flex justify-content-between align-items-center gap-3">
-                                                @if (auth()->user()->role == 'HRD')
-                                                    <a class="fw-semibold text-primary"
-                                                        href="{{ route('employee.edit', $employee->npk) }}">
-                                                        Go to employee edit page
-                                                    </a>
-                                                @endif
-                                            </div>
+
                                         @endif
                                     </div>
                                 </div>
@@ -343,14 +336,7 @@
                                             <div class="text-center text-muted mb-3">
                                                 No work experience data available.
                                             </div>
-                                            <div class="d-flex justify-content-between align-items-center gap-3">
-                                                @if (auth()->user()->role == 'HRD')
-                                                    <a class="fw-semibold text-primary"
-                                                        href="{{ route('employee.edit', $employee->npk) }}">
-                                                        Go to employee edit page
-                                                    </a>
-                                                @endif
-                                            </div>
+
                                         @endif
                                     </div>
                                 </div>
@@ -393,19 +379,7 @@
                                                     <div class="separator separator-dashed my-3"></div>
                                                 @endif
                                             @endforeach
-                                        @else
-                                            <div class="text-center text-muted mb-3">
-                                                No performance appraisal data available.
-                                            </div>
-                                            <div class="d-flex justify-content-between align-items-center gap-3">
 
-                                                @if (auth()->user()->role == 'HRD')
-                                                    <a class="fw-semibold text-primary"
-                                                        href="{{ route('employee.edit', $employee->npk) }}">
-                                                        Go to employee edit page
-                                                    </a>
-                                                @endif
-                                            </div>
                                         @endif
                                     </div>
                                 </div>
@@ -415,7 +389,7 @@
 
                     @include('website.modal.appraisal.all_detail')
 
-
+                    @if (auth()->user()->role == 'HRD')
                         <div class="row">
                             <!-- Card 2: Historical Human Assets Value -->
                             <div class="col-md-12">
@@ -456,19 +430,16 @@
                                                 <div class="text-center text-muted mb-3">
                                                     No human asset data available.
                                                 </div>
-                                                <div class="d-flex justify-content-between align-items-center gap-3">
-                                                    <a class="fw-semibold"
-                                                        href="{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
-                                                        Go to hav page
-                                                    </a>
 
-                                                </div>
+
+
                                             @endif
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                    @endif
 
                 </div>
             </div>
@@ -487,6 +458,7 @@
                                     data-bs-target="#detailAstraTrainingModal">
                                     <i class="fas fa-info"></i> Detail
                                 </button>
+
                             </div>
                         </div>
 
@@ -532,21 +504,6 @@
                                             @endif
 
                                             {{-- Tampilkan 1 tombol di akhir jika jumlah pelatihan < maxSlots --}}
-                                            @if ($trainingCount < $maxSlots)
-                                                <tr>
-                                                    <td colspan="3">
-                                                        <div
-                                                            class="d-flex justify-content-between align-items-center gap-3">
-                                                            @if (auth()->user()->role == 'HRD')
-                                                                <a class="fw-semibold text-primary"
-                                                                    href="{{ route('employee.edit', $employee->npk) }}">
-                                                                    Go to employee edit page
-                                                                </a>
-                                                            @endif
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            @endif
 
                                         </tbody>
                                     </table>
@@ -597,19 +554,7 @@
                                                     <td colspan="3" class="text-center text-muted">No data available
                                                     </td>
                                                 </tr>
-                                                <tr>
-                                                    <td colspan="3">
-                                                        <div
-                                                            class="d-flex justify-content-between align-items-center gap-3">
-                                                            @if (auth()->user()->role == 'HRD')
-                                                                <a class="fw-semibold text-primary"
-                                                                    href="{{ route('employee.edit', $employee->npk) }}">
-                                                                    Go to employee edit page
-                                                                </a>
-                                                            @endif
-                                                        </div>
-                                                    </td>
-                                                </tr>
+
                                             @else
                                                 @for ($i = 0; $i < $maxSlots; $i++)
                                                     @if (isset($externalTrainings[$i]))
@@ -622,20 +567,8 @@
                                                             </td>
                                                             <td class="text-center">{{ $training->vendor }}</td>
                                                         </tr>
-                                                    @else
-                                                        <tr>
-                                                            <td colspan="3">
-                                                                <div
-                                                                    class="d-flex justify-content-between align-items-center gap-3">
-                                                                    @if (auth()->user()->role == 'HRD')
-                                                                        <a class="fw-semibold text-primary"
-                                                                            href="{{ route('employee.edit', $employee->npk) }}">
-                                                                            Go to employee edit page
-                                                                        </a>
-                                                                    @endif
-                                                                </div>
-                                                            </td>
-                                                        </tr>
+
+
                                                     @endif
                                                 @endfor
                                             @endif
@@ -715,13 +648,28 @@
             <div class="row">
                 <!-- Strength -->
                 <div class="col-md-6">
-                    <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                            data-bs-toggle="collapse" data-bs-target="#strength_section">
+                    <div class="card mb-5 ">
+                        <div class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center cursor-pointer"
+                            role="button">
+
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
                             </div>
+
+                            @if ($assessment && $assessment->date)
+                                <a class="btn btn-sm btn-info"
+                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    <i class="fas fa-info"></i> Detail
+                                </a>
+                            @else
+                                <button class="btn btn-sm btn-info"
+                                    onclick="showAssessmentAlert()">
+                                    Detail
+                                </button>
+                            @endif
                         </div>
+
+
                         <div id="strength_section" class="collapse show">
                             <div class="card-body border-top p-10">
                                 @if (!$assessment)
@@ -748,7 +696,7 @@
                                                             <span class="show-less text-primary cursor-pointer d-none">Show
                                                                 Less</span>
                                                         @endif
-                                                    </div>
+                                                   </div>
                                                 </div>
                                             </div>
                                             <div class="separator separator-dashed my-4"></div>
@@ -756,19 +704,7 @@
                                     @endforeach
                                 @endif
                             </div>
-                            <div class="card-footer">
-                                @if ($assessment && $assessment->date)
-                                    <a class="fw-semibold"
-                                        href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
-                                        Go to assessment detail
-                                    </a>
-                                @else
-                                    <button class="fw-semibold btn btn-link text-primary p-0"
-                                        onclick="showAssessmentAlert()">
-                                        Go to assessment detail
-                                    </button>
-                                @endif
-                            </div>
+
 
                         </div>
                     </div>
@@ -777,12 +713,25 @@
                 <!-- Areas for Development -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                            data-bs-toggle="collapse" data-bs-target="#weakness_section">
+                        <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button" >
+
                             <div class="card-title m-0">
-                                <h3 class="fw-bold m-0">Areas for Development</h3>
+                                <h3 class="fw-bold m-0">Weakness</h3>
                             </div>
+
+                            @if ($assessment && $assessment->date)
+                                <a class="btn btn-sm btn-info"
+                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    <i class="fas fa-info"></i> Detail
+                        </a>
+                            @else
+                                <button class="btn btn-sm btn-info" onclick="showAssessmentAlert()">
+                                    Detail
+                                </button>
+                            @endif
                         </div>
+
                         <div id="weakness_section" class="collapse show">
                             <div class="card-body border-top p-10">
                                 @if (!$assessment)
@@ -824,11 +773,17 @@
 
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
-                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                    data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
+                <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button" >
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
                     </div>
+                     <a class="btn btn-sm btn-info"
+                        href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                          <i class="fas fa-info"></i>
+                        Detail
+                    </a>
+
                 </div>
 
                 <div class="card-body">
@@ -853,15 +808,7 @@
                         </tbody>
                     </table>
                 </div>
-                <div class="card-footer">
 
-                    <a class="fw-semibold"
-                        href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
-                        Go to IDP detail
-                    </a>
-
-
-                </div>
             </div>
 
             <!-- Tombol Back di bagian bawah card -->

@@ -8,6 +8,7 @@
     {{ $title ?? 'Approval' }}
 @endsection
 @section('main')
+
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
@@ -104,41 +105,41 @@
                                 <td>{{ $item->employee->grade }}</td>
                                 <td>
                                     @if ($item->hav_status == 0)
-                                    <span class="badge bg-warning fw-normal">Pending</span>
-                                @elseif ($item->hav_status == 2)
-                                    <span class="badge bg-success fw-normal">Approved</span>
-                                @elseif ($item->hav_status == 1)
-                                    <span class="badge bg-danger fw-normal">Revise</span>
-                                @endif
+                                        <span class="badge bg-warning fw-normal">Pending</span>
+                                    @elseif ($item->hav_status == 2)
+                                        <span class="badge bg-success fw-normal">Approved</span>
+                                    @elseif ($item->hav_status == 1)
+                                        <span class="badge bg-danger fw-normal">Revise</span>
+                                    @endif
                                 </td>
 
                                 <td class="text-center">
-                                    {{-- Summary --}}
-                                    <a href="{{ url('hav/generate-create', ['id' => $item->employee_id]) }}"
-                                        class="btn btn-info btn-sm">
+                                    <button type="button" class= "btn btn-sm btn-info btn-toggle-accordion"
+                                        onclick="window.location.href='{{ route('download.upload', ['havId' => $item->id]) }}'">
                                         <i class="fas fa-eye"></i>
-                                    </a>
-                                    @if ($item->hav_status == 0)
-                                    <!-- Tombol APPROVE -->
-                                    <button type="button" class="btn btn-success btn-sm" onclick="confirmApprove({{ $item->id }})">
-                                        <i class="fas fa-check"></i> Approve
                                     </button>
 
-                                    <!-- Tombol REJECT -->
-                                    <button type="button" class="btn btn-danger btn-sm" onclick="confirmReject({{ $item->id }})">
-                                        <i class="fas fa-times"></i> Revise
-                                    </button>
+                                    @if ($item->hav_status == 0)
+                                        <button type="button" class="btn btn-sm btn-success btn-approve"
+                                            onclick="confirmApprove({{ $item->id }})">
+                                            <i class="fas fa-check-circle"></i>
+                                        </button>
+
+                                        <button type="button" class="btn btn-sm btn-danger btn-revise"
+                                            onclick="confirmReject({{ $item->id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
                                     @endif
 
                                     @if ($item->hav_status == 1)
-                                    <button type="button" class="btn btn-warning btn-sm" onclick="reupload({{ $item->id }})">
-                                        <i class="fas fa-upload"></i> Revise
-                                    </button>
+                                        <button type="button" class="btn btn-sm btn-danger btn-revise"
+                                            onclick="reupload({{ $item->id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
                                     @endif
-
-
-
                                 </td>
+
+
                             </tr>
                         @endforeach
 
@@ -157,13 +158,14 @@
                 </div>
 
                 <div class="modal-body">
-                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST"
+                        enctype="multipart/form-data">
                         @csrf
 
                         <div class="mb-3">
                             <label for="importFile" class="form-label">Pilih File Excel</label>
-                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls"
-                                required>
+                            <input type="file" name="file" id="importFile" class="form-control"
+                                accept=".xlsx, .xls" required>
                             <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
 
@@ -183,7 +185,6 @@
             </div>
         </div>
     </div>
-    
 @endsection
 <!-- Pastikan jQuery & SweetAlert sudah terpasang -->
 <script>
@@ -197,7 +198,7 @@
             cancelButtonText: 'Cancel',
             preConfirm: (comment) => {
                 return $.ajax({
-                    url: `/hav/approve/${id}`,
+                    url: `/approval/hav/approve/${id}`,
                     method: 'PATCH',
                     data: {
                         _token: '{{ csrf_token() }}',
@@ -224,7 +225,7 @@
             cancelButtonText: 'Cancel',
             preConfirm: (comment) => {
                 return $.ajax({
-                    url: `/hav/reject/${id}`,
+                    url: `/approval/hav/reject/${id}`,
                     method: 'PATCH',
                     data: {
                         _token: '{{ csrf_token() }}',

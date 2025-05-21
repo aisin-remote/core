@@ -240,7 +240,7 @@ class Employee extends Model
             $normalized = $employee->getNormalizedPosition();
             return in_array($normalized, ['manager', 'supervisor', 'leader', 'jp', 'operator']);
         });
-    }       
+    }
 
 
     private function getDirectSubordinatesOf(Employee $employee)
