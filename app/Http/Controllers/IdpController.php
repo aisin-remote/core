@@ -768,7 +768,7 @@ class IdpController extends Controller
         $checkLevel = $employee->getFirstApproval();
         $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
 
-        $approveLevel = $employee->getFirstApproval();
+        $approveLevel = $employee->getFinalApproval();
         $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
 
         $checkIdps = Idp::with('assessment.employee', 'assessment.details')
@@ -779,10 +779,10 @@ class IdpController extends Controller
             ->get();
 
         $approveIdps = Idp::with('assessment.employee', 'assessment.details')
-            ->where('status', 2)
             ->whereHas('assessment.employee', function ($q) use ($subApprove) {
                 $q->whereIn('employee_id', $subApprove); // Menggunakan whereIn jika $subordinates adalah array
             })
+            ->where('status', 2)
             ->get();
 
         $idps = $checkIdps->merge($approveIdps);
