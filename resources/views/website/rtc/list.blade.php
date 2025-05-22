@@ -116,9 +116,32 @@
         </div>
     </div>
 
+    <style>
+        #viewDetailModal .modal-dialog {
+            max-width: 100vw;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            max-height: 100vh;
+        }
+
+        #viewDetailModal .modal-content {
+            height: 100vh;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #viewDetailModal .modal-body {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 1rem 2rem;
+        }
+    </style>
     {{-- modal detail --}}
     <div class="modal fade" id="viewDetailModal" tabindex="-1" aria-labelledby="viewDetailLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="viewDetailLabel">Detail</h5>
@@ -126,11 +149,13 @@
                 </div>
                 <div class="modal-body" id="viewDetailContent">
                     <!-- Konten akan diisi lewat AJAX -->
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                    <div class="d-flex justify-content-center align-items-center" style="height: 100%;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3">Loading data...</p>
                         </div>
-                        <p class="mt-3">Loading data...</p>
                     </div>
                 </div>
             </div>

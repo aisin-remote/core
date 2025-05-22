@@ -70,22 +70,24 @@ class RtcController extends Controller
         // Tentukan model yang akan dipanggil berdasarkan nilai filter
         switch ($filter) {
             case 'department':
-                // Ambil data berdasarkan department
-                $data = Department::with(['manager', 'short','mid','long'])->find($id);
+                $relation = 'manager';
+                $subLeading = 'leadingSection';
+                $data = Department::with([$relation, 'short', 'mid', 'long'])->find($id);
                 break;
-
+        
             case 'section':
-                // Ambil data berdasarkan section
-                $data = Section::with(['supervisor', 'short','mid','long'])->find($id);
+                $relation = 'supervisor';
+                $subLeading = 'leadingSubSection';
+                $data = Section::with([$relation, 'short', 'mid', 'long'])->find($id);
                 break;
-
+        
             case 'sub_section':
-                // Ambil data berdasarkan sub_section
-                $data = SubSection::with(['leader', 'short','mid','long'])->find($id);
+                $relation = 'leader';
+                $subLeading = '';
+                $data = SubSection::with([$relation, 'short', 'mid', 'long'])->find($id);
                 break;
-
+        
             default:
-                // Jika filter tidak sesuai, beri pesan atau arahkan ke halaman lain
                 return redirect()->route('rtc.index')->with('error', 'Invalid filter');
         }
     
@@ -94,8 +96,17 @@ class RtcController extends Controller
             return redirect()->route('rtc.index')->with('error', ucfirst($filter) . ' not found');
         }
 
-        if ($request->ajax()) {
-            return view('website.modal.rtc.index', compact('data', 'filter'));
+        if ($request->ajax() && $subLeading) {
+            $subordinates = $data->$relation->getSubordinatesByLevel(1);
+            $subordinates->each(function ($subordinate) use ($subLeading) {
+                $subordinate->load([
+                    $subLeading => function ($query) {
+                        return $query->with(['short', 'mid', 'long']);
+                    }
+                ]);
+            });
+
+            return view('website.modal.rtc.index', compact('data', 'filter', 'subordinates'));
         }
 
         // Return view dengan data yang sesuai
