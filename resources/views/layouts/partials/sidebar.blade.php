@@ -466,7 +466,6 @@
                             </a>
                         </div>
 
-
                         <!-- Division -->
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
@@ -534,15 +533,15 @@
                             </span>
                             <div class="menu-sub menu-sub-accordion menu-active-bg">
                                 <div class="menu-item">
-                                    <a class="menu-link {{ request()->is('employeeCompetencies/aii') ? 'active' : '' }}" 
-                                    href="{{ route('employeeCompetencies.index', ['company' => 'aii']) }}">
+                                    <a class="menu-link {{ $currentPath === 'employeeCompetencies/aii' ? 'active' : '' }}"
+                                        href="/employeeCompetencies/aii">
                                         <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                         <span class="menu-title">AII</span>
                                     </a>
                                 </div>
                                 <div class="menu-item">
-                                    <a class="menu-link {{ request()->is('employeeCompetencies/aiia') ? 'active' : '' }}" 
-                                    href="{{ route('employeeCompetencies.index', ['company' => 'aiia']) }}">
+                                    <a class="menu-link {{ $currentPath === 'employeeCompetencies/aiia' ? 'active' : '' }}"
+                                        href="/employeeCompetencies/aiia">
                                         <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                         <span class="menu-title">AIIA</span>
                                     </a>
@@ -553,7 +552,6 @@
                     </div>
                 </div>
             @endif
-
 
             {{-- approve --}}
                 @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
@@ -591,11 +589,6 @@
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
                         </div>
-
-
-                        <!-- Department -->
-
-
                     </div>
                 </div>
             @elseif (auth()->user()->role == 'HRD')
@@ -617,7 +610,6 @@
                             </a>
                         </div>
 
-
                         <!-- plant -->
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}" href="#">
@@ -625,7 +617,6 @@
                                 <span class="menu-title ps-1">HAV</span>
                             </a>
                         </div>
-
 
                         <!-- Division -->
                         <div class="menu-item">
@@ -635,10 +626,7 @@
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
                         </div>
-
                         <!-- Department -->
-
-
                     </div>
                 </div>
             @endif
