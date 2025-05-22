@@ -11,6 +11,7 @@ use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
 use App\Models\Development;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\DevelopmentOne;
 use App\Models\DetailAssessment;
@@ -20,7 +21,6 @@ use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
-use Illuminate\Support\Str;
 
 class IdpController extends Controller
 {
@@ -327,7 +327,7 @@ class IdpController extends Controller
         $details = DevelopmentOne::all();
         $mid = Development::all();
 
-           $allPositions = [
+        $allPositions = [
             'Direktur',
             'GM',
             'Manager',
@@ -368,9 +368,9 @@ class IdpController extends Controller
             'company'
         ));
     }
- public function show($employee_id)
-{
-   $employee = Employee::with('assessments')->find($employee_id);
+    public function show($employee_id)
+    {
+        $employee = Employee::with('assessments')->find($employee_id);
 
         if (!$employee) {
             return response()->json([
@@ -391,10 +391,7 @@ class IdpController extends Controller
             'employee' => $employee,
             'assessments' => $assessments
         ]);
-}
-
-
-
+    }
 
     public function store(Request $request)
     {

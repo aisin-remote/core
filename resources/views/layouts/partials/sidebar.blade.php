@@ -229,8 +229,8 @@
                                 </div>
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'hav/list' ? 'active' : '' }}"
-                                            href="/hav/list">
+                                        <a class="menu-link {{ $currentPath === 'hav/assign' ? 'active' : '' }}"
+                                            href="/hav/assign">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">HAV Assign</span>
                                         </a>
@@ -238,8 +238,8 @@
                                 </div>
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'hav/listt' ? 'active' : '' }}"
-                                            href="#">
+                                        <a class="menu-link {{ $currentPath === 'hav/list' ? 'active' : '' }}"
+                                            href="/hav/list">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">HAV List</span>
                                         </a>

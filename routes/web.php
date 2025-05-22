@@ -15,8 +15,8 @@ use App\Http\Controllers\ToDoListController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\ChecksheetController;
 use App\Http\Controllers\CompetencyController;
-use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
+use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 /*
 |--------------------------------------------------------------------------
@@ -122,6 +122,7 @@ Route::middleware('auth')->group(function () {
 
         // Pindahkan ke atas
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
+        Route::get('/assign/{company?}', [HavController::class, 'assign'])->name('hav.assign');
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
 

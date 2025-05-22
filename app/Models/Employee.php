@@ -172,6 +172,7 @@ class Employee extends Model
     // Accessor untuk Department
     public function getDepartmentAttribute()
     {
+        // dd($this->leadingSubSection);
         if ($this->subSection?->section?->department) {
             return $this->subSection->section->department;
         }
@@ -180,6 +181,10 @@ class Employee extends Model
             return $this->section->department;
         }
 
+        if ($this->leadingSubSection?->section->department) {
+            return $this->leadingSubSection->section->department;
+        }
+        
         if ($this->leadingSection?->department) {
             return $this->leadingSection->department;
         }

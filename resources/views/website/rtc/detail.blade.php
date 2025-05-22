@@ -179,6 +179,7 @@
         }
 
         .rtc-main-card {
+            border-top: #333 solid 4px;
             max-width: 300px;
             margin: 0 auto 30px;
         }

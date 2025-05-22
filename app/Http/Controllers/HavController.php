@@ -78,7 +78,7 @@ class HavController extends Controller
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
 
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+        }  elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
             $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
                 ->where('id', '!=', $employee->id)
                 ->pluck('id');
@@ -241,6 +241,117 @@ class HavController extends Controller
                 if (!$employee) {
                     $employees = collect();
                 } else {
+                    $subordinate =  $this->getSubordinatesFromStructure($user->employee)->pluck('id');
+
+                    $employees = Hav::with('employee')
+                        ->whereIn('employee_id', $subordinate)
+                        ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
+
+                            if ($filter && $filter !== 'all') {
+                                $query->where(function ($q) use ($filter) {
+                                    $q->where('position', $filter)
+                                        ->orWhere('position', 'like', "Act %{$filter}");
+                                });
+                            }
+                            if ($search) {
+                                $query->where('name', 'like', '%' . $search . '%');
+                            }
+                        })
+                        ->get()
+                        ->unique('employee_id')
+                        ->values();
+
+                }
+            }
+        }
+
+        // Daftar posisi
+        $allPositions = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        $positionIndex = array_search($currentPosition, $allPositions);
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+        return view('website.hav.list', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
+    }
+    public function assign(Request $request, $company = null)
+    {
+        $title = 'Add Employee';
+        $user = auth()->user();
+        $filter = $request->input('filter', 'all');
+        $search = $request->input('search'); // ambil input search dari request
+
+        // Ambil npk dari query string
+        $npk = $request->query('npk'); // Jika npk ada di query string
+
+        if ($npk) {
+            // Jika ada npk, tampilkan hanya data untuk npk tersebut
+
+            $employees = Hav::with('employee')
+
+                ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
+                    $query->where('npk', $npk); // Filter berdasarkan npk
+                    if ($filter && $filter !== 'all') {
+                        $query->where(function ($q) use ($filter) {
+                            $q->where('position', $filter)
+                                ->orWhere('position', 'like', "Act %{$filter}");
+                        });
+                    }
+                    if ($search) {
+                        $query->where('name', 'like', '%' . $search . '%');
+                    }
+                })
+
+                ->get()
+                ->unique('employee_id')
+                ->values();
+        } else {
+            // Logika untuk HRD atau selain HRD
+            if ($user->role === 'HRD') {
+                $employees = Hav::with('employee')
+                    ->whereHas('employee', function ($query) use ($company, $filter, $search) {
+                        if ($company) {
+                            $query->where('company_name', $company);
+                        }
+                        if ($filter && $filter !== 'all') {
+                            $query->where(function ($q) use ($filter) {
+                                $q->where('position', $filter)
+                                    ->orWhere('position', 'like', "Act %{$filter}");
+                            });
+                        }
+                        if ($search) {
+                            $query->where('name', 'like', '%' . $search . '%');
+                        }
+                    })
+                    ->get()
+                    ->unique('employee_id')
+                    ->values();
+            } else {
+                $employee = Employee::where('user_id', $user->id)->first();
+
+                if (!$employee) {
+                    $employees = collect();
+                } else {
                     $approvallevel = (auth()->user()->employee->getCreateAuth());
                     $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
 
@@ -292,10 +403,8 @@ class HavController extends Controller
             ? array_slice($allPositions, $positionIndex)
             : [];
 
-        return view('website.hav.list', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
+        return view('website.hav.assign', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }
-
-
 
     public function ajaxList(Request $request)
     {

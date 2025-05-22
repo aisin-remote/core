@@ -12,12 +12,16 @@
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">HAV List</h3>
+                <h3 class="card-title">HAV Assign</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                         style="width: 200px;" value="{{ request('search') }}">
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
+                    </button>
+                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
+                        <i class="fas fa-upload"></i>
+                        + Add
                     </button>
                     {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
                         data-bs-target="#kt_modal_create_app">
@@ -414,10 +418,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                            data-id="${hav.id}"
-                                                            class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                History
-                                                            </a>`}
+                                                                                    data-id="${hav.id}"
+                                                                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                        History
+                                                                                    </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>
