@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Illuminate\Support\Str;
 
 class IdpController extends Controller
 {
@@ -135,12 +136,15 @@ class IdpController extends Controller
         } else {
             // Ambil employee berdasarkan user login
             $emp = Employee::where('user_id', $user->id)->first();
+
+
             if (!$emp) {
                 $assessments = collect(); // Kosong jika tidak ada employee
             } else {
+
                 // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-                $viewLevel = $employee->getCreateAuth();
-                $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
+                $viewLevel = $emp->getCreateAuth();
+                $subordinates = $emp->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
 
                 // Ambil assessment terbaru hanya milik bawahannya
                 $assessments = Assessment::with(['employee', 'details', 'idp'])
@@ -164,6 +168,7 @@ class IdpController extends Controller
                     ->get();
             }
         }
+
 
         // Ambil semua karyawan
         $employees = Employee::all();
@@ -230,9 +235,10 @@ class IdpController extends Controller
     public function list(Request $request, $company = null, $reviewType = 'mid_year')
     {
         $user = auth()->user();
-        $employee = $user->employee;
-        $npk = $request->query('npk');
         $search = $request->query('search');
+        $npk = $request->query('npk');
+        $filter = $request->query('filter', 'all');
+
         $alcs = [
             1 => 'Vision & Business Sense',
             2 => 'Customer Focus',
@@ -244,29 +250,31 @@ class IdpController extends Controller
             8 => 'Drive & Courage'
         ];
 
-        // Ambil assessment terbaru berdasarkan created_at
+        $assessments = collect(); // default kosong
+
         if ($user->role === 'HRD') {
             $assessments = Assessment::whereIn('id', function ($query) {
-                $query->selectRaw('id')
+                $query->selectRaw('MAX(id)')
                     ->from('assessments as a')
-                    ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM assessments WHERE employee_id = a.employee_id)');
+                    ->groupBy('a.employee_id');
             })
                 ->with(['employee', 'details', 'idp'])
                 ->when(
                     $company,
-                    fn($query) =>
-                    $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                    fn($q) =>
+                    $q->whereHas('employee', fn($e) => $e->where('company_name', $company))
                 )
-                ->when($search, function ($query) use ($search) {
-                    $query->whereHas('employee', function ($q) use ($search) {
-                        $q->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('npk', 'like', '%' . $search . '%');
-                    });
-                })
+                ->when(
+                    $search,
+                    fn($q) =>
+                    $q->whereHas('employee', function ($e) use ($search) {
+                        $e->where('name', 'like', "%$search%")
+                            ->orWhere('npk', 'like', "%$search%");
+                    })
+                )
                 ->orderByDesc('created_at')
                 ->paginate(10);
         } else {
-            // Ambil employee berdasarkan user login
             $emp = Employee::with([
                 'subSection.section.department.division.plant',
                 'leadingSection.department.division.plant',
@@ -274,100 +282,116 @@ class IdpController extends Controller
                 'leadingPlant'
             ])->where('user_id', $user->id)->first();
 
-            if (!$emp) {
-                $assessments = collect(); // Kosong jika tidak ada employee
-            } else {
-                // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-                $subordinatesQuery = $this->getSubordinatesFromStructure($emp);
-                $subordinates = $subordinatesQuery->pluck('id')->toArray();  // ambil array ID saja
+            if ($emp) {
+                $subordinateIds = $this->getSubordinatesFromStructure($emp)->pluck('id');
 
                 $latestAssessmentIds = Assessment::selectRaw('MAX(id) as id')
-                    ->whereIn('employee_id', $subordinates)
+                    ->whereIn('employee_id', $subordinateIds)
                     ->groupBy('employee_id')
-                    ->pluck('id')
-                    ->toArray();
+                    ->pluck('id');
 
-
-                // Ambil assessment terbaru hanya milik bawahannya
                 $assessments = Assessment::with(['employee', 'details', 'idp'])
                     ->whereIn('id', $latestAssessmentIds)
                     ->when(
                         $company,
-                        fn($query) =>
-                        $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                        fn($q) =>
+                        $q->whereHas(
+                            'employee',
+                            fn($e) =>
+                            $e->where('company_name', $company)
+                        )
                     )
-                    ->when($search, function ($query) use ($search) {
-                        $query->whereHas('employee', function ($q) use ($search) {
-                            $q->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('npk', 'like', '%' . $search . '%');
-                        });
+                    ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
+                        if ($npk) {
+                            $query->where('npk', $npk);
+                        }
+
+                        if ($filter && $filter !== 'all') {
+                            $query->where(function ($q) use ($filter) {
+                                $q->where('position', $filter)
+                                    ->orWhere('position', 'like', "Act %{$filter}");
+                            });
+                        }
+
+                        if ($search) {
+                            $query->where('name', 'like', '%' . $search . '%');
+                        }
                     })
                     ->get();
             }
         }
 
-        // Ambil semua karyawan
+        // Data tambahan
         $employees = Employee::all();
-
-        // Ambil IDP
-        $idps = Idp::with('assessment', 'employee', 'commentHistory')->get();
-
-        // Daftar program
-        $programs = [
-            'Superior (DGM & GM) + DIC PUR + BOD Member',
-            'Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)',
-            'To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team --> Sharing Success Tips',
-            'Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project  (CAPACITY UP) & (AIIA) EV Project',
-            'SR Project (Structural Reform -->DM & SCM)',
-            'PEOPLE Development Program of Team members (ICT, IDP)',
-            '(Leadership) --> Courageously & Situational Leadership',
-            '(Developing Sub Ordinate) --> Coaching Skill / Developing Talents'
-        ];
-
+        $idps = Idp::with(['assessment', 'employee', 'commentHistory'])->get();
         $details = DevelopmentOne::all();
         $mid = Development::all();
 
-        foreach ($assessments as $assessment) {
-            // Ambil semua program IDP yang tersimpan
-            $savedPrograms = $assessment->idp->map(function ($idp) {
-                return [
-                    'program' => $idp->development_program,
-                    'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
-                ];
-            });
+           $allPositions = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
 
-            // Pisahkan berdasarkan due date
-            $midYearPrograms = [];
-            $oneYearPrograms = [];
-            $currentDate = Carbon::now();
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
 
-            foreach ($savedPrograms as $program) {
-                $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
-                $midYearPrograms[] = $program;
-                $oneYearPrograms[] = $program;
-            }
-
-            // Simpan ke objek assessment agar bisa diakses di Blade
-            $assessment->recommendedProgramsMidYear = $midYearPrograms;
-            $assessment->recommendedProgramsOneYear = $oneYearPrograms;
-
-            // Tambahkan strengths & weaknesses
-            $assessment->strengths = $assessment->strength;
-            $assessment->weaknesses = $assessment->weakness;
+        $positionIndex = array_search($currentPosition, $allPositions);
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
         }
+
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+        // Static program list
 
 
         return view('website.idp.list', compact(
             'employees',
             'assessments',
             'alcs',
-            'programs',
+            'visiblePositions',
+            'filter',
             'details',
             'mid',
             'idps',
             'company'
         ));
     }
+ public function show($employee_id)
+{
+   $employee = Employee::with('assessments')->find($employee_id);
+
+        if (!$employee) {
+            return response()->json([
+                'error' => 'Employee not found'
+            ], 404);
+        }
+
+        $assessments = Assessment::where('employee_id', $employee_id)
+            ->select('id', 'date',  'description', 'employee_id', 'upload')
+            ->orderBy('date', 'desc')
+            ->with(['details' => function ($query) {
+                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness','suggestion_development')
+                    ->with(['alc:id,name']);
+            }])
+            ->get();
+
+        return response()->json([
+            'employee' => $employee,
+            'assessments' => $assessments
+        ]);
+}
 
 
 

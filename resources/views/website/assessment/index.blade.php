@@ -193,6 +193,7 @@
 
                     let employeeId = $(this).data("employee-id");
                     console.log("Fetching history for Employee ID:", employeeId); // Debug
+                    let isHRD = window.currentUserRole === "HRD"; // <- cek role HRD
 
                     // Reset data modal sebelum request baru dilakukan
                     $("#npkText").text("-");
@@ -220,59 +221,64 @@
 
                             if (response.assessments.length > 0) {
                                 response.assessments.forEach((assessment, index) => {
-                                    let row = `
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td class="text-center">${assessment.date}</td>
-                           <td class="text-center">${assessment.description || '-'}</td>
+                                    let editBtn = '';
+                                    let deleteBtn = '';
 
-                            <td class="text-center">
-                                <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
-                                    Detail
-                                </a>
-                              ${`
-                                                                                                                                                    <a class="btn btn-primary btn-sm"
-                                                                                                                                                        target="_blank"
-                                                                                                                                                        href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
-                                                                                                                                                        onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                                                                                                                        View PDF
-                                                                                                                                                    </a>
-                                                                                                                                        `}
-
+                                    if (isHRD) {
+                                        editBtn = `
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
-                                data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
-                                data-id="${assessment.id}"
-                                data-employee-id="${assessment.employee_id}"
-                                data-date="${assessment.date}"
-                                data-description="${assessment.description}"
-                                data-upload="${assessment.upload}"
-                                  data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
-                                data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
-                                data-alc_name='${btoa(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
-                                data-strengths='${btoa(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
-                                data-weaknesses='${btoa(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
-                                data-suggestion_development='${btoa(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'
-                                >
-                                Edit
-                            </button>
+                                    data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
+                                    data-id="${assessment.id}"
+                                    data-employee-id="${assessment.employee_id}"
+                                    data-date="${assessment.date}"
+                                    data-description="${assessment.description}"
+                                    data-upload="${assessment.upload}"
+                                    data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
+                                    data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
+                                    data-alc_name='${btoa(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
+                                    data-strengths='${btoa(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
+                                    data-weaknesses='${btoa(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
+                                    data-suggestion_development='${btoa(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'
+                                >Edit</button>
+                            `;
 
-                                                                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                                                                        data-id="${assessment.id}">Delete</button>
-                                                                                </td>
-                                                                            </tr>
-                                                                        `;
+                                        deleteBtn = `
+                                <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                    data-id="${assessment.id}">Delete</button>
+                            `;
+                                    }
+
+                                    let row = `
+                            <tr>
+                                <td class="text-center">${index + 1}</td>
+                                <td class="text-center">${assessment.date}</td>
+                                <td class="text-center">${assessment.description || '-'}</td>
+                                <td class="text-center">
+                                    <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
+                                        Detail
+                                    </a>
+                                    <a class="btn btn-primary btn-sm"
+                                       target="_blank"
+                                       href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                       onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                        View PDF
+                                    </a>
+                                    ${editBtn}
+                                    ${deleteBtn}
+                                </td>
+                            </tr>
+                        `;
+
                                     $("#kt_table_assessments tbody").append(row);
-
                                 });
                             } else {
                                 $("#kt_table_assessments tbody").append(`
-                                                                        <tr>
-                                                                            <td colspan="3" class="text-center text-muted">No assessment found</td>
-                                                                        </tr>
-                                                                    `);
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No assessment found</td>
+                        </tr>
+                    `);
                             }
 
-                            // Tampilkan modal setelah data dimuat
                             $("#detailAssessmentModal").modal("show");
                         },
                         error: function(error) {
@@ -281,6 +287,7 @@
                         }
                     });
                 });
+
                 $(document).on("click", ".updateAssessment", function() {
                     let assessmentId = $(this).data("id");
                     let employeeId = $(this).data("employee-id");

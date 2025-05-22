@@ -21,7 +21,7 @@
                     </button>
                     <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
                         <i class="fas fa-upload"></i>
-                        Import
+                        + Add
                     </button>
                     {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
                         data-bs-target="#kt_modal_create_app">
