@@ -30,6 +30,17 @@ class Employee extends Model
         return $this->hasMany(Assessment::class, 'employee_id', 'id');
     }
 
+    public function employeeCompetencies()
+    {
+        return $this->hasMany(EmployeeCompetency::class, 'employee_id', 'id');
+    }
+    
+    public function competencies()
+    {
+        return $this->belongsToMany(Competency::class)
+                    ->withPivot('score');
+    }
+
     public function supervisor()
     {
         return $this->belongsTo(Employee::class, 'supervisor_id');
@@ -426,4 +437,18 @@ class Employee extends Model
         $conversion = $this->conversion;
         return $conversion ? $conversion->astra_grade : null;
     }
+    public function availableCompetencies()
+    {
+        $department = $this->departments->first();
+        
+        if (!$department) {
+            return collect();
+        }
+
+        return Competency::where('department_id', $department->id)
+            ->where('position', $this->position)
+            ->whereNotIn('id', $this->employeeCompetencies->pluck('competency_id'))
+            ->get();
+    }
+    
 }

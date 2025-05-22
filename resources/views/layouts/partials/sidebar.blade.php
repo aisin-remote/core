@@ -59,6 +59,7 @@
                 $currentPath = request()->path();
                 $currentMenu = explode('/', $currentPath)[0];
 
+                $isEmployeeCompetencies = str_starts_with($currentPath, 'employeeCompetencies');
                 $isEmployee = str_starts_with($currentPath, 'dashboard');
                 $isEmployee = str_starts_with($currentPath, 'employee');
                 $isAssessment = str_starts_with($currentPath, 'assessment');
@@ -494,6 +495,32 @@
                             </a>
                         </div>
 
+                        <!-- checksheet -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('/checksheet') ? 'active' : '' }}"
+                                href="/checksheet">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-title ps-1">Checksheet</span>
+                            </a>
+                        </div>
+
+                        <!-- Group Competency -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
+                                href="/group_competency">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-title ps-1">Group Competency</span>
+                            </a>
+                        </div>
+
+                        <!-- checksheet -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('/competency') ? 'active' : '' }}"
+                                href="/competency">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-title ps-1">Competency</span>
+                            </a>
+                        </div>
 
                         <!-- plant -->
                         <div class="menu-item">
@@ -545,6 +572,56 @@
                 </div>
             @endif
 
+            {{-- Training --}}
+            @if (auth()->user()->role == 'HRD')
+                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                    id="menu-approval">
+                    <span class="menu-link">
+                        <span class="menu-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </span>
+                        <span class="menu-title ps-1">Training</span>
+                        <span class="menu-arrow"></span>
+                    </span>
+                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+                        {{-- Employee Competency --}}
+                        @if (auth()->user()->role == 'User')
+                            <div class="menu-item">
+                                <a class="menu-link {{ $currentPath === 'employeeCompetencies' ? 'active' : '' }}"
+                                    href="/employeeCompetencies">
+                                    <span class="menu-title ps-1">Employee Competency</span>
+                                </a>
+                            </div>
+                        @else
+                            <div class="menu-item menu-accordion {{ $isEmployeeCompetencies ? 'show' : '' }}"
+                                data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                                <span class="menu-link {{ $isEmployeeCompetencies ? 'active' : '' }}">
+                                    <span class="menu-title ps-1">Employee Competency</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->is('employeeCompetencies/aii') ? 'active' : '' }}"
+                                            href="{{ route('employeeCompetencies.index', ['company' => 'aii']) }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">AII</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->is('employeeCompetencies/aiia') ? 'active' : '' }}"
+                                            href="{{ route('employeeCompetencies.index', ['company' => 'aiia']) }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">AIIA</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
+
             {{-- approve --}}
             @php
                 $normalized = strtolower(auth()->user()->employee->getNormalizedPosition());
@@ -570,14 +647,12 @@
                             </a>
                         </div>
 
-
                         <!-- plant -->
                         <a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
                             href="{{ route('hav.approval') }}">
                             {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                             <span class="menu-title ps-1">HAV</span>
                         </a>
-
 
                         <!-- Division -->
                         <div class="menu-item">
@@ -586,6 +661,7 @@
                                 <span class="menu-title ps-1">RTC</span>
                             </a>
                         </div>
+
 
                         <!-- Department -->
 
@@ -635,51 +711,6 @@
                     </div>
                 </div>
             @endif
-
-            {{-- <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                id="menu-master">
-                <span class="menu-link">
-                    <span class="menu-icon">
-                        <i class="fas fa-chalkboard-teacher"></i>
-                    </span>
-                    <span class="menu-title ps-1">Training</span>
-                    <span class="menu-arrow"></span>
-                </span>
-                <!-- End: Menu Link -->
-
-                <!-- Begin: Menu Sub -->
-                <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                    <!-- Menu Item: FAQ Classic -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('/emp_competency') ? 'active' : '' }}"
-                            href="/emp_competency">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Section</span>
-                        </a>
-                    </div>
-
-                    <!-- Menu Item: FAQ Extended -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('/competencies') ? 'active' : '' }}"
-                            href="/competencies">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Competency</span>
-                        </a>
-                    </div>
-
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
-                            href="/group_competency">
-                            <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
-                            <span class="menu-title ps-1">Group Competency</span>
-                        </a>
-                    </div>
-                </div>
-
-            </div> --}}
-            <!--end:Master Menu Accordion-->
-
-            <!--end:Master Section-->
         </div>
         <!-- Sidebar User Panel -->
         <!--begin::User info sidebar bottom-->
