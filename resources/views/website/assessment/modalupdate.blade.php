@@ -13,7 +13,7 @@
 
                     <div class="mb-4">
                         <label for="update_employee_id" class="form-label">Employee</label>
-                        <select class="form-control" id="update_employee_id" name="employee_id" required>
+                        <select class="form-control" id="update_employee_id" name="employee_id"  disabled>
                             <option value="">Pilih Employee</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->id }}">{{ $employee->name }}</option>
@@ -61,7 +61,7 @@
                     <div id="update-weaknesses-wrapper"></div>
 
                     <div class="mb-4">
-                        <label for="update_upload" class="form-label">Upload File Assessment (PDF, JPG, PNG)</label>
+                        <label for="update_upload" class="form-label">Upload File Assessment (PDF)</label>
                         <input type="file" class="form-control" id="update_upload" name="upload"
                             accept=".pdf,.jpg,.png">
                         <small id="update-upload-info"></small>
@@ -78,57 +78,85 @@
     document.addEventListener("DOMContentLoaded", function() {
         const updateForm = document.getElementById("updateAssessmentForm");
 
-        // Event listener untuk form submit
         updateForm.addEventListener("submit", function(event) {
-            event.preventDefault(); // Mencegah halaman reload
+            event.preventDefault();
 
-            let formData = new FormData(updateForm); // Ambil semua data form
+            const fileInput = document.getElementById("update_upload");
+            if (fileInput.files.length > 0) {
+                const fileSize = fileInput.files[0].size;
+                if (fileSize > 2 * 1024 * 1024) { // 2 MB limit
+                    Swal.fire({
+                        title: "Gagal!",
+                        text: "Ukuran file maksimal 2 MB.",
+                        icon: "error",
+                        confirmButtonText: "OK"
+                    });
+                    return; // stop submit
+                }
+            }
+
+            let formData = new FormData(updateForm);
 
             fetch("/assessment/update", {
                     method: "POST",
                     body: formData,
                     headers: {
-                        'Accept': 'application/json'
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                            .getAttribute('content')
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message) { // Jika update berhasil
-                        Swal.fire({
-                            title: "Berhasil!",
-                            text: "Assessment berhasil diperbarui!",
-                            icon: "success",
-                            confirmButtonText: "OK"
-                        }).then(() => {
-                            $("#updateAssessmentModal").modal('hide');
-                            $("#detailAssessmentModal").modal('hide');
-
-                            $(".modal-backdrop").remove();
-                            $("body").removeClass("modal-open");
-                        });
-                    } else {
-                        throw new Error("Gagal memperbarui assessment. Silakan coba lagi.");
+                .then(async response => {
+                    if (!response.ok) {
+                        // Kalau response error, ambil pesan validasi Laravel
+                        const errorData = await response.json();
+                        let errorMsg = "Terjadi kesalahan.";
+                        if (errorData.errors) {
+                            errorMsg = Object.values(errorData.errors).flat().join("\n");
+                        } else if (errorData.message) {
+                            errorMsg = errorData.message;
+                        }
+                        throw new Error(errorMsg);
                     }
+                    return response.json();
+                })
+                .then(data => {
+                    Swal.fire({
+                        title: "Berhasil!",
+                        text: data.message || "Assessment berhasil diperbarui!",
+                        icon: "success",
+                        confirmButtonText: "OK"
+                    }).then(() => {
+                        $("#updateAssessmentModal").modal('hide');
+                        $("#detailAssessmentModal").modal('hide');
+                        $(".modal-backdrop").remove();
+                        $("body").removeClass("modal-open");
+                        // Bisa tambah reload data atau refresh halaman jika perlu
+                         location.reload();
+                    });
                 })
                 .catch(error => {
                     Swal.fire({
                         title: "Gagal!",
-                        text: "Terjadi kesalahan saat memperbarui assessment. " + error
-                            .message,
+                        text: error.message,
                         icon: "error",
                         confirmButtonText: "OK"
                     });
                 });
         });
 
+
+
         // Load data ke modal saat tombol update diklik
 
 
-        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "",suggestion =
-                    "") {
+        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "",
+            alcName = "", suggestion =
+            "") {
             let container = document.getElementById(containerId);
             let templateCard = document.createElement("div");
-            templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
+            templateCard.classList.add("card", "p-3", "mb-3", "assessment-card",
+                `${type}-card`);
 
             // Tambahkan ID sesuai ALC
             if (selectedAlc) {
@@ -194,7 +222,8 @@
                         let buttonGroup = card.querySelector(".button-group");
                         let removeButton = document.createElement("button");
                         removeButton.type = "button";
-                        removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card",
+                        removeButton.classList.add("btn", "btn-danger", "btn-sm",
+                            "remove-card",
                             "me-2");
                         removeButton.textContent = "Hapus";
 
@@ -227,7 +256,8 @@
                 card = $(`#assessment_card_${alcId}`);
             } else {
                 // Card sudah ada → pindahkan dari wrapper lama ke wrapper baru
-                const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`)
+                const detachedCard = $(
+                        `#update-${oldType}s-wrapper #assessment_card_${alcId}`)
                     .detach();
                 newWrapper.append(detachedCard);
                 card = detachedCard;
@@ -263,6 +293,37 @@
                 }
             });
         }
+         $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                    setTimeout(() => {
+                        // Tutup semua modal yang mungkin masih terbuka
+                        $(".modal").modal("hide");
+
+                        // Hapus semua backdrop
+                        $(".modal-backdrop").remove();
+
+                        // Hapus kelas modal-open dari body
+                        $("body").removeClass("modal-open");
+                    }, 300);
+                });
+
+
+
+                // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
+                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+                    setTimeout(() => {
+                        if (!$("#updateAssessmentModal").hasClass("show")) {
+
+                            $("body").removeClass("modal-open");
+                        }
+                    }, 300);
+                });
+
+                // ===== CEGAH OVERLAY BERLAPIS =====
+                $(".modal").on("shown.bs.modal", function() {
+                    $(".modal-backdrop").last().css("z-index",
+                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+                });
+
 
 
 
