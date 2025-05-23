@@ -62,7 +62,7 @@
                             <th>Position</th>
                             <th>Department</th>
                             <th>Grade</th>
-                            <th>Last HAV</th>
+                            <th>Status</th>
                             <th class="text-center">Action</th>
                         </tr>
                     </thead>
@@ -78,28 +78,29 @@
                                 <td>{{ $item->employee->department?->name }}</td>
                                 <td>{{ $item->employee->grade }}</td>
                                 <td><span class="badge badge-light-warning fs-7 fw-bold">
-                                    {{ match(optional($item->hav)->status) {
-                                        0 => 'Created',
-                                        1 => 'Revised',
-                                        2 => 'Approved',
-                                        default => '-',
-                                    } }}
-                                </span>
-                                </td>
-                                <td class="text-center">
-                                    @if ($item->hav)
-                                        <a href="#" 
-   class="btn btn-warning btn-sm btn-revise-import"
-   data-bs-toggle="modal"
-   data-bs-target="#importModal"
-   data-hav-id="{{ $item->hav->id }}">
-   <i class="fas fa-upload"></i> Revise
-</a>
+                                        {{ match (optional($item->hav)->status) {
+                                            0 => 'Created',
+                                            1 => 'Revised',
+                                            2 => 'Approved',
+                                            default => '-',
+                                        } }}
+                                    </span>
 
-                                        <a
-                                            data-id="{{ $item->hav->id }}"
-                                            class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                Comment
+                                <td class="text-center">
+
+                                    @if ($item->hav)
+
+                                        @if (optional($item->hav)->status == 1)
+                                            <a href="#" class="btn btn-warning btn-sm btn-revise-import"
+                                                data-bs-toggle="modal" data-bs-target="#importModal"
+                                                data-hav-id="{{ $item->hav->id }}">
+                                                <i class="fas fa-upload"></i> Revise
+                                            </a>
+                                        @endif
+
+                                        <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment"
+                                            href="#">
+                                            Comment
                                         </a>
                                     @else
                                         {{-- <a href="#" class="btn btn-success btn-sm"><i class="fas fa-upload"></i> Import</a> --}}
@@ -118,12 +119,25 @@
         aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header d-flex justify-content-between align-items-center">
                     <h5 class="modal-title" id="commentHistoryModalLabel">Comment History</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div id="lastUploadInfo" style="font-size: 0.875rem; color: #666;">
+                            <!-- Last upload info akan diisi via JS -->
+                        </div>
+
+                        <a href="#" id="btnExportExcel" class="btn btn-success btn-sm" target="_blank"
+                            style="padding: 0.80rem 0.5rem; font-size: 0.75rem;">
+                            Export HAV
+                        </a>
+
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
                 </div>
 
                 <div class="modal-body">
+
                     <ul class="list-group" id="commentList">
                         <!-- Comments will be dynamically loaded here -->
                     </ul>
@@ -148,8 +162,8 @@
                         <div class="mb-3">
                             <label for="importFile" class="form-label">Pilih File Excel</label>
                             <input type="hidden" name="hav_id" id="havIdInput">
-                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls"
-                                required>
+                            <input type="file" name="file" id="importFile" class="form-control"
+                                accept=".xlsx, .xls" required>
                             <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
 
@@ -210,32 +224,60 @@
 
     <script>
         $(document).ready(function() {
+            // Misal response berisi data hav lengkap, termasuk lastUpload
+            function showCommentHistoryModal(response) {
+                $('#commentHistoryModal').modal('show');
+
+                // Clear sebelumnya
+                $('#commentList').empty();
+
+                // Tampilkan last upload info (jika ada)
+                if (response.lastUpload) {
+                    const date = new Date(response.lastUpload.created_at);
+                    const formattedDate = date.toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+
+                    $('#lastUploadInfo').html(`Last Submit: <strong>${formattedDate}</strong>`);
+
+                    // Update link download dengan havId yg sesuai
+                    $('#btnExportExcel').attr('href', `/hav/download-upload/${response.hav.id}`);
+                } else {
+                    $('#lastUploadInfo').html('No uploads found');
+                    $('#btnExportExcel').attr('href', '#');
+                }
+
+                // Render komentar dst...
+            }
+
 
             let pendingHavId = null;
 
-    // Saat tombol Revisi diklik, simpan ID-nya
-    $(document).on('click', '.btn-revise-import', function () {
-        pendingHavId = $(this).data('hav-id');
-        console.log('Clicked Revisi, will set hav_id:', pendingHavId);
-    });
+            // Saat tombol Revisi diklik, simpan ID-nya
+            $(document).on('click', '.btn-revise-import', function() {
+                pendingHavId = $(this).data('hav-id');
+                console.log('Clicked Revisi, will set hav_id:', pendingHavId);
+            });
 
-    // Setelah modal terbuka penuh, baru set value input
-    $('#importModal').on('shown.bs.modal', function () {
-        if (pendingHavId) {
-            $('#havIdInput').val(pendingHavId);
-            console.log('HAV ID input set:', pendingHavId);
-            pendingHavId = null; // reset
-        }
-    });
+            // Setelah modal terbuka penuh, baru set value input
+            $('#importModal').on('shown.bs.modal', function() {
+                if (pendingHavId) {
+                    $('#havIdInput').val(pendingHavId);
+                    console.log('HAV ID input set:', pendingHavId);
+                    pendingHavId = null; // reset
+                }
+            });
 
-    // Tombol "+ Add" harus reset isian
-    $(document).on('click', '#addButton', function () {
-        $('#havIdInput').val('');
-        pendingHavId = null;
-    });
+            // Tombol "+ Add" harus reset isian
+            $(document).on('click', '#addButton', function() {
+                $('#havIdInput').val('');
+                pendingHavId = null;
+            });
 
             // Ketika tombol "+ Add" diklik, kosongkan input hidden
-            $('[data-bs-target="#importModal"]').on('click', function () {
+            $('[data-bs-target="#importModal"]').on('click', function() {
                 $('#havIdInput').val('');
             });
 
@@ -286,10 +328,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                                                    data-id="${hav.id}"
-                                                                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                                        History
-                                                                                    </a>`}
+                                                                                                                                                                    data-id="${hav.id}"
+                                                                                                                                                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                                                                                                        History
+                                                                                                                                                                    </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>
@@ -395,23 +437,37 @@
                     success: function(response) {
                         console.log("Response received:", response
                             .comment); // Debugging the response
+                        showCommentHistoryModal(response);
 
                         // Check if we have comment history
                         if (response.comment && response.comment.length > 0) {
+                            // Clear existing comments
+                            $("#commentList").empty();
+
                             // Loop through the comments and append them to the modal
                             response.comment.forEach(function(comment) {
-                                console.log("Comment:",
-                                    comment); // Debugging each comment
+                                const date = new Date(comment.created_at);
+                                const formattedDate = new Intl.DateTimeFormat('id-ID', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                }).format(date);
+
                                 let commentHtml = `
-                                    <li class="list-group-item mb-2">
-                                        <strong>${comment.employee.name} :</strong> <br> ${comment.comment}
-                                        <br><small class="text-muted">${comment.created_at}</small><br>
-                                        <a href="{{ Storage::url('${comment.upload}') }}" target="_blank"
-                                        class="fw-bold text-primary text-decoration-underline">View Excel</a>
-                                    </li>
-                                `;
+                                <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
+                                    <div>
+                                        <strong>${comment.employee.name} :</strong><br>
+                                        ${comment.comment}
+                                    </div>
+                                   <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
+                                       <strong> ${formattedDate}</strong>
+                                    </div>
+                                </li>
+                            `;
                                 $("#commentList").append(commentHtml);
                             });
+
+
                         } else {
                             // If no comments found, display a message
                             $("#commentList").append(

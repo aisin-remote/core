@@ -389,6 +389,24 @@
                             alert("Employee not found!");
                             return;
                         }
+                        const titles = {
+                            1: 'Star',
+                            2: 'Future Star',
+                            3: 'Future Star',
+                            4: 'Potential Candidate',
+                            5: 'Raw Diamond',
+                            6: 'Candidate',
+                            7: 'Top Performer',
+                            8: 'Strong Performer',
+                            9: 'Career Person',
+                            10: 'Most Unfit Employee',
+                            11: 'Unfit Employee',
+                            12: 'Problem Employee',
+                            13: 'Maximal Contributor',
+                            14: 'Contributor',
+                            15: 'Minimal Contributor',
+                            16: 'Dead Wood'
+                        };
 
                         // Update informasi karyawan
                         $("#npkText").text(response.employee.npk);
@@ -402,7 +420,10 @@
                                 let row = `
                         <tr>
                             <td class="text-center">${index + 1}</td>
-                            <td class="text-center">${hav.status || '-'}</td>
+                          <td class="text-center">${titles[hav.quadrant] || '-'}</td>
+
+
+
                             <td class="text-center">${hav.year}</td>
                             <td class="text-center">
                                 <a
@@ -414,10 +435,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                            data-id="${hav.id}"
-                                                            class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                History
-                                                            </a>`}
+                                                                data-id="${hav.id}"
+                                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                    History
+                                                                </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>

@@ -264,6 +264,7 @@ class HavController extends Controller
             }
         }
 
+
         // Daftar posisi
         $allPositions = [
             'Direktur',
@@ -739,18 +740,16 @@ class HavController extends Controller
             return abort(404, 'File upload tidak ditemukan.');
         }
 
-        // ambil path upload dari DB, misal "public/hav_uploads/hav_1747706964.xlsx"
+        // path yang disimpan di DB, misalnya "hav_uploads/hav_1747960986.xlsx"
         $filePath = $latestUpload->upload;
 
-        // cek file di disk 'public'
-        if (!Storage::disk('public')->exists(str_replace('public/', '', $filePath))) {
+        // cek apakah file ada di disk 'local' (storage/app)
+        if (!Storage::disk('local')->exists($filePath)) {
             return abort(404, 'File tidak ditemukan di storage.');
         }
 
-        // hapus "public/" dari path sebelum download
-        $downloadPath = str_replace('public/', '', $filePath);
-
-        return Storage::disk('public')->download($downloadPath);
+        // download file dari disk 'local'
+        return Storage::disk('local')->download($filePath);
     }
 
     public function approval(Request $request, $company = null)
@@ -944,8 +943,13 @@ class HavController extends Controller
                 'msg' => 'No comment found for this employee'
             ], 404);
         }
+         $lastUpload = HavCommentHistory::where('hav_id', $hav_id)
+        ->orderByDesc('created_at')
+        ->first();
         return response()->json([
-            'comment' => $hav
+            'comment' => $hav,
+            'lastUpload' => $lastUpload,
+             'hav' => ['id' => $hav_id],
         ]);
     }
 }

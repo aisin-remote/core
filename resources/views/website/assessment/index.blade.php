@@ -101,12 +101,17 @@
 
                         </table>
                         <div class="d-flex justify-content-between">
-                            <span>Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
-                                {{ $assessments->total() }} entries</span>
+
                             {{ $assessments->links('pagination::bootstrap-5') }}
+
                         </div>
 
                     </div>
+                     <div class="d-flex justify-content-between">
+                            <small class="text-muted fw-bold">
+                                Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
+                            </small>
+                        </div>
                 </div>
             </div>
         </div>
@@ -193,7 +198,7 @@
 
                     let employeeId = $(this).data("employee-id");
                     console.log("Fetching history for Employee ID:", employeeId); // Debug
-                    let isHRD = window.currentUserRole === "HRD"; // <- cek role HRD
+                   // <- cek role HRD
 
                     // Reset data modal sebelum request baru dilakukan
                     $("#npkText").text("-");
@@ -218,7 +223,8 @@
 
                             // Kosongkan tabel sebelum menambahkan data baru
                             $("#kt_table_assessments tbody").empty();
-
+                             window.currentUserRole = "{{ strtolower(auth()->user()->role) }}";
+                              let isHRD = window.currentUserRole === "hrd";
                             if (response.assessments.length > 0) {
                                 response.assessments.forEach((assessment, index) => {
                                     let editBtn = '';
