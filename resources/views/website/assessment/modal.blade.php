@@ -78,7 +78,7 @@
 
 
                     <div class="mb-4">
-                        <label for="upload" class="form-label">Upload File Assessment (PDF, JPG, PNG)</label>
+                        <label for="upload" class="form-label">Upload File Assessment (PDF)</label>
                         <input type="file" class="form-control" id="upload" name="upload"
                             accept=".pdf,.jpg,.png">
                     </div>

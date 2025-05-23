@@ -107,11 +107,11 @@
                         </div>
 
                     </div>
-                     <div class="d-flex justify-content-between">
-                            <small class="text-muted fw-bold">
-                                Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
-                            </small>
-                        </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted fw-bold">
+                            Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -198,7 +198,7 @@
 
                     let employeeId = $(this).data("employee-id");
                     console.log("Fetching history for Employee ID:", employeeId); // Debug
-                   // <- cek role HRD
+                    // <- cek role HRD
 
                     // Reset data modal sebelum request baru dilakukan
                     $("#npkText").text("-");
@@ -223,8 +223,8 @@
 
                             // Kosongkan tabel sebelum menambahkan data baru
                             $("#kt_table_assessments tbody").empty();
-                             window.currentUserRole = "{{ strtolower(auth()->user()->role) }}";
-                              let isHRD = window.currentUserRole === "hrd";
+                            window.currentUserRole = "{{ strtolower(auth()->user()->role) }}";
+                            let isHRD = window.currentUserRole === "hrd";
                             if (response.assessments.length > 0) {
                                 response.assessments.forEach((assessment, index) => {
                                     let editBtn = '';
@@ -734,10 +734,29 @@
                 $('#assessmentForm').submit(function(e) {
                     e.preventDefault();
                     let assessment_id = $('#assessment_id').val();
+
+                    const fileInput = document.getElementById("upload"); // Ganti ini kalau ID-nya beda
+                    if (fileInput && fileInput.files.length > 0) {
+                        const fileSize = fileInput.files[0].size;
+                        if (fileSize > 2 * 1024 * 1024) {
+                            Swal.fire({
+                                title: "Gagal!",
+                                text: "Ukuran file maksimal 2 MB.",
+                                icon: "error",
+                                confirmButtonText: "OK"
+                            });
+                            return;
+                        }
+                    }
+
                     let formData = new FormData(this);
                     let url = assessment_id ? "{{ url('/assessment') }}/" + assessment_id :
                         "{{ route('assessments.store') }}";
-                    let method = assessment_id ? "PUT" : "POST";
+                    let method = assessment_id ? "POST" : "POST";
+                    if (assessment_id) {
+                        formData.append('_method', 'PUT');
+                    }
+
                     $.ajax({
                         url: url,
                         type: method,
@@ -752,8 +771,8 @@
                                 icon: "success",
                                 confirmButtonText: "OK"
                             }).then(() => {
-                                $('#addAssessmentModal').modal('hide'); // Tutup modal
-                                location.reload(); // Refresh halaman setelah sukses
+                                $('#addAssessmentModal').modal('hide');
+                                location.reload();
                             });
                         },
                         error: function(xhr, status, error) {
@@ -770,8 +789,8 @@
                             });
                         }
                     });
-
                 });
+
             });
 
             document.addEventListener("DOMContentLoaded", function() {
@@ -795,11 +814,7 @@
                     });
                 });
 
-                // Event listener untuk department dropdown
-                departmentFilter.addEventListener("change", function() {
-                    currentDepartmentFilter = this.value.toLowerCase();
-                    applyFilters();
-                });
+
 
 
 
