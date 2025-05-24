@@ -31,6 +31,7 @@ use App\Http\Controllers\ChecksheetAssessmentController;
 
 
 /* Employee Competency */
+
 Route::prefix('employeeCompetencies')->group(function () {
     Route::resource('/', EmployeeCompetencyController::class);
     Route::get('/{company?}', [EmployeeCompetencyController::class, 'index'])->name('employeeCompetencies.index');
@@ -42,9 +43,9 @@ Route::prefix('employeeCompetencies')->group(function () {
     Route::get('/get-competencies', [EmployeeCompetencyController::class, 'getCompetencies']);
     Route::get('/employee/{employee}', [EmployeeCompetencyController::class, 'show'])->name('employeeCompetencies.show');
     Route::delete('/delete-all/{employee}', [EmployeeCompetencyController::class, 'destroyAll'])->name('employeeCompetencies.destroyAll');
-    Route::get('/{id}/checksheet', [EmployeeCompetencyController::class,'checksheet']);
+    Route::get('/{id}/checksheet', [EmployeeCompetencyController::class, 'checksheet']);
 });
-    
+
 /* Group Competency */
 Route::resource('group_competency', GroupCompetencyController::class);
 Route::resource('competency', CompetencyController::class);
@@ -65,9 +66,9 @@ Route::delete('/checksheet/{checksheet}', [ChecksheetController::class, 'destroy
 
 /* Checksheet Assessment */
 Route::get('/checksheet-assessment/{competency}', [ChecksheetAssessmentController::class, 'index'])
-     ->name('checksheet-assessment.index');
+    ->name('checksheet-assessment.index');
 Route::post('/checksheet-assessment', [ChecksheetAssessmentController::class, 'store'])
-     ->name('checksheet-assessment.store'); 
+    ->name('checksheet-assessment.store');
 
 
 Route::middleware('guest')->group(function () {
@@ -118,7 +119,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
         Route::get('/get-history/{hav_id}', [HavController::class, 'getComment'])->name('hav.getComment');
 
-        Route::get('/hav/test-import', function () {});
+        Route::get('/exportassign/{id}', [HavController::class, 'exportassign'])->name('hav.exportassign');
 
         // Pindahkan ke atas
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
@@ -218,7 +219,7 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('idp')->group(function () {
-         Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
+        Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
         Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
         Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');

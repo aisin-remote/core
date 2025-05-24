@@ -142,7 +142,7 @@
                     <label for="position" class="form-label">Pilih Position</label>
                     <select name="position" id="position" class="form-select">
                         <option value="">-- Semua Position --</option>
-                        @foreach ($positions as $pos)
+                        @foreach ($visiblePositions as $pos)
                             <option value="{{ $pos }}">{{ $pos }}</option>
                         @endforeach
                     </select>
