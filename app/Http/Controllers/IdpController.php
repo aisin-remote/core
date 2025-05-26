@@ -125,6 +125,10 @@ class IdpController extends Controller
                     fn($query) =>
                     $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                 )
+                ->when($npk, function ($query) use ($npk) {
+                    $query->whereHas('employee', fn($q) => $q->where('npk', $npk));
+                })
+
                 ->when($search, function ($query) use ($search) {
                     $query->whereHas('employee', function ($q) use ($search) {
                         $q->where('name', 'like', '%' . $search . '%')
@@ -154,6 +158,10 @@ class IdpController extends Controller
                         fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                     )
+                    ->when($npk, function ($query) use ($npk) {
+                        $query->whereHas('employee', fn($q) => $q->where('npk', $npk));
+                    })
+
                     ->when($search, function ($query) use ($search) {
                         $query->whereHas('employee', function ($q) use ($search) {
                             $q->where('name', 'like', '%' . $search . '%')
@@ -382,7 +390,7 @@ class IdpController extends Controller
             ->select('id', 'date',  'description', 'employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
-                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness','suggestion_development')
+                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness', 'suggestion_development')
                     ->with(['alc:id,name']);
             }])
             ->get();

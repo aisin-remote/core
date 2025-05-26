@@ -9,6 +9,13 @@
         margin: 20px 0;
     }
 
+    .select2-container .select2-selection--single {
+        height: 38px;
+        padding: 6px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
     .is-invalid {
         border-color: red !important;
     }
@@ -89,8 +96,10 @@
         </div>
     </div>
 </div>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
+
         function updateDescriptionName(selectElement, type) {
             const card = selectElement.closest('.assessment-card');
             const textarea = card.querySelector(`.${type}-textarea`);
@@ -230,6 +239,7 @@
 
             document.getElementById('upload').value = '';
             document.getElementById('assessment_id').value = '';
+             $('#employee_id').val(null).trigger('change');
 
             updateDropdownOptions();
         });
@@ -264,5 +274,13 @@
         });
 
         updateDropdownOptions();
+    });
+       $(document).ready(function() {
+        $('#employee_id').select2({
+            dropdownParent: $('#addAssessmentModal'),
+            placeholder: "Pilih Employee",
+            allowClear: false,
+            width: '100%'
+        });
     });
 </script>

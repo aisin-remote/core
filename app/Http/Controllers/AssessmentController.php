@@ -82,7 +82,7 @@ class AssessmentController extends Controller
             return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
 
-        return Employee::whereIn('id', $subordinateIds);
+        return Employee::whereIn('id', $subordinateIds)->get();
     }
 
     private function collectSubordinates($models, $field, $subordinateIds)
@@ -102,6 +102,36 @@ class AssessmentController extends Controller
     {
         $user = auth()->user();
         $title = 'Assessment';
+        $allPositions = [
+            'President',
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $rawPosition = $user->employee->position;
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        // Cari index posisi saat ini
+        $positionIndex = array_search($currentPosition, $allPositions);
+
+        // Fallback jika tidak ditemukan
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        // Ambil posisi di bawahnya (tanpa posisi user)
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
 
         $filter = $request->input('filter'); // Filter by position
         $search = $request->input('search'); // Search by name
@@ -109,6 +139,12 @@ class AssessmentController extends Controller
         if ($user->role === 'HRD') {
             $employees = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
+                ->where(function ($q) use ($visiblePositions) {
+                    foreach ($visiblePositions as $pos) {
+                        $q->orWhere('position', $pos)
+                            ->orWhere('position', 'like', "Act %{$pos}");
+                    }
+                })
                 ->when($filter && $filter != 'all', function ($query) use ($filter) {
                     $query->where(function ($q) use ($filter) {
                         $q->where('position', $filter)
@@ -131,21 +167,26 @@ class AssessmentController extends Controller
             if (!$employee) {
                 $employees = collect();
             } else {
-                $employees = $this->getSubordinatesFromStructure($employee)
-                    ->when($filter && $filter != 'all', function ($query) use ($filter) {
-                        $query->where(function ($q) use ($filter) {
-                            $q->where('position', $filter)
-                                ->orWhere('position', 'like', "Act %{$filter}");
-                        });
-                    })
+                $subordinates = $this->getSubordinatesFromStructure($employee);
 
-                    ->when($search, function ($query) use ($search) {
-                        $query->where(function ($q) use ($search) {
-                            $q->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('npk', 'like', '%' . $search . '%');
-                        });
-                    })
-                    ->get();
+                $employees = collect([$employee])->merge($subordinates)->unique('id');
+
+                // Filter posisi
+                if ($filter && $filter !== 'all') {
+                    $employees = $employees->filter(function ($emp) use ($filter) {
+                        return $emp->position === $filter || str_starts_with($emp->position, "Act {$filter}");
+                    });
+                }
+
+                // Search by name / npk
+                if ($search) {
+                    $employees = $employees->filter(function ($emp) use ($search) {
+                        return stripos($emp->name, $search) !== false || stripos($emp->npk, $search) !== false;
+                    });
+                }
+
+                // Hydrate ulang jadi Eloquent Collection agar bisa pakai relasi seperti ->assessments()
+                $employees = Employee::hydrate($employees->toArray());
             }
         }
 
@@ -154,35 +195,6 @@ class AssessmentController extends Controller
         $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());
         $alcs = Alc::all();
 
-        $allPositions = [
-            'Direktur',
-            'GM',
-            'Manager',
-            'Coordinator',
-            'Section Head',
-            'Supervisor',
-            'Leader',
-            'JP',
-            'Operator',
-        ];
-
-        $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
-            : $rawPosition;
-
-        // Cari index posisi saat ini
-        $positionIndex = array_search($currentPosition, $allPositions);
-
-        // Fallback jika tidak ditemukan
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
-        }
-
-        // Ambil posisi di bawahnya (tanpa posisi user)
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            : [];
 
         return view('website.assessment.index', compact(
             'assessments',
