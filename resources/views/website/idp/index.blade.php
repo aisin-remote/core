@@ -224,21 +224,26 @@
                                 </table>
                             </div>
                             <div class="d-flex justify-content-between">
-                                @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator && $assessments->count())
+                                @if ($assessments->count())
                                     <span>
-                                        Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
-                                        {{ $assessments->total() }} entries
+                                        @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                                            Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
+                                            {{ $assessments->total() }} entries
+                                        @else
+                                            Showing all {{ $assessments->count() }} entries
+                                        @endif
                                     </span>
-                                    {{ $assessments->links('pagination::bootstrap-5') }}
+                                    @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                                        {{ $assessments->links('pagination::bootstrap-5') }}
+                                    @endif
                                 @else
                                     <span>No data found.</span>
                                 @endif
                             </div>
-
                         </div>
                     @endforeach
                 </div>
-                <div class="d-flex align-items-center gap-4 mt-3">
+                <div class="d-flex align-items-center gap-4 mt-5">
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
                         <span class="ms-2 text-muted">Below Standard</span>

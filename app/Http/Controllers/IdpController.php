@@ -125,6 +125,10 @@ class IdpController extends Controller
                     fn($query) =>
                     $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                 )
+                ->when($npk, function ($query) use ($npk) {
+                    $query->whereHas('employee', fn($q) => $q->where('npk', $npk));
+                })
+
                 ->when($search, function ($query) use ($search) {
                     $query->whereHas('employee', function ($q) use ($search) {
                         $q->where('name', 'like', '%' . $search . '%')
@@ -154,6 +158,10 @@ class IdpController extends Controller
                         fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                     )
+                    ->when($npk, function ($query) use ($npk) {
+                        $query->whereHas('employee', fn($q) => $q->where('npk', $npk));
+                    })
+
                     ->when($search, function ($query) use ($search) {
                         $query->whereHas('employee', function ($q) use ($search) {
                             $q->where('name', 'like', '%' . $search . '%')
