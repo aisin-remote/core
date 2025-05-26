@@ -275,16 +275,9 @@
                                     @php
                                         set_time_limit(60);
                                         $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
-                                        $idp = DB::table('idp')
+                                        $idp = \App\Models\Idp::with('commentHistory')
                                             ->where('assessment_id', $assessment->id)
                                             ->where('alc_id', $id)
-                                            ->select(
-                                                'id',
-                                                'category',
-                                                'development_program',
-                                                'development_target',
-                                                'date',
-                                            )
                                             ->first();
 
                                         $assessment_detail_id = null;
@@ -293,6 +286,7 @@
                                                 $assessment_detail_id = $detail->id;
                                             }
                                         }
+
                                     @endphp
 
                                     <div class="modal-body scroll-y mx-2 mt-5">
@@ -395,26 +389,26 @@
                                                 <hr>
                                             </div>
 
-                                            <div class="col-lg-12 fv-row mb-5">
-                                                <label class="fs-5 fw-bold form-label mb-2 required">Comment
-                                                    History</label>
-                                                @foreach ($idps as $idp)
-                                                    @if (!$idp->commentHistory->isEmpty())
-                                                        @foreach ($idp->commentHistory as $comment)
-                                                            <div class="border rounded p-3 mb-3 bg-light">
-                                                                <div class="fw-semibold mb-2">
-                                                                    {{ $comment->employee->name ?? 'Unknown Employee' }} —
-                                                                    <small
-                                                                        class="text-muted">{{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}</small>
-                                                                </div>
-                                                                <div class="text-muted fst-italic">
-                                                                    {{ $comment->comment }}
-                                                                </div>
+                                            @if ($idp && $idp->commentHistory && $idp->commentHistory->isNotEmpty())
+                                                <div class="col-lg-12 fv-row mb-5">
+                                                    <label class="fs-5 fw-bold form-label mb-2">Comment
+                                                        History</label>
+
+                                                    @foreach ($idp->commentHistory as $comment)
+                                                        <div class="border rounded p-3 mb-3 bg-light">
+                                                            <div class="fw-semibold mb-2">
+                                                                {{ $comment->employee->name ?? 'Unknown Employee' }} —
+                                                                <small class="text-muted">
+                                                                    {{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}
+                                                                </small>
                                                             </div>
-                                                        @endforeach
-                                                    @endif
-                                                @endforeach
-                                            </div>
+                                                            <div class="text-muted fst-italic">
+                                                                {{ $comment->comment }}
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
 
                                             <div class="text-center pt-15">
                                                 <button type="button"
