@@ -390,7 +390,7 @@ class IdpController extends Controller
             ->select('id', 'date',  'description', 'employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
-                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness','suggestion_development')
+                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness', 'suggestion_development')
                     ->with(['alc:id,name']);
             }])
             ->get();

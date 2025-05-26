@@ -2,9 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Assessment;
+use App\Models\Competency;
+use App\Models\Department;
+use Illuminate\Support\Str;
+use App\Models\EmployeeCompetency;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
 class Employee extends Model
 {
@@ -34,11 +39,11 @@ class Employee extends Model
     {
         return $this->hasMany(EmployeeCompetency::class, 'employee_id', 'id');
     }
-    
+
     public function competencies()
     {
         return $this->belongsToMany(Competency::class)
-                    ->withPivot('score');
+            ->withPivot('score');
     }
 
     public function supervisor()
@@ -48,7 +53,7 @@ class Employee extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class,'user_id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function promotionHistory()
@@ -143,6 +148,7 @@ class Employee extends Model
             : null;
     }
 
+
     // Mengambil Hav
     public function hav()
     {
@@ -184,7 +190,7 @@ class Employee extends Model
         if ($this->leadingSubSection?->section->department) {
             return $this->leadingSubSection->section->department;
         }
-        
+
         if ($this->leadingSection?->department) {
             return $this->leadingSection->department;
         }
@@ -384,6 +390,7 @@ class Employee extends Model
             'act leader'       => 'leader',
             'act jp'           => 'jp',
             'act gm'           => 'gm',
+            'GM'               => 'gm',
             'direktur'         => 'direktur',
             'director'         => 'direktur'
         ];
@@ -445,7 +452,7 @@ class Employee extends Model
     public function availableCompetencies()
     {
         $department = $this->departments->first();
-        
+
         if (!$department) {
             return collect();
         }
@@ -455,5 +462,17 @@ class Employee extends Model
             ->whereNotIn('id', $this->employeeCompetencies->pluck('competency_id'))
             ->get();
     }
-    
+      public function getBagianAttribute()
+    {
+        $position = $this->getNormalizedPosition() ?? '';
+        $position = strtolower($position);
+        return match (true) {
+            Str::contains($position, 'president') => 'President',
+            Str::contains($position, 'direktur') => $this->leadingPlant->name ?? 'Tidak Ada Plant',
+            Str::contains($position, 'gm') => $this->leadingDivision->name ?? 'Tidak Ada Divisi',
+            Str::contains($position, 'manager') => $this->leadingDepartment->name ?? 'Tidak Ada Departemen',
+            default => $this->department->name
+                ?? 'Tidak Ada Departemen',
+        };
+    }
 }

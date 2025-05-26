@@ -26,7 +26,7 @@
                                 <option value="{{ $department }}">{{ $department }}</option>
                             @endforeach
                         </select> --}}
-                        @if (auth()->user()->role == 'HRD')
+                        @if (auth()->user()->role == 'HRD' && auth()->user()->employee->position != 'President')
                             <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#addAssessmentModal">Add</a>
                         @endif
@@ -59,38 +59,47 @@
                             <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
+                                    <th>Photo</th>
                                     <th>Employee Name</th>
-                                    <th>Department</th>
-                                    <th>Position</th>
                                     <th>NPK</th>
+                                    <th>Company</th>
+                                    <th>Position</th>
+                                    <th>Department</th>
+                                    <th>Grade</th>
                                     <th>Age</th>
+                                    <th>Last Assessment</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($assessments as $index => $assessment)
-                                    <tr data-position="{{ $assessment->employee->position ?? '-' }}">
+                                    @php
+                                        $employee = $assessment->employee;
+                                        $birthdate = $employee->birthday_date;
+                                        $age = $birthdate ? \Carbon\Carbon::parse($birthdate)->age : null;
+                                        $lastAssessmentDate = optional($employee->assessments()->latest()->first())
+                                            ->date;
+                                    @endphp
+                                    <tr data-position="{{ $employee->position ?? '-' }}">
                                         <td>{{ $assessments->firstItem() + $index }}</td>
-                                        <td>{{ $assessment->employee->name ?? '-' }}</td>
-                                        <td>
-                                            @if ($assessment->employee->department)
-                                                {{ $assessment->employee->department->name }}
-                                            @else
-                                                Tidak Ada Departemen
-                                            @endif
+                                        <td class="text-center">
+                                            <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                                alt="Employee Photo" class="rounded" width="40" height="40"
+                                                style="object-fit: cover;">
                                         </td>
-                                        <td>{{ $assessment->employee->position ?? '-' }}</td>
-                                        <td>{{ $assessment->employee->npk ?? '-' }}</td>
-                                        <td>
-                                            @php
-                                                $birthdate = $assessment->employee->birthday_date;
-                                                $age = $birthdate ? \Carbon\Carbon::parse($birthdate)->age : null;
-                                            @endphp
-                                            {{ $age ?? '-' }}
+                                        <td>{{ $employee->name ?? '-' }}</td>
+                                        <td>{{ $employee->npk ?? '-' }}</td>
+                                        <td>{{ $employee->company_name ?? '-' }}</td>
+                                        <td>{{ $employee->position ?? '-' }}</td>
+                                        <td>{{ $employee->bagian }}</td>
+
+                                        <td>{{ $employee->grade ?? '-' }}</td>
+                                        <td>{{ $age ?? '-' }}</td>
+                                        <td>{{ $lastAssessmentDate ? \Carbon\Carbon::parse($lastAssessmentDate)->format('d M Y') : '-' }}
                                         </td>
                                         <td class="text-center">
                                             <a class="btn btn-info btn-sm history-btn"
-                                                data-employee-id="{{ $assessment->employee->id }}" data-bs-toggle="modal"
+                                                data-employee-id="{{ $employee->id }}" data-bs-toggle="modal"
                                                 data-bs-target="#detailAssessmentModal">
                                                 History
                                             </a>
@@ -98,6 +107,7 @@
                                     </tr>
                                 @endforeach
                             </tbody>
+
 
                         </table>
                         <div class="d-flex justify-content-between">

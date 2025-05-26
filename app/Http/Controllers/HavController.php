@@ -289,9 +289,8 @@ class HavController extends Controller
             }
         }
 
-
-        // Daftar posisi
         $allPositions = [
+            'President',
             'Direktur',
             'GM',
             'Manager',
