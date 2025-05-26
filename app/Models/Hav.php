@@ -12,7 +12,7 @@ class Hav extends Model
 
     protected $guarded = ['id'];
 
-    protected $fillable = ['employee_id', 'quadrant'];
+    protected $fillable = ['employee_id', 'quadrant', 'status'];
 
     // One-to-Many: Hav -> HavDetails
     public function details()
@@ -37,7 +37,7 @@ class Hav extends Model
         return $this->belongsTo(QuadranMaster::class, 'quadrant', 'code');
     }
     // Get the status of the employee
-    public function getStatusAttribute()
+    public function getStatusQuadrantAttribute()
     {
         $statusList = [
             1 => 'Star',

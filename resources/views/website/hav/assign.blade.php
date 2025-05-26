@@ -19,10 +19,6 @@
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="fas fa-upload"></i>
-                        + Add
-                    </button>
                     {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
                         data-bs-target="#kt_modal_create_app">
                         <i class="fas fa-upload"></i>
@@ -62,11 +58,12 @@
                             <th>Position</th>
                             <th>Department</th>
                             <th>Grade</th>
-                            <th>Last HAV</th>
+                            <th>Status</th>
                             <th class="text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
+
                         @foreach ($employees as $item)
                             <tr data-position="{{ $item->employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
@@ -76,14 +73,40 @@
                                 <td>{{ $item->employee->position }}</td>
                                 <td>{{ $item->employee->department?->name }}</td>
                                 <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name }}</span>
-                                </td>
+                                <td><span class="badge badge-light-warning fs-7 fw-bold">
+                                        {{ match (optional($item->hav)->status) {
+                                            0 => 'Created',
+                                            1 => 'Revised',
+                                            2 => 'Approved',
+                                            default => '-',
+                                        } }}
+                                    </span>
+
                                 <td class="text-center">
-                                    {{-- Summary --}}
-                                    <a href="#" data-employee-id="{{ $item->employee->id }}"
-                                        class="btn btn-info btn-sm history-btn">
-                                        History
-                                    </a>
+
+                                    @if ($item->hav)
+                                        <a href="#" 
+                                            class="btn btn-warning btn-sm btn-revise-import"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#importModal"
+                                            data-hav-id="{{ $item->hav->id }}"
+                                            data-employee-id="{{ $item->employee->id }}">
+                                            <i class="fas fa-upload"></i> Revise
+                                        </a>
+
+                                        <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment"
+                                            href="#">
+                                            Comment
+                                        </a>
+                                    @else
+                                        
+                                        <a href="#" class="btn btn-info btn-sm btn-add-import"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#importModal"
+                                            data-employee-id="{{ $item->employee->id }}">
+                                            <i class="fas fa-upload"></i> + Add
+                                        </a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -98,12 +121,25 @@
         aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header d-flex justify-content-between align-items-center">
                     <h5 class="modal-title" id="commentHistoryModalLabel">Comment History</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div id="lastUploadInfo" style="font-size: 0.875rem; color: #666;">
+                            <!-- Last upload info akan diisi via JS -->
+                        </div>
+
+                        <a href="#" id="btnExportExcel" class="btn btn-success btn-sm" target="_blank"
+                            style="padding: 0.80rem 0.5rem; font-size: 0.75rem;">
+                            Export HAV
+                        </a>
+
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
                 </div>
 
                 <div class="modal-body">
+
                     <ul class="list-group" id="commentList">
                         <!-- Comments will be dynamically loaded here -->
                     </ul>
@@ -127,16 +163,21 @@
 
                         <div class="mb-3">
                             <label for="importFile" class="form-label">Pilih File Excel</label>
-                            <input type="file" name="file" id="importFile" class="form-control" accept=".xlsx, .xls"
-                                required>
+                            <input type="hidden" name="hav_id" id="havIdInput">
+                            <input type="file" name="file" id="importFile" class="form-control"
+                                accept=".xlsx, .xls" required>
                             <small class="form-text text-muted">Format yang diperbolehkan: .xlsx atau .xls</small>
                         </div>
 
                         <div class="alert alert-info small">
                             <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
                             Download template format import:
-                            <a href="{{ asset('assets/file/Import-HAV.xlsx') }}" target="_blank"
-                                class="fw-bold text-primary text-decoration-underline">Download Template</a>
+                            <a href="#" target="_blank"
+                                id="downloadTemplateLink"
+                                
+                                class="fw-bold text-primary text-decoration-underline">
+                                Download Template
+                                </a>
                         </div>
 
                         <div class="text-end">
@@ -144,188 +185,6 @@
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
                         </div>
                     </form>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="havDetail" tabindex="-1" aria-hidden="true">
-        <!--begin::Modal dialog-->
-        <div class="modal-dialog modal-dialog-centered mw-900px">
-            <!--begin::Modal content-->
-            <div class="modal-content">
-                <!--begin::Modal header-->
-                <div class="modal-header">
-                    <!--begin::Modal title-->
-                    <h2 id="nameTitle">Herizal Arfiansyah</h2>
-                    <!--end::Modal title-->
-
-                    <!--begin::Close-->
-                    <div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
-                        <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
-                    </div>
-                    <!--end::Close-->
-                </div>
-                <!--end::Modal header-->
-
-                <!--begin::Modal body-->
-                <div class="modal-body py-lg-10 px-lg-10">
-                    <!--begin::Stepper-->
-                    <div class="stepper stepper-pills stepper-column d-flex flex-column flex-xl-row flex-row-fluid"
-                        id="kt_modal_create_app_stepper">
-
-                        <!--begin::Content-->
-                        <div class="flex-row-fluid py-lg-5 px-lg-15">
-                            <!--begin::Form-->
-                            <form class="form" novalidate="novalidate" id="kt_modal_create_app_form">
-                                <!--begin::Step 1-->
-                                <div class="current" data-kt-stepper-element="content">
-                                    <div class="w-100" style="margin-right: 10px;">
-
-                                        <!--begin::Input group-->
-                                        <div class="fv-row">
-                                            <!--begin::Label-->
-                                            <label class="d-flex align-items-center fs-5 fw-semibold mb-4">
-                                                <span class="required">Astra Leadership Competency Score</span>
-
-
-                                                <span class="ms-1" data-bs-toggle="tooltip"
-                                                    title="Select your app category">
-                                                    <i class="ki-duotone ki-information-5 text-gray-500 fs-6"><span
-                                                            class="path1"></span><span class="path2"></span><span
-                                                            class="path3"></span></i></span> </label>
-                                            <!--end::Label-->
-
-                                            <!--begin:Options-->
-                                            <div class="fv-row">
-                                                <table class="table table-bordered" border="1" cellpadding="8"
-                                                    cellspacing="0">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>ALC</th>
-                                                            <th>Score</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td>Vision & Business Sense</td>
-                                                            <td id="alc1">2</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Customer Focus</td>
-                                                            <td id="alc2">3</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Interpersonal Skill</td>
-                                                            <td id="alc3">3</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Analysis & Judgment</td>
-                                                            <td id="alc4">3</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Planning & Driving Action</td>
-                                                            <td id="alc5">3</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Leading & Motivating</td>
-                                                            <td id="alc6">3</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Teamwork</td>
-                                                            <td id="alc7">3</td>
-                                                        </tr>
-                                                        <tr>
-                                                            <td>Drive & Courage</td>
-                                                            <td id="alc8">3</td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-
-
-                                            </div>
-                                            <!--end:Options-->
-                                        </div>
-                                        <!--end::Input group-->
-                                    </div>
-                                    <div class="w-100" style="margin-left: 10px;">
-
-                                        <label class="d-flex align-items-center fs-5 fw-semibold mb-4">
-                                            <span class="required">PK Last 3 Years</span>
-
-
-                                            <span class="ms-1" data-bs-toggle="tooltip"
-                                                title="Select your app category">
-                                                <i class="ki-duotone ki-information-5 text-gray-500 fs-6"><span
-                                                        class="path1"></span><span class="path2"></span><span
-                                                        class="path3"></span></i></span> </label>
-
-
-                                        <!--begin::Input group-->
-                                        <div class="fv-row">
-
-                                            <table class="table table-bordered" border="1" cellpadding="8"
-                                                cellspacing="0">
-                                                <thead>
-                                                    <tr>
-                                                        <th>PK</th>
-                                                        <th>Score</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody id="performanceBody">
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <!--end::Input group-->
-                                    </div>
-                                </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Modal -->
-    <div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History Assessment</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <h1 class="text-center mb-4 fw-bold">History HAV</h1>
-
-                    <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
-                        <div class="col-auto">
-                            <p class="fs-5 fw-bold"><strong>NPK:</strong><span id="npkText"></span></p>
-                        </div>
-                        <div class="col-auto">
-                            <p class="fs-5 fw-bold"><strong>Position:</strong> <span id="positionText"></span></p>
-                        </div>
-                    </div>
-
-                    <div class="table-responsive">
-                        <table class="table table-striped table-bordered align-middle table-hover fs-6"
-                            id="kt_table_assessments" width="100%">
-                            <thead class="table-dark">
-                                <tr>
-                                    <th class="text-center" width="10%">No</th>
-                                    <th class="text-center">Quadran</th>
-                                    <th class="text-center">Date</th>
-                                    <th class="text-center" width="40%">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -371,6 +230,83 @@
 
     <script>
         $(document).ready(function() {
+            // Misal response berisi data hav lengkap, termasuk lastUpload
+            function showCommentHistoryModal(response) {
+                $('#commentHistoryModal').modal('show');
+
+                // Clear sebelumnya
+                $('#commentList').empty();
+
+                // Tampilkan last upload info (jika ada)
+                if (response.lastUpload) {
+                    const date = new Date(response.lastUpload.created_at);
+                    const formattedDate = date.toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+
+                    $('#lastUploadInfo').html(`Last Submit: <strong>${formattedDate}</strong>`);
+
+                    // Update link download dengan havId yg sesuai
+                    $('#btnExportExcel').attr('href', `/hav/download-upload/${response.hav.id}`);
+                } else {
+                    $('#lastUploadInfo').html('No uploads found');
+                    $('#btnExportExcel').attr('href', '#');
+                }
+
+                // Render komentar dst...
+            }
+
+            let pendingHavId = null;
+
+            function setDownloadTemplateLink(employeeId) {
+                    const url = "{{ url('/hav/exportassign') }}/" + employeeId;
+                    $('#downloadTemplateLink').attr('href', url);
+            }
+
+            // Tombol Revisi
+            $(document).on('click', '.btn-revise-import', function () {
+                const havId = $(this).data('hav-id');
+                const employeeId = $(this).data('employee-id');
+
+                $('#havIdInput').val(havId);
+                setDownloadTemplateLink(employeeId);
+            });
+
+            // Tombol + Add
+            $(document).on('click', '.btn-add-import', function () {
+                const employeeId = $(this).data('employee-id');
+                $('#havIdInput').val(''); // tidak bawa HAV ID
+                setDownloadTemplateLink(employeeId);
+            });
+
+                    // Saat tombol Revisi diklik, simpan ID-nya
+                    $(document).on('click', '.btn-revise-import', function() {
+                        pendingHavId = $(this).data('hav-id');
+                        console.log('Clicked Revisi, will set hav_id:', pendingHavId);
+                    });
+
+                    // Setelah modal terbuka penuh, baru set value input
+                    $('#importModal').on('shown.bs.modal', function() {
+                        if (pendingHavId) {
+                            $('#havIdInput').val(pendingHavId);
+                            console.log('HAV ID input set:', pendingHavId);
+                            pendingHavId = null; // reset
+                        }
+                    });
+
+                    // Tombol "+ Add" harus reset isian
+                    $(document).on('click', '#addButton', function() {
+                        $('#havIdInput').val('');
+                        pendingHavId = null;
+                    });
+
+            // Ketika tombol "+ Add" diklik, kosongkan input hidden
+            $('[data-bs-target="#importModal"]').on('click', function() {
+                $('#havIdInput').val('');
+            });
+
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
 
@@ -418,10 +354,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                                                    data-id="${hav.id}"
-                                                                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                                        History
-                                                                                    </a>`}
+                                                                                                                                                                    data-id="${hav.id}"
+                                                                                                                                                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                                                                                                        History
+                                                                                                                                                                    </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>
@@ -527,23 +463,37 @@
                     success: function(response) {
                         console.log("Response received:", response
                             .comment); // Debugging the response
+                        showCommentHistoryModal(response);
 
                         // Check if we have comment history
                         if (response.comment && response.comment.length > 0) {
+                            // Clear existing comments
+                            $("#commentList").empty();
+
                             // Loop through the comments and append them to the modal
                             response.comment.forEach(function(comment) {
-                                console.log("Comment:",
-                                    comment); // Debugging each comment
+                                const date = new Date(comment.created_at);
+                                const formattedDate = new Intl.DateTimeFormat('id-ID', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                }).format(date);
+
                                 let commentHtml = `
-                                    <li class="list-group-item mb-2">
-                                        <strong>${comment.employee.name} :</strong> <br> ${comment.comment}
-                                        <br><small class="text-muted">${comment.created_at}</small><br>
-                                        <a href="{{ Storage::url('${comment.upload}') }}" target="_blank"
-                                        class="fw-bold text-primary text-decoration-underline">View Excel</a>
-                                    </li>
-                                `;
+                                <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
+                                    <div>
+                                        <strong>${comment.employee.name} :</strong><br>
+                                        ${comment.comment}
+                                    </div>
+                                   <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
+                                       <strong> ${formattedDate}</strong>
+                                    </div>
+                                </li>
+                            `;
                                 $("#commentList").append(commentHtml);
                             });
+
+
                         } else {
                             // If no comments found, display a message
                             $("#commentList").append(

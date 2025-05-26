@@ -16,10 +16,12 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 class HavImport implements WithMultipleSheets, WithEvents
 {
     protected $filePath;
+    protected $havId;
 
-    public function __construct($filePath)
+    public function __construct($filePath, $havId = null)
     {
         $this->filePath = $filePath;
+        $this->havId = $havId;
     }
 
     public function sheets(): array
@@ -59,10 +61,25 @@ class HavImport implements WithMultipleSheets, WithEvents
 
                 DB::transaction(function () use ($employee, $year, $comment, $sheet) {
 
-                    $hav = new Hav();
-                    $hav->employee_id = $employee->id;
-                    $hav->status = 0; // 0 = Create
-                    $hav->year = $year;
+                    if ($this->havId) {
+                        // Update HAV existing
+                        $hav = Hav::findOrFail($this->havId);
+                        $hav->status = 0; // reset status ke 'created' saat revisi
+                        $hav->year = $year;
+
+                        // Hapus detail lama
+                        HavDetail::where('hav_id', $hav->id)->delete();
+
+                        // Optional: hapus comment history sebelumnya kalau ingin bersih
+                        // HavCommentHistory::where('hav_id', $hav->id)->delete();
+                    } else {
+                        // Insert baru
+                        $hav = new Hav();
+                        $hav->employee_id = $employee->id;
+                        $hav->status = 0;
+                        $hav->year = $year;
+                    }
+
 
 
                     $scoreMap = [

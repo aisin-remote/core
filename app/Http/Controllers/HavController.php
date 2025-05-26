@@ -78,7 +78,7 @@ class HavController extends Controller
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
 
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
-        }  elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
             $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
                 ->where('id', '!=', $employee->id)
                 ->pluck('id');
@@ -172,9 +172,34 @@ class HavController extends Controller
                 return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
             });
         }
+        $positions = Employee::select('position')->distinct()->pluck('position')->filter()->values();
+        $allPositions = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
 
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
 
-        return view('website.hav.index', compact('orderedHavGrouped', 'titles'));
+        $positionIndex = array_search($currentPosition, $allPositions);
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+        return view('website.hav.index', compact('orderedHavGrouped', 'titles', 'positions', 'visiblePositions'));
     }
 
 
@@ -260,10 +285,10 @@ class HavController extends Controller
                         ->get()
                         ->unique('employee_id')
                         ->values();
-
                 }
             }
         }
+
 
         // Daftar posisi
         $allPositions = [
@@ -294,117 +319,167 @@ class HavController extends Controller
 
         return view('website.hav.list', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }
+
     public function assign(Request $request, $company = null)
     {
-        $title = 'Add Employee';
+        $title = 'Assign HAV';
         $user = auth()->user();
+        $employee = $user->employee;
         $filter = $request->input('filter', 'all');
-        $search = $request->input('search'); // ambil input search dari request
+        $search = $request->input('search');
 
-        // Ambil npk dari query string
-        $npk = $request->query('npk'); // Jika npk ada di query string
-
-        if ($npk) {
-            // Jika ada npk, tampilkan hanya data untuk npk tersebut
-
-            $employees = Hav::with('employee')
-
-                ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
-                    $query->where('npk', $npk); // Filter berdasarkan npk
-                    if ($filter && $filter !== 'all') {
-                        $query->where(function ($q) use ($filter) {
-                            $q->where('position', $filter)
-                                ->orWhere('position', 'like', "Act %{$filter}");
-                        });
-                    }
-                    if ($search) {
-                        $query->where('name', 'like', '%' . $search . '%');
-                    }
-                })
-
-                ->get()
-                ->unique('employee_id')
-                ->values();
-        } else {
-            // Logika untuk HRD atau selain HRD
-            if ($user->role === 'HRD') {
-                $employees = Hav::with('employee')
-                    ->whereHas('employee', function ($query) use ($company, $filter, $search) {
-                        if ($company) {
-                            $query->where('company_name', $company);
-                        }
-                        if ($filter && $filter !== 'all') {
-                            $query->where(function ($q) use ($filter) {
-                                $q->where('position', $filter)
-                                    ->orWhere('position', 'like', "Act %{$filter}");
-                            });
-                        }
-                        if ($search) {
-                            $query->where('name', 'like', '%' . $search . '%');
-                        }
-                    })
-                    ->get()
-                    ->unique('employee_id')
-                    ->values();
-            } else {
-                $employee = Employee::where('user_id', $user->id)->first();
-
-                if (!$employee) {
-                    $employees = collect();
-                } else {
-                    $approvallevel = (auth()->user()->employee->getCreateAuth());
-                    $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
-
-                    $employees = Hav::with('employee')
-                        ->whereIn('employee_id', $subordinate)
-                        ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
-
-                            if ($filter && $filter !== 'all') {
-                                $query->where(function ($q) use ($filter) {
-                                    $q->where('position', $filter)
-                                        ->orWhere('position', 'like', "Act %{$filter}");
-                                });
-                            }
-                            if ($search) {
-                                $query->where('name', 'like', '%' . $search . '%');
-                            }
-                        })
-                        ->get()
-                        ->unique('employee_id')
-                        ->values();
-                }
-            }
-        }
-
-        // Daftar posisi
-        $allPositions = [
-            'Direktur',
-            'GM',
-            'Manager',
-            'Coordinator',
-            'Section Head',
-            'Supervisor',
-            'Leader',
-            'JP',
-            'Operator',
-        ];
-
-        $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
-            : $rawPosition;
-
+        // Posisi yang terlihat
+        $allPositions = ['Direktur', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
+        $rawPosition = $employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ') ? trim(str_replace('Act', '', $rawPosition)) : $rawPosition;
         $positionIndex = array_search($currentPosition, $allPositions);
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
-        }
+        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            : [];
+        // Ambil subordinate berdasarkan level otorisasi
+        $approvallevel = $employee->getCreateAuth();
+        $subordinateIds = $employee->getSubordinatesByLevel($approvallevel)->pluck('id');
+
+        // Ambil semua subordinate (filtered)
+        $subordinates = Employee::whereIn('id', $subordinateIds)
+            ->when($company, fn($q) => $q->where('company_name', $company))
+            ->when($filter && $filter !== 'all', function ($q) use ($filter) {
+                $q->where(function ($sub) use ($filter) {
+                    $sub->where('position', $filter)
+                        ->orWhere('position', 'like', "Act %{$filter}");
+                });
+            })
+            ->when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))
+            ->with(['hav' => function ($q) {
+                $q->orderByDesc('created_at') // urutkan biar first() dapat yang terbaru
+                    ->with(['details', 'commentHistory']);
+            }])
+            ->get();
+        $employees = $subordinates->map(function ($emp) {
+            $latestHav = $emp->hav ? $emp->hav->first() : null;
+            return (object)[
+                'employee' => $emp,
+                'hav' => $latestHav,
+            ];
+        });
 
         return view('website.hav.assign', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }
+
+
+
+
+
+    // public function assign(Request $request, $company = null)
+    // {
+    //     $title = 'Add Employee';
+    //     $user = auth()->user();
+    //     $filter = $request->input('filter', 'all');
+    //     $search = $request->input('search'); // ambil input search dari request
+
+    //     // Ambil npk dari query string
+    //     $npk = $request->query('npk'); // Jika npk ada di query string
+
+    //     if ($npk) {
+    //         // Jika ada npk, tampilkan hanya data untuk npk tersebut
+
+    //         $employees = Hav::with('employee')
+
+    //             ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
+    //                 $query->where('npk', $npk); // Filter berdasarkan npk
+    //                 if ($filter && $filter !== 'all') {
+    //                     $query->where(function ($q) use ($filter) {
+    //                         $q->where('position', $filter)
+    //                             ->orWhere('position', 'like', "Act %{$filter}");
+    //                     });
+    //                 }
+    //                 if ($search) {
+    //                     $query->where('name', 'like', '%' . $search . '%');
+    //                 }
+    //             })
+
+    //             ->get()
+    //             ->unique('employee_id')
+    //             ->values();
+    //     } else {
+    //         // Logika untuk HRD atau selain HRD
+    //         if ($user->role === 'HRD') {
+    //             $employees = Hav::with('employee')
+    //                 ->whereHas('employee', function ($query) use ($company, $filter, $search) {
+    //                     if ($company) {
+    //                         $query->where('company_name', $company);
+    //                     }
+    //                     if ($filter && $filter !== 'all') {
+    //                         $query->where(function ($q) use ($filter) {
+    //                             $q->where('position', $filter)
+    //                                 ->orWhere('position', 'like', "Act %{$filter}");
+    //                         });
+    //                     }
+    //                     if ($search) {
+    //                         $query->where('name', 'like', '%' . $search . '%');
+    //                     }
+    //                 })
+    //                 ->get()
+    //                 ->unique('employee_id')
+    //                 ->values();
+    //         } else {
+    //             $employee = Employee::where('user_id', $user->id)->first();
+
+    //             if (!$employee) {
+    //                 $employees = collect();
+    //             } else {
+    //                 $approvallevel = (auth()->user()->employee->getCreateAuth());
+    //                 $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
+
+    //                 $employees = Hav::with('employee')
+    //                     ->whereIn('employee_id', $subordinate)
+    //                     ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
+
+    //                         if ($filter && $filter !== 'all') {
+    //                             $query->where(function ($q) use ($filter) {
+    //                                 $q->where('position', $filter)
+    //                                     ->orWhere('position', 'like', "Act %{$filter}");
+    //                             });
+    //                         }
+    //                         if ($search) {
+    //                             $query->where('name', 'like', '%' . $search . '%');
+    //                         }
+    //                     })
+    //                     ->get()
+    //                     ->unique('employee_id')
+    //                     ->values();
+    //             }
+    //         }
+    //     }
+
+    //     // Daftar posisi
+    //     $allPositions = [
+    //         'Direktur',
+    //         'GM',
+    //         'Manager',
+    //         'Coordinator',
+    //         'Section Head',
+    //         'Supervisor',
+    //         'Leader',
+    //         'JP',
+    //         'Operator',
+    //     ];
+
+    //     $rawPosition = $user->employee->position ?? 'Operator';
+    //     $currentPosition = Str::contains($rawPosition, 'Act ')
+    //         ? trim(str_replace('Act', '', $rawPosition))
+    //         : $rawPosition;
+
+    //     $positionIndex = array_search($currentPosition, $allPositions);
+    //     if ($positionIndex === false) {
+    //         $positionIndex = array_search('Operator', $allPositions);
+    //     }
+
+    //     $visiblePositions = $positionIndex !== false
+    //         ? array_slice($allPositions, $positionIndex)
+    //         : [];
+
+    //     return view('website.hav.assign', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
+    // }
 
     public function ajaxList(Request $request)
     {
@@ -516,8 +591,9 @@ class HavController extends Controller
      * @param  int  $id
      * @return \Illuminate\Http\Response
      */
-    public function export()
+    public function export(Request $request)
     {
+        $position = $request->input('position');
         $templatePath = public_path('assets/file/HAV_Summary.xls');
         $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
@@ -532,8 +608,11 @@ class HavController extends Controller
             'performanceAppraisalHistories' => function ($q) {
                 $q->orderBy('date');
             }
-        ])->whereHas('havQuadrants')->whereIn('id', $subordinates)->get();
-
+        ])
+            ->whereHas('havQuadrants')
+            ->when($position, fn($q) => $q->where('position', $position)) // filter posisi
+            ->whereIn('id', $subordinates)->get();
+        // dd($employees);
         $startRow = 13;
         $sheet->setCellValue("C6", auth()->user()->employee->name);
         $sheet->setCellValue("C7", date('d-m-Y H:i:s'));
@@ -564,7 +643,7 @@ class HavController extends Controller
             $sheet->setCellValue("C{$row}", $emp->name);
             $sheet->setCellValue("D{$row}", $emp->function);
             $sheet->setCellValue("E{$row}", $emp->division->name); // Divisi
-            $sheet->setCellValue("F{$row}", $emp->departments[0]->name); // Departemen
+            $sheet->setCellValue("F{$row}", $emp->department->name); // Departemen
             $sheet->setCellValue("G{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia
             $sheet->setCellValue("H{$row}", $emp->grade); // Sub Gol
             $sheet->setCellValue("I{$row}", $emp->working_period); // Masa kerja
@@ -645,6 +724,35 @@ class HavController extends Controller
 
         // return Excel::download(new HavSummaryExport, 'HAV_Summary_Exported.xlsx');
     }
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function exportassign($id)
+    {
+        $templatePath = public_path('assets/file/Import-HAV.xls');
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $employees = Employee::with('departments')->find($id);
+        $sheet->setCellValue("C6", $employees->name);
+        $sheet->setCellValue("C7", $employees->npk);
+        $sheet->setCellValue("C8", $employees->grade);
+        $sheet->setCellValue("C9", $employees->company_name);
+        $sheet->setCellValue("C10", $employees->department->name);
+        $sheet->setCellValue("C11", $employees->position);
+        $sheet->setCellValue("C13", date('Y'));
+
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $filename = 'HAV_Template_' . $employees->name . '_' . date('Y') . '.xlsx';
+        $writer->save(public_path($filename));
+
+        return response()->download(public_path($filename))->deleteFileAfterSend(true);
+
+        // return Excel::download(new HavSummaryExport, 'HAV_Summary_Exported.xlsx');
+    }
 
 
     /**
@@ -658,6 +766,7 @@ class HavController extends Controller
         $request->validate([
             'file' => 'required|mimes:xlsx,xls',
         ]);
+        $havId = $request->input('hav_id');
 
         try {
             // Handle file upload here in the controller
@@ -666,7 +775,7 @@ class HavController extends Controller
             $filePath = $file->storeAs('/hav_uploads', $fileName);
 
             // Pass the file path to the import class
-            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport($filePath), $file);
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport($filePath,  $havId), $file);
 
             return back()->with('success', 'Import HAV berhasil.');
         } catch (\Throwable $e) {
@@ -674,30 +783,28 @@ class HavController extends Controller
         }
         return redirect()->back();
     }
-   public function downloadLatestUpload($havId)
-{
-    $latestUpload = DB::table('hav_comment_histories')
-        ->where('hav_id', $havId)
-        ->orderBy('created_at', 'desc')
-        ->first();
+    public function downloadLatestUpload($havId)
+    {
+        $latestUpload = DB::table('hav_comment_histories')
+            ->where('hav_id', $havId)
+            ->orderBy('created_at', 'desc')
+            ->first();
 
-    if (!$latestUpload || !$latestUpload->upload) {
-        return abort(404, 'File upload tidak ditemukan.');
+        if (!$latestUpload || !$latestUpload->upload) {
+            return abort(404, 'File upload tidak ditemukan.');
+        }
+
+        // path yang disimpan di DB, misalnya "hav_uploads/hav_1747960986.xlsx"
+        $filePath = $latestUpload->upload;
+
+        // cek apakah file ada di disk 'local' (storage/app)
+        if (!Storage::disk('local')->exists($filePath)) {
+            return abort(404, 'File tidak ditemukan di storage.');
+        }
+
+        // download file dari disk 'local'
+        return Storage::disk('local')->download($filePath);
     }
-
-    // ambil path upload dari DB, misal "public/hav_uploads/hav_1747706964.xlsx"
-    $filePath = $latestUpload->upload;
-
-    // cek file di disk 'public'
-    if (!Storage::disk('public')->exists(str_replace('public/', '', $filePath))) {
-        return abort(404, 'File tidak ditemukan di storage.');
-    }
-
-    // hapus "public/" dari path sebelum download
-    $downloadPath = str_replace('public/', '', $filePath);
-
-    return Storage::disk('public')->download($downloadPath);
-}
 
     public function approval(Request $request, $company = null)
     {
@@ -710,7 +817,7 @@ class HavController extends Controller
 
         if ($user->role === 'HRD') {
             $employees = Hav::with('employee')
-             ->whereIn('status', [0, 1])
+                ->whereIn('status', [0, 1])
                 ->whereHas('employee', function ($query) use ($company, $filter, $search) {
                     if ($company) {
                         $query->where('company_name', $company);
@@ -739,7 +846,7 @@ class HavController extends Controller
                 $employees = Hav::with('employee')
                     ->select('havs.*', 'havs.status as hav_status')
                     ->whereIn('employee_id', $subordinate)
-                     ->whereIn('status', [0, 1])
+                    ->whereIn('status', [0, 1])
                     ->get();
             }
         }
@@ -747,59 +854,59 @@ class HavController extends Controller
 
         return view('website.approval.hav.index', compact('title', 'employees', 'filter', 'company', 'search'));
     }
-  public function approve(Request $request, $id)
-{
-    $hav = Hav::findOrFail($id);
-    $hav->status = 2;
+    public function approve(Request $request, $id)
+    {
+        $hav = Hav::findOrFail($id);
+        $hav->status = 2;
 
-    $comment = $request->input('comment');
-    $employee = auth()->user()->employee;
+        $comment = $request->input('comment');
+        $employee = auth()->user()->employee;
 
-    $filePath = null;
-    $latestComment = $hav->commentHistory()->latest()->first();
+        $filePath = null;
+        $latestComment = $hav->commentHistory()->latest()->first();
 
-    if ($latestComment && $latestComment->upload) {
-        $filePath = $latestComment->upload; // Jangan pakai public_path
+        if ($latestComment && $latestComment->upload) {
+            $filePath = $latestComment->upload; // Jangan pakai public_path
+        }
+
+        if ($employee) {
+            $hav->commentHistory()->create([
+                'comment' => $comment,
+                'employee_id' => $employee->id,
+                'upload' => $filePath, // Langsung simpan relative path-nya
+            ]);
+        }
+
+        $hav->save();
+        return response()->json(['message' => 'Data berhasil disetujui.']);
     }
 
-    if ($employee) {
-        $hav->commentHistory()->create([
-            'comment' => $comment,
-            'employee_id' => $employee->id,
-            'upload' => $filePath, // Langsung simpan relative path-nya
-        ]);
+    public function reject(Request $request, $id)
+    {
+        $hav = Hav::findOrFail($id);
+        $hav->status = 1;
+
+        $comment = $request->input('comment');
+        $employee = auth()->user()->employee;
+
+        $filePath = null;
+        $latestComment = $hav->commentHistory()->latest()->first();
+
+        if ($latestComment && $latestComment->upload) {
+            $filePath = $latestComment->upload; // Langsung ambil relative path
+        }
+
+        if ($employee) {
+            $hav->commentHistory()->create([
+                'comment' => $comment,
+                'employee_id' => $employee->id,
+                'upload' => $filePath,
+            ]);
+        }
+
+        $hav->save();
+        return response()->json(['message' => 'Data berhasil disetujui.']);
     }
-
-    $hav->save();
-    return response()->json(['message' => 'Data berhasil disetujui.']);
-}
-
-public function reject(Request $request, $id)
-{
-    $hav = Hav::findOrFail($id);
-    $hav->status = 1;
-
-    $comment = $request->input('comment');
-    $employee = auth()->user()->employee;
-
-    $filePath = null;
-    $latestComment = $hav->commentHistory()->latest()->first();
-
-    if ($latestComment && $latestComment->upload) {
-        $filePath = $latestComment->upload; // Langsung ambil relative path
-    }
-
-    if ($employee) {
-        $hav->commentHistory()->create([
-            'comment' => $comment,
-            'employee_id' => $employee->id,
-            'upload' => $filePath,
-        ]);
-    }
-
-    $hav->save();
-    return response()->json(['message' => 'Data berhasil disetujui.']);
-}
 
 
     /**
@@ -890,8 +997,13 @@ public function reject(Request $request, $id)
                 'msg' => 'No comment found for this employee'
             ], 404);
         }
+         $lastUpload = HavCommentHistory::where('hav_id', $hav_id)
+        ->orderByDesc('created_at')
+        ->first();
         return response()->json([
-            'comment' => $hav
+            'comment' => $hav,
+            'lastUpload' => $lastUpload,
+             'hav' => ['id' => $hav_id],
         ]);
     }
 }

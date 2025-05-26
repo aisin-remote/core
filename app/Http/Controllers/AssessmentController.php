@@ -116,7 +116,12 @@ class AssessmentController extends Controller
                     });
                 })
 
-                ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
+                ->when($search, function ($query) use ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('npk', 'like', '%' . $search . '%');
+                    });
+                })
                 ->get();
         } else {
             $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
@@ -134,7 +139,12 @@ class AssessmentController extends Controller
                         });
                     })
 
-                    ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
+                    ->when($search, function ($query) use ($search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('name', 'like', '%' . $search . '%')
+                                ->orWhere('npk', 'like', '%' . $search . '%');
+                        });
+                    })
                     ->get();
             }
         }
@@ -262,7 +272,7 @@ class AssessmentController extends Controller
             ->select('id', 'date',  'description', 'employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
-                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness','suggestion_development')
+                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness', 'suggestion_development')
                     ->with(['alc:id,name']);
             }])
             ->get();
@@ -449,7 +459,7 @@ class AssessmentController extends Controller
     public function edit($id)
     {
         $assessment = Assessment::with('details.alc')->findOrFail($id);
-          \Log::info("DETAILS: ", $assessment->details->toArray()); // Tambah ini
+        \Log::info("DETAILS: ", $assessment->details->toArray()); // Tambah ini
         return response()->json([
             'id' => $assessment->id,
             'employee_id' => $assessment->employee_id,
@@ -467,7 +477,6 @@ class AssessmentController extends Controller
 
             'alc_options' => Alc::select('id', 'name')->get()
         ]);
-
     }
 
 
@@ -476,7 +485,6 @@ class AssessmentController extends Controller
 
         $validated = $request->validate([
             'assessment_id' => 'required|exists:assessments,id',
-            'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
             'description' => 'required|string|max:255',
             'scores' => 'required|array',
@@ -488,7 +496,6 @@ class AssessmentController extends Controller
 
         // **Update tabel `assessments`**
         $assessment = Assessment::findOrFail($request->assessment_id);
-        $assessment->employee_id = $request->employee_id;
         $assessment->date = $request->date;
         $assessment->description = $request->description;
 
