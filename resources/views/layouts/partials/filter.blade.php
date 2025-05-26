@@ -27,9 +27,9 @@
                     data-bs-target="#addPlanModal" data-id="{{ $item->id }}">
                     <i class="fas fa-plus-circle"></i>
                 </a>
-                <a href="#" class="btn btn-sm btn-warning" title="Export">
+                {{-- <a href="#" class="btn btn-sm btn-warning" title="Export">
                     <i class="fas fa-upload"></i>
-                </a>
+                </a> --}}
             </td>
         </tr>
     @endforeach
