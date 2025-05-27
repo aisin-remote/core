@@ -1,20 +1,15 @@
 @extends('layouts.root.main')
 
-@section('title')
-    {{ $title ?? 'Approval' }}
-@endsection
-
-@section('breadcrumbs')
-    {{ $title ?? 'Approval' }}
-@endsection
+@section('title', $title ?? 'Approval')
+@section('breadcrumbs', $title ?? 'Approval')
 
 @section('main')
-    @if (session()->has('success'))
+    @if (session('success'))
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
+            document.addEventListener("DOMContentLoaded", () => {
                 Swal.fire({
                     title: "Sukses!",
-                    text: "{{ session('success') }}",
+                    text: @json(session('success')),
                     icon: "success",
                     confirmButtonText: "OK"
                 });
@@ -54,9 +49,7 @@
                     </thead>
                     <tbody>
                         @forelse($groupedIdps as $employeeId => $employeeIdps)
-                            @php
-                                $employee = $employeeIdps->first()->assessment->employee;
-                            @endphp
+                            @php $employee = $employeeIdps->first()->assessment->employee; @endphp
                             <tr>
                                 <td>{{ $no++ }}</td>
                                 <td>{{ $employee->npk ?? '-' }}</td>
@@ -64,14 +57,13 @@
                                 <td>{{ $employee->department?->name ?? '-' }}</td>
                                 <td>{{ $employee->position ?? '-' }}</td>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-warning btn-export"
+                                    <button class="btn btn-sm btn-warning"
                                         onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $employee->id]) }}'">
                                         <i class="fas fa-upload"></i>
                                     </button>
                                     <button class="btn btn-sm btn-info btn-toggle-accordion"
                                         data-employee-id="{{ $employeeId }}"
-                                        data-bs-target="#collapse{{ $employeeId }}" aria-expanded="false"
-                                        aria-controls="collapse{{ $employeeId }}">
+                                        data-bs-target="#collapse{{ $employeeId }}">
                                         <i class="fas fa-eye"></i>
                                     </button>
                                 </td>
@@ -79,23 +71,22 @@
 
                             <tr id="collapse{{ $employeeId }}" class="accordion-collapse collapse"
                                 data-bs-parent="#kt_table_users">
-                                <td colspan="7">
-                                    <div class="accordion accordion-icon-toggle" id="accordionFlush{{ $employeeId }}">
+                                <td colspan="6">
+                                    <div class="accordion accordion-flush" id="accordionFlush{{ $employeeId }}">
                                         @foreach ($employeeIdps as $index => $idp)
                                             <div class="accordion-item">
                                                 <h2 class="accordion-header"
                                                     id="flush-heading{{ $employeeId }}-{{ $index }}">
-                                                    <button class="accordion-button collapsed" type="button"
-                                                        data-bs-toggle="collapse"
-                                                        data-bs-target="#flush-collapse{{ $employeeId }}-{{ $index }}"
-                                                        aria-expanded="false"
-                                                        aria-controls="flush-collapse{{ $employeeId }}-{{ $index }}">
-                                                        {{ $idp->category }} - {{ $idp->development_program }}
-                                                    </button>
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <button type="button"
+                                                            class="accordion-button collapsed bg-light text-primary"
+                                                            onclick="toggleAccordion('flush-collapse{{ $employeeId }}-{{ $index }}')">
+                                                            {{ $idp->category }} - {{ $idp->development_program }}
+                                                        </button>
+                                                    </div>
                                                 </h2>
                                                 <div id="flush-collapse{{ $employeeId }}-{{ $index }}"
                                                     class="accordion-collapse collapse"
-                                                    aria-labelledby="flush-heading{{ $employeeId }}-{{ $index }}"
                                                     data-bs-parent="#accordionFlush{{ $employeeId }}">
                                                     <div class="accordion-body">
                                                         <table class="table table-sm">
@@ -118,17 +109,14 @@
                                                                 </tr>
                                                                 <tr>
                                                                     <td><strong>Score:</strong></td>
-                                                                    <td>
-                                                                        <span class="badge badge-danger">2</span>
-                                                                    </td>
+                                                                    <td><span class="badge badge-danger">2</span></td>
                                                                 </tr>
                                                             </tbody>
                                                         </table>
 
-                                                        <!-- Tombol Approve per IDP -->
                                                         <button class="btn btn-sm btn-danger btn-revise"
                                                             data-id="{{ $idp->id }}">
-                                                            <i class="fas fa-edit"></i>Revise
+                                                            <i class="fas fa-edit"></i> Revise
                                                         </button>
                                                         <button class="btn btn-sm btn-success btn-approve"
                                                             data-idp-id="{{ $idp->id }}">
@@ -155,33 +143,33 @@
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <!-- In your layout file -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        $(document).ready(function() {
-            // Let Bootstrap handle all accordion toggles automatically
+        function toggleAccordion(id) {
+            const el = document.getElementById(id);
+            if (el.classList.contains('show')) {
+                bootstrap.Collapse.getInstance(el)?.hide();
+            } else {
+                new bootstrap.Collapse(el);
+            }
+        }
 
-            // Only keep your custom functionality
-            $('.btn-approve').click(function() {
-                var idpId = $(this).data('idp-id');
-                console.log('Approved IDP ID: ' + idpId);
-                // Your approval logic here
-            });
-
-            // Update the toggle button to use Bootstrap's native functionality
-            $('.btn-toggle-accordion').each(function() {
-                $(this).attr({
-                    'data-bs-toggle': 'collapse',
-                    'aria-expanded': 'false'
+        document.addEventListener('DOMContentLoaded', () => {
+            // Toggle accordion
+            document.querySelectorAll('.btn-toggle-accordion').forEach(button => {
+                button.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-bs-target');
+                    const row = document.querySelector(targetId);
+                    document.querySelectorAll('.accordion-collapse').forEach(el => el.classList
+                        .remove('show'));
+                    row.classList.add('show');
                 });
             });
-        });
 
-        document.addEventListener('DOMContentLoaded', function() {
+            // Approve button
             document.querySelectorAll('.btn-approve').forEach(button => {
-                button.addEventListener('click', function() {
-                    const id = this.getAttribute('data-idp-id');
-                    console.log(id)
+                button.addEventListener('click', () => {
+                    const id = button.dataset.idpId;
 
                     Swal.fire({
                         title: 'Approve this data?',
@@ -192,9 +180,17 @@
                         cancelButtonColor: '#d33',
                         confirmButtonText: 'Yes, approve it!',
                         cancelButtonText: 'Cancel'
-                    }).then((result) => {
+                    }).then(result => {
                         if (result.isConfirmed) {
-                            fetch(`idp/${id}`)
+                            fetch(`idp/${id}`, {
+                                    method: 'PATCH',
+                                    headers: {
+                                        'X-CSRF-TOKEN': document.querySelector(
+                                            'meta[name="csrf-token"]').getAttribute(
+                                            'content')
+                                    }
+                                })
+                                .then(response => response.json())
                                 .then(data => {
                                     Swal.fire({
                                         title: 'Approved!',
@@ -204,16 +200,9 @@
                                         timer: 1500,
                                         showConfirmButton: false
                                     });
-
-                                    // Reload page setelah 1.5 detik (selesai swal)
-                                    setTimeout(() => {
-                                        location.reload();
-                                    }, 1500);
-
-                                    // Optional: refresh data, disable button, etc.
+                                    setTimeout(() => location.reload(), 1500);
                                 })
-                                .catch(error => {
-                                    console.log('Error:', error);
+                                .catch(() => {
                                     Swal.fire('Error!', 'Something went wrong.',
                                         'error');
                                 });
@@ -222,9 +211,9 @@
                 });
             });
 
-
+            // Revise button
             document.querySelectorAll('.btn-revise').forEach(button => {
-                button.addEventListener('click', function() {
+                button.addEventListener('click', () => {
                     Swal.fire({
                         title: 'Enter reason for revision',
                         input: 'textarea',
@@ -232,22 +221,17 @@
                         showCancelButton: true,
                         confirmButtonText: 'Submit',
                         cancelButtonText: 'Cancel',
-                        inputValidator: (value) => {
-                            if (!value) return 'You need to write something!';
-                        }
-                    }).then((result) => {
+                        inputValidator: value => !value ? 'You need to write something!' :
+                            null
+                    }).then(result => {
                         if (result.isConfirmed) {
+                            const id = button.dataset.id;
                             const revisionReason = result.value;
-                            const id = this.dataset
-                                .id; // Ambil ID dari atribut data-id pada tombol
 
-                            // Tampilkan pesan loading
                             Swal.fire({
                                 title: 'Submitting...',
                                 allowOutsideClick: false,
-                                didOpen: () => {
-                                    Swal.showLoading();
-                                }
+                                didOpen: () => Swal.showLoading()
                             });
 
                             fetch('idp/revise', {
@@ -259,11 +243,11 @@
                                             'content')
                                     },
                                     body: JSON.stringify({
-                                        id: id,
+                                        id,
                                         comment: revisionReason
                                     })
                                 })
-                                .then(response => response.json())
+                                .then(res => res.json())
                                 .then(data => {
                                     Swal.fire({
                                         title: 'Revised!',
@@ -272,19 +256,11 @@
                                         timer: 2000,
                                         showConfirmButton: false
                                     });
-
-                                    // Reload page setelah 1.5 detik (selesai swal)
-                                    setTimeout(() => {
-                                        location.reload();
-                                    }, 1500);
+                                    setTimeout(() => location.reload(), 1500);
                                 })
-                                .catch(error => {
-                                    Swal.fire({
-                                        title: 'Error!',
-                                        text: 'Something went wrong.',
-                                        icon: 'error'
-                                    });
-                                    console.error(error);
+                                .catch(() => {
+                                    Swal.fire('Error!', 'Something went wrong.',
+                                        'error');
                                 });
                         }
                     });

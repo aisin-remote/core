@@ -173,8 +173,33 @@ class HavController extends Controller
             });
         }
         $positions = Employee::select('position')->distinct()->pluck('position')->filter()->values();
+        $allPositions = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
 
-        return view('website.hav.index', compact('orderedHavGrouped', 'titles', 'positions'));
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        $positionIndex = array_search($currentPosition, $allPositions);
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+        return view('website.hav.index', compact('orderedHavGrouped', 'titles', 'positions', 'visiblePositions'));
     }
 
 
@@ -692,6 +717,35 @@ class HavController extends Controller
 
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
         $filename = 'HAV_Summary_Exported.xlsx';
+        $writer->save(public_path($filename));
+
+        return response()->download(public_path($filename))->deleteFileAfterSend(true);
+
+        // return Excel::download(new HavSummaryExport, 'HAV_Summary_Exported.xlsx');
+    }
+    /**
+     * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\Response
+     */
+    public function exportassign($id)
+    {
+        $templatePath = public_path('assets/file/Import-HAV.xls');
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $employees = Employee::with('departments')->find($id);
+        $sheet->setCellValue("C6", $employees->name);
+        $sheet->setCellValue("C7", $employees->npk);
+        $sheet->setCellValue("C8", $employees->grade);
+        $sheet->setCellValue("C9", $employees->company_name);
+        $sheet->setCellValue("C10", $employees->department->name);
+        $sheet->setCellValue("C11", $employees->position);
+        $sheet->setCellValue("C13", date('Y'));
+
+        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+        $filename = 'HAV_Template_' . $employees->name . '_' . date('Y') . '.xlsx';
         $writer->save(public_path($filename));
 
         return response()->download(public_path($filename))->deleteFileAfterSend(true);

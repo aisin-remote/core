@@ -19,10 +19,6 @@
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
-                    <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="fas fa-upload"></i>
-                        + Add
-                    </button>
                     {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
                         data-bs-target="#kt_modal_create_app">
                         <i class="fas fa-upload"></i>
@@ -89,21 +85,27 @@
                                 <td class="text-center">
 
                                     @if ($item->hav)
-
-                                        @if (optional($item->hav)->status == 1)
-                                            <a href="#" class="btn btn-warning btn-sm btn-revise-import"
-                                                data-bs-toggle="modal" data-bs-target="#importModal"
-                                                data-hav-id="{{ $item->hav->id }}">
-                                                <i class="fas fa-upload"></i> Revise
-                                            </a>
-                                        @endif
+                                        <a href="#" 
+                                            class="btn btn-warning btn-sm btn-revise-import"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#importModal"
+                                            data-hav-id="{{ $item->hav->id }}"
+                                            data-employee-id="{{ $item->employee->id }}">
+                                            <i class="fas fa-upload"></i> Revise
+                                        </a>
 
                                         <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment"
                                             href="#">
                                             Comment
                                         </a>
                                     @else
-                                        {{-- <a href="#" class="btn btn-success btn-sm"><i class="fas fa-upload"></i> Import</a> --}}
+                                        
+                                        <a href="#" class="btn btn-info btn-sm btn-add-import"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#importModal"
+                                            data-employee-id="{{ $item->employee->id }}">
+                                            <i class="fas fa-upload"></i> + Add
+                                        </a>
                                     @endif
                                 </td>
                             </tr>
@@ -170,8 +172,12 @@
                         <div class="alert alert-info small">
                             <strong>Petunjuk:</strong> Gunakan format Excel yang sudah ditentukan.<br>
                             Download template format import:
-                            <a href="{{ asset('assets/file/Import-HAV.xlsx') }}" target="_blank"
-                                class="fw-bold text-primary text-decoration-underline">Download Template</a>
+                            <a href="#" target="_blank"
+                                id="downloadTemplateLink"
+                                
+                                class="fw-bold text-primary text-decoration-underline">
+                                Download Template
+                                </a>
                         </div>
 
                         <div class="text-end">
@@ -252,29 +258,49 @@
                 // Render komentar dst...
             }
 
-
             let pendingHavId = null;
 
-            // Saat tombol Revisi diklik, simpan ID-nya
-            $(document).on('click', '.btn-revise-import', function() {
-                pendingHavId = $(this).data('hav-id');
-                console.log('Clicked Revisi, will set hav_id:', pendingHavId);
+            function setDownloadTemplateLink(employeeId) {
+                    const url = "{{ url('/hav/exportassign') }}/" + employeeId;
+                    $('#downloadTemplateLink').attr('href', url);
+            }
+
+            // Tombol Revisi
+            $(document).on('click', '.btn-revise-import', function () {
+                const havId = $(this).data('hav-id');
+                const employeeId = $(this).data('employee-id');
+
+                $('#havIdInput').val(havId);
+                setDownloadTemplateLink(employeeId);
             });
 
-            // Setelah modal terbuka penuh, baru set value input
-            $('#importModal').on('shown.bs.modal', function() {
-                if (pendingHavId) {
-                    $('#havIdInput').val(pendingHavId);
-                    console.log('HAV ID input set:', pendingHavId);
-                    pendingHavId = null; // reset
-                }
+            // Tombol + Add
+            $(document).on('click', '.btn-add-import', function () {
+                const employeeId = $(this).data('employee-id');
+                $('#havIdInput').val(''); // tidak bawa HAV ID
+                setDownloadTemplateLink(employeeId);
             });
 
-            // Tombol "+ Add" harus reset isian
-            $(document).on('click', '#addButton', function() {
-                $('#havIdInput').val('');
-                pendingHavId = null;
-            });
+                    // Saat tombol Revisi diklik, simpan ID-nya
+                    $(document).on('click', '.btn-revise-import', function() {
+                        pendingHavId = $(this).data('hav-id');
+                        console.log('Clicked Revisi, will set hav_id:', pendingHavId);
+                    });
+
+                    // Setelah modal terbuka penuh, baru set value input
+                    $('#importModal').on('shown.bs.modal', function() {
+                        if (pendingHavId) {
+                            $('#havIdInput').val(pendingHavId);
+                            console.log('HAV ID input set:', pendingHavId);
+                            pendingHavId = null; // reset
+                        }
+                    });
+
+                    // Tombol "+ Add" harus reset isian
+                    $(document).on('click', '#addButton', function() {
+                        $('#havIdInput').val('');
+                        pendingHavId = null;
+                    });
 
             // Ketika tombol "+ Add" diklik, kosongkan input hidden
             $('[data-bs-target="#importModal"]').on('click', function() {

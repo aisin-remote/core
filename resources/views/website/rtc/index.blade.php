@@ -95,10 +95,10 @@
                                                 data-bs-target="#addPlanModal">
                                                 <i class="fas fa-plus-circle"></i>
                                             </a>
-                                            <a href="{{ asset('assets/file/' . $file) }}" class="btn btn-sm btn-warning"
+                                            {{-- <a href="{{ asset('assets/file/' . $file) }}" class="btn btn-sm btn-warning"
                                                 title="Export" download>
                                                 <i class="fas fa-upload"></i>
-                                            </a>
+                                            </a> --}}
                                         </td>
                                     </tr>
                                 @empty

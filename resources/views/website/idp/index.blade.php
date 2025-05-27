@@ -114,6 +114,7 @@
                                             @foreach ($alcs as $id => $title)
                                                 <th class="text-center" style="width: 100px">{{ $title }}</th>
                                             @endforeach
+                                            <th class="text-center" style="width: 150px">Status</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -157,6 +158,63 @@
                                                             'id',
                                                             auth()->user()->employee->id,
                                                         );
+
+                                                        $emp = [];
+                                                        foreach ($assessment->details as $assessmentDetail) {
+                                                            if ($assessmentDetail->score < 3) {
+                                                                $emp[$assessment->employee_id][] = [
+                                                                    'assessment_id' => $assessmentDetail->assessment_id,
+                                                                    'alc_id' => $assessmentDetail->alc_id,
+                                                                    'alc_name' =>
+                                                                        $assessmentDetail->alc->name ?? 'Unknown',
+                                                                ];
+                                                            }
+                                                        }
+
+                                                        $status = 'approved';
+
+                                                        foreach ($assessment->details as $detail) {
+                                                            if ($detail->score < 3) {
+                                                                $idp = \App\Models\Idp::where(
+                                                                    'assessment_id',
+                                                                    $detail->assessment_id,
+                                                                )
+                                                                    ->where('alc_id', $detail->alc_id)
+                                                                    ->first();
+
+                                                                if (!$idp) {
+                                                                    $status = 'not_created';
+                                                                    break;
+                                                                } elseif ($idp->status === 0) {
+                                                                    $status = 'draft';
+                                                                    break;
+                                                                } elseif ($idp->status === 1 && $status !== 'draft') {
+                                                                    $status = 'waiting';
+                                                                } elseif (
+                                                                    $idp->status === 2 &&
+                                                                    !in_array($status, [
+                                                                        'not_created',
+                                                                        'draft',
+                                                                        'waiting',
+                                                                    ])
+                                                                ) {
+                                                                    $status = 'checked';
+                                                                }
+                                                            }
+                                                        }
+
+                                                        $badges = [
+                                                            'not_created' => [
+                                                                'text' => 'Not Created',
+                                                                'color' => '#212529',
+                                                            ], // dark (Bootstrap dark is #212529)
+                                                            'draft' => ['text' => 'Draft', 'color' => '#6c757d'], // secondary
+                                                            'waiting' => ['text' => 'Checking', 'color' => '#ffc107'], // warning
+                                                            'checked' => ['text' => 'Checked', 'color' => '#0dcaf0'], // info
+                                                            'approved' => ['text' => 'Approved', 'color' => '#198754'], // success
+                                                        ];
+                                                        $badge = $badges[$status] ?? $badges['approved'];
+
                                                     @endphp
                                                     <td class="text-center">
                                                         @if ($score >= 3 || $score === '-')
@@ -178,6 +236,23 @@
                                                         @endif
                                                     </td>
                                                 @endforeach
+                                                <td class="text-center">
+                                                    <span
+                                                        style="
+                                                            min-width: 90px;
+                                                            display: inline-block;
+                                                            padding: 0.75rem;
+                                                            text-align: center;
+                                                            font-size: 0.85rem;
+                                                            font-weight: 600;
+                                                            border-radius: 0.375rem;
+                                                            white-space: nowrap;
+                                                            border: 2px solid {{ $badge['color'] }};
+                                                            color: {{ $badge['color'] }};
+                                                        ">
+                                                        {{ $badge['text'] }}
+                                                    </span>
+                                                </td>
                                                 <td class="text-center" style="width: 50px">
                                                     <div class="d-flex gap-2 justify-content-center">
                                                         <button type="button" class="btn btn-sm btn-primary"
@@ -224,21 +299,26 @@
                                 </table>
                             </div>
                             <div class="d-flex justify-content-between">
-                                @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator && $assessments->count())
+                                @if ($assessments->count())
                                     <span>
-                                        Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
-                                        {{ $assessments->total() }} entries
+                                        @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                                            Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
+                                            {{ $assessments->total() }} entries
+                                        @else
+                                            Showing all {{ $assessments->count() }} entries
+                                        @endif
                                     </span>
-                                    {{ $assessments->links('pagination::bootstrap-5') }}
+                                    @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                                        {{ $assessments->links('pagination::bootstrap-5') }}
+                                    @endif
                                 @else
                                     <span>No data found.</span>
                                 @endif
                             </div>
-
                         </div>
                     @endforeach
                 </div>
-                <div class="d-flex align-items-center gap-4 mt-3">
+                <div class="d-flex align-items-center gap-4 mt-5">
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
                         <span class="ms-2 text-muted">Below Standard</span>
@@ -270,16 +350,9 @@
                                     @php
                                         set_time_limit(60);
                                         $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
-                                        $idp = DB::table('idp')
+                                        $idp = \App\Models\Idp::with('commentHistory')
                                             ->where('assessment_id', $assessment->id)
                                             ->where('alc_id', $id)
-                                            ->select(
-                                                'id',
-                                                'category',
-                                                'development_program',
-                                                'development_target',
-                                                'date',
-                                            )
                                             ->first();
 
                                         $assessment_detail_id = null;
@@ -288,6 +361,7 @@
                                                 $assessment_detail_id = $detail->id;
                                             }
                                         }
+
                                     @endphp
 
                                     <div class="modal-body scroll-y mx-2 mt-5">
@@ -390,26 +464,25 @@
                                                 <hr>
                                             </div>
 
-                                            <div class="col-lg-12 fv-row mb-5">
-                                                <label class="fs-5 fw-bold form-label mb-2 required">Comment
-                                                    History</label>
-                                                @foreach ($idps as $idp)
-                                                    @if (!$idp->commentHistory->isEmpty())
-                                                        @foreach ($idp->commentHistory as $comment)
-                                                            <div class="border rounded p-3 mb-3 bg-light">
-                                                                <div class="fw-semibold mb-2">
-                                                                    {{ $comment->employee->name ?? 'Unknown Employee' }} —
-                                                                    <small
-                                                                        class="text-muted">{{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}</small>
-                                                                </div>
-                                                                <div class="text-muted fst-italic">
-                                                                    {{ $comment->comment }}
-                                                                </div>
+                                            @if ($idp && $idp->commentHistory && $idp->commentHistory->isNotEmpty())
+                                                <div class="col-lg-12 fv-row mb-5">
+                                                    <label class="fs-5 fw-bold form-label mb-2">Comment
+                                                        History</label>
+                                                    @foreach ($idp->commentHistory as $comment)
+                                                        <div class="border rounded p-3 mb-3 bg-light">
+                                                            <div class="fw-semibold mb-2">
+                                                                {{ $comment->employee->name ?? 'Unknown Employee' }} —
+                                                                <small class="text-muted">
+                                                                    {{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}
+                                                                </small>
                                                             </div>
-                                                        @endforeach
-                                                    @endif
-                                                @endforeach
-                                            </div>
+                                                            <div class="text-muted fst-italic">
+                                                                {{ $comment->comment }}
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
 
                                             <div class="text-center pt-15">
                                                 <button type="button"
