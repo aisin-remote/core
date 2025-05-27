@@ -107,81 +107,8 @@ class EmployeeController extends Controller
         $user = auth()->user();
         $search = $request->input('search');
         $filter = $request->input('filter', 'all'); // Menambahkan filter, default 'all'
-
-        if ($user->role === 'HRD') {
-            // HRD bisa mencari berdasarkan beberapa kolom, termasuk company_name
-            $employees = Employee::with([
-                'subSection.section.department',
-                'leadingSection.department',
-                'leadingDepartment.division'
-            ])
-            ->when($company, fn($query) => $query->where('company_name', $company))  // Filter berdasarkan perusahaan yang sedang diakses
-            ->when($search, function ($query, $search) {
-                $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
-                      ->orWhere('npk', 'like', "%{$search}%")
-                      ->orWhere('company_name', 'like', "%{$search}%");  // Pencarian di seluruh kolom
-                });
-            })
-            ->when($filter && $filter != 'all', function ($query) use ($filter) {
-                $query->where(function ($q) use ($filter) {
-                    $q->where('position', $filter)
-                      ->orWhere('position', 'like', "Act %{$filter}");
-                });
-            })
-
-            ->paginate(10)
-            ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
-
-        } else {
-            // Untuk user biasa (misalnya Supervisor), pencarian hanya berlaku untuk 'company_name' yang terkait
-            $employee = Employee::with([
-                'subSection.section.department.division.plant',
-                'leadingSection.department.division.plant',
-                'leadingDepartment.division.plant'
-            ])
-            ->where('user_id', $user->id)
-            ->first();
-
-            if (!$employee) {
-                $employees = collect();
-            } else {
-                $query = $this->getSubordinatesFromStructure($employee);
-
-                if ($query instanceof \Illuminate\Database\Eloquent\Builder) {
-                    // Pastikan hanya pencarian berdasarkan company_name yang relevan
-                    if ($search) {
-                        $query->where(function ($q) use ($search, $employee) {
-                            $q->where('company_name', $employee->company_name)  // Batasi pencarian hanya dalam company_name yang sama dengan user
-                              ->where(function ($q2) use ($search) {
-                                  $q2->where('name', 'like', "%{$search}%")
-                                      ->orWhere('npk', 'like', "%{$search}%");
-                              });
-                        });
-                    }
-
-                    // Filter posisi jika diperlukan
-                    if ($filter && $filter != 'all') {
-                        $query->where(function ($q) use ($filter) {
-                            $q->where('position', $filter)
-                              ->orWhere('position', 'like', "Act %{$filter}");
-                        });
-                    }
-
-
-                    // Paginate hasil
-                    $employees = $query->paginate(10)->appends([
-                        'search' => $search,
-                        'filter' => $filter,
-                        'company' => $company
-                    ]);
-                } else {
-                    $employees = collect();
-                }
-            }
-        }
-
         $allPositions = [
+            'President',
             'Direktur',
             'GM',
             'Manager',
@@ -211,7 +138,116 @@ class EmployeeController extends Controller
             ? array_slice($allPositions, $positionIndex)
             : [];
 
-        return view('website.employee.index', compact('employees', 'title', 'filter', 'company','visiblePositions'));
+        if ($user->role === 'HRD') {
+            // HRD bisa mencari berdasarkan beberapa kolom, termasuk company_name
+            $employees = Employee::with([
+                'subSection.section.department',
+                'leadingSection.department',
+                'leadingDepartment.division'
+            ])
+                ->when($company, fn($query) => $query->where('company_name', $company))  // Filter berdasarkan perusahaan yang sedang diakses
+                ->where(function ($q) use ($visiblePositions) {
+                    foreach ($visiblePositions as $pos) {
+                        $q->orWhere('position', $pos)
+                            ->orWhere('position', 'like', "Act %{$pos}");
+                    }
+                })
+                ->when($search, function ($query, $search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%")
+                            ->orWhere('npk', 'like', "%{$search}%")
+                            ->orWhere('company_name', 'like', "%{$search}%");  // Pencarian di seluruh kolom
+                    });
+                })
+                ->when($filter && $filter != 'all', function ($query) use ($filter) {
+                    $query->where(function ($q) use ($filter) {
+                        $q->where('position', $filter)
+                            ->orWhere('position', 'like', "Act %{$filter}");
+                    });
+                })
+
+                ->paginate(10)
+                ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
+        } else {
+            // Untuk user biasa (misalnya Supervisor), pencarian hanya berlaku untuk 'company_name' yang terkait
+            $employee = Employee::with([
+                'subSection.section.department.division.plant',
+                'leadingSection.department.division.plant',
+                'leadingDepartment.division.plant'
+            ])
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$employee) {
+                $employees = collect();
+            } else {
+                $query = $this->getSubordinatesFromStructure($employee);
+
+                if ($query instanceof \Illuminate\Database\Eloquent\Builder) {
+                    // Pastikan hanya pencarian berdasarkan company_name yang relevan
+                    if ($search) {
+                        $query->where(function ($q) use ($search, $employee) {
+                            $q->where('company_name', $employee->company_name)  // Batasi pencarian hanya dalam company_name yang sama dengan user
+                                ->where(function ($q2) use ($search) {
+                                    $q2->where('name', 'like', "%{$search}%")
+                                        ->orWhere('npk', 'like', "%{$search}%");
+                                });
+                        });
+                    }
+
+                    // Filter posisi jika diperlukan
+                    if ($filter && $filter != 'all') {
+                        $query->where(function ($q) use ($filter) {
+                            $q->where('position', $filter)
+                                ->orWhere('position', 'like', "Act %{$filter}");
+                        });
+                    }
+
+
+                    // Paginate hasil
+                    $employees = $query->paginate(10)->appends([
+                        'search' => $search,
+                        'filter' => $filter,
+                        'company' => $company
+                    ]);
+                } else {
+                    $employees = collect();
+                }
+            }
+        }
+
+        $allPositions = [
+            'President',
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        // Cari index posisi saat ini
+        $positionIndex = array_search($currentPosition, $allPositions);
+
+        // Fallback jika tidak ditemukan
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        // Ambil posisi di bawahnya (tanpa posisi user)
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+        return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions'));
     }
 
 
@@ -354,31 +390,31 @@ class EmployeeController extends Controller
                     'roles' => ['act leader', 'leader'],
                     'update' => fn() => $validatedData['sub_section_id'] &&
                         DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                            ->update(['leader_id' => $employee->id]),
+                        ->update(['leader_id' => $employee->id]),
                 ],
                 'section' => [
                     'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
                     'update' => fn() => $validatedData['section_id'] &&
                         DB::table('sections')->where('id', $validatedData['section_id'])
-                            ->update(['supervisor_id' => $employee->id]),
+                        ->update(['supervisor_id' => $employee->id]),
                 ],
                 'department' => [
                     'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
                     'update' => fn() => $validatedData['department_id'] &&
                         DB::table('departments')->where('id', $validatedData['department_id'])
-                            ->update(['manager_id' => $employee->id]),
+                        ->update(['manager_id' => $employee->id]),
                 ],
                 'division' => [
                     'roles' => ['act gm', 'gm'],
                     'update' => fn() => $validatedData['division_id'] &&
                         DB::table('divisions')->where('id', $validatedData['division_id'])
-                            ->update(['gm_id' => $employee->id]),
+                        ->update(['gm_id' => $employee->id]),
                 ],
                 'plant' => [
                     'roles' => ['director'],
                     'update' => fn() => $validatedData['plant_id'] &&
                         DB::table('plants')->where('id', $validatedData['plant_id'])
-                            ->update(['director_id' => $employee->id]),
+                        ->update(['director_id' => $employee->id]),
                 ],
             ];
 
@@ -392,8 +428,15 @@ class EmployeeController extends Controller
 
             // Role yang butuh dibuatkan user
             $userRoles = [
-                'manager', 'act manager', 'act supervisor', 'act section head',
-                'supervisor', 'section head', 'act gm', 'gm', 'director'
+                'manager',
+                'act manager',
+                'act supervisor',
+                'act section head',
+                'supervisor',
+                'section head',
+                'act gm',
+                'gm',
+                'director'
             ];
 
             if (in_array($pos, $userRoles)) {
@@ -575,7 +618,7 @@ class EmployeeController extends Controller
         $plants = Plant::all();
         $sections = Section::all();
         $subSections = SubSection::all();
-        return view('website.employee.update', compact('employee','positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
+        return view('website.employee.update', compact('employee', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
     }
 
     public function update(Request $request, $npk)
@@ -689,31 +732,31 @@ class EmployeeController extends Controller
                         'roles' => ['act leader', 'leader'],
                         'update' => fn() => $validatedData['sub_section_id'] &&
                             DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                                ->update(['leader_id' => $employee->id]),
+                            ->update(['leader_id' => $employee->id]),
                     ],
                     'section' => [
                         'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
                         'update' => fn() => $validatedData['section_id'] &&
                             DB::table('sections')->where('id', $validatedData['section_id'])
-                                ->update(['supervisor_id' => $employee->id]),
+                            ->update(['supervisor_id' => $employee->id]),
                     ],
                     'department' => [
                         'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
                         'update' => fn() => $validatedData['department_id'] &&
                             DB::table('departments')->where('id', $validatedData['department_id'])
-                                ->update(['manager_id' => $employee->id]),
+                            ->update(['manager_id' => $employee->id]),
                     ],
                     'division' => [
                         'roles' => ['act gm', 'gm'],
                         'update' => fn() => $validatedData['division_id'] &&
                             DB::table('divisions')->where('id', $validatedData['division_id'])
-                                ->update(['gm_id' => $employee->id]),
+                            ->update(['gm_id' => $employee->id]),
                     ],
                     'plant' => [
                         'roles' => ['director'],
                         'update' => fn() => $validatedData['plant_id'] &&
                             DB::table('plants')->where('id', $validatedData['plant_id'])
-                                ->update(['director_id' => $employee->id]),
+                            ->update(['director_id' => $employee->id]),
                     ],
                 ];
 
@@ -1139,7 +1182,7 @@ class EmployeeController extends Controller
         }
     }
 
-     public function promotionUpdate(Request $request, $id)
+    public function promotionUpdate(Request $request, $id)
     {
         $experience = PromotionHistory::findOrFail($id);
 

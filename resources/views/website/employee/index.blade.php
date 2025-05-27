@@ -33,10 +33,6 @@
                             <i class="fas fa-search"></i> Search
                         </button>
 
-                        <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                            data-kt-menu-placement="bottom-end">
-                            <i class="fas fa-filter"></i> Filter
-                        </button>
                     </form>
                 </div>
             </div>
@@ -122,7 +118,13 @@
                 <div class="d-flex justify-content-end mt-4">
                     {{ $employees->links('pagination::bootstrap-5') }}
                 </div>
+                <div class="d-flex justify-content-between">
+                    <small class="text-muted fw-bold">
+                        Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
+                    </small>
+                </div>
             </div>
+
 
         </div>
     </div>

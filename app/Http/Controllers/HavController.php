@@ -916,7 +916,13 @@ class HavController extends Controller
      */
     public function show($id)
     {
-        $employee = Employee::with('hav', 'hav.details')->find($id);
+        $employee = Employee::with([
+            'hav' => function ($query) {
+                $query->with(['details' => function ($q) {
+                    $q->orderBy('created_at', 'desc'); // urutkan detail dari yang terbaru
+                }]);
+            }
+        ])->find($id);
 
         if (!$employee) {
             return response()->json([
@@ -996,13 +1002,13 @@ class HavController extends Controller
                 'msg' => 'No comment found for this employee'
             ], 404);
         }
-         $lastUpload = HavCommentHistory::where('hav_id', $hav_id)
-        ->orderByDesc('created_at')
-        ->first();
+        $lastUpload = HavCommentHistory::where('hav_id', $hav_id)
+            ->orderByDesc('created_at')
+            ->first();
         return response()->json([
             'comment' => $hav,
             'lastUpload' => $lastUpload,
-             'hav' => ['id' => $hav_id],
+            'hav' => ['id' => $hav_id],
         ]);
     }
 }

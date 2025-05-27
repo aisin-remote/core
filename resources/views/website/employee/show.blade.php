@@ -282,7 +282,6 @@
                                             <div class="text-center text-muted mb-3">
                                                 No educational background data available.
                                             </div>
-
                                         @endif
                                     </div>
                                 </div>
@@ -336,7 +335,6 @@
                                             <div class="text-center text-muted mb-3">
                                                 No work experience data available.
                                             </div>
-
                                         @endif
                                     </div>
                                 </div>
@@ -379,7 +377,6 @@
                                                     <div class="separator separator-dashed my-3"></div>
                                                 @endif
                                             @endforeach
-
                                         @endif
                                     </div>
                                 </div>
@@ -394,12 +391,17 @@
                             <!-- Card 2: Historical Human Assets Value -->
                             <div class="col-md-12">
                                 <div class="card mb-5 mb-xl-10">
-                                    <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                                        data-bs-toggle="collapse" data-bs-target="#kt_account_human_assets"
-                                        aria-expanded="true" aria-controls="kt_account_human_assets">
+                                    <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                                        role="button">
                                         <div class="card-title m-0">
                                             <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
                                         </div>
+
+                                        <a class="btn btn-sm btn-info"
+                                            href="{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                                            <i class="fas fa-info"></i>
+                                            Detail
+                                        </a>
                                     </div>
 
                                     <div id="kt_account_human_assets" class="collapse show">
@@ -430,9 +432,6 @@
                                                 <div class="text-center text-muted mb-3">
                                                     No human asset data available.
                                                 </div>
-
-
-
                                             @endif
                                         </div>
                                     </div>
@@ -554,7 +553,6 @@
                                                     <td colspan="3" class="text-center text-muted">No data available
                                                     </td>
                                                 </tr>
-
                                             @else
                                                 @for ($i = 0; $i < $maxSlots; $i++)
                                                     @if (isset($externalTrainings[$i]))
@@ -567,8 +565,6 @@
                                                             </td>
                                                             <td class="text-center">{{ $training->vendor }}</td>
                                                         </tr>
-
-
                                                     @endif
                                                 @endfor
                                             @endif
@@ -662,8 +658,7 @@
                                     <i class="fas fa-info"></i> Detail
                                 </a>
                             @else
-                                <button class="btn btn-sm btn-info"
-                                    onclick="showAssessmentAlert()">
+                                <button class="btn btn-sm btn-info" onclick="showAssessmentAlert()">
                                     Detail
                                 </button>
                             @endif
@@ -696,7 +691,7 @@
                                                             <span class="show-less text-primary cursor-pointer d-none">Show
                                                                 Less</span>
                                                         @endif
-                                                   </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div class="separator separator-dashed my-4"></div>
@@ -714,7 +709,7 @@
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" >
+                            role="button">
 
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Weakness</h3>
@@ -724,7 +719,7 @@
                                 <a class="btn btn-sm btn-info"
                                     href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
                                     <i class="fas fa-info"></i> Detail
-                        </a>
+                                </a>
                             @else
                                 <button class="btn btn-sm btn-info" onclick="showAssessmentAlert()">
                                     Detail
@@ -774,13 +769,13 @@
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
                 <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" >
+                    role="button">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
                     </div>
-                     <a class="btn btn-sm btn-info"
+                    <a class="btn btn-sm btn-info"
                         href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
-                          <i class="fas fa-info"></i>
+                        <i class="fas fa-info"></i>
                         Detail
                     </a>
 
