@@ -114,6 +114,7 @@
                                             @foreach ($alcs as $id => $title)
                                                 <th class="text-center" style="width: 100px">{{ $title }}</th>
                                             @endforeach
+                                            <th class="text-center" style="width: 150px">Status</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -157,6 +158,63 @@
                                                             'id',
                                                             auth()->user()->employee->id,
                                                         );
+
+                                                        $emp = [];
+                                                        foreach ($assessment->details as $assessmentDetail) {
+                                                            if ($assessmentDetail->score < 3) {
+                                                                $emp[$assessment->employee_id][] = [
+                                                                    'assessment_id' => $assessmentDetail->assessment_id,
+                                                                    'alc_id' => $assessmentDetail->alc_id,
+                                                                    'alc_name' =>
+                                                                        $assessmentDetail->alc->name ?? 'Unknown',
+                                                                ];
+                                                            }
+                                                        }
+
+                                                        $status = 'approved';
+
+                                                        foreach ($assessment->details as $detail) {
+                                                            if ($detail->score < 3) {
+                                                                $idp = \App\Models\Idp::where(
+                                                                    'assessment_id',
+                                                                    $detail->assessment_id,
+                                                                )
+                                                                    ->where('alc_id', $detail->alc_id)
+                                                                    ->first();
+
+                                                                if (!$idp) {
+                                                                    $status = 'not_created';
+                                                                    break;
+                                                                } elseif ($idp->status === 0) {
+                                                                    $status = 'draft';
+                                                                    break;
+                                                                } elseif ($idp->status === 1 && $status !== 'draft') {
+                                                                    $status = 'waiting';
+                                                                } elseif (
+                                                                    $idp->status === 2 &&
+                                                                    !in_array($status, [
+                                                                        'not_created',
+                                                                        'draft',
+                                                                        'waiting',
+                                                                    ])
+                                                                ) {
+                                                                    $status = 'checked';
+                                                                }
+                                                            }
+                                                        }
+
+                                                        $badges = [
+                                                            'not_created' => [
+                                                                'text' => 'Not Created',
+                                                                'color' => '#212529',
+                                                            ], // dark (Bootstrap dark is #212529)
+                                                            'draft' => ['text' => 'Draft', 'color' => '#6c757d'], // secondary
+                                                            'waiting' => ['text' => 'Checking', 'color' => '#ffc107'], // warning
+                                                            'checked' => ['text' => 'Checked', 'color' => '#0dcaf0'], // info
+                                                            'approved' => ['text' => 'Approved', 'color' => '#198754'], // success
+                                                        ];
+                                                        $badge = $badges[$status] ?? $badges['approved'];
+
                                                     @endphp
                                                     <td class="text-center">
                                                         @if ($score >= 3 || $score === '-')
@@ -178,6 +236,23 @@
                                                         @endif
                                                     </td>
                                                 @endforeach
+                                                <td class="text-center">
+                                                    <span
+                                                        style="
+                                                            min-width: 90px;
+                                                            display: inline-block;
+                                                            padding: 0.75rem;
+                                                            text-align: center;
+                                                            font-size: 0.85rem;
+                                                            font-weight: 600;
+                                                            border-radius: 0.375rem;
+                                                            white-space: nowrap;
+                                                            border: 2px solid {{ $badge['color'] }};
+                                                            color: {{ $badge['color'] }};
+                                                        ">
+                                                        {{ $badge['text'] }}
+                                                    </span>
+                                                </td>
                                                 <td class="text-center" style="width: 50px">
                                                     <div class="d-flex gap-2 justify-content-center">
                                                         <button type="button" class="btn btn-sm btn-primary"
@@ -393,7 +468,6 @@
                                                 <div class="col-lg-12 fv-row mb-5">
                                                     <label class="fs-5 fw-bold form-label mb-2">Comment
                                                         History</label>
-
                                                     @foreach ($idp->commentHistory as $comment)
                                                         <div class="border rounded p-3 mb-3 bg-light">
                                                             <div class="fw-semibold mb-2">
