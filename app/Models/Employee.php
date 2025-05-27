@@ -2,14 +2,14 @@
 
 namespace App\Models;
 
+use Carbon\Carbon;
 use App\Models\Assessment;
 use App\Models\Competency;
 use App\Models\Department;
 use Illuminate\Support\Str;
 use App\Models\EmployeeCompetency;
-use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Employee extends Model
 {
@@ -462,7 +462,7 @@ class Employee extends Model
             ->whereNotIn('id', $this->employeeCompetencies->pluck('competency_id'))
             ->get();
     }
-      public function getBagianAttribute()
+    public function getBagianAttribute()
     {
         $position = $this->getNormalizedPosition() ?? '';
         $position = strtolower($position);
@@ -474,5 +474,11 @@ class Employee extends Model
             default => $this->department->name
                 ?? 'Tidak Ada Departemen',
         };
+    }
+
+    public function isDireksi(): bool
+    {
+        $direksiPositions = ['President', 'VPD'];  // Tambah posisi direksi lain kalau perlu
+        return in_array($this->position, $direksiPositions);
     }
 }

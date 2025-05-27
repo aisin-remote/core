@@ -138,7 +138,7 @@ class EmployeeController extends Controller
             ? array_slice($allPositions, $positionIndex)
             : [];
 
-        if ($user->role === 'HRD') {
+        if ($user->isHRDorDireksi()) {
             // HRD bisa mencari berdasarkan beberapa kolom, termasuk company_name
             $employees = Employee::with([
                 'subSection.section.department',

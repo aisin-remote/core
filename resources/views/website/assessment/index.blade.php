@@ -67,7 +67,7 @@
                                     <th>Department</th>
                                     <th>Grade</th>
                                     <th>Age</th>
-                                    <th>Last Assessment</th>
+                                    <th class="text-center">Last Assessment</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -95,7 +95,8 @@
 
                                         <td>{{ $employee->grade ?? '-' }}</td>
                                         <td>{{ $age ?? '-' }}</td>
-                                        <td>{{ $lastAssessmentDate ? \Carbon\Carbon::parse($lastAssessmentDate)->format('d M Y') : '-' }}
+                                        <td class="text-center">
+                                            {{ $lastAssessmentDate ? \Carbon\Carbon::parse($lastAssessmentDate)->format('d M Y') : '-' }}
                                         </td>
                                         <td class="text-center">
                                             <a class="btn btn-info btn-sm history-btn"

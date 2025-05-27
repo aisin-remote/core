@@ -113,7 +113,7 @@ class IdpController extends Controller
         ];
 
         // Ambil assessment terbaru berdasarkan created_at
-        if ($user->role === 'HRD') {
+        if ($user->isHRDorDireksi()) {
             $assessments = Assessment::whereIn('id', function ($query) {
                 $query->selectRaw('id')
                     ->from('assessments as a')

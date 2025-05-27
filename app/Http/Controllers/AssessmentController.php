@@ -9,9 +9,9 @@ use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
-use Illuminate\Support\Str;
-
 use App\Models\SubSection;
+
+use Illuminate\Support\Str;
 use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
@@ -136,7 +136,7 @@ class AssessmentController extends Controller
         $filter = $request->input('filter'); // Filter by position
         $search = $request->input('search'); // Search by name
 
-        if ($user->role === 'HRD') {
+        if ($user->role === 'HRD' || $user->employee->position == 'President' ||  $user->employee->position == 'VPD') {
             $employees = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
                 ->where(function ($q) use ($visiblePositions) {

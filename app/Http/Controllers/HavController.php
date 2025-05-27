@@ -114,7 +114,7 @@ class HavController extends Controller
     {
         $title = 'Employee List';
         $user = auth()->user();
-        if ($user->role === 'HRD') {
+        if ($user->isHRDorDireksi()) {
             $havGrouped = HavQuadrant::whereHas('employee', function ($query) use ($company) {
                 $query->where('company_name', $company);
             })->with('employee')->get()->groupBy('quadrant');
