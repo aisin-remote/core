@@ -629,7 +629,7 @@
 
 
             {{-- approve --}}
-            @if ($isHRDorTop)
+
                 <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                     id="menu-approval">
                     <span class="menu-link">
@@ -668,7 +668,7 @@
 
                     </div>
                 </div>
-            @endif
+         
         </div>
         <!-- Sidebar User Panel -->
         <!--begin::User info sidebar bottom-->

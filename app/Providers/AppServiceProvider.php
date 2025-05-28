@@ -38,6 +38,7 @@ class AppServiceProvider extends ServiceProvider
             }
 
             $employee = $user->employee;
+
             $company = $employee->company_name;
 
             $createLevel = $employee->getCreateAuth();

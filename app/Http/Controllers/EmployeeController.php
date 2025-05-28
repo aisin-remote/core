@@ -109,6 +109,7 @@ class EmployeeController extends Controller
         $filter = $request->input('filter', 'all'); // Menambahkan filter, default 'all'
         $allPositions = [
             'President',
+            'VPD',
             'Direktur',
             'GM',
             'Manager',
@@ -1262,11 +1263,14 @@ class EmployeeController extends Controller
 
             // Validasi input
             $validatedData = $request->validate([
-                'year'           => 'required|digits:4|integer',
                 'program'        => 'required|string|max:255',
                 'ict_score'      => 'required',
                 'project_score'  => 'required',
                 'total_score'    => 'required',
+                 'date_start' => 'required',
+                  'date_end' => 'required',
+                  'institusi' => 'required',
+
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
@@ -1278,11 +1282,13 @@ class EmployeeController extends Controller
             // Simpan data ke AstraTraining
             AstraTraining::create([
                 'employee_id'   => $request->employee_id,
-                'year'          => $validatedData['year'],
                 'program'       => $validatedData['program'],
                 'ict_score'     => $validatedData['ict_score'],
                 'project_score' => $validatedData['project_score'],
                 'total_score'   => $validatedData['total_score'],
+                'date_start'       => $validatedData['date_start'],
+                'date_end'       => $validatedData['date_end'],
+                'institusi'       => $validatedData['institusi'],
             ]);
 
             DB::commit();

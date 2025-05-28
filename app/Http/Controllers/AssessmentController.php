@@ -104,6 +104,7 @@ class AssessmentController extends Controller
         $title = 'Assessment';
         $allPositions = [
             'President',
+            'VPD',
             'Direktur',
             'GM',
             'Manager',

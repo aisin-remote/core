@@ -9,6 +9,8 @@
 @endsection
 
 @section('main')
+
+
     @if (session()->has('success'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
@@ -614,13 +616,19 @@
                             <!-- Card 2: Historical Human Assets Value -->
                             <div class="col-md-12">
                                 <div class="card mb-5 mb-xl-10">
-                                    <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                                        data-bs-toggle="collapse" data-bs-target="#kt_account_human_assets"
-                                        aria-expanded="true" aria-controls="kt_account_human_assets">
+                                    <div
+                                        class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
                                         <div class="card-title m-0">
                                             <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
                                         </div>
+                                        <div class="d-flex gap-3">
+                                            <a class="btn btn-sm btn-info"
+                                                onclick="window.location.href='{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}'">
+                                                <i class="fas fa-info"></i> Detail
+                                            </a>
+                                        </div>
                                     </div>
+
 
                                     <div id="kt_account_human_assets" class="collapse show">
                                         <div class="card-body border-top p-10">
@@ -649,13 +657,6 @@
                                             @else
                                                 <div class="text-center text-muted mb-3">
                                                     No human asset data available.
-                                                </div>
-                                                <div class="d-flex justify-content-between align-items-center gap-3">
-                                                    <a class="fw-semibold"
-                                                        href="{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
-                                                        Go to hav page
-                                                    </a>
-
                                                 </div>
                                             @endif
                                         </div>
@@ -926,7 +927,9 @@
                                             </button>
                                         </td>
                                     </tr>
-                                  @include('website.modal.promotion_history.update', ['experience' => $promotionHistory])
+                                    @include('website.modal.promotion_history.update', [
+                                        'experience' => $promotionHistory,
+                                    ])
                                     {{-- delete modal --}}
                                     @include('website.modal.promotion_history.delete', [
                                         'promotionHistory' => $promotionHistory,
@@ -952,11 +955,23 @@
                 <!-- Strength -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                            data-bs-toggle="collapse" data-bs-target="#strength_section">
+                        <div class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center cursor-pointer"
+                            role="button">
+
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
                             </div>
+
+                            @if ($assessment && $assessment->date)
+                                <a class="btn btn-sm btn-info"
+                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    <i class="fas fa-info"></i> Detail
+                                </a>
+                            @else
+                                <button class="btn btn-sm btn-info" onclick="showAssessmentAlert()">
+                                    Detail
+                                </button>
+                            @endif
                         </div>
                         <div id="strength_section" class="collapse show">
                             <div class="card-body border-top p-10">
@@ -992,11 +1007,7 @@
                                     @endforeach
                                 @endif
                             </div>
-                            <div class="card-footer">
-                                <a class="fw-semibold" href="{{ route('assessments.index', $employee->company_name) }}">
-                                    Go to assesment page
-                                </a>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -1044,11 +1055,7 @@
                                     @endforeach
                                 @endif
                             </div>
-                            <div class="card-footer">
-                                <a class="fw-semibold" href="{{ route('assessments.index', $employee->company_name) }}">
-                                    Go to assesment page
-                                </a>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -1056,12 +1063,18 @@
 
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
-                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                    data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
+                <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
                     </div>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-sm btn-info"
+                            href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                            <i class="fas fa-info"></i> Detail
+                        </a>
+                    </div>
                 </div>
+
 
                 <div class="card-body">
                     <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
@@ -1085,14 +1098,7 @@
                         </tbody>
                     </table>
                 </div>
-                   <div class="card-footer">
-
-                    <a class="fw-semibold"
-                        href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
-                        Go to IDP detail
-                    </a>
-
-                </div>
+             
             </div>
 
             <!-- Tombol Back di bagian bawah card -->
@@ -1107,6 +1113,15 @@
 @endsection
 
 @push('scripts')
+    <style>
+        .modal-backdrop.modal-stack {
+            z-index: 1060 !important;
+        }
+
+        .modal.modal-stack {
+            z-index: 1070 !important;
+        }
+    </style>
     <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -1177,6 +1192,26 @@
                 const selectedPosition = $(this).val();
                 toggleHierarchySelects(selectedPosition);
             });
+            let modalLevel = 0;
+
+            $(document).on('show.bs.modal', '.modal', function() {
+                let zIndex = 1050 + (10 * modalLevel);
+                $(this).css('z-index', zIndex);
+                setTimeout(() => {
+                    $('.modal-backdrop').not('.modal-stack')
+                        .css('z-index', zIndex - 1)
+                        .addClass('modal-stack');
+                }, 0);
+                modalLevel++;
+            });
+
+            $(document).on('hidden.bs.modal', '.modal', function() {
+                modalLevel = Math.max(0, modalLevel - 1);
+                if ($('.modal.show').length > 0) {
+                    $('body').addClass('modal-open');
+                }
+            });
+
         });
     </script>
 @endpush

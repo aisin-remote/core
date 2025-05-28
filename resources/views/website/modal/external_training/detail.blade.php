@@ -17,15 +17,27 @@
                                     <th>Training</th>
                                     <th class="text-center">Year</th>
                                     <th class="text-center">Vendor</th>
+                                    <th class="text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="text-gray-700">
-                                @foreach ($externalTrainings as $training)
+                                @foreach ($externalTrainings as $externalTraining)
                                     <tr>
-                                        <td>{{ $training->program }}</td>
+                                        <td>{{ $externalTraining->program }}</td>
                                         <td class="text-center">
-                                            {{ \Carbon\Carbon::parse($training->date_end)->format('Y') }}</td>
-                                        <td class="text-center">{{ $training->vendor }}</td>
+                                            {{ \Carbon\Carbon::parse($externalTraining->date_end)->format('Y') }}
+                                        </td>
+                                        <td class="text-center">{{ $externalTraining->vendor }}</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-light-warning" data-bs-toggle="modal"
+                                                data-bs-target="#editExternalTrainingModal{{ $externalTraining->id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light-danger" data-bs-toggle="modal"
+                                                data-bs-target="#deleteExternalTrainingModal{{ $externalTraining->id }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -35,6 +47,7 @@
                     <div class="text-center text-muted">No External Training data available.</div>
                 @endif
             </div>
+
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>

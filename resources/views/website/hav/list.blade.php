@@ -52,6 +52,7 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
+                            <th>Photo</th>
                             <th>NPK</th>
                             <th>Employee Name</th>
                             <th>Company</th>
@@ -66,6 +67,11 @@
                         @foreach ($employees as $item)
                             <tr data-position="{{ $item->employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
+                                <td class="text-center">
+                                    <img src="{{ $item->employee->photo ? asset('storage/' . $item->employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                        alt="Employee Photo" class="rounded" width="40" height="40"
+                                        style="object-fit: cover;">
+                                </td>
                                 <td>{{ $item->employee->npk }}</td>
                                 <td>{{ $item->employee->name }}</td>
                                 <td>{{ $item->employee->company_name }}</td>
@@ -94,12 +100,25 @@
         aria-hidden="true">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header d-flex justify-content-between align-items-center">
                     <h5 class="modal-title" id="commentHistoryModalLabel">Comment History</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+
+                    <div class="d-flex align-items-center gap-3">
+                        <div id="lastUploadInfo" style="font-size: 0.875rem; color: #666;">
+                            <!-- Last upload info akan diisi via JS -->
+                        </div>
+
+                        <a href="#" id="btnExportExcel" class="btn btn-success btn-sm" target="_blank"
+                            style="padding: 0.80rem 0.5rem; font-size: 0.75rem;">
+                            Export HAV
+                        </a>
+
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+                    </div>
                 </div>
 
                 <div class="modal-body">
+
                     <ul class="list-group" id="commentList">
                         <!-- Comments will be dynamically loaded here -->
                     </ul>
@@ -107,6 +126,7 @@
             </div>
         </div>
     </div>
+
 
 
     <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
@@ -319,8 +339,12 @@
                             </tbody>
                         </table>
                     </div>
+        
                 </div>
-                <div class="modal-footer">
+               <div class="modal-footer d-flex justify-content-between align-items-center w-100">
+                    <small class="text-muted fw-bold m-0">
+                        Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
+                    </small>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -367,6 +391,32 @@
 
     <script>
         $(document).ready(function() {
+            function showCommentHistoryModal(response) {
+                $('#commentHistoryModal').modal('show');
+
+                // Clear sebelumnya
+                $('#commentList').empty();
+
+                // Tampilkan last upload info (jika ada)
+                if (response.lastUpload) {
+                    const date = new Date(response.lastUpload.created_at);
+                    const formattedDate = date.toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+
+                    $('#lastUploadInfo').html(`Last Submit: <strong>${formattedDate}</strong>`);
+
+                    // Update link download dengan havId yg sesuai
+                    $('#btnExportExcel').attr('href', `/hav/download-upload/${response.hav.id}`);
+                } else {
+                    $('#lastUploadInfo').html('No uploads found');
+                    $('#btnExportExcel').attr('href', '#');
+                }
+
+                // Render komentar dst...
+            }
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
 
@@ -411,40 +461,42 @@
                         // Update informasi karyawan
                         $("#npkText").text(response.employee.npk);
                         $("#positionText").text(response.employee.position);
+                        const currentUserRole = "{{ auth()->user()->role }}";
 
                         // Kosongkan tabel sebelum menambahkan data baru
                         $("#kt_table_assessments tbody").empty();
 
                         if (response.employee.hav.length > 0) {
                             response.employee.hav.forEach((hav, index) => {
+                                let deleteButton = '';
+                                if (currentUserRole === 'HRD') {
+                                    deleteButton =
+                                        `<button type="button" class="btn btn-danger btn-sm delete-btn" data-id="${hav.id}">Delete</button>`;
+                                }
+
                                 let row = `
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                          <td class="text-center">${titles[hav.quadrant] || '-'}</td>
-
-
-
-                            <td class="text-center">${hav.year}</td>
-                            <td class="text-center">
-                                <a
-                                data-detail='${JSON.stringify(hav.details)}'
-                                data-tahun='${hav.year}'
-                                data-nama='${response.employee.name}'
-                                data-employeeid='${response.employee.id}'
-                                class="btn btn-info btn-sm btn-hav-detail" href="#">
-                                    Detail
-                                </a>
-                                ${`<a
-                                                                data-id="${hav.id}"
-                                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                    History
-                                                                </a>`}
-                                <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                    data-id="${hav.id}">Delete</button>
-                            </td>
-                        </tr>
-
-                                `;
+        <tr>
+            <td class="text-center">${index + 1}</td>
+            <td class="text-center">${titles[hav.quadrant] || '-'}</td>
+            <td class="text-center">${hav.year}</td>
+            <td class="text-center">
+                <a
+                    data-detail='${JSON.stringify(hav.details)}'
+                    data-tahun='${hav.year}'
+                    data-nama='${response.employee.name}'
+                    data-employeeid='${response.employee.id}'
+                    class="btn btn-info btn-sm btn-hav-detail" href="#">
+                    Detail
+                </a>
+                <a
+                    data-id="${hav.id}"
+                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                    History
+                </a>
+                ${deleteButton}
+            </td>
+        </tr>
+        `;
                                 $("#kt_table_assessments tbody").append(row);
                             });
                         } else {
@@ -544,23 +596,37 @@
                     success: function(response) {
                         console.log("Response received:", response
                             .comment); // Debugging the response
+                        showCommentHistoryModal(response);
 
                         // Check if we have comment history
                         if (response.comment && response.comment.length > 0) {
+                            // Clear existing comments
+                            $("#commentList").empty();
+
                             // Loop through the comments and append them to the modal
                             response.comment.forEach(function(comment) {
-                                console.log("Comment:",
-                                    comment); // Debugging each comment
+                                const date = new Date(comment.created_at);
+                                const formattedDate = new Intl.DateTimeFormat('id-ID', {
+                                    day: 'numeric',
+                                    month: 'long',
+                                    year: 'numeric'
+                                }).format(date);
+
                                 let commentHtml = `
-                                    <li class="list-group-item mb-2">
-                                        <strong>${comment.employee.name} :</strong> <br> ${comment.comment}
-                                        <br><small class="text-muted">${comment.created_at}</small><br>
-                                        <a href="{{ Storage::url('${comment.upload}') }}" target="_blank"
-                                        class="fw-bold text-primary text-decoration-underline">View Excel</a>
-                                    </li>
-                                `;
+                                <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
+                                    <div>
+                                        <strong>${comment.employee.name} :</strong><br>
+                                        ${comment.comment}
+                                    </div>
+                                   <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
+                                       <strong> ${formattedDate}</strong>
+                                    </div>
+                                </li>
+                            `;
                                 $("#commentList").append(commentHtml);
                             });
+
+
                         } else {
                             // If no comments found, display a message
                             $("#commentList").append(

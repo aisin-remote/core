@@ -111,10 +111,8 @@
 
 
                         </table>
-                        <div class="d-flex justify-content-between">
-
+                       <div class="d-flex justify-content-end mt-4">
                             {{ $assessments->links('pagination::bootstrap-5') }}
-
                         </div>
 
                     </div>
