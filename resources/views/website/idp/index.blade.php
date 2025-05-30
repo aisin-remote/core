@@ -256,17 +256,32 @@
                                                 </td>
                                                 <td class="text-center" style="width: 50px">
                                                     <div class="d-flex gap-2 justify-content-center">
-                                                        <button type="button" class="btn btn-sm btn-primary"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
-                                                            <i class="fas fa-pencil-alt"></i>
-                                                        </button>
+                                                        @php
+                                                            $user = auth()->user();
+                                                            $isHRDorDireksi = $user->isHRDorDireksi();
+                                                            $exportablePositions = [
+                                                                'Manager',
+                                                                'GM',
+                                                                'Act Group Manager',
+                                                                'Direktur',
+                                                            ];
+                                                        @endphp
+
+                                                        @if (!$isHRDorDireksi)
+                                                            <button type="button" class="btn btn-sm btn-primary"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
+                                                                <i class="fas fa-pencil-alt"></i>
+                                                            </button>
+                                                        @endif
+
                                                         <button type="button" class="btn btn-sm btn-info"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#notes_{{ $assessment->employee->id }}">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
-                                                        @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
+
+                                                        @if (in_array($jobPositions, $exportablePositions))
                                                             <button type="button" class="btn btn-sm btn-success"
                                                                 onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
                                                                 <i class="fas fa-file-export"></i>
@@ -277,6 +292,14 @@
                                                             onclick="sendDataConfirmation({{ $assessment->employee->id }})">
                                                             <i class="fas fa-paper-plane"></i>
                                                         </button>
+
+
+                                                        @if (!$isHRDorDireksi)
+                                                            <button type="button" class="btn btn-sm btn-warning"
+                                                                onclick="sendDataConfirmation({{ $assessment->employee->id }})">
+                                                                <i class="fas fa-paper-plane"></i>
+                                                            </button>
+                                                        @endif
 
                                                         {{-- <button type="button" class="btn btn-sm btn-success"
                                                             onclick="approveAction()">

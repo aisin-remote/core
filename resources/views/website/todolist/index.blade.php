@@ -161,6 +161,32 @@
             </div>
             {{-- end of HAV --}}
 
+            {{-- RTC --}}
+            <div class="col-4">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-light text-white">
+                        <h3 class="card-title mb-0">
+                            <i class="fas fa-tasks me-2"></i><span class="fw-bold">RTC</span> -
+                            [0 Items]
+                        </h3>
+                    </div>
+                    <div class="card-body overflow-auto" style="max-height: 600px;">
+                        <div class="row g-3">
+                            <div class="col-md-12 py-1">
+                                <div class="card border-0 bg-light-success hover-shadow">
+                                    <div class="card-body text-center">
+                                        <h5 class="mb-0 text-success">
+                                            <i class="fas fa-check-circle me-2"></i> No Task.
+                                        </h5>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{-- end of RTC --}}
+
             {{-- Assessment --}}
             @if (auth()->user()->role === 'HRD')
                 <div class="col-4">

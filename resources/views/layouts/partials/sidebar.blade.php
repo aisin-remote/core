@@ -629,46 +629,45 @@
 
 
             {{-- approve --}}
-
-                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                    id="menu-approval">
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="fas fa-check  "></i>
-                        </span>
-                        <span class="menu-title ps-1">Approval</span>
-                        <span class="menu-arrow"></span>
+            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                id="menu-approval">
+                <span class="menu-link">
+                    <span class="menu-icon">
+                        <i class="fas fa-check  "></i>
                     </span>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+                    <span class="menu-title ps-1">Approval</span>
+                    <span class="menu-arrow"></span>
+                </span>
+                <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
 
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('approval/idp') ? 'active' : '' }}"
-                                href="{{ route('idp.approval') }}">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">IDP</span>
-                            </a>
-                        </div>
-
-                        <!-- plant -->
-                        <a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
-                            href="{{ route('hav.approval') }}">
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('approval/idp') ? 'active' : '' }}"
+                            href="{{ route('idp.approval') }}">
                             {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                            <span class="menu-title ps-1">HAV</span>
+                            <span class="menu-title ps-1">IDP</span>
                         </a>
+                    </div>
 
-                        <!-- Division -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}" href="#">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">RTC</span>
-                            </a>
-                        </div>
+                    <!-- plant -->
+                    <a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
+                        href="{{ route('hav.approval') }}">
+                        {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                        <span class="menu-title ps-1">HAV</span>
+                    </a>
 
-                        <!-- Department -->
+                    <!-- Division -->
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}" href="#">
+                            {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                            <span class="menu-title ps-1">RTC</span>
+                        </a>
+                    </div>
+
+                    <!-- Department -->
 
                     </div>
                 </div>
-         
+            @endif
         </div>
         <!-- Sidebar User Panel -->
         <!--begin::User info sidebar bottom-->
