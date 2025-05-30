@@ -15,6 +15,7 @@ use App\Models\SubSection;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\AstraTraining;
+use App\Models\Hav;
 use App\Imports\MasterImports;
 use App\Imports\EmployeeImport;
 use App\Models\MutationHistory;
@@ -557,6 +558,15 @@ class EmployeeController extends Controller
             })
             ->orderBy('last_promotion_date', 'desc') // Urutkan dari yang terbaru
             ->get();
+        $employee = Employee::where('npk', $npk)->firstOrFail();
+
+        $humanAssets = Hav::with('employee')
+            ->where('employee_id', $employee->id) // gunakan ID employee yang sesuai
+            ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
+            ->groupBy('quadrant', 'year')
+            ->orderByDesc('year')
+            ->get();
+
 
         $astraTrainings = AstraTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
@@ -619,7 +629,7 @@ class EmployeeController extends Controller
         $plants = Plant::all();
         $sections = Section::all();
         $subSections = SubSection::all();
-        return view('website.employee.update', compact('employee', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
+        return view('website.employee.update', compact('employee', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
     }
 
     public function update(Request $request, $npk)
@@ -1267,9 +1277,9 @@ class EmployeeController extends Controller
                 'ict_score'      => 'required',
                 'project_score'  => 'required',
                 'total_score'    => 'required',
-                 'date_start' => 'required',
-                  'date_end' => 'required',
-                  'institusi' => 'required',
+                'date_start' => 'required',
+                'date_end' => 'required',
+                'institusi' => 'required',
 
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1310,11 +1320,13 @@ class EmployeeController extends Controller
 
             // Validasi input
             $validatedData = $request->validate([
-                'year'           => 'required|digits:4|integer',
+                'date_start' => 'required',
+                'date_end' => 'required',
                 'program'        => 'required|string|max:255',
                 'ict_score'      => 'required',
                 'project_score'  => 'required',
                 'total_score'    => 'required',
+                'institusi' => 'required',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
@@ -1325,7 +1337,9 @@ class EmployeeController extends Controller
 
             // Update data AstraTraining
             $astraTraining->update([
-                'year'          => $validatedData['year'],
+                'date_start'       => $validatedData['date_start'],
+                'date_end'       => $validatedData['date_end'],
+                'institusi'       => $validatedData['institusi'],
                 'program'       => $validatedData['program'],
                 'ict_score'     => $validatedData['ict_score'],
                 'project_score' => $validatedData['project_score'],
@@ -1374,8 +1388,9 @@ class EmployeeController extends Controller
             // Validasi input
             $validatedData = $request->validate([
                 'program' => 'required|string|max:255',
-                'year'    => 'required|digits:4|integer',
                 'vendor'  => 'required|string|max:255',
+                'date_start' => 'required',
+                'date_end' => 'required',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
@@ -1387,7 +1402,8 @@ class EmployeeController extends Controller
             // Simpan data ke ExternalTraining
             ExternalTraining::create([
                 'employee_id' => $request->employee_id,
-                'year'        => $validatedData['year'],
+                'date_start'       => $validatedData['date_start'],
+                'date_end'       => $validatedData['date_end'],
                 'program'     => $validatedData['program'],
                 'vendor'      => $validatedData['vendor'],
             ]);
@@ -1409,7 +1425,8 @@ class EmployeeController extends Controller
             // Validasi input
             $validatedData = $request->validate([
                 'program' => 'required|string|max:255',
-                'year'    => 'required|digits:4|integer',
+                'date_start' => 'required',
+                'date_end' => 'required',
                 'vendor'  => 'required|string|max:255',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1421,7 +1438,8 @@ class EmployeeController extends Controller
 
             // Update data di database
             $externalTraining->update([
-                'year'    => $validatedData['year'],
+                'date_start'       => $validatedData['date_start'],
+                'date_end'       => $validatedData['date_end'],
                 'program' => $validatedData['program'],
                 'vendor'  => $validatedData['vendor'],
             ]);

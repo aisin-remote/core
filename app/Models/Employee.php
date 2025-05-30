@@ -248,6 +248,7 @@ class Employee extends Model
 
             foreach ($currentEmployees as $emp) {
                 $nextEmployees = $nextEmployees->merge($this->getDirectSubordinatesOf($emp));
+                
             }
 
             if ($nextEmployees->isEmpty()) {
