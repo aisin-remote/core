@@ -19,6 +19,7 @@
                                     <th class="text-center">Current Grade</th>
                                     <th class="text-center">Current Position</th>
                                     <th class="text-center">Last Promotion Date</th>
+                                    <th class="text-center">Action</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -32,6 +33,16 @@
                                         <td class="text-center">
                                             {{ \Carbon\Carbon::parse($promotion->last_promotion_date)->format('j F Y, g:i A') }}
                                         </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-light-warning me-1" data-bs-toggle="modal"
+                                                data-bs-target="#editPromotionModal{{ $promotion->id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-light-danger" data-bs-toggle="modal"
+                                                data-bs-target="#deletePromotionModal{{ $promotion->id }}">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -41,6 +52,7 @@
                     <p class="text-center text-muted">No promotion history available.</p>
                 @endif
             </div>
+
 
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>

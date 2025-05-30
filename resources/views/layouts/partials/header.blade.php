@@ -1230,11 +1230,14 @@
                         <!--end::Menu separator-->
 
                         <!--begin::Menu item-->
-                        <div class="menu-item px-5">
-                            <a href="/employee/detail/{{ auth()->user()->employee->npk }}" class="menu-link px-5">
-                                My Profile
-                            </a>
-                        </div>
+                        @if (auth()->user()->role == 'User')
+                            <div class="menu-item px-5">
+                                <a href="/employee/detail/{{ auth()->user()->employee->npk }}" class="menu-link px-5">
+                                    My Profile
+                                </a>
+                            </div>
+                        @endif
+
                         <!--end::Menu item-->
 
                         <!--begin::Menu separator-->

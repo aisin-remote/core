@@ -665,8 +665,9 @@
 
                     <!-- Department -->
 
+                    </div>
                 </div>
-            </div>
+            @endif
         </div>
         <!-- Sidebar User Panel -->
         <!--begin::User info sidebar bottom-->

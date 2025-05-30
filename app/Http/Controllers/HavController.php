@@ -174,6 +174,7 @@ class HavController extends Controller
         }
         $positions = Employee::select('position')->distinct()->pluck('position')->filter()->values();
         $allPositions = [
+            'President',
             'Direktur',
             'GM',
             'Manager',
@@ -241,7 +242,7 @@ class HavController extends Controller
                 ->values();
         } else {
             // Logika untuk HRD atau selain HRD
-            if ($user->role === 'HRD') {
+            if ($user->isHRDorDireksi()) {
                 $employees = Hav::with('employee')
                     ->whereHas('employee', function ($query) use ($company, $filter, $search) {
                         if ($company) {
@@ -254,7 +255,10 @@ class HavController extends Controller
                             });
                         }
                         if ($search) {
-                            $query->where('name', 'like', '%' . $search . '%');
+                            $query->where(function ($q) use ($search) {
+                                $q->where('name', 'like', '%' . $search . '%')
+                                    ->orWhere('npk', 'like', '%' . $search . '%');
+                            });
                         }
                     })
                     ->get()
@@ -291,6 +295,7 @@ class HavController extends Controller
 
         $allPositions = [
             'President',
+             'VPD',
             'Direktur',
             'GM',
             'Manager',

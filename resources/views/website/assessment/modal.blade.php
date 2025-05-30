@@ -35,12 +35,14 @@
 
                     <div class="mb-4">
                         <label for="employee_id" class="form-label">Employee</label>
-                        <select class="form-control" id="employee_id" name="employee_id" required>
-                            <option value="">Pilih Employee</option>
+                        <select id="employee_id" name="employee_id" class="form-select">
                             @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                                <option value="{{ $employee->id }}" data-position="{{ $employee->position }}">
+                                    {{ $employee->name }}
+                                </option>
                             @endforeach
                         </select>
+
                     </div>
 
                     <div class="mb-4">
@@ -49,8 +51,9 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="description" class="form-label">Description Assessment</label>
-                        <textarea type="text" class="form-control" id="description" name="description" required></textarea>
+                       
+                        <input type="hidden" id="description" name="description" required>
+
                     </div>
 
                     <div class="mb-4">
@@ -239,7 +242,8 @@
 
             document.getElementById('upload').value = '';
             document.getElementById('assessment_id').value = '';
-             $('#employee_id').val(null).trigger('change');
+            $('#employee_id').val(null).trigger('change');
+            $('#description').val('');
 
             updateDropdownOptions();
         });
@@ -275,12 +279,17 @@
 
         updateDropdownOptions();
     });
-       $(document).ready(function() {
+    $(document).ready(function() {
         $('#employee_id').select2({
             dropdownParent: $('#addAssessmentModal'),
             placeholder: "Pilih Employee",
             allowClear: false,
             width: '100%'
+        });
+        $('#employee_id').on('change', function() {
+            const selectedOption = $(this).find('option:selected');
+            const position = selectedOption.data('position') || '';
+            $('#description').val(position);
         });
     });
 </script>
