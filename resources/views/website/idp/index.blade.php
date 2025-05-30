@@ -130,115 +130,142 @@
                                                         ->where('employee.position', $position)
                                                         ->groupBy('employee_id')
                                                         ->map(fn($group) => $group->sortByDesc('created_at')->first());
+                                            $rowNumber = 1;
                                         @endphp
 
                                         @forelse ($filteredEmployees as $index => $assessment)
-                                            <tr>
-                                                <td class="text-center">{{ $loop->iteration }}</td>
-                                                <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
+                                            @php
+                                                // Cek apakah assessment memiliki minimal satu detail dengan score
+                                                $hasScore = $assessment->details->contains(function ($detail) {
+                                                    return !is_null($detail->score);
+                                                });
+                                            @endphp
+                                            @if ($hasScore)
+                                                <tr>
+                                                    <td class="text-center">{{ $rowNumber++ }}</td>
+                                                    <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
+                                                    @foreach ($assessment->details as $title)
+                                                        @php
+                                                            $score = $title->score ?? '-';
+                                                            $idpExists = DB::table('idp')
+                                                                ->where('hav_detail_id', $title->id)
+                                                                ->where('alc_id', $title->alc_id)
+                                                                ->get();
 
-                                                @foreach ($alcs as $id => $title)
-                                                    @php
-                                                        $detail = $assessment->details->where('alc_id', $id)->first();
-                                                        $score = $detail->score ?? '-';
-                                                        $idpExists = DB::table('idp')
-                                                            ->where('assessment_id', $assessment->id)
-                                                            ->where('alc_id', $id)
-                                                            ->exists();
+                                                            // Ambil level approval dari employee yang sedang di-assess
+                                                            $approvalLevel = $assessment->employee->getCreateAuth();
 
-                                                        // Ambil level approval dari employee yang sedang di-assess
-                                                        $approvalLevel = $assessment->employee->getCreateAuth();
+                                                            // Ambil atasan dari employee tsb berdasarkan level approval
+                                                            $superiors = $assessment->employee->getSuperiorsByLevel(
+                                                                $approvalLevel,
+                                                            );
 
-                                                        // Ambil atasan dari employee tsb berdasarkan level approval
-                                                        $superiors = $assessment->employee->getSuperiorsByLevel(
-                                                            $approvalLevel,
-                                                        );
+                                                            $isSuperior = $superiors->contains(
+                                                                'id',
+                                                                auth()->user()->employee->id,
+                                                            );
 
-                                                        $isSuperior = $superiors->contains(
-                                                            'id',
-                                                            auth()->user()->employee->id,
-                                                        );
-
-                                                        $emp = [];
-                                                        foreach ($assessment->details as $assessmentDetail) {
-                                                            if ($assessmentDetail->score < 3) {
-                                                                $emp[$assessment->employee_id][] = [
-                                                                    'assessment_id' => $assessmentDetail->assessment_id,
-                                                                    'alc_id' => $assessmentDetail->alc_id,
-                                                                    'alc_name' =>
-                                                                        $assessmentDetail->alc->name ?? 'Unknown',
-                                                                ];
-                                                            }
-                                                        }
-
-                                                        $status = 'approved';
-
-                                                        foreach ($assessment->details as $detail) {
-                                                            if ($detail->score < 3) {
-                                                                $idp = \App\Models\Idp::where(
-                                                                    'assessment_id',
-                                                                    $detail->assessment_id,
-                                                                )
-                                                                    ->where('alc_id', $detail->alc_id)
-                                                                    ->first();
-
-                                                                if (!$idp) {
-                                                                    $status = 'not_created';
-                                                                    break;
-                                                                } elseif ($idp->status === 0) {
-                                                                    $status = 'draft';
-                                                                    break;
-                                                                } elseif ($idp->status === 1 && $status !== 'draft') {
-                                                                    $status = 'waiting';
-                                                                } elseif (
-                                                                    $idp->status === 2 &&
-                                                                    !in_array($status, [
-                                                                        'not_created',
-                                                                        'draft',
-                                                                        'waiting',
-                                                                    ])
-                                                                ) {
-                                                                    $status = 'checked';
+                                                            $emp = [];
+                                                            foreach ($assessment->details as $assessmentDetail) {
+                                                                if ($assessmentDetail->score < 3) {
+                                                                    $emp[$assessment->employee_id][] = [
+                                                                        'assessment_id' =>
+                                                                            $assessmentDetail->assessment_id,
+                                                                        'alc_id' => $assessmentDetail->alc_id,
+                                                                        'alc_name' =>
+                                                                            $assessmentDetail->alc->name ?? 'Unknown',
+                                                                    ];
                                                                 }
                                                             }
-                                                        }
 
-                                                        $badges = [
-                                                            'not_created' => [
-                                                                'text' => 'Not Created',
-                                                                'color' => '#212529',
-                                                            ], // dark (Bootstrap dark is #212529)
-                                                            'draft' => ['text' => 'Draft', 'color' => '#6c757d'], // secondary
-                                                            'waiting' => ['text' => 'Checking', 'color' => '#ffc107'], // warning
-                                                            'checked' => ['text' => 'Checked', 'color' => '#0dcaf0'], // info
-                                                            'approved' => ['text' => 'Approved', 'color' => '#198754'], // success
-                                                        ];
-                                                        $badge = $badges[$status] ?? $badges['approved'];
+                                                            $status = 'approved';
 
-                                                    @endphp
+                                                            foreach ($assessment->details as $detail) {
+                                                                if ($detail->score < 3) {
+                                                                    $idp = \App\Models\Idp::where(
+                                                                        'hav_detail_id',
+                                                                        $detail->id,
+                                                                    )
+                                                                        ->where('alc_id', $detail->alc_id)
+                                                                        ->first();
+
+                                                                    if (!$idp) {
+                                                                        $status = 'not_created';
+                                                                        break;
+                                                                    } elseif ($idp->status === 0) {
+                                                                        $status = 'draft';
+                                                                        break;
+                                                                    } elseif (
+                                                                        $idp->status === 1 &&
+                                                                        $status !== 'draft'
+                                                                    ) {
+                                                                        $status = 'waiting';
+                                                                    } elseif (
+                                                                        $idp->status === 2 &&
+                                                                        !in_array($status, [
+                                                                            'not_created',
+                                                                            'draft',
+                                                                            'waiting',
+                                                                        ])
+                                                                    ) {
+                                                                        $status = 'checked';
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            $badges = [
+                                                                'not_created' => [
+                                                                    'text' => 'Not Created',
+                                                                    'class' => 'light-dark',
+                                                                ],
+                                                                'draft' => [
+                                                                    'text' => 'Need Submit',
+                                                                    'class' => 'light-secondary',
+                                                                ],
+                                                                'waiting' => [
+                                                                    'text' => 'Waiting',
+                                                                    'class' => 'light-warning',
+                                                                ],
+                                                                'checked' => [
+                                                                    'text' => 'Checked',
+                                                                    'class' => 'light-info',
+                                                                ],
+                                                                'approved' => [
+                                                                    'text' => 'Approved',
+                                                                    'class' => 'light-success',
+                                                                ],
+                                                                'revise' => [
+                                                                    'text' => 'Revise',
+                                                                    'class' => 'light-danger',
+                                                                ],
+                                                            ];
+                                                            $badge = $badges[$status] ?? $badges['approved'];
+
+                                                        @endphp
+                                                        <td class="text-center">
+                                                            @if ($score >= 3 || $score === '-')
+                                                                <span class="badge badge-lg badge-success d-block w-100">
+                                                                    {{ $score }}
+                                                                </span>
+                                                            @else
+                                                                {{-- Boleh klik --}}
+                                                                <span class="badge badge-lg badge-danger d-block w-100"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $title->alc_id }}"
+                                                                    data-title="Update IDP - {{ $title->alc->name }}"
+                                                                    data-assessment="{{ $assessment->id }}"
+                                                                    data-alc="{{ $title->alc_id }}"
+                                                                    style="cursor: pointer;">
+                                                                    {{ $score }}
+                                                                    <i
+                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                                </span>
+                                                            @endif
+                                                        </td>
+                                                    @endforeach
                                                     <td class="text-center">
-                                                        @if ($score >= 3 || $score === '-')
-                                                            <span class="badge badge-lg badge-success d-block w-100">
-                                                                {{ $score }}
-                                                            </span>
-                                                        @else
-                                                            {{-- Boleh klik --}}
-                                                            <span class="badge badge-lg badge-danger d-block w-100"
-                                                                data-bs-toggle="modal"
-                                                                data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
-                                                                data-title="Update IDP - {{ $title }}"
-                                                                data-assessment="{{ $assessment->id }}"
-                                                                data-alc="{{ $id }}" style="cursor: pointer;">
-                                                                {{ $score }}
-                                                                <i
-                                                                    class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
-                                                            </span>
-                                                        @endif
-                                                    </td>
-                                                @endforeach
-                                                <td class="text-center">
-                                                    <span
-                                                        style="
+                                                        <span class="badge badge-{{ $badge['class'] }}"
+                                                            style="
                                                             min-width: 90px;
                                                             display: inline-block;
                                                             padding: 0.75rem;
@@ -247,54 +274,52 @@
                                                             font-weight: 600;
                                                             border-radius: 0.375rem;
                                                             white-space: nowrap;
-                                                            border: 2px solid {{ $badge['color'] }};
-                                                            color: {{ $badge['color'] }};
                                                         ">
-                                                        {{ $badge['text'] }}
-                                                    </span>
-                                                </td>
-                                                <td class="text-center" style="width: 50px">
-                                                    <div class="d-flex gap-2 justify-content-center">
-                                                        @php
-                                                            $user = auth()->user();
-                                                            $isHRDorDireksi = $user->isHRDorDireksi();
-                                                            $exportablePositions = [
-                                                                'Manager',
-                                                                'GM',
-                                                                'Act Group Manager',
-                                                                'Direktur',
-                                                            ];
-                                                        @endphp
+                                                            {{ $badge['text'] }}
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-center" style="width: 50px">
+                                                        <div class="d-flex gap-2 justify-content-center">
+                                                            @php
+                                                                $user = auth()->user();
+                                                                $isHRDorDireksi = $user->isHRDorDireksi();
+                                                                $exportablePositions = [
+                                                                    'Manager',
+                                                                    'GM',
+                                                                    'Act Group Manager',
+                                                                    'Direktur',
+                                                                ];
+                                                            @endphp
 
-                                                        @if (!$isHRDorDireksi)
-                                                            <button type="button" class="btn btn-sm btn-primary"
+                                                            @if (!$isHRDorDireksi)
+                                                                <button type="button" class="btn btn-sm btn-primary"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
+                                                                    <i class="fas fa-pencil-alt"></i>
+                                                                </button>
+                                                            @endif
+
+                                                            <button type="button" class="btn btn-sm btn-info"
                                                                 data-bs-toggle="modal"
-                                                                data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
-                                                                <i class="fas fa-pencil-alt"></i>
+                                                                data-bs-target="#notes_{{ $assessment->employee->id }}">
+                                                                <i class="fas fa-eye"></i>
                                                             </button>
-                                                        @endif
 
-                                                        <button type="button" class="btn btn-sm btn-info"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#notes_{{ $assessment->employee->id }}">
-                                                            <i class="fas fa-eye"></i>
-                                                        </button>
+                                                            @if (in_array($jobPositions, $exportablePositions))
+                                                                <button type="button" class="btn btn-sm btn-success"
+                                                                    onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
+                                                                    <i class="fas fa-file-export"></i>
+                                                                </button>
+                                                            @endif
 
-                                                        @if (in_array($jobPositions, $exportablePositions))
-                                                            <button type="button" class="btn btn-sm btn-success"
-                                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                                <i class="fas fa-file-export"></i>
-                                                            </button>
-                                                        @endif
+                                                            @if (!$isHRDorDireksi)
+                                                                <button type="button" class="btn btn-sm btn-warning"
+                                                                    onclick="sendDataConfirmation({{ $assessment->employee->id }})">
+                                                                    <i class="fas fa-paper-plane"></i>
+                                                                </button>
+                                                            @endif
 
-                                                        @if (!$isHRDorDireksi)
-                                                            <button type="button" class="btn btn-sm btn-warning"
-                                                                onclick="sendDataConfirmation({{ $assessment->employee->id }})">
-                                                                <i class="fas fa-paper-plane"></i>
-                                                            </button>
-                                                        @endif
-                                                            
-                                                        {{-- <button type="button" class="btn btn-sm btn-success"
+                                                            {{-- <button type="button" class="btn btn-sm btn-success"
                                                             onclick="approveAction()">
                                                             <i class="fas fa-check-circle"></i>
                                                         </button>
@@ -302,10 +327,11 @@
                                                             onclick="rejectAction()">
                                                             <i class="fas fa-times-circle"></i>
                                                         </button> --}}
-                                                    </div>
+                                                        </div>
 
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                </tr>
+                                            @endif
                                         @empty
                                             <tr>
                                                 <td colspan="{{ count($alcs) + 3 }}" class="text-center text-muted py-4">
@@ -318,14 +344,6 @@
                             </div>
                             <div class="d-flex justify-content-between">
                                 @if ($assessments->count())
-                                    <span>
-                                        @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator)
-                                            Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
-                                            {{ $assessments->total() }} entries
-                                        @else
-                                            Showing all {{ $assessments->count() }} entries
-                                        @endif
-                                    </span>
                                     @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator)
                                         {{ $assessments->links('pagination::bootstrap-5') }}
                                     @endif
@@ -354,6 +372,28 @@
                         $employee = $assessment->employee;
                     @endphp
                     @foreach ($alcs as $id => $title)
+                        @php
+                            set_time_limit(60);
+                            $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
+
+                            $weakness = \App\Models\DetailAssessment::select('weakness')
+                                ->where('assessment_id', optional($weaknessDetail?->idp->first())->assessment_id)
+                                ->where('alc_id', $weaknessDetail?->alc_id)
+                                ->first();
+
+                            $idp = \App\Models\Idp::with('commentHistory')
+                                ->where('hav_detail_id', $weaknessDetail->id)
+                                ->where('alc_id', $id)
+                                ->first();
+
+                            $assessment_detail_id = null;
+                            foreach ($assessment->details as $detail) {
+                                if ($idp && $detail->assesment_id == $idp->id) {
+                                    $assessment_detail_id = $detail->id;
+                                }
+                            }
+
+                        @endphp
                         <div class="modal fade" id="kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
                             tabindex="-1" style="display: none;" aria-modal="true" role="dialog">
                             <div class="modal-dialog modal-dialog-centered mw-750px">
@@ -364,23 +404,6 @@
                                         <button type="button" class="btn-close" data-bs-dismiss="modal"
                                             aria-label="Close"></button>
                                     </div>
-
-                                    @php
-                                        set_time_limit(60);
-                                        $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
-                                        $idp = \App\Models\Idp::with('commentHistory')
-                                            ->where('assessment_id', $assessment->id)
-                                            ->where('alc_id', $id)
-                                            ->first();
-
-                                        $assessment_detail_id = null;
-                                        foreach ($assessment->details as $detail) {
-                                            if ($idp && $detail->assesment_id == $idp->id) {
-                                                $assessment_detail_id = $detail->id;
-                                            }
-                                        }
-
-                                    @endphp
 
                                     <div class="modal-body scroll-y mx-2 mt-5">
                                         <input type="hidden" name="employee_id" value="{{ $assessment->id }}">
@@ -396,10 +419,10 @@
                                             <div class="border p-4 rounded bg-light mb-5"
                                                 style="max-height: 400px; overflow-y: auto;">
                                                 <h6 class="fw-bold mb-">Weakness</h6>
-                                                <p class="mb-5">{{ $weaknessDetail->weakness }}</p>
+                                                <p class="mb-5">{{ $weakness?->weakness }}</p>
 
                                                 <h6 class="fw-bold mb-2">Suggestion Development</h6>
-                                                <p>{{ $weaknessDetail->suggestion_development }}</p>
+                                                <p>{{ $weaknessDetail?->suggestion_development }}</p>
                                             </div>
 
                                             <!-- Countdown Text -->
@@ -709,7 +732,7 @@
                                     <div class="row mt-8">
                                         <div class="card">
                                             <div class="card-header">
-                                                <h3 class="card-title">I. Development Program</h3>
+                                                <h3 class="card-title">I. Strength & Weakness</h3>
                                             </div>
                                             <div class="card-body table-responsive">
                                                 <table class="table align-middle">
@@ -1353,7 +1376,10 @@
                             if (!res.ok) {
                                 throw new Error(data.message || "Terjadi kesalahan.");
                             }
-                            Swal.fire('Berhasil!', data.message, 'success');
+                            Swal.fire('Berhasil!', data.message, 'success').then(() => {
+                                // reload halaman setelah user klik OK pada alert sukses
+                                location.reload();
+                            });
                         })
                         .catch(err => {
                             Swal.fire('Gagal', err.message || 'Terjadi kesalahan saat mengirim IDP.', 'error');

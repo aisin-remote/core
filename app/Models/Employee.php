@@ -239,7 +239,7 @@ class Employee extends Model
     }
 
     // ambil bawahan
-    public function getSubordinatesByLevel(int $level = 1)
+    public function getSubordinatesByLevel(int $level = 1, array $allowedPositions = [])
     {
         $currentEmployees = collect([$this]);
 
@@ -251,16 +251,20 @@ class Employee extends Model
             }
 
             if ($nextEmployees->isEmpty()) {
-                // break;
                 return collect();  // langsung return kosong kalau gak ada bawahan di iterasi ini
             }
 
             $currentEmployees = $nextEmployees;
         }
 
-        return $currentEmployees->filter(function ($employee) {
+        // Jika tidak diberikan posisi yang diizinkan, gunakan default lama
+        if (empty($allowedPositions)) {
+            $allowedPositions = ['manager', 'supervisor', 'leader', 'jp', 'operator', 'gm'];
+        }
+
+        return $currentEmployees->filter(function ($employee) use ($allowedPositions) {
             $normalized = $employee->getNormalizedPosition();
-            return in_array($normalized, ['manager', 'supervisor', 'leader', 'jp', 'operator']);
+            return in_array($normalized, $allowedPositions);
         });
     }
 
@@ -269,6 +273,19 @@ class Employee extends Model
     {
         $subordinateIds = collect();
 
+        $normalizedPosition = $employee->getNormalizedPosition();
+
+
+        if ($normalizedPosition === 'vpd') {
+            $managerIds = Department::pluck('manager_id')->filter();
+            $gmIds = Division::pluck('gm_id')->filter();
+        
+            $subordinateIds = $managerIds->merge($gmIds)->unique();        
+        } elseif($normalizedPosition === 'president') {
+            $subordinateIds = Division::pluck('gm_id')->filter()->unique();
+        }
+
+        // Lanjutkan ke kondisi biasa
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
@@ -335,11 +352,11 @@ class Employee extends Model
         return $superiors;
     }
 
-    public function manualSuperiorMap()
+    public function manualSubordinateMap()
     {
         return [
-            'gm' => 'vp',           // GM ke Vice President
-            'vp' => 'president',    // VP ke President
+            'direktur' => 'vpd',           // GM ke Vice President
+            'vpd' => 'president',    // VP ke President
             // Tambahkan sesuai kebutuhan
         ];
     }
@@ -392,12 +409,15 @@ class Employee extends Model
             'act gm'           => 'gm',
             'GM'               => 'gm',
             'direktur'         => 'direktur',
-            'director'         => 'direktur'
+            'director'         => 'direktur',
+            'vpd'              => 'vpd',
+            'president'        => 'president',
         ];
 
         $position = strtolower($this->position);
         return $aliasMap[$position] ?? $position;
     }
+
 
     // mapping create authorization
     public function getCreateAuth()
@@ -414,6 +434,7 @@ class Employee extends Model
         return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader', 'manager' => 3,
             'supervisor', 'gm', 'direktur' => 2,
+            'vpd' => 1,
             default => 0,
         };
     }
@@ -423,6 +444,7 @@ class Employee extends Model
         return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 4,
             'supervisor', 'manager', 'gm' => 3,
+            'vpd', 'president' =>1,
             default => 0,
         };
     }

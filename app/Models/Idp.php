@@ -21,6 +21,11 @@ class Idp extends Model
     {
         return $this->belongsTo(Assessment::class, 'assessment_id', 'id');
     }
+    
+    public function hav()
+    {
+        return $this->belongsTo(HavDetail::class, 'hav_detail_id', 'id');
+    }
 
     public function alc()
     {

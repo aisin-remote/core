@@ -32,7 +32,7 @@
 
             <div class="card-body">
                 @php
-                    $groupedIdps = $idps->groupBy(fn($idp) => $idp->assessment->employee->id);
+                    $groupedIdps = $idps->groupBy(fn($idp) => $idp->hav->hav->employee->id);
                     $no = 1;
                 @endphp
 
@@ -49,12 +49,12 @@
                     </thead>
                     <tbody>
                         @forelse($groupedIdps as $employeeId => $employeeIdps)
-                            @php $employee = $employeeIdps->first()->assessment->employee; @endphp
+                            @php $employee = $employeeIdps->first()->hav->hav->employee; @endphp
                             <tr>
                                 <td>{{ $no++ }}</td>
                                 <td>{{ $employee->npk ?? '-' }}</td>
                                 <td>{{ $employee->name ?? '-' }}</td>
-                                <td>{{ $employee->department?->name ?? '-' }}</td>
+                                <td>{{ $employee->bagian ?? '-' }}</td>
                                 <td>{{ $employee->position ?? '-' }}</td>
                                 <td class="text-center">
                                     <button class="btn btn-sm btn-warning"
@@ -183,7 +183,7 @@
                     }).then(result => {
                         if (result.isConfirmed) {
                             fetch(`idp/${id}`, {
-                                    method: 'PATCH',
+                                    method: 'GET',
                                     headers: {
                                         'X-CSRF-TOKEN': document.querySelector(
                                             'meta[name="csrf-token"]').getAttribute(

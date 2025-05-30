@@ -78,6 +78,7 @@
                     <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                     <tr>
                         <th>No</th>
+                        <th>Photo</th>
                         <th>NPK</th>
                         <th>Employee Name</th>
                         <th>Company</th>
@@ -93,6 +94,11 @@
                         @forelse ($assessments as $index => $assessment)
                             <tr>
                                 <td class="text-center">{{ $index + 1 }}</td>
+                                <td class="text-center">
+                                    <img src="{{ $assessment->employee->photo ? asset('storage/' . $assessment->employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                        alt="Employee Photo" class="rounded" width="40" height="40"
+                                        style="object-fit: cover;">
+                                </td>
                                 <td>{{ $assessment->employee->npk }}</td>
                                 <td>{{ $assessment->employee->name }}</td>
                                 <td>{{ $assessment->employee->company_name }}</td>

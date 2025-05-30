@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Hav extends Model
 {
@@ -19,7 +19,6 @@ class Hav extends Model
     {
         return $this->hasMany(HavDetail::class, 'hav_id', 'id');
     }
-
 
     // Many-to-One: Hav -> Employee
     public function employee()

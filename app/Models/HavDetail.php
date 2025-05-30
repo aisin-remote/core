@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class HavDetail extends Model
 {
@@ -30,5 +30,10 @@ class HavDetail extends Model
     public function alc()
     {
         return $this->belongsTo(Alc::class, 'alc_id', 'id');
+    }
+    
+    public function idp()
+    {
+        return $this->hasMany(Idp::class, 'hav_detail_id', 'id');
     }
 }

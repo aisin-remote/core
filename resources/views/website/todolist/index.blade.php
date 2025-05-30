@@ -57,6 +57,7 @@
                                             class="card border-0 shadow-sm
                                             @if ($item['type'] === 'unassigned') bg-danger-subtle
                                             @elseif($item['type'] === 'need_check') bg-warning-subtle
+                                            @elseif($item['type'] === 'draft') bg-warning-subtle
                                             @elseif($item['type'] === 'need_approval') bg-info-subtle
                                             @else bg-light @endif
                                             hover-shadow">
@@ -68,6 +69,7 @@
                                                     class="badge
                                                     @if ($item['type'] === 'unassigned') badge-danger
                                                     @elseif($item['type'] === 'need_check') badge-warning
+                                                    @elseif($item['type'] === 'draft') badge-warning
                                                     @elseif($item['type'] === 'need_approval') badge-info
                                                     @else badge-secondary @endif
                                                     rounded-pill px-3 py-2">
@@ -77,6 +79,8 @@
                                                         <i class="fas fa-exclamation-circle me-2"></i> Need Check
                                                     @elseif($item['type'] === 'need_approval')
                                                         <i class="fas fa-hourglass-half me-2"></i> Need Approval
+                                                    @elseif($item['type'] === 'draft')
+                                                        <i class="fas fa-exclamation-circle me-2"></i> Need Submit
                                                     @else
                                                         Unknown
                                                     @endif
