@@ -138,7 +138,7 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('employee')->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
-        Route::get('/{company?}', [EmployeeController::class, 'index'])->name('employee.index');
+
         Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
         Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
         Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
@@ -192,6 +192,7 @@ Route::middleware('auth')->group(function () {
         Route::prefix('profile')->group(function () {
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
         });
+        Route::get('/{company?}', [EmployeeController::class, 'index'])->name('employee.index');
     });
 
 

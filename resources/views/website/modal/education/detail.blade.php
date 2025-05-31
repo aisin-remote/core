@@ -19,15 +19,20 @@
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light-warning edit-education-btn" data-bs-toggle="modal"
-                                data-bs-target="#editEducationModal{{ $edu->id }}"
-                                data-education-id="{{ $edu->id }}">
+                            <button class="btn btn-sm btn-light-warning edit-education-btn"
+                                data-education-id="{{ $edu->id }}"
+                                data-target="#editEducationModal{{ $edu->id }}">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-light-danger delete-education-btn" data-bs-toggle="modal"
-                                data-bs-target="#deleteEducationModal{{ $edu->id }}">
+
+                            <button class="btn btn-sm btn-light-danger delete-education-btn"
+                                data-education-id="{{ $edu->id }}"
+                                data-target="#deleteEducationModal{{ $edu->id }}">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
+
+
+
                         </div>
                     </div>
                     @unless ($loop->last)
@@ -45,3 +50,60 @@
         </div>
     </div>
 </div>
+<script>
+    $(document).on("click", ".edit-education-btn", function() {
+        const target = $(this).data("target");
+
+        // Ambil instance modal detail yang sudah ada
+        const detailModalEl = document.getElementById("detailEducationModal");
+        const detailModalInstance = bootstrap.Modal.getInstance(detailModalEl);
+
+        // Sembunyikan modal detail dulu
+        detailModalInstance.hide();
+
+        // Buka modal edit setelah delay
+        setTimeout(() => {
+            const editModalEl = document.querySelector(target);
+
+            // Cek apakah modal edit sudah punya instance, kalau belum buat baru
+            let editModalInstance = bootstrap.Modal.getInstance(editModalEl);
+            if (!editModalInstance) {
+                editModalInstance = new bootstrap.Modal(editModalEl);
+            }
+            editModalInstance.show();
+
+            // Pasang event listener untuk buka kembali modal detail saat modal edit ditutup
+            editModalEl.addEventListener('hidden.bs.modal', function handler() {
+                detailModalInstance.show();
+
+                // Hapus event listener supaya tidak double trigger
+                editModalEl.removeEventListener('hidden.bs.modal', handler);
+            });
+        }, 300);
+    });
+
+    $(document).on("click", ".delete-education-btn", function() {
+        const targetSelector = $(this).data("target");
+
+        const detailModalEl = document.getElementById("detailEducationModal");
+        const detailModalInstance = bootstrap.Modal.getInstance(detailModalEl);
+
+        detailModalInstance.hide();
+
+        setTimeout(() => {
+            const deleteModalEl = document.querySelector(targetSelector);
+
+            // Cek instance modal hapus
+            let deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
+            if (!deleteModalInstance) {
+                deleteModalInstance = new bootstrap.Modal(deleteModalEl);
+            }
+            deleteModalInstance.show();
+
+            deleteModalEl.addEventListener('hidden.bs.modal', function handler() {
+                detailModalInstance.show();
+                deleteModalEl.removeEventListener('hidden.bs.modal', handler);
+            });
+        }, 300);
+    });
+</script>

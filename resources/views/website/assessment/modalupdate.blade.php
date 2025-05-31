@@ -25,9 +25,9 @@
                         <label for="update_date" class="form-label">Date Assessment</label>
                         <input type="date" class="form-control" id="update_date" name="date" required>
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-4" style="display: none;">
                         <label for="update_description" class="form-label">Description Assessment</label>
-                        <input type="text" class="form-control" id="update_description" name="description" required>
+                        <input type="hidden" class="form-control" id="update_description" name="description" required>
                     </div>
 
                     <div class="mb-4">
@@ -293,40 +293,25 @@
                 }
             });
         }
-         $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        // Tutup semua modal yang mungkin masih terbuka
-                        $(".modal").modal("hide");
-
-                        // Hapus semua backdrop
-                        $(".modal-backdrop").remove();
-
-                        // Hapus kelas modal-open dari body
+        $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                    if ($(".modal.show").length === 0) {
                         $("body").removeClass("modal-open");
-                    }, 300);
+                        $(".modal-backdrop").remove();
+                    }
                 });
 
-
-
-                // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
+                // Saat modal history ditutup
                 $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        if (!$("#updateAssessmentModal").hasClass("show")) {
-
-                            $("body").removeClass("modal-open");
-                        }
-                    }, 300);
+                    if ($(".modal.show").length === 0) {
+                        $("body").removeClass("modal-open");
+                        $(".modal-backdrop").remove();
+                    }
                 });
 
-                // ===== CEGAH OVERLAY BERLAPIS =====
+                // Jaga z-index backdrop agar tidak terlalu tebal saat banyak modal muncul
                 $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").last().css("z-index",
-                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+                    $(".modal-backdrop").css("z-index", 1050);
                 });
-
-
-
-
 
     });
 </script>

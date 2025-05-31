@@ -111,7 +111,7 @@
 
 
                         </table>
-                       <div class="d-flex justify-content-end mt-4">
+                        <div class="d-flex justify-content-end mt-4">
                             {{ $assessments->links('pagination::bootstrap-5') }}
                         </div>
 
@@ -347,7 +347,7 @@
 
                         // Buat overlay baru agar tetap ada
                         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 300);
+                    }, 10);
                 });
 
                 function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses, suggestions) {
@@ -535,36 +535,27 @@
                 //         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
                 //     }, 300);
                 // });
+                // Saat modal update ditutup
                 $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        // Tutup semua modal yang mungkin masih terbuka
-                        $(".modal").modal("hide");
-
-                        // Hapus semua backdrop
-                        $(".modal-backdrop").remove();
-
-                        // Hapus kelas modal-open dari body
+                    if ($(".modal.show").length === 0) {
                         $("body").removeClass("modal-open");
-                    }, 300);
+                        $(".modal-backdrop").remove();
+                    }
                 });
 
-
-
-                // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
+                // Saat modal history ditutup
                 $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        if (!$("#updateAssessmentModal").hasClass("show")) {
-
-                            $("body").removeClass("modal-open");
-                        }
-                    }, 300);
+                    if ($(".modal.show").length === 0) {
+                        $("body").removeClass("modal-open");
+                        $(".modal-backdrop").remove();
+                    }
                 });
 
-                // ===== CEGAH OVERLAY BERLAPIS =====
+                // Jaga z-index backdrop agar tidak terlalu tebal saat banyak modal muncul
                 $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").last().css("z-index",
-                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+                    $(".modal-backdrop").css("z-index", 1050);
                 });
+
 
 
 
