@@ -341,6 +341,8 @@ class IdpController extends Controller
         $mid = Development::all();
 
         $allPositions = [
+            'President',
+            'VPD',
             'Direktur',
             'GM',
             'Manager',
