@@ -603,7 +603,15 @@ class HavController extends Controller
         $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
-        $subordinates = auth()->user()->subordinate()->unique()->values();
+        $user = auth()->user();
+        $role = strtolower($user->employee->position); // pastikan lowercase atau sesuai penulisan
+
+        if (in_array($role, ['president', 'vpd'])) {
+            $subordinates = Employee::pluck('id'); // semua employee
+        } else {
+            $subordinates = $user->subordinate()->pluck('id')->unique()->values(); // bawahan langsung
+        }
+
         $employees = Employee::with([
             'departments',
             'assessments.details',
@@ -712,10 +720,10 @@ class HavController extends Controller
 
             $getLastAssessment = $emp->assessments->sortByDesc('date')->first();
 
-            $withWeakness = $getLastAssessment->details->filter(fn($item) => !empty($item['weakness']))
+            $withWeakness = $getLastAssessment?->details->filter(fn($item) => !empty($item['weakness']))
                 ->values() // reset index agar rapi
                 ->take(8);
-            $withStrength = $getLastAssessment->details->filter(fn($item) => !empty($item['strength']))
+            $withStrength = $getLastAssessment?->details->filter(fn($item) => !empty($item['strength']))
                 ->values() // reset index agar rapi
                 ->take(8);
 
