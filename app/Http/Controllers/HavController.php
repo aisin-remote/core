@@ -341,7 +341,7 @@ class HavController extends Controller
 
         // Ambil subordinate berdasarkan level otorisasi
         $approvallevel = $employee->getCreateAuth();
-        $subordinateIds = $employee->getSubordinatesByLevel($approvallevel)->pluck('id');
+        $subordinateIds = $employee->getSubordinatesByLevel($approvallevel)->pluck('id')->toArray();
 
         // Ambil semua subordinate (filtered)
         $subordinates = Employee::whereIn('id', $subordinateIds)
@@ -358,6 +358,7 @@ class HavController extends Controller
                     ->with(['details', 'commentHistory']);
             }])
             ->get();
+
         $employees = $subordinates->map(function ($emp) {
             $latestHav = $emp->hav ? $emp->hav->first() : null;
             return (object)[

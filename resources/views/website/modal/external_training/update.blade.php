@@ -13,16 +13,22 @@
                 <div class="modal-body">
                     <input type="hidden" name="employee_id" value="{{ $externalTraining->employee_id }}">
 
-                    <div class="mb-3">
-                        <label class="form-label">Date</label>
-                        <input type="date" name="year" class="form-control" required
-                            value="{{ \Carbon\Carbon::parse($externalTraining->date_end)->format('Y-m-d') }}">
-                    </div>
 
                     <div class="mb-3">
                         <label class="form-label">Program</label>
                         <input type="text" name="program" class="form-control" required
                             value="{{ $externalTraining->program }}">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Date Start</label>
+                        <input type="date" name="date_start" class="form-control" required
+                            value="{{ \Carbon\Carbon::parse($externalTraining->date_start)->format('Y-m-d') }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Date End</label>
+                        <input type="date" name="date_end" class="form-control" required
+                            value="{{ \Carbon\Carbon::parse($externalTraining->date_end)->format('Y-m-d') }}">
                     </div>
 
                     <div class="mb-3">
