@@ -346,27 +346,68 @@
                                 </div>
                             </div>
                         @elseif ($isHRDorTop)
-                            {{-- IDP menu for HRD / President / VPD --}}
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
                                     <span class="menu-title ps-1">IDP</span>
                                     <span class="menu-arrow"></span>
                                 </span>
+
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'idp/aii' ? 'active' : '' }}"
-                                            href="/idp/aii">
+                                    {{-- IDP Assign --}}
+                                    <div class="menu-item menu-accordion {{ request()->is('idp/*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">AII</span>
-                                        </a>
+                                            <span class="menu-title">IDP Assign</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/aii') ? 'active' : '' }}"
+                                                    href="/idp/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/aiia') ? 'active' : '' }}"
+                                                    href="/idp/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'idp/aiia' ? 'active' : '' }}"
-                                            href="/idp/aiia">
+
+                                    {{-- IDP List --}}
+                                    <div class="menu-item menu-accordion {{ request()->is('idp/list/*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">AIIA</span>
-                                        </a>
+                                            <span class="menu-title">IDP List</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/list/aii') ? 'active' : '' }}"
+                                                    href="/idp/list/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/list/aiia') ? 'active' : '' }}"
+                                                    href="/idp/list/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -665,9 +706,8 @@
 
                     <!-- Department -->
 
-                    </div>
                 </div>
-            @endif
+            </div>
         </div>
         <!-- Sidebar User Panel -->
         <!--begin::User info sidebar bottom-->

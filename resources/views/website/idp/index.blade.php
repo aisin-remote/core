@@ -373,6 +373,7 @@
                     @endphp
                     @foreach ($alcs as $id => $title)
                         @php
+                            // dd($id);
                             set_time_limit(60);
                             $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
 
@@ -382,7 +383,7 @@
                                 ->first();
 
                             $idp = \App\Models\Idp::with('commentHistory')
-                                ->where('hav_detail_id', $weaknessDetail->id)
+                                ->where('hav_detail_id', $weaknessDetail?->id)
                                 ->where('alc_id', $id)
                                 ->first();
 

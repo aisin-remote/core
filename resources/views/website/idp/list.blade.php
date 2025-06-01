@@ -45,11 +45,13 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">IDP List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;" value="{{ request('search') }}">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
+                    <form method="GET" action="{{ url()->current() }}" class="d-flex mb-3">
+                        <input type="text" id="searchInputEmployee" name="search" class="form-control me-2"
+                            placeholder="Search..." style="width: 250px;" value="{{ request('search') }}">
+                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
+                            Search
+                        </button>
+                    </form>
                 </div>
             </div>
 
@@ -103,7 +105,7 @@
                                 <td>{{ $assessment->employee->name }}</td>
                                 <td>{{ $assessment->employee->company_name }}</td>
                                 <td>{{ $assessment->employee->position }}</td>
-                                <td>{{ $assessment->employee->department?->name ?? '-' }}</td>
+                                <td>{{ $assessment->employee->bagian ?? '-' }}</td>
                                 <td>{{ $assessment->employee->grade ?? '-' }}</td>
                                 <td class="text-center">
                                     {{-- Summary --}}
@@ -129,11 +131,11 @@
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History Assessment</h5>
+                    <h5 class="modal-title fw-bold" id="detailAssessmentModalLabel">History IDP</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <h1 class="text-center mb-4 fw-bold">History HAV</h1>
+                    <h1 class="text-center mb-4 fw-bold">History IDP</h1>
 
                     <div class="row mb-3 d-flex justify-content-end align-items-center gap-4">
                         <div class="col-auto">

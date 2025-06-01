@@ -265,7 +265,7 @@ class IdpController extends Controller
 
         $assessments = collect(); // default kosong
 
-        if ($user->role === 'HRD') {
+        if ($user->isHRDorDireksi()) {
             $assessments = Assessment::whereIn('id', function ($query) {
                 $query->selectRaw('MAX(id)')
                     ->from('assessments as a')
