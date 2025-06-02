@@ -295,7 +295,7 @@ class HavController extends Controller
 
         $allPositions = [
             'President',
-             'VPD',
+            'VPD',
             'Direktur',
             'GM',
             'Manager',
@@ -609,9 +609,8 @@ class HavController extends Controller
         if (in_array($role, ['president', 'vpd'])) {
             $subordinates = Employee::pluck('id'); // semua employee
         } else {
-            $subordinates = $user->subordinate()->pluck('id')->unique()->values(); // bawahan langsung
+            $subordinates =  $this->getSubordinatesFromStructure($user->employee)->pluck('id'); // bawahan langsung
         }
-
         $employees = Employee::with([
             'departments',
             'assessments.details',
@@ -621,9 +620,11 @@ class HavController extends Controller
             ->whereHas('havQuadrants')
             ->when($position, fn($q) => $q->where('position', $position)) // filter posisi
             ->whereIn('id', $subordinates)->get();
+
         $startRow = 13;
         $sheet->setCellValue("C6", auth()->user()->employee->name);
         $sheet->setCellValue("C7", date('d-m-Y H:i:s'));
+
 
         foreach ($employees as $i => $emp) {
             $row = $startRow + $i;

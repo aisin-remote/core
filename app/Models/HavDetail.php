@@ -12,7 +12,7 @@ class HavDetail extends Model
 
     protected $guarded = ['id'];
 
-    protected $fillable = ['alc_id', 'hav_id', 'score', 'evidence'];
+    protected $fillable = ['alc_id', 'hav_id', 'score', 'evidence', 'suggestion_development', 'is_assessment'];
 
     // Many-to-One: HavDetail -> Hav
     public function hav()
@@ -31,7 +31,7 @@ class HavDetail extends Model
     {
         return $this->belongsTo(Alc::class, 'alc_id', 'id');
     }
-    
+
     public function idp()
     {
         return $this->hasMany(Idp::class, 'hav_detail_id', 'id');

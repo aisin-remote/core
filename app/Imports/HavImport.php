@@ -84,24 +84,35 @@ class HavImport implements WithMultipleSheets, WithEvents
 
                     $scoreMap = [
                         1 => 'D15',
-                        2 => 'H15',
-                        3 => 'M15',
-                        4 => 'Q15',
+                        2 => 'I15',
+                        3 => 'O15',
+                        4 => 'T15',
                         5 => 'D25',
-                        6 => 'H25',
-                        7 => 'M25',
-                        8 => 'Q25',
+                        6 => 'I25',
+                        7 => 'O25',
+                        8 => 'T25',
                     ];
 
                     $evidenceMap = [
                         1 => 'E17',
-                        2 => 'I17',
-                        3 => 'N17',
-                        4 => 'R17',
+                        2 => 'J17',
+                        3 => 'P17',
+                        4 => 'U17',
                         5 => 'E27',
-                        6 => 'I27',
-                        7 => 'N27',
-                        8 => 'R27',
+                        6 => 'J27',
+                        7 => 'P27',
+                        8 => 'U27',
+                    ];
+
+                    $developmentMap = [
+                        1 => 'F17',
+                        2 => 'K17',
+                        3 => 'Q17',
+                        4 => 'V17',
+                        5 => 'F27',
+                        6 => 'K27',
+                        7 => 'Q27',
+                        8 => 'V27',
                     ];
 
                     $quadrant = (new HavQuadrant())->updateHavFromAssessment(
@@ -128,6 +139,8 @@ class HavImport implements WithMultipleSheets, WithEvents
                             'alc_id' => $alc->id,
                             'score' => floatval($sheet->getCell($cell)->getCalculatedValue()),
                             'evidence' => $sheet->getCell($evidenceMap[$index])->getCalculatedValue(),
+                            'suggestion_development' => $sheet->getCell($developmentMap[$index])->getCalculatedValue(),
+                            'is_assessment' => 0,
                         ]);
                     }
 
