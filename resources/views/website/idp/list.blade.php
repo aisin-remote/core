@@ -88,32 +88,40 @@
                         <th>Department</th>
                         <th>Grade</th>
                         <th class="text-center">Action</th>
-
-
                     </tr>
                     </thead>
                     <tbody>
                         @forelse ($assessments as $index => $assessment)
+                            @php
+                                $hav = $assessment->hav; // karena hasMany
+                                $employee = optional(optional($hav)->hav)->employee;
+                            @endphp
                             <tr>
                                 <td class="text-center">{{ $index + 1 }}</td>
                                 <td class="text-center">
-                                    <img src="{{ $assessment->employee->photo ? asset('storage/' . $assessment->employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                    <img src="{{ $employee?->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
                                         style="object-fit: cover;">
                                 </td>
-                                <td>{{ $assessment->employee->npk }}</td>
-                                <td>{{ $assessment->employee->name }}</td>
-                                <td>{{ $assessment->employee->company_name }}</td>
-                                <td>{{ $assessment->employee->position }}</td>
-                                <td>{{ $assessment->employee->bagian ?? '-' }}</td>
-                                <td>{{ $assessment->employee->grade ?? '-' }}</td>
+                                <td>{{ $employee?->npk ?? '-' }}</td>
+                                <td>{{ $employee?->name ?? '-' }}</td>
+                                <td>{{ $employee?->company_name ?? '-' }}</td>
+                                <td>{{ $employee?->position ?? '-' }}</td>
+                                <td>{{ $employee?->bagian ?? '-' }}</td>
+                                <td>{{ $employee?->grade ?? '-' }}</td>
                                 <td class="text-center">
-                                    {{-- Summary --}}
-                                    <a class="btn btn-info btn-sm history-btn"
-                                        data-employee-id="{{ $assessment->employee->id }}" data-bs-toggle="modal"
-                                        data-bs-target="#detailAssessmentModal">
-                                        History
-                                    </a>
+                                    @if ($employee)
+                                        <a class="btn btn-info btn-sm history-btn" data-employee-id="{{ $employee->id }}"
+                                            data-bs-toggle="modal" data-bs-target="#detailAssessmentModal">
+                                            History
+                                        </a>
+                                    @else
+                                        <span class="text-muted">No Employee</span>
+                                    @endif
+
+                                    <button class="btn btn-danger btn-sm btn-delete" data-id="{{ $assessment->id }}">
+                                        Delete
+                                    </button>
                                 </td>
                             </tr>
                         @empty
@@ -167,198 +175,6 @@
             </div>
         </div>
     </div>
-    @foreach ($assessments as $assessment)
-        <div class="modal fade" id="notes_{{ $assessment->employee->id }}" tabindex="-1" aria-modal="true" role="dialog">
-            <div class="modal-dialog modal-dialog-centered mw-1000px">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 class="fw-bold">Summary {{ $assessment->employee->name }}</h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <div class="modal-body scroll-y mx-2">
-                        <canvas id="chart_{{ $assessment->id }}" height="80"></canvas>
-                    </div>
-                    <div class="modal-body scroll-y mx-2">
-                        <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h3 class="card-title">I. Development Program</h3>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center">Strength</th>
-                                                    <th class="text-center">Description</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @php
-                                                    $strengths = $assessment->details
-                                                        ->filter(fn($item) => !empty($item->strength))
-                                                        ->values();
-                                                @endphp
-
-                                                @foreach ($strengths as $detail)
-                                                    <tr>
-                                                        <td class="text-justify px-3">
-                                                            {{ $detail->alc->name ?? '-' }}</td>
-                                                        <td class="text-justify px-3">
-                                                            {{ $detail->strength ?? '-' }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header">
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center">Weakness</th>
-                                                    <th class="text-center">Description</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @php
-                                                    $weakness = $assessment->details
-                                                        ->filter(fn($item) => !empty($item->weakness))
-                                                        ->values();
-                                                @endphp
-
-                                                @foreach ($weakness as $detail)
-                                                    <tr>
-                                                        <td class="text-justify px-3">
-                                                            {{ $detail->alc->name ?? '-' }}</td>
-                                                        <td class="text-justify px-3">
-                                                            {{ $detail->weakness ?? '-' }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Individual Development Program -->
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h3 class="card-title">II. Individual Development Program</h3>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                            <thead>
-                                                <tr>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-center">Development Area</th>
-                                                    <th class="text-center">Category</th>
-                                                    <th class="text-center">Development Program</th>
-                                                    <th class="text-center">Development Target</th>
-                                                    <th class="text-center">Due Date</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td class="text-justify px-3">
-                                                        {{ $assessment->idp?->first()?->alc->name }}</td>
-                                                    <td class="text-justify px-3">
-                                                        {{ $assessment->idp?->first()?->category }}</td>
-                                                    <td class="text-justify px-3">
-                                                        {{ $assessment->idp?->first()?->development_program }}
-                                                    </td>
-                                                    <td class="text-justify px-3">
-                                                        {{ $assessment->idp?->first()?->development_target }}</td>
-                                                    <td class="text-justify px-3">
-                                                        {{ optional(optional($assessment->idp)->first())->date ? \Carbon\Carbon::parse(optional($assessment->idp)->first()->date)->format('d-m-Y') : '' }}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Mid Year Review -->
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header">
-                                        <h3 class="card-title">III. Mid Year Review</h3>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                            <thead>
-                                                <tr>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-justify px-3">Development Program</th>
-                                                    <th class="text-justify px-3">Development Achievement</th>
-                                                    <th class="text-justify px-3">Next Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($mid->where('employee_id', $assessment->employee_id) as $items)
-                                                    <tr>
-                                                        <td class="text-justify px-3">
-                                                            {{ $items->development_program }}</td>
-                                                        <td class="text-justify px-3">
-                                                            {{ $items->development_achievement }}</td>
-                                                        <td class="text-justify px-3">{{ $items->next_action }}
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">IV. One Year Review</h3>
-                                        <div class="d-flex align-items-center">
-                                        </div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                    <th class="text-justify px-3" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-justify px-3" style="width: 50px">
-                                                        Evaluation Result
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($details->where('employee_id', $assessment->employee->id) as $item)
-                                                    <tr>
-                                                        <td class="text-justify px-3">
-                                                            {{ $item->development_program }}</td>
-                                                        <td class="text-justify px-3">
-                                                            {{ $item->evaluation_result }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    @endforeach
 @endsection
 
 @push('scripts')
@@ -367,6 +183,50 @@
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script>
         $(document).ready(function() {
+            $('.btn-delete').on('click', function() {
+                const id = $(this).data('id');
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: 'This IDP will be permanently deleted!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Deleting...',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+
+                        $.ajax({
+                            url: `/idp/delete/${id}`,
+                            type: 'POST',
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr(
+                                    'content') // ← CSRF Token
+                            },
+                            success: function(response) {
+                                Swal.fire({
+                                    title: 'Deleted!',
+                                    text: response.message ||
+                                        'IDP successfully deleted.',
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+                                setTimeout(() => location.reload(), 1500);
+                            },
+                            error: function() {
+                                Swal.fire('Error!', 'Something went wrong.', 'error');
+                            }
+                        });
+                    }
+                });
+            });
+
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
 
@@ -419,7 +279,7 @@
                         } else {
                             $("#kt_table_assessments tbody").append(`
         <tr>
-            <td colspan="3" class="text-center text-muted">No assessment found</td>
+            <td colspan="3" class="text-center text-muted">No IDP found</td>
         </tr>
     `);
                         }
@@ -451,58 +311,6 @@
                     $('#detailAssessmentModal').modal('show');
                 }
             });
-        });
-        document.addEventListener("DOMContentLoaded", function() {
-            @foreach ($assessments as $assessment)
-                const ctx{{ $assessment->id }} = document.getElementById('chart_{{ $assessment->id }}');
-                if (ctx{{ $assessment->id }}) {
-                    new Chart(ctx{{ $assessment->id }}, {
-                        type: 'bar',
-                        data: {
-                            labels: [
-                                @foreach ($assessment->details as $detail)
-                                    {!! json_encode($detail->alc->name ?? 'N/A') !!},
-                                @endforeach
-                            ],
-
-                            datasets: [{
-                                label: 'Score',
-                                backgroundColor: '#0d6efd',
-                                borderColor: '#0d6efd',
-                                data: [
-                                    @foreach ($assessment->details as $detail)
-                                        {{ intval($detail->score ?? 0) }},
-                                    @endforeach
-                                ],
-
-                            }]
-                        },
-                        options: {
-                            responsive: true,
-                            plugins: {
-                                title: {
-                                    display: true,
-                                    text: 'ALC Score Overview'
-                                },
-                                legend: {
-                                    display: false
-                                }
-                            },
-                            scales: {
-                                y: {
-                                    beginAtZero: true,
-                                    max: 5,
-                                    ticks: {
-                                        stepSize: 1, // loncatan 1
-                                        precision: 0 // tanpa desimal
-                                    }
-                                }
-                            }
-
-                        }
-                    });
-                }
-            @endforeach
         });
     </script>
 @endpush

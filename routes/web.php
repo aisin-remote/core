@@ -228,7 +228,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/idp/store-one-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('idp.storeMidYear');
         Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
         Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
-        Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
+        Route::post('/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
         Route::get('/getData', [IdpController::class, 'getData'])->name('idp.getData');
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
         Route::get('/history/{id}', [IdpController::class, 'show'])->name('idp.show');

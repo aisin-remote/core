@@ -266,70 +266,56 @@ class IdpController extends Controller
         $assessments = collect(); // default kosong
 
         if ($user->isHRDorDireksi()) {
-            $assessments = Assessment::whereIn('id', function ($query) {
-                $query->selectRaw('MAX(id)')
-                    ->from('assessments as a')
-                    ->groupBy('a.employee_id');
-            })
-                ->with(['employee', 'details', 'idp'])
-                ->when(
-                    $company,
-                    fn($q) =>
-                    $q->whereHas('employee', fn($e) => $e->where('company_name', $company))
-                )
-                ->when(
-                    $search,
-                    fn($q) =>
-                    $q->whereHas('employee', function ($e) use ($search) {
-                        $e->where('name', 'like', "%$search%")
-                            ->orWhere('npk', 'like', "%$search%");
-                    })
-                )
+            $assessments = Idp::with('hav.hav.employee')
+                ->when($company, function ($query) use ($company) {
+                    $query->whereHas('hav.hav.employee', function ($q) use ($company) {
+                        $q->where('company_name', $company);
+                    });
+                })
+                ->when($npk, function ($query) use ($npk) {
+                    $query->whereHas('hav.hav.employee', function ($q) use ($npk) {
+                        $q->where('npk', $npk);
+                    });
+                })
+                ->when($search, function ($query) use ($search) {
+                    $query->whereHas('hav.hav.employee', function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('npk', 'like', '%' . $search . '%');
+                    });
+                })
                 ->orderByDesc('created_at')
                 ->paginate(10);
         } else {
-            $emp = Employee::with([
-                'subSection.section.department.division.plant',
-                'leadingSection.department.division.plant',
-                'leadingDepartment.division.plant',
-                'leadingPlant'
-            ])->where('user_id', $user->id)->first();
+            // Ambil employee berdasarkan user login
+            $emp = Employee::where('user_id', $user->id)->first();
 
-            if ($emp) {
-                $subordinateIds = $this->getSubordinatesFromStructure($emp)->pluck('id');
+            if (!$emp) {
+                $assessments = collect(); // Kosong jika tidak ada employee
+            } else {
+                $subordinates = $this->getSubordinatesFromStructure($emp)->pluck('id')->toArray();
 
-                $latestAssessmentIds = Assessment::selectRaw('MAX(id) as id')
-                    ->whereIn('employee_id', $subordinateIds)
-                    ->groupBy('employee_id')
-                    ->pluck('id');
-
-                $assessments = Assessment::with(['employee', 'details', 'idp'])
-                    ->whereIn('id', $latestAssessmentIds)
-                    ->when(
-                        $company,
-                        fn($q) =>
-                        $q->whereHas(
-                            'employee',
-                            fn($e) =>
-                            $e->where('company_name', $company)
-                        )
-                    )
-                    ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
-                        if ($npk) {
-                            $query->where('npk', $npk);
-                        }
-
-                        if ($filter && $filter !== 'all') {
-                            $query->where(function ($q) use ($filter) {
-                                $q->where('position', $filter)
-                                    ->orWhere('position', 'like', "Act %{$filter}");
-                            });
-                        }
-
-                        if ($search) {
-                            $query->where('name', 'like', '%' . $search . '%');
-                        }
+                // Ambil IDP bawahan
+                $assessments = Idp::with('hav.hav.employee')
+                    ->whereHas('hav.hav.employee', function ($query) use ($subordinates) {
+                        $query->whereIn('id', $subordinates);
                     })
+                    ->when($company, function ($query) use ($company) {
+                        $query->whereHas('hav.hav.employee', function ($q) use ($company) {
+                            $q->where('company_name', $company);
+                        });
+                    })
+                    ->when($npk, function ($query) use ($npk) {
+                        $query->whereHas('hav.hav.employee', function ($q) use ($npk) {
+                            $q->where('npk', $npk);
+                        });
+                    })
+                    ->when($search, function ($query) use ($search) {
+                        $query->whereHas('hav.hav.employee', function ($q) use ($search) {
+                            $q->where('name', 'like', '%' . $search . '%')
+                                ->orWhere('npk', 'like', '%' . $search . '%');
+                        });
+                    })
+                    ->orderByDesc('created_at')
                     ->get();
             }
         }
@@ -411,10 +397,9 @@ class IdpController extends Controller
     public function store(Request $request)
     {
         $assessment = Assessment::where('id', $request->assessment_id)->first();
-
         try {
             DB::beginTransaction();
-            $idp = Idp::where('assessment_id', $request->assessment_id)
+            $idp = Idp::where('hav_detail_id', $request->hav_detail_id)
                 ->where('alc_id', $request->alc_id)
                 ->first();
 
@@ -433,11 +418,12 @@ class IdpController extends Controller
                     'message' => 'Development updated successfully.',
                     'idp' => $idp, // opsional: kirim data IDP terbaru
                 ]);
+
             } else {
                 $newIdp = Idp::create([
+                    'hav_detail_id' => $request->hav_detail_id,
                     'alc_id' => $request->alc_id,
                     'assessment_id' => $request->assessment_id,
-                    'employee_id' => $assessment->employee_id,
                     'development_program' => $request->development_program,
                     'category' => $request->category,
                     'development_target' => $request->development_target,
@@ -446,7 +432,6 @@ class IdpController extends Controller
                 ]);
 
                 DB::commit();
-
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Development added successfully.',
@@ -878,5 +863,13 @@ class IdpController extends Controller
 
         // Kembalikan respons JSON
         return response()->json(['message' => 'Data berhasil direvisi.']);
+    }
+
+    public function destroy($id)
+    {
+        $idp = Idp::findOrFail($id);
+        $idp->delete();
+
+        return redirect()->back()->with('success', 'IDP deleted successfully.');
     }
 }

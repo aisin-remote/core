@@ -150,7 +150,13 @@
                                                             $idpExists = DB::table('idp')
                                                                 ->where('hav_detail_id', $title->id)
                                                                 ->where('alc_id', $title->alc_id)
-                                                                ->get();
+                                                                ->exists();
+
+                                                            $assessmentId = DB::table('assessments')
+                                                                ->select('id')
+                                                                ->where('employee_id', $index)
+                                                                ->latest()
+                                                                ->first();
 
                                                             // Ambil level approval dari employee yang sedang di-assess
                                                             $approvalLevel = $assessment->employee->getCreateAuth();
@@ -253,7 +259,7 @@
                                                                     data-bs-toggle="modal"
                                                                     data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $title->alc_id }}"
                                                                     data-title="Update IDP - {{ $title->alc->name }}"
-                                                                    data-assessment="{{ $assessment->id }}"
+                                                                    data-assessment="{{ $assessmentId->id }}"
                                                                     data-alc="{{ $title->alc_id }}"
                                                                     style="cursor: pointer;">
                                                                     {{ $score }}
@@ -373,13 +379,22 @@
                     @endphp
                     @foreach ($alcs as $id => $title)
                         @php
-                            // dd($id);
                             set_time_limit(60);
                             $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
 
-                            $weakness = \App\Models\DetailAssessment::select('weakness')
-                                ->where('assessment_id', optional($weaknessDetail?->idp->first())->assessment_id)
-                                ->where('alc_id', $weaknessDetail?->alc_id)
+                            $assessmentId = DB::table('assessments')
+                                ->select('id')
+                                ->where('employee_id', $weaknessDetail->hav->employee->id)
+                                ->latest()
+                                ->first();
+
+                            $weakness = \App\Models\DetailAssessment::with('assessment.employee')
+                                ->select('weakness', 'suggestion_development')
+                                ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
+                                    $query->where('id', $weaknessDetail->hav->employee->id);
+                                })
+                                ->where('alc_id', $weaknessDetail->alc_id)
+                                ->latest()
                                 ->first();
 
                             $idp = \App\Models\Idp::with('commentHistory')
@@ -420,10 +435,11 @@
                                             <div class="border p-4 rounded bg-light mb-5"
                                                 style="max-height: 400px; overflow-y: auto;">
                                                 <h6 class="fw-bold mb-">Weakness</h6>
-                                                <p class="mb-5">{{ $weakness?->weakness }}</p>
+                                                <p class="mb-5">{{ optional($weakness)->weakness }}</p>
 
                                                 <h6 class="fw-bold mb-2">Suggestion Development</h6>
-                                                <p>{{ $weaknessDetail?->suggestion_development }}</p>
+                                                <p>{{ $weaknessDetail?->suggestion_development ?? ($weakness?->suggestion_development ?? '-') }}
+                                                </p>
                                             </div>
 
                                             <!-- Countdown Text -->
@@ -456,7 +472,7 @@
                                             <div class="col-lg-12 mb-10">
                                                 <label class="fs-5 fw-bold form-label mb-2"><span
                                                         class="required">Category</span></label>
-                                                <select id="category_select_{{ $assessment->id }}_{{ $id }}"
+                                                <select id="category_select_{{ $assessmentId->id }}_{{ $id }}"
                                                     name="category" class="form-select form-select-lg fw-semibold"
                                                     data-control="select2" data-placeholder="Select categories...">
                                                     <option value="">Select Category</option>
@@ -472,7 +488,7 @@
                                             <div class="col-lg-12 mb-10">
                                                 <label class="fs-5 fw-bold form-label mb-2"><span
                                                         class="required">Development Program</span></label>
-                                                <select id="program_select_{{ $assessment->id }}_{{ $id }}"
+                                                <select id="program_select_{{ $assessmentId->id }}_{{ $id }}"
                                                     name="development_program"
                                                     class="form-select form-select-lg fw-semibold" data-control="select2"
                                                     data-placeholder="Select Programs...">
@@ -487,17 +503,17 @@
                                             </div>
 
                                             <div class="col-lg-12 fv-row mb-10">
-                                                <label for="target_{{ $assessment->id }}_{{ $id }}"
+                                                <label for="target_{{ $assessmentId->id }}_{{ $id }}"
                                                     class="fs-5 fw-bold form-label mb-2 required">Development
                                                     Target</label>
-                                                <textarea id="target_{{ $assessment->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
+                                                <textarea id="target_{{ $assessmentId->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
                                             </div>
 
                                             <div class="col-lg-12 fv-row mb-5">
-                                                <label for="due_date_{{ $assessment->id }}_{{ $id }}"
+                                                <label for="due_date_{{ $assessmentId->id }}_{{ $id }}"
                                                     class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
                                                 <input type="date"
-                                                    id="due_date_{{ $assessment->id }}_{{ $id }}"
+                                                    id="due_date_{{ $assessmentId->id }}_{{ $id }}"
                                                     name="date" class="form-control"
                                                     value="{{ isset($idp) ? $idp->date : '' }}" />
                                             </div>
@@ -530,8 +546,9 @@
                                                 <button type="button"
                                                     id="confirm-button-{{ $assessment->id }}-{{ $id }}"
                                                     class="btn btn-primary btn-create-idp"
-                                                    data-assessment="{{ $assessment->id }}"
-                                                    data-alc="{{ $id }}" disabled>
+                                                    data-assessment="{{ $assessmentId->id }}"
+                                                    data-hav="{{ $weaknessDetail?->id }}" data-alc="{{ $id }}"
+                                                    disabled>
                                                     Submit
                                                 </button>
                                             </div>
@@ -1072,6 +1089,7 @@
                 button.addEventListener('click', function() {
                     const alc = this.getAttribute('data-alc');
                     const assessmentId = this.getAttribute('data-assessment');
+                    console.log(assessmentId);
                     const modalTarget = this.getAttribute('data-bs-target');
                     const title = this.getAttribute('data-title');
 
@@ -1151,8 +1169,8 @@
             document.querySelectorAll('.btn-create-idp').forEach(button => {
                 button.addEventListener('click', function() {
                     const assessmentId = this.getAttribute('data-assessment');
+                    const havDetailId = this.getAttribute('data-hav');
                     const alcId = this.getAttribute('data-alc');
-
                     const category = document.getElementById(
                         `category_select_${assessmentId}_${alcId}`).value;
                     const program = document.getElementById(
@@ -1166,6 +1184,7 @@
 
                     localStorage.setItem(key, JSON.stringify({
                         assessment_id: assessmentId,
+                        hav_detail_id: havDetailId,
                         alc_id: alcId,
                         category: category,
                         program: program,
@@ -1178,6 +1197,7 @@
                         url: "{{ route('idp.store') }}",
                         type: "POST",
                         data: {
+                            hav_detail_id: havDetailId,
                             alc_id: alcId,
                             assessment_id: assessmentId,
                             development_program: program,
