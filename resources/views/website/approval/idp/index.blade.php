@@ -73,37 +73,34 @@
                                 data-bs-parent="#kt_table_users">
                                 <td colspan="6">
                                     <div class="accordion accordion-flush" id="accordionFlush{{ $employeeId }}">
-                                        @foreach ($employeeIdps as $index => $idp)
-                                            <div class="accordion-item">
-                                                <h2 class="accordion-header"
-                                                    id="flush-heading{{ $employeeId }}-{{ $index }}">
-                                                    <div class="d-flex justify-content-between align-items-center">
-                                                        <button type="button"
-                                                            class="accordion-button collapsed bg-light fw-bolder"
-                                                            onclick="toggleAccordion('flush-collapse{{ $employeeId }}-{{ $index }}')">
-                                                            {{ $idp->alc->name }}
-                                                        </button>
-                                                    </div>
-                                                </h2>
-                                                <div id="flush-collapse{{ $employeeId }}-{{ $index }}"
-                                                    class="accordion-collapse collapse"
-                                                    data-bs-parent="#accordionFlush{{ $employeeId }}">
-                                                    <div class="accordion-body">
-                                                        <div class="table-responsive">
-                                                            <table class="table table-bordered table-sm">
-                                                                <thead class="thead-dark">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="flush-heading{{ $employeeId }}">
+                                                <button type="button" class="accordion-button collapsed bg-light fw-bolder"
+                                                    onclick="toggleAccordion('flush-collapse{{ $employeeId }}')">
+                                                    Individual Development Plan
+                                                </button>
+                                            </h2>
+                                            <div id="flush-collapse{{ $employeeId }}" class="accordion-collapse collapse"
+                                                data-bs-parent="#accordionFlush{{ $employeeId }}">
+                                                <div class="accordion-body">
+                                                    <div class="table-responsive">
+                                                        <table class="table table-bordered table-sm">
+                                                            <thead class="table-light">
+                                                                <tr>
+                                                                    <th class="text-center">ALC</th>
+                                                                    <th class="text-center">Category</th>
+                                                                    <th>Program</th>
+                                                                    <th>Target</th>
+                                                                    <th>Date</th>
+                                                                    <th class="text-center">Score</th>
+                                                                    <th class="text-center">Action</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach ($employeeIdps as $idp)
                                                                     <tr>
-                                                                        <th>Category</th>
-                                                                        <th>Program</th>
-                                                                        <th>Target</th>
-                                                                        <th>Date</th>
-                                                                        <th class="text-center">Score</th>
-                                                                        <th class="text-center">Action</th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody>
-                                                                    <tr>
-                                                                        <td>{{ $idp->category }}</td>
+                                                                        <td class="text-center">{{ $idp->category }}</td>
+                                                                        <td class="text-center">{{ $idp->alc->name }}</td>
                                                                         <td>{{ $idp->development_program }}</td>
                                                                         <td>{{ $idp->development_target }}</td>
                                                                         <td>{{ $idp->date }}</td>
@@ -122,14 +119,13 @@
                                                                             </button>
                                                                         </td>
                                                                     </tr>
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
                                                     </div>
                                                 </div>
                                             </div>
-                                        @endforeach
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
