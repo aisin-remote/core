@@ -379,13 +379,11 @@ class IdpController extends Controller
             ], 404);
         }
 
-        $assessments = Assessment::where('employee_id', $employee_id)
-            ->select('id', 'date',  'description', 'employee_id', 'upload')
+        $assessments = Idp::with('hav.hav.employee')
+            ->whereHas('hav.hav.employee', function ($q) use ($employee) {
+                $q->where('id', $employee->id);
+            })
             ->orderBy('date', 'desc')
-            ->with(['details' => function ($query) {
-                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness', 'suggestion_development')
-                    ->with(['alc:id,name']);
-            }])
             ->get();
 
         return response()->json([

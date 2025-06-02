@@ -79,9 +79,9 @@
                                                     id="flush-heading{{ $employeeId }}-{{ $index }}">
                                                     <div class="d-flex justify-content-between align-items-center">
                                                         <button type="button"
-                                                            class="accordion-button collapsed bg-light text-primary"
+                                                            class="accordion-button collapsed bg-light fw-bolder"
                                                             onclick="toggleAccordion('flush-collapse{{ $employeeId }}-{{ $index }}')">
-                                                            {{ $idp->category }} - {{ $idp->development_program }}
+                                                            {{ $idp->alc->name }}
                                                         </button>
                                                     </div>
                                                 </h2>
@@ -89,39 +89,43 @@
                                                     class="accordion-collapse collapse"
                                                     data-bs-parent="#accordionFlush{{ $employeeId }}">
                                                     <div class="accordion-body">
-                                                        <table class="table table-sm">
-                                                            <tbody>
-                                                                <tr>
-                                                                    <td><strong>Category:</strong></td>
-                                                                    <td>{{ $idp->category }}</td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td><strong>Program:</strong></td>
-                                                                    <td>{{ $idp->development_program }}</td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td><strong>Target:</strong></td>
-                                                                    <td>{{ $idp->development_target }}</td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td><strong>Date:</strong></td>
-                                                                    <td>{{ $idp->date }}</td>
-                                                                </tr>
-                                                                <tr>
-                                                                    <td><strong>Score:</strong></td>
-                                                                    <td><span class="badge badge-danger">2</span></td>
-                                                                </tr>
-                                                            </tbody>
-                                                        </table>
+                                                        <div class="table-responsive">
+                                                            <table class="table table-bordered table-sm">
+                                                                <thead class="thead-dark">
+                                                                    <tr>
+                                                                        <th>Category</th>
+                                                                        <th>Program</th>
+                                                                        <th>Target</th>
+                                                                        <th>Date</th>
+                                                                        <th class="text-center">Score</th>
+                                                                        <th class="text-center">Action</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                    <tr>
+                                                                        <td>{{ $idp->category }}</td>
+                                                                        <td>{{ $idp->development_program }}</td>
+                                                                        <td>{{ $idp->development_target }}</td>
+                                                                        <td>{{ $idp->date }}</td>
+                                                                        <td class="text-center">
+                                                                            <span class="badge badge-danger">2</span>
+                                                                        </td>
+                                                                        <td class="text-center">
+                                                                            <button class="btn btn-sm btn-danger btn-revise"
+                                                                                data-id="{{ $idp->id }}">
+                                                                                <i class="fas fa-edit"></i> Revise
+                                                                            </button>
+                                                                            <button
+                                                                                class="btn btn-sm btn-success btn-approve"
+                                                                                data-idp-id="{{ $idp->id }}">
+                                                                                <i class="fas fa-check-circle"></i> Approve
+                                                                            </button>
+                                                                        </td>
+                                                                    </tr>
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
 
-                                                        <button class="btn btn-sm btn-danger btn-revise"
-                                                            data-id="{{ $idp->id }}">
-                                                            <i class="fas fa-edit"></i> Revise
-                                                        </button>
-                                                        <button class="btn btn-sm btn-success btn-approve"
-                                                            data-idp-id="{{ $idp->id }}">
-                                                            <i class="fas fa-check-circle"></i> Approve
-                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>

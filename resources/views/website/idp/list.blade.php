@@ -175,6 +175,199 @@
             </div>
         </div>
     </div>
+
+    @foreach ($assessments as $assessment)
+        <div class="modal fade" id="notes_{{ $assessment->hav->hav->employee->id }}" tabindex="-1" aria-modal="true"
+            role="dialog">
+            <div class="modal-dialog modal-dialog-centered mw-1000px">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h2 class="fw-bold">Summary {{ $assessment->hav->hav->employee->name }}</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body scroll-y mx-2">
+                        <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
+                            <div class="row mt-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title">I. Strength & Weakness</h3>
+                                    </div>
+                                    <div class="card-body table-responsive">
+                                        <table class="table align-middle">
+                                            <thead>
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                    <th class="text-center">Strength</th>
+                                                    <th class="text-center">Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @php
+                                                    $strengths =
+                                                        $assessment->details
+                                                            ?->filter(fn($item) => !empty($item->strength))
+                                                            ->values() ?? collect();
+                                                @endphp
+
+                                                @foreach ($strengths as $detail)
+                                                    <tr>
+                                                        <td class="text-justify px-3">
+                                                            {{ $detail->alc->name ?? '-' }}</td>
+                                                        <td class="text-justify px-3">
+                                                            {{ $detail->strength ?? '-' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+
+                            <div class="row mt-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                    </div>
+                                    <div class="card-body table-responsive">
+                                        <table class="table align-middle">
+                                            <thead>
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                    <th class="text-center">Weakness</th>
+                                                    <th class="text-center">Description</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @php
+                                                    $weakness = collect($assessment->details)
+                                                        ->filter(fn($item) => !empty($item->weakness))
+                                                        ->values();
+                                                @endphp
+
+
+                                                @foreach ($weakness as $detail)
+                                                    <tr>
+                                                        <td class="text-justify px-3">
+                                                            {{ $detail->alc->name ?? '-' }}</td>
+                                                        <td class="text-justify px-3">
+                                                            {{ $detail->weakness ?? '-' }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Individual Development Program -->
+                            <div class="row mt-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title">II. Individual Development Program</h3>
+                                    </div>
+                                    <div class="card-body table-responsive">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
+                                            <thead>
+                                                <tr>
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                    <th class="text-center">Development Area</th>
+                                                    <th class="text-center">Category</th>
+                                                    <th class="text-center">Development Program</th>
+                                                    <th class="text-center">Development Target</th>
+                                                    <th class="text-center">Due Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td class="text-center px-3">
+                                                        {{ $assessment->alc->name }}</td>
+                                                    <td class="text-center px-3">
+                                                        {{ $assessment->category }}</td>
+                                                    <td class="text-center px-3">
+                                                        {{ $assessment->development_program }}
+                                                    </td>
+                                                    <td class="text-center px-3">
+                                                        {{ $assessment->development_target }}</td>
+                                                    <td class="text-center px-3">
+                                                        {{ \Carbon\Carbon::parse($assessment->date)->format('d-m-Y') }}
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mid Year Review -->
+                            <div class="row mt-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h3 class="card-title">III. Mid Year Review</h3>
+                                    </div>
+                                    <div class="card-body table-responsive">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
+                                            <thead>
+                                                <tr>
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                    <th class="text-justify px-3">Development Program</th>
+                                                    <th class="text-justify px-3">Development Achievement</th>
+                                                    <th class="text-justify px-3">Next Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($mid->where('employee_id', $assessment->employee_id) as $items)
+                                                    <tr>
+                                                        <td class="text-justify px-3">
+                                                            {{ $items->development_program }}</td>
+                                                        <td class="text-justify px-3">
+                                                            {{ $items->development_achievement }}</td>
+                                                        <td class="text-justify px-3">{{ $items->next_action }}
+                                                        </td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mt-8">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h3 class="card-title">IV. One Year Review</h3>
+                                        <div class="d-flex align-items-center">
+                                        </div>
+                                    </div>
+                                    <div class="card-body table-responsive">
+                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
+                                            id="kt_table_users">
+                                            <thead>
+                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                    <th class="text-justify px-3" style="width: 50px">
+                                                        Development Program
+                                                    </th>
+                                                    <th class="text-justify px-3" style="width: 50px">
+                                                        Evaluation Result
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach ($details->where('employee_id', $assessment->hav->hav->employee->id) as $item)
+                                                    <tr>
+                                                        <td class="text-justify px-3">
+                                                            {{ $item->development_program }}</td>
+                                                        <td class="text-justify px-3">
+                                                            {{ $item->evaluation_result }}</td>
+                                                    </tr>
+                                                @endforeach
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endforeach
 @endsection
 
 @push('scripts')

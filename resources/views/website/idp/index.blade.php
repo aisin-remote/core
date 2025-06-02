@@ -1017,7 +1017,7 @@
 
                     function startCountdown(callback) {
                         clearInterval(countdownInterval); // prevent duplicate
-                        const totalSeconds = 12;
+                        const totalSeconds = 2;
                         let secondsLeft = totalSeconds;
                         let messageToggle = true;
 

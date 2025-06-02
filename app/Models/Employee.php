@@ -248,7 +248,6 @@ class Employee extends Model
 
             foreach ($currentEmployees as $emp) {
                 $nextEmployees = $nextEmployees->merge($this->getDirectSubordinatesOf($emp));
-                
             }
 
             if ($nextEmployees->isEmpty()) {
@@ -268,7 +267,6 @@ class Employee extends Model
             return in_array($normalized, $allowedPositions);
         });
     }
-
 
     private function getDirectSubordinatesOf(Employee $employee)
     {
