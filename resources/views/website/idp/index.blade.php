@@ -259,7 +259,7 @@
                                                                     data-bs-toggle="modal"
                                                                     data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $title->alc_id }}"
                                                                     data-title="Update IDP - {{ $title->alc->name }}"
-                                                                    data-assessment="{{ $assessmentId->id }}"
+                                                                    data-assessment="{{ $assessmentId?->id }}"
                                                                     data-alc="{{ $title->alc_id }}"
                                                                     style="cursor: pointer;">
                                                                     {{ $score }}
@@ -472,7 +472,7 @@
                                             <div class="col-lg-12 mb-10">
                                                 <label class="fs-5 fw-bold form-label mb-2"><span
                                                         class="required">Category</span></label>
-                                                <select id="category_select_{{ $assessmentId->id }}_{{ $id }}"
+                                                <select id="category_select_{{ $assessmentId?->id }}_{{ $id }}"
                                                     name="category" class="form-select form-select-lg fw-semibold"
                                                     data-control="select2" data-placeholder="Select categories...">
                                                     <option value="">Select Category</option>
@@ -488,7 +488,7 @@
                                             <div class="col-lg-12 mb-10">
                                                 <label class="fs-5 fw-bold form-label mb-2"><span
                                                         class="required">Development Program</span></label>
-                                                <select id="program_select_{{ $assessmentId->id }}_{{ $id }}"
+                                                <select id="program_select_{{ $assessmentId?->id }}_{{ $id }}"
                                                     name="development_program"
                                                     class="form-select form-select-lg fw-semibold" data-control="select2"
                                                     data-placeholder="Select Programs...">
@@ -503,17 +503,17 @@
                                             </div>
 
                                             <div class="col-lg-12 fv-row mb-10">
-                                                <label for="target_{{ $assessmentId->id }}_{{ $id }}"
+                                                <label for="target_{{ $assessmentId?->id }}_{{ $id }}"
                                                     class="fs-5 fw-bold form-label mb-2 required">Development
                                                     Target</label>
-                                                <textarea id="target_{{ $assessmentId->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
+                                                <textarea id="target_{{ $assessmentId?->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
                                             </div>
 
                                             <div class="col-lg-12 fv-row mb-5">
-                                                <label for="due_date_{{ $assessmentId->id }}_{{ $id }}"
+                                                <label for="due_date_{{ $assessmentId?->id }}_{{ $id }}"
                                                     class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
                                                 <input type="date"
-                                                    id="due_date_{{ $assessmentId->id }}_{{ $id }}"
+                                                    id="due_date_{{ $assessmentId?->id }}_{{ $id }}"
                                                     name="date" class="form-control"
                                                     value="{{ isset($idp) ? $idp->date : '' }}" />
                                             </div>
@@ -546,7 +546,7 @@
                                                 <button type="button"
                                                     id="confirm-button-{{ $assessment->id }}-{{ $id }}"
                                                     class="btn btn-primary btn-create-idp"
-                                                    data-assessment="{{ $assessmentId->id }}"
+                                                    data-assessment="{{ $assessmentId?->id }}"
                                                     data-hav="{{ $weaknessDetail?->id }}" data-alc="{{ $id }}"
                                                     disabled>
                                                     Submit
