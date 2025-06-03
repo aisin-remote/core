@@ -184,10 +184,13 @@
                                                                 }
                                                             }
 
-                                                            $status = 'approved';
+                                                            $status = 'no_approval_needed'; // default jika semua skor >= 3
 
                                                             foreach ($assessment->details as $detail) {
-                                                                if ($detail->score < 3) {
+                                                                if (
+                                                                    $detail->score < 3 ||
+                                                                    $detail->suggestion_development !== null
+                                                                ) {
                                                                     $idp = \App\Models\Idp::where(
                                                                         'hav_detail_id',
                                                                         $detail->id,
@@ -215,11 +218,26 @@
                                                                         ])
                                                                     ) {
                                                                         $status = 'checked';
+                                                                        break;
+                                                                    } elseif (
+                                                                        $idp->status === 3 &&
+                                                                        !in_array($status, [
+                                                                            'not_created',
+                                                                            'draft',
+                                                                            'waiting',
+                                                                            'checked',
+                                                                        ])
+                                                                    ) {
+                                                                        $status = 'approved';
                                                                     }
                                                                 }
                                                             }
 
                                                             $badges = [
+                                                                'no_approval_needed' => [
+                                                                    'text' => '-',
+                                                                    'class' => 'light-primary',
+                                                                ],
                                                                 'not_created' => [
                                                                     'text' => 'Not Created',
                                                                     'class' => 'light-dark',
@@ -245,26 +263,49 @@
                                                                     'class' => 'light-danger',
                                                                 ],
                                                             ];
+
                                                             $badge = $badges[$status] ?? $badges['approved'];
+
+                                                            $badgeClass = 'badge-lg d-block w-100 ';
+                                                            if ($score < 3) {
+                                                                $badgeClass .= 'badge-danger';
+                                                            } elseif ($title->suggestion_development !== null) {
+                                                                $badgeClass .= 'badge-warning';
+                                                            } else {
+                                                                $badgeClass .= 'badge-success';
+                                                            }
+
+                                                            $showIcon = false;
+                                                            if ($score < 3) {
+                                                                $showIcon = true;
+                                                            } elseif (
+                                                                $title->suggestion_development !== null &&
+                                                                !$idpExists
+                                                            ) {
+                                                                $showIcon = true;
+                                                            }
 
                                                         @endphp
                                                         <td class="text-center">
-                                                            @if ($score >= 3 || $score === '-')
+                                                            @if ($score === '-')
                                                                 <span class="badge badge-lg badge-success d-block w-100">
                                                                     {{ $score }}
                                                                 </span>
                                                             @else
-                                                                {{-- Boleh klik --}}
-                                                                <span class="badge badge-lg badge-danger d-block w-100"
+                                                                <span class="badge {{ $badgeClass }}"
                                                                     data-bs-toggle="modal"
                                                                     data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $title->alc_id }}"
                                                                     data-title="Update IDP - {{ $title->alc->name }}"
                                                                     data-assessment="{{ $assessmentId?->id }}"
                                                                     data-alc="{{ $title->alc_id }}"
                                                                     style="cursor: pointer;">
+
                                                                     {{ $score }}
-                                                                    <i
-                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+
+                                                                    @if ($showIcon)
+                                                                        <i
+                                                                            class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                                    @endif
                                                                 </span>
                                                             @endif
                                                         </td>
@@ -435,7 +476,7 @@
                                             <div class="border p-4 rounded bg-light mb-5"
                                                 style="max-height: 400px; overflow-y: auto;">
                                                 <h6 class="fw-bold mb-">Weakness</h6>
-                                                <p class="mb-5">{{ optional($weakness)->weakness }}</p>
+                                                <p class="mb-5">{{ optional($weakness)->weakness ?? '-' }}</p>
 
                                                 <h6 class="fw-bold mb-2">Suggestion Development</h6>
                                                 <p>{{ $weaknessDetail?->suggestion_development ?? ($weakness?->suggestion_development ?? '-') }}

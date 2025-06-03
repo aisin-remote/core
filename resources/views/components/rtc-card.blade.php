@@ -17,7 +17,7 @@
 <div class="{{ $cardClass }}">
     <div class="rtc-header">
         <h3
-            class="{{ $cardClass === 'rtc-main-card' ? 'rtc-title' : ($cardClass === 'rtc-manager-card' ? 'rtc-department' : 'rtc-section') }}">
+            class="text-center {{ $cardClass === 'rtc-main-card' ? 'rtc-title' : ($cardClass === 'rtc-manager-card' ? 'rtc-department' : 'rtc-section') }}">
             {{ $title }}
         </h3>
     </div>

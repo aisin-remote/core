@@ -51,17 +51,18 @@ class ToDoListController extends Controller
 
         
         $emp = [];
-        foreach ($assessments as $assessment){
-            foreach ($assessment->details as $detail){
-                if($detail->score < 3 &&!empty($detail->idp)){
+        foreach ($assessments as $assessment) {
+            foreach ($assessment->details as $detail) {
+                // Jika score < 3 atau ada saran pengembangan, dan IDP-nya tidak kosong
+                if (($detail->score < 3 || $detail->suggestion_development !== null) && !empty($detail->idp)) {
                     $emp[$assessment->employee_id][] = [
                         'hav_detail_id' => $detail->id,
                         'alc_id' => $detail->alc_id,
-                        'alc_name' => $detail->alc->name ?? 'Unknown', // Ambil nama ALC
+                        'alc_name' => $detail->alc->name ?? 'Unknown',
                     ];
                 }
             }
-        }
+        }        
             
         // lalu crosscek di tabel idp, sudah ada atau belum
         $employeeNames = $assessments->pluck('employee.name','employee_id')->toArray();
