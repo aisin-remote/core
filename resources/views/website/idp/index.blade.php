@@ -761,26 +761,47 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @php
-                                                            $strengths = $assessment->details
-                                                                ->filter(fn($item) => !empty($item->strength))
-                                                                ->values();
-                                                        @endphp
+                                                        @foreach ($alcs as $id => $title)
+                                                            @php
+                                                                $weaknessDetail = $assessment->details
+                                                                    ->where('alc_id', $id)
+                                                                    ->first();
+                                                                $detailAlc = null;
 
-                                                        @foreach ($strengths as $detail)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->alc->name ?? '-' }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->strength ?? '-' }}</td>
-                                                            </tr>
+                                                                if (
+                                                                    $weaknessDetail &&
+                                                                    $weaknessDetail->hav &&
+                                                                    $weaknessDetail->hav->employee
+                                                                ) {
+                                                                    $employeeId = $weaknessDetail->hav->employee->id;
+
+                                                                    $detailAlc = \App\Models\DetailAssessment::with(
+                                                                        'assessment.employee',
+                                                                    )
+                                                                        ->whereHas('assessment.employee', function (
+                                                                            $query,
+                                                                        ) use ($employeeId) {
+                                                                            $query->where('id', $employeeId);
+                                                                        })
+                                                                        ->where('alc_id', $weaknessDetail->alc_id)
+                                                                        ->latest()
+                                                                        ->first();
+                                                                }
+                                                            @endphp
+                                                            @if ($detailAlc && $detailAlc->strength)
+                                                                <tr>
+                                                                    <td class="text-center px-3">{{ $title ?? '-' }}
+                                                                    </td>
+                                                                    <td class="text-center px-3">
+                                                                        {{ $detailAlc->strength ?? '-' }}</td>
+                                                                </tr>
+                                                            @endif
                                                         @endforeach
                                                     </tbody>
                                                 </table>
                                             </div>
                                         </div>
                                     </div>
-
 
                                     <div class="row mt-8">
                                         <div class="card">
@@ -795,19 +816,41 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @php
-                                                            $weakness = $assessment->details
-                                                                ->filter(fn($item) => !empty($item->weakness))
-                                                                ->values();
-                                                        @endphp
+                                                        @foreach ($alcs as $id => $title)
+                                                            @php
+                                                                $weaknessDetail = $assessment->details
+                                                                    ->where('alc_id', $id)
+                                                                    ->first();
+                                                                $detailAlc = null;
 
-                                                        @foreach ($weakness as $detail)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->alc->name ?? '-' }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->weakness ?? '-' }}</td>
-                                                            </tr>
+                                                                if (
+                                                                    $weaknessDetail &&
+                                                                    $weaknessDetail->hav &&
+                                                                    $weaknessDetail->hav->employee
+                                                                ) {
+                                                                    $employeeId = $weaknessDetail->hav->employee->id;
+
+                                                                    $detailAlc = \App\Models\DetailAssessment::with(
+                                                                        'assessment.employee',
+                                                                    )
+                                                                        ->whereHas('assessment.employee', function (
+                                                                            $query,
+                                                                        ) use ($employeeId) {
+                                                                            $query->where('id', $employeeId);
+                                                                        })
+                                                                        ->where('alc_id', $weaknessDetail->alc_id)
+                                                                        ->latest()
+                                                                        ->first();
+                                                                }
+                                                            @endphp
+                                                            @if ($detailAlc && $detailAlc->weakness)
+                                                                <tr>
+                                                                    <td class="text-center px-3">{{ $title ?? '-' }}
+                                                                    </td>
+                                                                    <td class="text-center px-3">
+                                                                        {{ $detailAlc->weakness ?? '-' }}</td>
+                                                                </tr>
+                                                            @endif
                                                         @endforeach
                                                     </tbody>
                                                 </table>
@@ -834,20 +877,25 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        <tr>
-                                                            <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->alc->name }}</td>
-                                                            <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->category }}</td>
-                                                            <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->development_program }}
-                                                            </td>
-                                                            <td class="text-justify px-3">
-                                                                {{ $assessment->idp?->first()?->development_target }}</td>
-                                                            <td class="text-justify px-3">
-                                                                {{ optional(optional($assessment->idp)->first())->date ? \Carbon\Carbon::parse(optional($assessment->idp)->first()->date)->format('d-m-Y') : '' }}
-                                                            </td>
-                                                        </tr>
+                                                        @foreach ($assessment->details->filter(fn($item) => $item->idp->isNotEmpty()) as $idp)
+                                                            <tr>
+                                                                <td class="text-center px-3">
+                                                                    {{ $idp->alc->name ?? '-' }}
+                                                                </td>
+                                                                <td class="text-center px-3">
+                                                                    {{ $idp->idp->first()?->category }}
+                                                                </td>
+                                                                <td class="text-center px-3">
+                                                                    {{ $idp->idp->first()?->development_program }}
+                                                                </td>
+                                                                <td class="text-center px-3">
+                                                                    {{ $idp->idp->first()?->development_target }}
+                                                                </td>
+                                                                <td class="text-center px-3">
+                                                                    {{ optional($idp->idp->first())->date ? \Carbon\Carbon::parse($idp->idp->first()->date)->format('d-m-Y') : '-' }}
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
                                                     </tbody>
                                                 </table>
                                             </div>
@@ -877,7 +925,8 @@
                                                                     {{ $items->development_program }}</td>
                                                                 <td class="text-justify px-3">
                                                                     {{ $items->development_achievement }}</td>
-                                                                <td class="text-justify px-3">{{ $items->next_action }}
+                                                                <td class="text-justify px-3">
+                                                                    {{ $items->next_action }}
                                                                 </td>
                                                             </tr>
                                                         @endforeach
