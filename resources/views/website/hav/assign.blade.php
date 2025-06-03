@@ -73,25 +73,36 @@
                                 <td>{{ $item->employee->position }}</td>
                                 <td>{{ $item->employee->department?->name }}</td>
                                 <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge badge-light-warning fs-7 fw-bold">
-                                        {{ match (optional($item->hav)->status) {
-                                            0 => 'Submited',
-                                            1 => 'Revised',
-                                            2 => 'Approved',
-                                            default => '-',
-                                        } }}
+                                @php
+                                    $status = optional($item->hav)->status;
+                                    $isAssessmentOne = $item->hav && $item->hav->details->contains('is_assessment', 1);
+                                @endphp
+                                <td>
+                                    <span class="badge badge-light-warning fs-7 fw-bold">
+                                        @if ($status === 0 && $isAssessmentOne)
+                                            Not Created
+                                        @else
+                                            {{ match ($status) {
+                                                0 => 'Submited',
+                                                1 => 'Revised',
+                                                2 => 'Approved',
+                                                3 => 'Not Created',
+                                                default => '-',
+                                            } }}
+                                        @endif
                                     </span>
+                                </td>
 
                                 <td class="text-center">
-
-                                    @if ($item->hav)
-                                        @if ($item->hav->status == 1)
-                                            <a href="#" class="btn btn-warning btn-sm btn-revise-import"
-                                                data-bs-toggle="modal" data-bs-target="#importModal"
-                                                data-hav-id="{{ $item->hav->id }}"
-                                                data-employee-id="{{ $item->employee->id }}">
-                                                <i class="fas fa-upload"></i> Revise
-                                            </a>
+                                    @if ($item->hav && $item->hav->details->first()?->is_assessment == 0)
+                                        @if ($item->hav)
+                                            @if ($item->hav->status == 1)
+                                                <a href="#" class="btn btn-warning btn-sm btn-revise-import"
+                                                    data-bs-toggle="modal" data-bs-target="#importModal"
+                                                    data-hav-id="{{ $item->hav->id }}"
+                                                    data-employee-id="{{ $item->employee->id }}">
+                                                    <i class="fas fa-upload"></i> Revise
+                                                </a>
                                             @endif
                                             <a data-id="{{ $item->hav->id }}"
                                                 class="btn btn-primary btn-sm btn-hav-comment" href="#">
@@ -104,6 +115,16 @@
                                                 <i class="fas fa-plus"></i> Add
                                             </a>
                                         @endif
+                                    @else
+                                        <a href="#" class="btn btn-info btn-sm btn-add-import" data-bs-toggle="modal"
+                                            data-bs-target="#importModal" data-employee-id="{{ $item->employee->id }}">
+                                            <i class="fas fa-plus"></i> Add
+                                        </a>
+                                        <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment"
+                                            href="#">
+                                            Comment
+                                        </a>
+                                    @endif
                                 </td>
                             </tr>
                         @endforeach
@@ -155,7 +176,8 @@
                 </div>
 
                 <div class="modal-body">
-                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST"
+                        enctype="multipart/form-data">
                         @csrf
 
                         <div class="mb-3">
@@ -349,10 +371,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                                                                                                                                        data-id="${hav.id}"
-                                                                                                                                                                        class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                                                                                                                            History
-                                                                                                                                                                        </a>`}
+                                                                                                                                                                                                            data-id="${hav.id}"
+                                                                                                                                                                                                            class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                                                                                                                                                History
+                                                                                                                                                                                                            </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>
@@ -478,7 +500,8 @@
                                 <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
                                     <div>
                                         <strong>${comment.employee.name} :</strong><br>
-                                        ${comment.comment}
+                                      ${comment.comment ?? '-'}
+
                                     </div>
                                    <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
                                        <strong> ${formattedDate}</strong>
