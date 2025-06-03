@@ -351,14 +351,13 @@ class Employee extends Model
         return $superiors;
     }
 
-    public function manualSubordinateMap()
+    public static function manualSuperiorMap()
     {
         return [
-            'direktur' => 'vpd',           // GM ke Vice President
-            'vpd' => 'president',    // VP ke President
-            // Tambahkan sesuai kebutuhan
+            'gm' => 'vp',
+            'vp' => 'president',
         ];
-    }
+    }    
 
     private function getDirectSuperiorOf(Employee $employee)
     {
