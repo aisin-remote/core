@@ -28,7 +28,6 @@ use App\Http\Controllers\ChecksheetAssessmentController;
 |
 */
 
-
 /* Employee Competency */
 Route::prefix('employeeCompetencies')->group(function () {
     Route::resource('/', EmployeeCompetencyController::class);
@@ -63,10 +62,13 @@ Route::post('/checksheet/store', [ChecksheetController::class, 'store'])->name('
 Route::delete('/checksheet/{checksheet}', [ChecksheetController::class, 'destroy'])->name('checksheet.destroy');
 
 /* Checksheet Assessment */
-Route::get('/checksheet-assessment/{competency}', [ChecksheetAssessmentController::class, 'index'])
-     ->name('checksheet-assessment.index');
+Route::get('/checksheet-assessment/{employeeId}/{competencyId}', [ChecksheetAssessmentController::class, 'index'])
+    ->where(['employeeId' => '[0-9]+', 'competencyId' => '[0-9]+'])
+    ->name('checksheet-assessment.index');
+Route::get('/checksheet-assessment/view/{employeeCompetencyId}', [ChecksheetAssessmentController::class, 'show'])
+     ->name('checksheet-assessment.view');
 Route::post('/checksheet-assessment', [ChecksheetAssessmentController::class, 'store'])
-     ->name('checksheet-assessment.store'); 
+    ->name('checksheet-assessment.store'); 
 
 
 Route::middleware('guest')->group(function () {

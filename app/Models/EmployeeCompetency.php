@@ -27,4 +27,10 @@ class EmployeeCompetency extends Model
     {
         return $this->belongsToMany(Department::class, 'employee_departments');
     }
+
+    public function checksheetAssessments()
+    {
+        return $this->hasMany(ChecksheetAssessment::class);
+    }
+
 }

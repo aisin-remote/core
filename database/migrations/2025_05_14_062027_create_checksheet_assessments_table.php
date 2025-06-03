@@ -26,7 +26,7 @@ return new class extends Migration
                 ->on('employee_competency')
                 ->onDelete('cascade');
             $table->integer('score');
-            $table->integer('description');
+            $table->string('description');
             $table->timestamps();
 
         });

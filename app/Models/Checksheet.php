@@ -12,11 +12,6 @@ class CheckSheet extends Model
     protected $table = 'checksheet';
     protected $guarded = ['id'];
 
-    public function department()
-    {
-        return $this->belongsTo(Department::class, 'department_id', 'id');
-    }
-
     public function competency()
     {
         return $this->belongsTo(Competency::class);

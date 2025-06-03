@@ -2,192 +2,238 @@
 
 @push('custom-css')
 <style>
-  .badge-circle {
-    border-radius: 0.75rem;
-    padding: 0.5rem 0.75rem;
-    color: white;
+  /* 1) Hilangkan semua border default */
+  #empCompTable,
+  #empCompTable th,
+  #empCompTable td {
+    border: none !important;
   }
+  /* Kalau masih ada border di <table>, override juga */
+  #empCompTable {
+    border: none !important;
+  }
+
+  /* 2) Sticky & layout tetap sama */
+  .table-responsive { overflow-x: visible; }
+  #empCompTable {
+    width: 100%;
+    border-collapse: separate;
+    table-layout: fixed;
+  }
+  /* No & Employee */
+  .col-no  { width: 60px;  min-width: 60px; }
+  .col-emp { width: 200px; min-width: 200px; }
   .sticky-col {
-    position: sticky;
-    left: 0;
-    background: white;
-    z-index: 2;
+    position: sticky; left: 0; z-index: 10; background: white;
+  }
+  .col-no  { left: 0; }
+  .col-emp { left: 60px; }
+  /* Action */
+  .col-act { width: 120px; min-width: 120px; }
+  .sticky-action {
+    position: sticky; right: 0; z-index: 10; background: white;
+  }
+
+  /* 3) Kompetency scroll-per-row */
+  .comp-wrapper {
+    display: inline-block;
+    overflow-x: auto;
+    white-space: nowrap;
+    width: 100%;
+  }
+  .comp-wrapper::-webkit-scrollbar {
+    height: 6px;
+  }
+  .comp-wrapper::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+  }
+  .comp-cell {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 0.5rem;
+    width: 100px;
+  }
+  .comp-icon { width: 90px; height: 90px; margin: 4px 0; }
+  .comp-name {
+    font-size: 0.85rem;
+    text-align: center;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
+    margin-top: 0.25rem;
+    max-height: 3.6em;
+  }
+
+  /* 4) Center “–” jika tidak ada competency */
+  .comp-wrapper > span {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 120px;
+    color: #999;
+    font-size: 1.2rem;
   }
 </style>
 @endpush
 
+
 @section('main')
-  <div id="kt_app_content_container" class="app-container container-fluid">
+  <div class="app-container container-fluid">
     <div class="card">
-      <div class="card-header d-flex justify-content-between align-items-center">
+      <div class="card-header d-flex justify-content-between">
         <h3 class="card-title">Employee List</h3>
         <div class="d-flex align-items-center">
-          <input type="text" id="searchInputEmployee" class="form-control me-2"
-                 placeholder="Search Employee..." style="width: 200px;">
+          <input type="text" id="searchInputEmployee" class="form-control me-2" placeholder="Search Employee..."
+              style="width: 200px;">
           <button type="button" class="btn btn-primary me-3" id="searchButton">
-            <i class="fas fa-search"></i> Search
+              <i class="fas fa-search"></i> Search
           </button>
-        </div>
+      </div>
       </div>
       <div class="card-body">
         {{-- Position Tabs --}}
-        <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8"
-            id="positionTabs">
-          <li class="nav-item"><a class="nav-link active" href="#" data-position="all">Show All</a></li>
-          @foreach(['Direktur','GM','Manager','Coordinator','Section Head','Supervisor','Leader','JP','Operator'] as $pos)
+        <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8" id="positionTabs">
+          <li class="nav-item"><a class="nav-link active" href="#" data-position="all">All</a></li>
+          @foreach(['Direktur','GM','Manager','Coordinator','Section Head','Supervisor','Leader','Act Leader','JP','Act JP','Operator'] as $pos)
             <li class="nav-item">
               <a class="nav-link" href="#" data-position="{{ $pos }}">{{ $pos }}</a>
             </li>
           @endforeach
         </ul>
-
-        {{-- Group Competency Tabs --}}
-        <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8"
-            id="groupTabs">
+        {{-- Group Tabs --}}
+        <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8" id="groupTabs">
           @foreach($groups as $grp)
             <li class="nav-item">
-              <a class="nav-link {{ $grp==='Basic' ? 'active' : '' }}"
-                 href="#" data-group="{{ $grp }}">{{ $grp }}</a>
+              <a class="nav-link {{ $grp==='Basic'?'active':'' }}" href="#" data-group="{{ $grp }}">{{ $grp }}</a>
             </li>
           @endforeach
         </ul>
 
         <div class="table-responsive">
-          <table class="table align-middle table-row-dashed fs-6 gy-5" id="empCompTable">
+          <table class="table" id="empCompTable">
             <thead>
               <tr class="text-start text-muted fw-bold fs-7 gs-0">
-                <th class="sticky-col">No</th>
-                <th class="sticky-col">Employee Name</th>
-                {{-- dynamic competency headers --}}
-                <th class="text-center">Actions</th>
+                <th class="sticky-col col-no">No</th>
+                <th class="sticky-col col-emp">Employee</th>
+                <th class="text-center">Competencies</th>
+                <th class="sticky-action col-act text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td colspan="100%" class="text-center text-muted py-5">No data available</td>
-              </tr>
             </tbody>
           </table>
         </div>
       </div>
     </div>
   </div>
-
   @include('website.employee_competency.modal')
 @endsection
 
 @push('scripts')
 <script>
-const baseShowUrl = "{{ route('employeeCompetencies.show', ':id') }}";
+const employees    = @json($matrixData);
+const baseShowUrl  = "{{ route('employeeCompetencies.show', ':id') }}";
+let currentPosition='all', currentGroup='Basic';
+
+function makeIcon(act, plan) {
+  const colors = ['lightgray','lightgray','lightgray','lightgray'];
+  for (let i = 1; i <= plan && i <= 4; i++) colors[i-1] = 'gold';
+  for (let i = 1; i <= act  && i <= 4; i++) colors[i-1] = 'red';
+
+  const quads = [
+    { d: 'M40,40 L5,40 A35,35 0 0,1 40,5 Z',   x:25, y:28 },
+    { d: 'M40,40 L40,5 A35,35 0 0,1 75,40 Z',  x:55, y:28 },
+    { d: 'M40,40 L75,40 A35,35 0 0,1 40,75 Z', x:55, y:58 },
+    { d: 'M40,40 L40,75 A35,35 0 0,1 5,40 Z',  x:25, y:58 }
+  ];
+  const paths = quads.map((q,i) =>
+    `<path d="${q.d}" fill="${colors[i]}" stroke="black" stroke-width="0.5"/>`
+  ).join('');
+  const texts = quads.map((q,i) =>
+    `<text x="${q.x}" y="${q.y}" font-size="14" text-anchor="middle" fill="black">${i+1}</text>`
+  ).join('');
+  return `<svg class="comp-icon" viewBox="0 0 80 80">${paths}${texts}</svg>`;
+}
+
+function render() {
+  const tbody = document.querySelector('#empCompTable tbody');
+  tbody.innerHTML = '';
+
+  // filter posisi + search
+  let data = employees.filter(e =>
+    currentPosition==='all' || e.position===currentPosition
+  );
+  const term = document.getElementById('searchInputEmployee').value.trim().toLowerCase();
+  if (term) data = data.filter(e => e.name.toLowerCase().includes(term));
+
+  if (!data.length) {
+    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">No records found</td></tr>`;
+    return;
+  }
+
+  data.forEach((e,i) => {
+    // bangun list competency
+    const comps = e.comps
+      .filter(c => currentGroup==='all' || c.group===currentGroup)
+      .map(c => `
+        <div class="comp-cell">
+          <div class="comp-name">${c.name}</div>
+          ${makeIcon(c.act, c.plan)}
+        </div>
+      `).join('') || '<span class="text-muted">–</span>';
+
+    const showUrl = baseShowUrl.replace(':id', e.id);
+    tbody.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td class="sticky-col col-no">${i+1}</td>
+        <td class="sticky-col col-emp">${e.name}</td>
+        <td class="comp-wrapper">${comps}</td>
+        <td class="sticky-action col-act text-center">
+          <a href="${showUrl}" class="btn btn-info btn-sm me-1">
+            <i class="fas fa-eye"></i>
+          </a>
+          <button type="button"
+                  class="btn btn-success btn-sm checksheet-btn"
+                  data-employee-id="${e.id}"
+                  data-npk="${e.npk||''}"
+                  data-position="${e.position}">
+            <i class="fas fa-file-alt"></i>
+          </button>
+        </td>
+      </tr>
+    `);
+  });
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-  const employees    = @json($matrixData);
-  const positionTabs = document.querySelectorAll('#positionTabs .nav-link');
-  const groupTabs    = document.querySelectorAll('#groupTabs .nav-link');
-  const table        = document.getElementById('empCompTable');
-  const searchInput  = document.getElementById('searchInputEmployee');
-  const searchButton = document.getElementById('searchButton');
-  let currentPosition = 'all', currentGroup = 'Basic';
-
-  function buildColumns(filtered) {
-    const cols = [];
-    filtered.forEach(e => e.comps.forEach(c => {
-      if ((currentGroup==='all' || c.group===currentGroup) && !cols.includes(c.name)) {
-        cols.push(c.name);
-      }
-    }));
-    return cols;
-  }
-
-  function render() {
-    let filtered = employees.filter(e =>
-      currentPosition==='all' || e.position===currentPosition
-    );
-    const term = searchInput.value.toLowerCase();
-    if (term) filtered = filtered.filter(e => e.name.toLowerCase().includes(term));
-
-    const comps = buildColumns(filtered);
-    const thead = table.tHead.rows[0];
-    
-    // Hapus kolom dinamis sampai tersisa 3 kolom dasar
-    while (thead.cells.length > 3) thead.deleteCell(2);
-    
-    // Tambahkan header kompetensi sebelum kolom Actions
-    comps.forEach(name => {
-      const th = document.createElement('th');
-      th.textContent = name;
-      th.classList.add('text-center','align-middle');
-      thead.insertBefore(th, thead.cells[thead.cells.length - 1]);
+  // posisi tabs
+  document.querySelectorAll('#positionTabs .nav-link').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      currentPosition = a.dataset.position;
+      document.querySelectorAll('#positionTabs .nav-link').forEach(x=>x.classList.remove('active'));
+      a.classList.add('active');
+      render();
     });
-
-    const tbody = table.tBodies[0];
-    tbody.innerHTML = '';
-    
-    if (!filtered.length) {
-      tbody.innerHTML = `<tr><td colspan="${comps.length + 3}"
-        class="text-center text-muted py-3">No matching records</td></tr>`;
-      return;
-    }
-
-    filtered.forEach((e,i) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td class="sticky-col">${i+1}</td>
-        <td class="sticky-col">${e.name}</td>
-      `;
-      
-      // Tambahkan sel kompetensi
-      comps.forEach(cn => {
-        const ec = e.comps.find(c=>c.name===cn);
-        if (ec) {
-          const cls = ec.act>=ec.plan?'bg-success':'bg-danger';
-          tr.innerHTML += `<td class="text-center">
-            <span class="badge-circle ${cls}">${ec.act}</span>
-          </td>`;
-        } else {
-          tr.innerHTML += `<td class="text-center text-muted">-</td>`;
-        }
-      });
-
-      // Tambahkan tombol aksi
-      const showUrl = baseShowUrl.replace(':id', e.id);
-      tr.innerHTML += `<td class="text-center">
-        <a href="${showUrl}" class="btn btn-sm btn-info me-1">
-          <i class="fas fa-eye"></i>
-        </a>
-        <button
-          type="button"
-          class="btn btn-sm btn-success me-1 checksheet-btn"
-          data-employee-id="${e.id}"
-          data-npk="${e.npk||''}"
-          data-position="${e.position}">
-          <i class="fas fa-file-alt"></i>
-        </button>
-      </td>`;
-      
-      tbody.appendChild(tr);
+  });
+  // grup tabs
+  document.querySelectorAll('#groupTabs .nav-link').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      currentGroup = a.dataset.group;
+      document.querySelectorAll('#groupTabs .nav-link').forEach(x=>x.classList.remove('active'));
+      a.classList.add('active');
+      render();
     });
-  }
-
-  // tabs
-  positionTabs.forEach(a=>a.addEventListener('click', e=>{ 
-    e.preventDefault();
-    currentPosition = a.dataset.position;
-    positionTabs.forEach(x=>x.classList.remove('active'));
-    a.classList.add('active');
-    render();
-  }));
-  groupTabs.forEach(a=>a.addEventListener('click', e=>{ 
-    e.preventDefault();
-    currentGroup = a.dataset.group;
-    groupTabs.forEach(x=>x.classList.remove('active'));
-    a.classList.add('active');
-    render();
-  }));
-
+  });
   // search
-  searchButton.addEventListener('click', () => render());
-  searchInput.addEventListener('keyup', e => { if(e.key==='Enter') render(); });
+  document.getElementById('searchButton').addEventListener('click', render);
+  document.getElementById('searchInputEmployee').addEventListener('keyup', e => {
+    if (e.key === 'Enter') render();
+  });
+
   render();
 });
 </script>

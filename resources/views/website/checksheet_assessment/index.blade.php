@@ -11,6 +11,7 @@
         @csrf
         <input type="hidden" name="competency_id" value="{{ $competency->id }}">
         
+        <input type="hidden" name="employee_competency_id" value="{{ $employeeCompetency->id }}">
         <div class="checksheet-container">
           @foreach($checksheets as $key => $cs)
           <div class="checksheet-item mb-4 p-4 border rounded">
@@ -80,12 +81,22 @@
     </div>
   </div>
 </div>
+@if(session('error'))
+<script>
+    Swal.fire({
+        icon: 'error',
+        title: 'Gagal!',
+        text: '{{ session('error') }}',
+        confirmButtonText: 'OK'
+    });
+</script>
+@endif
 @if(session('success'))
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     Swal.fire({
         icon: 'success',
-        title: 'Sukses!',
+        title: 'Berhasil!',
         text: '{{ session('success') }}',
         confirmButtonText: 'OK'
     }).then(() => {
@@ -93,6 +104,17 @@
     });
 </script>
 @endif
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    window.addEventListener('beforeunload', function(e) {
+        if(document.querySelector('form').checkValidity()) {
+            return undefined;
+        }
+        e.preventDefault();
+        e.returnValue = '';
+    });
+});
+</script>
 <style>
   .checksheet-item {
     background-color: #f8f9fa;

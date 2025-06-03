@@ -12,35 +12,94 @@ use App\Models\Plant;
 use App\Models\Section;
 use App\Models\SubSection;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use PHPUnit\TextUI\XmlConfiguration\GroupCollection;
 
 class CompetencyController extends Controller
 {
     /** Tampilkan daftar Competency */
-    public function index()
+    public function index(Request $request)
     {
-        $competencies = Competency::with([
+        // Ambil query search dan position
+        $search = $request->query('search');
+        $position = $request->query('position', 'Show All');
+        $group = $request->query('group', 'Show All');
+
+        // Mulai builder dengan eager-load relasi
+        $query = Competency::with([
             'group_competency',
             'sub_section.section.department.division.plant',
             'section.department.division.plant',
             'department.division.plant',
             'division.plant',
             'plant'
-        ])->paginate(10);
-    
-        $group       = GroupCompetency::all();
+        ]);
+
+        // Jika ada kata kunci, tambahkan where/orWhereHas
+        if ($search) {
+            $query->where(function($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                ->orWhere('position', 'like', "%{$search}%")
+                ->orWhereHas('group_competency', function($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        // Filter berdasarkan posisi jika dipilih dan bukan 'Show All'
+        if ($position && $position !== 'Show All') {
+            $query->where('position', $position);
+        }
+
+        if ($group && $group !== 'Show All') {
+            $query->where('group_competency_id', $group);
+        }
+
+        // Paginate dan sertakan query string
+        $competencies = $query
+            ->orderBy('name')
+            ->paginate(10)
+            ->appends([
+                'search' => $search,
+                'position' => $position,
+                'group' => $group
+            ]);
+
+        // Data pendukung untuk form/filter
+        $groups = GroupCompetency::all();
         $subSections = SubSection::all();
-        $sections    = Section::all();
+        $sections = Section::all();
         $departments = Department::all();
-        $divisions   = Division::all();
-        $plants      = Plant::all();
-        $groups      = GroupCompetency::all();
-    
+        $divisions = Division::all();
+        $plants = Plant::all();
+
+        // Daftar posisi untuk tab
+        $jobPositions = [
+            'Show All',
+            'Operator',
+            'Leader',
+            'Act Leader',
+            'JP',
+            'Act JP',
+            'Supervisor',
+            'Section Head',
+            'Coordinator',
+            'Manager',
+            'GM',
+            'Direktur',
+        ];
+
         return view('website.competency.index', compact(
-            'competencies','groups','subSections','sections',
-            'departments','divisions','plants'
+            'competencies', 
+            'search', 
+            'groups', 
+            'subSections',
+            'sections', 
+            'departments', 
+            'divisions', 
+            'plants',
+            'jobPositions',
+            'position',
+            'group'
         ));
     }
 
@@ -58,19 +117,17 @@ class CompetencyController extends Controller
         ]);
     }
 
-    /** Simpan Competency baru + assign ke karyawan */
     public function store(Request $r)
     {
-        // 1. Validasi dengan conditional FK fields
+        // 1. Validasi sama seperti semula
         $data = $r->validate([
             'name'                => 'required|string|max:191',
             'group_competency_id' => 'required|exists:group_competency,id',
             'position'            => 'required|string',
             'weight'              => 'required|integer|min:0|max:4',
             'plan'                => 'required|integer|min:0|max:4',
-
             'sub_section_id' => [
-                Rule::requiredIf(fn() => in_array($r->position, ['Operator','JP','Leader'])),
+                Rule::requiredIf(fn() => in_array($r->position, ['Operator','JP','Leader','Act Leader'])),
                 'nullable','exists:sub_sections,id'
             ],
             'section_id' => [
@@ -91,46 +148,63 @@ class CompetencyController extends Controller
             ],
         ]);
 
-        // 2. Simpan master competency
+        // 2. Simpan competency master
         $competency = Competency::create($data);
 
-        // 3. Cari karyawan yang match position + FK
+        // 3. Cari karyawan yang match position + hirarki (tanpa pakai kolom section_id di employees):
         $query = Employee::where('position', $competency->position);
 
         switch ($competency->position) {
+            // Kasus: Operator, JP, Leader, Act Leader → filter lewat subSection.id
             case 'Operator':
             case 'JP':
             case 'Leader':
-                $query->where('sub_section_id', $competency->sub_section_id);
+            case 'Act Leader':
+                // Artinya kita akan “menembus” subSection langsung:
+                $query->whereHas('subSection', function ($q) use ($competency) {
+                    $q->where('id', $competency->sub_section_id);
+                });
                 break;
 
+            // Kasus: Supervisor, Section Head → filter karyawan yang berada di Section tertentu
+            // Karena employees tidak punya kolom section_id, kita “naik” satu level lewat subSection.section:
             case 'Supervisor':
             case 'Section Head':
-                $query->where('section_id', $competency->section_id);
+                $query->whereHas('subSection.section', function ($q) use ($competency) {
+                    $q->where('id', $competency->section_id);
+                });
                 break;
 
+            // Kasus: Manager, Coordinator → filter lewat Department
             case 'Manager':
             case 'Coordinator':
-                // jika di employees ada kolom department_id
-                $query->where('department_id', $competency->department_id);
+                $query->whereHas('subSection.section.department', function ($q) use ($competency) {
+                    $q->where('id', $competency->department_id);
+                });
                 break;
 
+            // Kasus: GM → filter lewat Division
             case 'GM':
-                $query->where('division_id', $competency->division_id);
+                $query->whereHas('subSection.section.department.division', function ($q) use ($competency) {
+                    $q->where('id', $competency->division_id);
+                });
                 break;
 
+            // Kasus: Director → filter lewat Plant
             case 'Director':
-                $query->where('plant_id', $competency->plant_id);
+                $query->whereHas('subSection.section.department.division.plant', function ($q) use ($competency) {
+                    $q->where('id', $competency->plant_id);
+                });
                 break;
 
+            // Jika posisi lain, misalnya tidak di‐map ke hirarki, paksa return kosong:
             default:
-                // tidak assign ke siapa‑siapa
                 $query->whereRaw('0 = 1');
         }
 
         $employees = $query->get();
 
-        // 4. Bulk insert mapping ke employee_competency
+        // 4. Bulk insert ke employee_competency (sama seperti semula)
         $now    = now();
         $insert = [];
 
@@ -155,8 +229,14 @@ class CompetencyController extends Controller
             EmployeeCompetency::insert($insert);
         }
 
-        return response()->json(['message' => 'Competency added successfully!'], 200);
+        if ($r->expectsJson()) {
+            return response()->json(['message' => ' Competency added successfully!'], 200);
+        }
+        // kalau bukan AJAX, redirect balik ke index (misalnya):
+        return redirect()->route('competencies.index')
+                         ->with('success', 'Competency added successfully!');
     }
+
 
     /** Form edit Competency (untuk modal) */
     public function edit($id)

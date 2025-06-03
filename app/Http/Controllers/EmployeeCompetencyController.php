@@ -132,8 +132,15 @@ class EmployeeCompetencyController extends Controller
 
     public function checksheet($id)
     {
-        $employee = Employee::with(['employeeCompetencies.competency.checkSheets'])->findOrFail($id);
+        $employee = Employee::findOrFail($id);
         
+        // Load checkSheets dengan filter position
+        $employee->load(['employeeCompetencies.competency' => function($query) use ($employee) {
+            $query->with(['checkSheets' => function($q) use ($employee) {
+                $q->where('position', $employee->position);
+            }]);
+        }]);
+
         $competencies = $employee->employeeCompetencies->map(function($ec) {
             return [
                 'id' => $ec->competency->id,
@@ -278,55 +285,6 @@ class EmployeeCompetencyController extends Controller
                 'error' => 'Upload gagal: ' . $e->getMessage()
             ], 500);
         }
-    }
-
-    public function approve($id)
-    {
-        try {
-            $employeeCompetency = EmployeeCompetency::findOrFail($id);
-            
-            if(!$employeeCompetency->files) {
-                return response()->json([
-                    'success' => false,
-                    'error' => 'File belum diupload'
-                ], 400);
-            }
-
-            if($employeeCompetency->status == 1) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Sudah diapprove sebelumnya'
-                ]);
-            }
-
-            $employeeCompetency->update([
-                'status' => 1,
-                'act' => 1
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Competency berhasil diapprove!'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Gagal approve: ' . $e->getMessage()
-            ], 500);
-        }
-    }
-
-    public function unapprove($id)
-    {
-        $employeeCompetency = EmployeeCompetency::findOrFail($id);
-        
-        $employeeCompetency->update([
-            'status' => 0,
-            'act' => $employeeCompetency->act
-        ]);
-
-        return response()->json(['message' => 'Competency unapproved successfully']);
     }
 
     /**

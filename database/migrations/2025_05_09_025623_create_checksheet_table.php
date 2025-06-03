@@ -15,13 +15,13 @@ return new class extends Migration
     {
         Schema::create('checksheet', function (Blueprint $table) {
             $table->bigIncrements('id');
+            $table->unsignedBigInteger('competency_id');
+            $table->foreign('competency_id')
+                ->references('id')
+                ->on('competency')
+                ->onDelete('cascade');
             $table->string('name');
             $table->enum('position', ['GM','Manager','Coordinator','Section Head','Supervisor','Act Leader','Act JP','Operator','Leader','JP']);
-            $table->unsignedBigInteger('department_id');
-            $table->foreign('department_id')
-                ->references('id')
-                ->on('departments')
-                ->onDelete('cascade');
             $table->timestamps();
         });
     }

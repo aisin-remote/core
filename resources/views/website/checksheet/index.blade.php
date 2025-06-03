@@ -32,7 +32,6 @@
                             <th>Category</th>
                             <th>Name</th>
                             <th>Position</th>
-                            <th>Department</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -42,7 +41,6 @@
                                 <td>{{ $index + 1 }}</td>
                                 <td>{{ $checksheet->competency->name }}</td>
                                 <td>{{ $checksheet->name }}</td>
-                                <td>{{ $checksheet->department->name }}</td>
                                 <td>{{ $checksheet->position }}</td>
                                 <td class="text-center">
                                     <button class="btn btn-danger btn-sm delete-btn" data-id="{{ $checksheet->id }}">
@@ -57,6 +55,9 @@
                         @endforelse
                     </tbody>
                 </table>
+                <div class="d-flex justify-content-end mt-4">
+                    {{ $checksheets->links('vendor.pagination.bootstrap-5') }}
+                </div>
             </div>
         </div>
     </div>

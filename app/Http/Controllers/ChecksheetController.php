@@ -17,12 +17,11 @@ class ChecksheetController extends Controller
     public function index()
     {
         $title = 'Checksheet';
-        $checksheets  = Checksheet::with('department')->paginate(10);
-        $departments  = Department::all();
+        $checksheets  = Checksheet::with('competency')->paginate(10);
         $competencies= Competency::all();
 
         return view('website.checksheet.index', compact(
-            'checksheets', 'departments', 'title', 'competencies'
+            'checksheets', 'title', 'competencies'
         ));
     }
 
@@ -33,9 +32,7 @@ class ChecksheetController extends Controller
      */
     public function create()
     {
-        $departments = Department::all();
-
-        return view('checksheet.create', compact('departments'));
+        return view('checksheet.create');
     }
 
     /**
@@ -49,16 +46,16 @@ class ChecksheetController extends Controller
         $request->validate([
             'competency_id' => 'required|exists:competency,id',
             'name'          => 'required|string|max:191',
-            'department_id' => 'required|exists:departments,id',
             'position'      => 'required|string'
         ]);
     
         Checksheet::create($request->only([
-            'competency_id','name','position','department_id'
+            'competency_id','name','position'
         ]));
     
         return response()->json(['message'=>'Checksheet added successfully!'],200);
     }
+
 
     /**
      * Display the specified resource.

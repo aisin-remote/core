@@ -31,16 +31,6 @@
                     </div>                 
 
                     <div class="mb-3">
-                        <label for="department_id">Department</label>
-                        <select class="form-select" id="department_id" name="department_id" required>
-                            <option value="" disabled selected>-- Select Department --</option>
-                            @foreach ($departments as $department)
-                                <option value="{{ $department->id }}">{{ $department->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="mb-3">
                         <label for="position">Position</label>
                         <select name="position" class="form-select"required>
                             <option value="">Select Position</option>
@@ -72,18 +62,6 @@
         // Event listener ketika modal ditutup
         addModal.addEventListener("hidden.bs.modal", function() {
             addForm.reset(); // Reset semua input field ke default
-        });
-    });
-    $(document).ready(function() {
-        $('#categorySelect').select2({
-        placeholder: "— Pilih atau Ketik Kategori —",
-        tags: true,
-        tokenSeparators: [',',';'],  // pemisah jika ketik beberapa sekaligus
-        maximumSelectionLength: 1,   // batasi 1 item saja
-        allowClear: true,
-        width: '100%'
-        });
-        $('#categorySelect').on('select2:select', function(e) {
         });
     });
 </script>
