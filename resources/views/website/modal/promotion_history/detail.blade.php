@@ -34,15 +34,17 @@
                                             {{ \Carbon\Carbon::parse($promotion->last_promotion_date)->format('j F Y, g:i A') }}
                                         </td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-light-warning me-1 edit-promotion-btn"
-                                                data-promotion-id={{ $promotion->id }}
-                                                data-edit-modal-id="editPromotionModal{{ $promotion->id }}">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-light-danger delete-promotion-btn"
-                                               data-delete-modal-id="deletePromotionModal{{ $promotion->id }}">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
+                                            @if ($mode === 'edit')
+                                                <button class="btn btn-sm btn-light-warning me-1 edit-promotion-btn"
+                                                    data-promotion-id={{ $promotion->id }}
+                                                    data-edit-modal-id="editPromotionModal{{ $promotion->id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-light-danger delete-promotion-btn"
+                                                    data-delete-modal-id="deletePromotionModal{{ $promotion->id }}">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach

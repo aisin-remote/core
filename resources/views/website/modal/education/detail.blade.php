@@ -19,21 +19,21 @@
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light-warning edit-education-btn"
-                                data-education-id="{{ $edu->id }}"
-                                data-target="#editEducationModal{{ $edu->id }}">
-                                <i class="fas fa-edit"></i>
-                            </button>
+                            @if ($mode === 'edit')
+                                <button class="btn btn-sm btn-light-warning edit-education-btn"
+                                    data-education-id="{{ $edu->id }}"
+                                    data-target="#editEducationModal{{ $edu->id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
 
-                            <button class="btn btn-sm btn-light-danger delete-education-btn"
-                                data-education-id="{{ $edu->id }}"
-                                data-target="#deleteEducationModal{{ $edu->id }}">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-
-
-
+                                <button class="btn btn-sm btn-light-danger delete-education-btn"
+                                    data-education-id="{{ $edu->id }}"
+                                    data-target="#deleteEducationModal{{ $edu->id }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            @endif
                         </div>
+
                     </div>
                     @unless ($loop->last)
                         <hr class="my-2">

@@ -395,6 +395,36 @@ class AssessmentController extends Controller
                     ]
                 );
         }
+        // Simpan ke tabel hav
+        $latestHav = DB::table('havs')
+            ->where('employee_id', $request->employee_id)
+            ->latest('created_at')
+            ->first();
+
+        $havId = DB::table('havs')->insertGetId([
+            'employee_id' => $request->employee_id,
+            'year' => (string) now()->year, // Konversi ke string karena varchar
+            'quadrant' => $latestHav->quadrant ?? null,
+            'status' => '0', // Gunakan quadrant terakhir jika ada
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+
+        // Simpan ke tabel detail_hav berdasarkan alc_id dan score
+        foreach ($request->alc_ids as $alc_id) {
+            $score = $request->scores[$alc_id] ?? "0";
+
+            DB::table('hav_details')->insert([
+                'hav_id' => $havId,
+                'alc_id' => $alc_id,
+                'score' => $score,
+                'is_assessment' => '1',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        }
+
         // $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
 
         // $user = Auth::user();

@@ -407,20 +407,40 @@
                                     <div id="kt_account_human_assets" class="collapse show">
                                         <div class="card-body border-top p-10">
                                             @php
-                                                $humanAssets = [];
-                                                $humanAssetsCount = count($humanAssets);
+                                                $humanAssetsCount = isset($humanAssets) ? count($humanAssets) : 0;
+                                                $titles = [
+                                                    1 => 'Star',
+                                                    2 => 'Future Star',
+                                                    3 => 'Future Star',
+                                                    4 => 'Potential Candidate',
+                                                    5 => 'Raw Diamond',
+                                                    6 => 'Candidate',
+                                                    7 => 'Top Performer',
+                                                    8 => 'Strong Performer',
+                                                    9 => 'Career Person',
+                                                    10 => 'Most Unfit Employee',
+                                                    11 => 'Unfit Employee',
+                                                    12 => 'Problem Employee',
+                                                    13 => 'Maximal Contributor',
+                                                    14 => 'Contributor',
+                                                    15 => 'Minimal Contributor',
+                                                    16 => 'Dead Wood',
+                                                ];
                                             @endphp
+
 
                                             @if ($humanAssetsCount > 0)
                                                 @foreach ($humanAssets->take(3) as $asset)
                                                     <div class="d-flex flex-wrap align-items-center">
                                                         <div id="kt_signin_email">
                                                             <div class="fs-6 fw-bold mb-1">
-                                                                {{ $asset['title'] }} [{{ $asset['count'] }}]
+                                                                {{ $titles[(int) $asset['quadrant']] ?? 'Unknown' }}
+                                                                [{{ $asset['count'] }}]
                                                                 <div class="text-muted fs-7">
                                                                     {{ $asset['year'] }}
                                                                 </div>
                                                             </div>
+
                                                         </div>
                                                     </div>
 
@@ -433,6 +453,7 @@
                                                     No human asset data available.
                                                 </div>
                                             @endif
+
                                         </div>
                                     </div>
                                 </div>

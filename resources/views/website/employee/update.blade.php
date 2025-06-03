@@ -406,13 +406,6 @@
                                                     </div>
                                                 </div>
 
-                                                @include('website.modal.education.detail')
-                                                @include('website.modal.education.update', [
-                                                    'education' => $education,
-                                                ])
-                                                @include('website.modal.education.delete', [
-                                                    'education' => $education,
-                                                ])
 
                                                 @if (!$loop->last)
                                                     <div class="separator separator-dashed my-3"></div>
@@ -429,10 +422,18 @@
 
                         </div>
 
-                        {{-- modal education --}}
-                        @include('website.modal.education.create', [
-                            'employee_id' => $employee->id,
-                        ])
+                        {{-- === Modal Detail Education (hanya 1 modal statis, bukan per-id) === --}}
+                        @include('website.modal.education.detail')
+
+                        {{-- === Modal Create Education === --}}
+                        @include('website.modal.education.create', ['employee_id' => $employee->id])
+
+                        {{-- === Loop untuk modal update dan delete agar tidak ikut terbatas 3 data === --}}
+                        @foreach ($educations as $education)
+                            @include('website.modal.education.update', ['education' => $education])
+                            @include('website.modal.education.delete', ['education' => $education])
+                        @endforeach
+
                         {{-- end of modal education --}}
                     </div>
                     <div class="row">
@@ -497,16 +498,8 @@
                                                     </div>
                                                 </div>
 
-                                                @include('website.modal.work.all_detail')
-                                                @include('website.modal.work.detail', [
-                                                    'experience' => $experience,
-                                                ])
-                                                @include('website.modal.work.update', [
-                                                    'experience' => $experience,
-                                                ])
-                                                @include('website.modal.work.delete', [
-                                                    'experience' => $experience,
-                                                ])
+
+
 
                                                 @if (!$loop->last)
                                                     <div class="separator separator-dashed my-3"></div>
@@ -526,6 +519,14 @@
                         @include('website.modal.work.create', [
                             'employee_id' => $employee->id,
                         ])
+                        @include('website.modal.work.all_detail')
+                        {{-- Modal update, delete, dan detail untuk setiap experience --}}
+                        @foreach ($workExperiences as $experience)
+                            @include('website.modal.work.detail', ['experience' => $experience])
+                            @include('website.modal.work.update', ['experience' => $experience])
+                            @include('website.modal.work.delete', ['experience' => $experience])
+                        @endforeach
+
                         {{-- end of work experience modal input --}}
                     </div>
                     <div class="row">
@@ -581,16 +582,6 @@
                                                     </div>
                                                 </div>
 
-                                                @include('website.modal.appraisal.all_detail')
-                                                @include('website.modal.appraisal.detail', [
-                                                    'appraisal' => $appraisal,
-                                                ])
-                                                @include('website.modal.appraisal.update', [
-                                                    'appraisal' => $appraisal,
-                                                ])
-                                                @include('website.modal.appraisal.delete', [
-                                                    'appraisal' => $appraisal,
-                                                ])
 
                                                 @if (!$loop->last)
                                                     <div class="separator separator-dashed my-3"></div>
@@ -610,6 +601,13 @@
                         @include('website.modal.appraisal.create', [
                             'employee_id' => $employee->id,
                         ])
+                        @include('website.modal.appraisal.all_detail')
+
+                        @foreach ($performanceAppraisals as $appraisal)
+                            @include('website.modal.appraisal.detail', ['appraisal' => $appraisal])
+                            @include('website.modal.appraisal.update', ['appraisal' => $appraisal])
+                            @include('website.modal.appraisal.delete', ['appraisal' => $appraisal])
+                        @endforeach
                         {{-- end of appraisal modal --}}
                     </div>
 
@@ -662,7 +660,7 @@
                                                     <div class="d-flex flex-wrap align-items-center">
                                                         <div id="kt_signin_email">
                                                             <div class="fs-6 fw-bold mb-1">
-                                                               {{ $titles[(int) $asset['quadrant']] ?? 'Unknown' }}
+                                                                {{ $titles[(int) $asset['quadrant']] ?? 'Unknown' }}
                                                                 [{{ $asset['count'] }}]
                                                                 <div class="text-muted fs-7">
                                                                     {{ $asset['year'] }}
@@ -791,6 +789,12 @@
                 @include('website.modal.astra_training.create', [
                     'employee_id' => $employee->id,
                 ])
+                {{-- Include Modals Update & Delete (outside of foreach) --}}
+                @foreach ($astraTrainings as $astraTraining)
+                    @include('website.modal.astra_training.update', ['astraTraining' => $astraTraining])
+                    @include('website.modal.astra_training.delete', ['astraTraining' => $astraTraining])
+                @endforeach
+
                 {{-- end of astra_training modal --}}
 
                 <div class="col-md-6">
@@ -859,13 +863,7 @@
                                                     </td>
                                                 </tr>
 
-                                                @include('website.modal.external_training.update', [
-                                                    'externalTraining' => $externalTraining,
-                                                ])
 
-                                                @include('website.modal.external_training.delete', [
-                                                    'externalTraining' => $externalTraining,
-                                                ])
                                             @empty
                                                 <tr>
                                                     <td colspan="7" class="text-center">No data available</td>
@@ -883,12 +881,19 @@
                 </div>
             </div>
 
-            {{-- external_training modal --}}
-            @include('website.modal.external_training.detail')
 
-            @include('website.modal.external_training.create', [
-                'employee_id' => $employee->id,
-            ])
+            {{-- external_training modal --}}
+            @foreach ($externalTrainings as $externalTraining)
+                @include('website.modal.external_training.update', [
+                    'externalTraining' => $externalTraining,
+                ])
+                @include('website.modal.external_training.delete', [
+                    'externalTraining' => $externalTraining,
+                ])
+            @endforeach
+
+            @include('website.modal.external_training.detail')
+            @include('website.modal.external_training.create', ['employee_id' => $employee->id])
             {{-- end of external_training modal --}}
 
 
@@ -950,13 +955,6 @@
                                             </button>
                                         </td>
                                     </tr>
-                                    @include('website.modal.promotion_history.update', [
-                                        'experience' => $promotionHistory,
-                                    ])
-                                    {{-- delete modal --}}
-                                    @include('website.modal.promotion_history.delete', [
-                                        'promotionHistory' => $promotionHistory,
-                                    ])
                                     {{-- end of modal --}}
                                 @empty
                                     <tr>
@@ -973,6 +971,16 @@
             </div>
 
             @include('website.modal.promotion_history.detail')
+            {{-- Promotion History Modals --}}
+            @foreach ($promotionHistories as $promotionHistory)
+                @include('website.modal.promotion_history.update', [
+                    'experience' => $promotionHistory, // Pastikan file update expect key ini
+                ])
+                @include('website.modal.promotion_history.delete', [
+                    'promotionHistory' => $promotionHistory,
+                ])
+            @endforeach
+
 
             <div class="row">
                 <!-- Strength -->

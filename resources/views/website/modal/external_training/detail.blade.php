@@ -29,6 +29,7 @@
                                         </td>
                                         <td class="text-center">{{ $externalTraining->vendor }}</td>
                                         <td class="text-center">
+                                              @if ($mode === 'edit')
                                             <button class="btn btn-sm btn-light-warning edit-external-btn"
                                                 data-externalTraining-id={{ $externalTraining->id }}
                                                data-edit-modal-id="editExternalTrainingModal{{ $externalTraining->id }}">
@@ -38,6 +39,7 @@
                                                  data-delete-modal-id="deleteExternalTrainingModal{{ $externalTraining->id }}">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
+                                            @endif  
                                         </td>
                                     </tr>
                                 @endforeach

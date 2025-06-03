@@ -22,16 +22,17 @@
                             @endif
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light-warning edit-appraisal-btn"
-                                data-appraisal-id={{ $appraisal->id }}
-                                data-edit-modal-id="editAppraisalModal{{ $appraisal->id }}">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-light-danger delete-appraisal-btn"
-
-                                data-delete-modal-id="deleteAppraisalModal{{ $appraisal->id }}">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                            @if ($mode === 'edit')
+                                <button class="btn btn-sm btn-light-warning edit-appraisal-btn"
+                                    data-appraisal-id={{ $appraisal->id }}
+                                    data-edit-modal-id="editAppraisalModal{{ $appraisal->id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-light-danger delete-appraisal-btn"
+                                    data-delete-modal-id="deleteAppraisalModal{{ $appraisal->id }}">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            @endif
                         </div>
                     </div>
                     @unless ($loop->last)

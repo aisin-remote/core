@@ -7,9 +7,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to delete the experience
-                    <strong>{{ $experience->position }}</strong> at
-                    <strong>{{ $experience->company }}</strong>?
+                <p>Apakah Anda yakin ingin menghapus data dari riwayat ini?
                 </p>
             </div>
             <div class="modal-footer">
