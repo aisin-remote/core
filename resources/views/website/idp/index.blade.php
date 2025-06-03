@@ -747,116 +747,104 @@
 
                             <div class="modal-body scroll-y mx-2">
                                 <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h3 class="card-title">I. Strength & Weakness</h3>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle">
-                                                    <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-center">Strength</th>
-                                                            <th class="text-center">Description</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($alcs as $id => $title)
-                                                            @php
-                                                                $weaknessDetail = $assessment->details
-                                                                    ->where('alc_id', $id)
-                                                                    ->first();
-                                                                $detailAlc = null;
+                                    @php
+                                        $strengthRows = [];
+                                        $weaknessRows = [];
 
-                                                                if (
-                                                                    $weaknessDetail &&
-                                                                    $weaknessDetail->hav &&
-                                                                    $weaknessDetail->hav->employee
-                                                                ) {
-                                                                    $employeeId = $weaknessDetail->hav->employee->id;
+                                        foreach ($alcs as $id => $title) {
+                                            $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
+                                            $detailAlc = null;
 
-                                                                    $detailAlc = \App\Models\DetailAssessment::with(
-                                                                        'assessment.employee',
-                                                                    )
-                                                                        ->whereHas('assessment.employee', function (
-                                                                            $query,
-                                                                        ) use ($employeeId) {
-                                                                            $query->where('id', $employeeId);
-                                                                        })
-                                                                        ->where('alc_id', $weaknessDetail->alc_id)
-                                                                        ->latest()
-                                                                        ->first();
-                                                                }
-                                                            @endphp
-                                                            @if ($detailAlc && $detailAlc->strength)
-                                                                <tr>
-                                                                    <td class="text-center px-3">{{ $title ?? '-' }}
-                                                                    </td>
-                                                                    <td class="text-center px-3">
-                                                                        {{ $detailAlc->strength ?? '-' }}</td>
+                                            if (
+                                                $weaknessDetail &&
+                                                $weaknessDetail->hav &&
+                                                $weaknessDetail->hav->employee
+                                            ) {
+                                                $employeeId = $weaknessDetail->hav->employee->id;
+
+                                                $detailAlc = \App\Models\DetailAssessment::with('assessment.employee')
+                                                    ->whereHas('assessment.employee', function ($query) use (
+                                                        $employeeId,
+                                                    ) {
+                                                        $query->where('id', $employeeId);
+                                                    })
+                                                    ->where('alc_id', $weaknessDetail->alc_id)
+                                                    ->latest()
+                                                    ->first();
+                                            }
+
+                                            if ($detailAlc) {
+                                                if ($detailAlc->strength) {
+                                                    $strengthRows[] = [
+                                                        'title' => $title ?? '-',
+                                                        'value' => $detailAlc->strength,
+                                                    ];
+                                                }
+
+                                                if ($detailAlc->weakness) {
+                                                    $weaknessRows[] = [
+                                                        'title' => $title ?? '-',
+                                                        'value' => $detailAlc->weakness,
+                                                    ];
+                                                }
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if (count($strengthRows) > 0 || count($weaknessRows) > 0)
+                                        <div class="row mt-8">
+                                            <div class="card">
+                                                <div class="card-header">
+                                                    <h3 class="card-title">I. Strength & Weakness</h3>
+                                                </div>
+                                                <div class="card-body table-responsive">
+
+                                                    @if (count($strengthRows) > 0)
+                                                        <table class="table align-middle mb-6">
+                                                            <thead>
+                                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                                    <th class="text-center">Strength</th>
+                                                                    <th class="text-center">Description</th>
                                                                 </tr>
-                                                            @endif
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach ($strengthRows as $row)
+                                                                    <tr>
+                                                                        <td class="text-center px-3">{{ $row['title'] }}
+                                                                        </td>
+                                                                        <td class="text-center px-3">{{ $row['value'] }}
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    @endif
+
+                                                    @if (count($weaknessRows) > 0)
+                                                        <table class="table align-middle">
+                                                            <thead>
+                                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                                    <th class="text-center">Weakness</th>
+                                                                    <th class="text-center">Description</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach ($weaknessRows as $row)
+                                                                    <tr>
+                                                                        <td class="text-center px-3">{{ $row['title'] }}
+                                                                        </td>
+                                                                        <td class="text-center px-3">{{ $row['value'] }}
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    @endif
+
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle">
-                                                    <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-center">Weakness</th>
-                                                            <th class="text-center">Description</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($alcs as $id => $title)
-                                                            @php
-                                                                $weaknessDetail = $assessment->details
-                                                                    ->where('alc_id', $id)
-                                                                    ->first();
-                                                                $detailAlc = null;
-
-                                                                if (
-                                                                    $weaknessDetail &&
-                                                                    $weaknessDetail->hav &&
-                                                                    $weaknessDetail->hav->employee
-                                                                ) {
-                                                                    $employeeId = $weaknessDetail->hav->employee->id;
-
-                                                                    $detailAlc = \App\Models\DetailAssessment::with(
-                                                                        'assessment.employee',
-                                                                    )
-                                                                        ->whereHas('assessment.employee', function (
-                                                                            $query,
-                                                                        ) use ($employeeId) {
-                                                                            $query->where('id', $employeeId);
-                                                                        })
-                                                                        ->where('alc_id', $weaknessDetail->alc_id)
-                                                                        ->latest()
-                                                                        ->first();
-                                                                }
-                                                            @endphp
-                                                            @if ($detailAlc && $detailAlc->weakness)
-                                                                <tr>
-                                                                    <td class="text-center px-3">{{ $title ?? '-' }}
-                                                                    </td>
-                                                                    <td class="text-center px-3">
-                                                                        {{ $detailAlc->weakness ?? '-' }}</td>
-                                                                </tr>
-                                                            @endif
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    @endif
 
                                     <!-- Individual Development Program -->
                                     <div class="row mt-8">
