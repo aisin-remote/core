@@ -205,7 +205,7 @@ class IdpController extends Controller
         foreach ($assessments as $assessment) {
             foreach ($assessment->details as $detail){
                 // Ambil semua program IDP yang tersimpan
-                $savedPrograms = $detail->idp->where('status', 2)->map(function ($idp) {
+                $savedPrograms = $detail->idp->where('status', 3)->map(function ($idp) {
                     return [
                         'program' => $idp->development_program,
                         'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
@@ -232,6 +232,8 @@ class IdpController extends Controller
                 $detail->recommendedProgramsOneYear = $oneYearPrograms;
             }
         }
+
+        
 
         return view('website.idp.index', compact(
             'employees',

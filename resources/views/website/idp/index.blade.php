@@ -642,20 +642,30 @@
                                             <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
 
                                             <div id="programContainerMid_{{ $assessment->employee->id }}">
-                                                @if (!empty($assessment->recommendedProgramsMidYear))
-                                                    @foreach ($assessment->recommendedProgramsMidYear as $index => $program)
+                                                @if (!empty($assessment->details))
+                                                    @php $hasMidYearData = false; @endphp
+
+                                                    @foreach ($assessment->details as $program)
+                                                        @if (empty($program->recommendedProgramsMidYear) || empty($program->recommendedProgramsMidYear[0]['program']))
+                                                            @continue
+                                                        @endif
+
+                                                        @php $hasMidYearData = true; @endphp
+
                                                         <div class="programItem">
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
                                                                     Program</label>
                                                                 <input type="text" class="form-control"
                                                                     name="development_program[]"
-                                                                    value="{{ $program['program'] }}" readonly>
+                                                                    value="{{ $program->recommendedProgramsMidYear[0]['program'] }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Date</label>
                                                                 <input type="text" class="form-control"
-                                                                    value="{{ $program['date'] }}" readonly>
+                                                                    value="{{ $program->recommendedProgramsMidYear[0]['date'] ?? '-' }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
@@ -673,6 +683,10 @@
                                                             <hr>
                                                         </div>
                                                     @endforeach
+
+                                                    @if (!$hasMidYearData)
+                                                        <p class="text-center text-muted">No data available</p>
+                                                    @endif
                                                 @else
                                                     <p class="text-center text-muted">No data available</p>
                                                 @endif
@@ -693,30 +707,51 @@
 
                                             <div id="programContainerOne_{{ $assessment->employee->id }}"
                                                 class="programContainer">
-                                                @if (!empty($assessment->recommendedProgramsOneYear))
-                                                    @foreach ($assessment->recommendedProgramsOneYear as $index => $program)
+                                                @if (!empty($assessment->details))
+                                                    @php $hasData = false; @endphp
+
+                                                    @foreach ($assessment->details as $program)
+                                                        @if (empty($program->recommendedProgramsOneYear) || empty($program->recommendedProgramsOneYear[0]['program']))
+                                                            @continue
+                                                        @endif
+
+                                                        @php $hasData = true; @endphp
+
                                                         <div class="programItem">
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
                                                                     Program</label>
                                                                 <input type="text" class="form-control"
-                                                                    name="development_program[{{ $assessment->employee->id }}][]"
-                                                                    value="{{ $program['program'] }}" readonly>
+                                                                    name="development_program[]"
+                                                                    value="{{ $program->recommendedProgramsOneYear[0]['program'] }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Date</label>
                                                                 <input type="text" class="form-control"
-                                                                    name="date[{{ $assessment->employee->id }}][]"
-                                                                    value="{{ $program['date'] }}" readonly>
+                                                                    value="{{ $program->recommendedProgramsOneYear[0]['date'] ?? '-' }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label fw-bold">Evaluation Result</label>
+                                                                <label class="form-label fw-bold">Development
+                                                                    Achievement</label>
                                                                 <input type="text" class="form-control"
-                                                                    name="evaluation_result[{{ $assessment->employee->id }}][]"
-                                                                    placeholder="Evaluation Result" required>
+                                                                    name="development_achievement[]"
+                                                                    placeholder="Enter achievement" required>
                                                             </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Next Action</label>
+                                                                <input type="text" class="form-control"
+                                                                    name="next_action[]" placeholder="Enter next action"
+                                                                    required>
+                                                            </div>
+                                                            <hr>
                                                         </div>
                                                     @endforeach
+
+                                                    @if (!$hasData)
+                                                        <p class="text-center text-muted">No data available</p>
+                                                    @endif
                                                 @else
                                                     <p class="text-center text-muted">No data available</p>
                                                 @endif
