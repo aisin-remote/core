@@ -93,41 +93,44 @@
                                     </span>
                                 </td>
 
-                                <td class="text-center">
-                                    @if ($item->hav && $item->hav->details->first()?->is_assessment == 0)
-                                        @if ($item->hav)
-                                            @if ($item->hav->status == 1)
-                                                <a href="#" class="btn btn-warning btn-sm btn-revise-import"
-                                                    data-bs-toggle="modal" data-bs-target="#importModal"
-                                                    data-hav-id="{{ $item->hav->id }}"
-                                                    data-employee-id="{{ $item->employee->id }}">
-                                                    <i class="fas fa-upload"></i> Revise
-                                                </a>
-                                            @endif
-                                            <a data-id="{{ $item->hav->id }}"
-                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                Comment
-                                            </a>
-                                        @else
-                                            <a href="#" class="btn btn-info btn-sm btn-add-import"
-                                                data-bs-toggle="modal" data-bs-target="#importModal"
-                                                data-employee-id="{{ $item->employee->id }}">
-                                                <i class="fas fa-plus"></i> Add
-                                            </a>
-                                        @endif
-                                    @else
-                                     @if ($item->hav)
-                                        <a href="#" class="btn btn-info btn-sm btn-add-import" data-bs-toggle="modal"
-                                            data-bs-target="#importModal" data-employee-id="{{ $item->employee->id }}">
-                                            <i class="fas fa-plus"></i> Add
-                                        </a>
-                                        <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment"
-                                            href="#">
-                                            Comment
-                                        </a>
-                                        @endif
-                                    @endif
-                                </td>
+                               <td class="text-center">
+    @if (!$item->hav)
+        {{-- Tidak ada data HAV --}}
+        <a href="#" class="btn btn-info btn-sm btn-add-import"
+            data-bs-toggle="modal" data-bs-target="#importModal"
+            data-employee-id="{{ $item->employee->id }}">
+            <i class="fas fa-plus"></i> Add
+        </a>
+    @else
+        @php
+            $isAssessment = $item->hav->details->first()?->is_assessment ?? 1;
+        @endphp
+
+        @if ($isAssessment == 0)
+            @if ($item->hav->status == 1)
+                <a href="#" class="btn btn-warning btn-sm btn-revise-import"
+                    data-bs-toggle="modal" data-bs-target="#importModal"
+                    data-hav-id="{{ $item->hav->id }}"
+                    data-employee-id="{{ $item->employee->id }}">
+                    <i class="fas fa-upload"></i> Revise
+                </a>
+            @endif
+        @else
+            {{-- Data HAV tapi bukan hasil assessment, izinkan Add ulang --}}
+            <a href="#" class="btn btn-info btn-sm btn-add-import"
+                data-bs-toggle="modal" data-bs-target="#importModal"
+                data-employee-id="{{ $item->employee->id }}">
+                <i class="fas fa-plus"></i> Add
+            </a>
+        @endif
+
+        {{-- Tombol Comment selalu muncul jika ada data HAV --}}
+        <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment" href="#">
+            Comment
+        </a>
+    @endif
+</td>
+
                             </tr>
                         @endforeach
                     </tbody>
