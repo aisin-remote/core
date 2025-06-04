@@ -12,9 +12,7 @@
                 @csrf
                 @method('DELETE')
                 <div class="modal-body">
-                    <p>Apakah Anda yakin ingin menghapus data
-                        <strong>{{ $astraTraining->id }}</strong> dari
-                        riwayat ini?
+                    <p>Apakah Anda yakin ingin menghapus data ini?
                     </p>
                 </div>
                 <div class="modal-footer">

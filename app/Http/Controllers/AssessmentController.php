@@ -2,23 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use DataTables;
+use App\Http\Controllers\Controller;
 use App\Models\Alc;
-use App\Models\Section;
-use App\Models\Division;
-use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
+use App\Models\DetailAssessment;
+use App\Models\Division;
+use App\Models\Employee;
+use App\Models\Section;
+
 use App\Models\SubSection;
+use DataTables;
+use Illuminate\Support\Facades\Auth;
+
+use Illuminate\Support\Facades\Http;
 
 use Illuminate\Support\Str;
-use App\Models\DetailAssessment;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
+
 use Symfony\Component\HttpFoundation\Request;
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AssessmentController extends Controller
 {
@@ -395,6 +401,106 @@ class AssessmentController extends Controller
                     ]
                 );
         }
+        // Simpan ke tabel hav
+        $latestHav = DB::table('havs')
+            ->where('employee_id', $request->employee_id)
+            ->latest('created_at')
+            ->first();
+
+        $havId = DB::table('havs')->insertGetId([
+            'employee_id' => $request->employee_id,
+            'year' => now()->year,
+            'quadrant' => $latestHav->quadrant ?? null,
+            'status' => '0',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        // Load Excel template
+        $templatePath = public_path('assets/file/Import-HAV.xls');
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $employee = Employee::with('departments')->findOrFail($request->employee_id);
+        $sheet->setCellValue("C6", $employee->name);
+        $sheet->setCellValue("C7", $employee->npk);
+        $sheet->setCellValue("C8", $employee->grade);
+        $sheet->setCellValue("C9", $employee->company_name);
+        $sheet->setCellValue("C10", $employee->department->name ?? '');
+        $sheet->setCellValue("C11", $employee->position);
+        $sheet->setCellValue("C13", date('Y'));
+
+        // ALC mapping ke kolom & baris
+        $alcMapping = [
+            1 => ['D', [17, 18, 19]],                          // Vision & Business Sense
+            2 => ['I', [17, 18, 19, 20, 21, 22, 23]],           // Customer Focus
+            3 => ['O', [17, 18, 19, 20]],                      // Interpersonal Skill
+            4 => ['T', [17, 18, 19, 20]],                      // Analysis & Judgment
+            5 => ['D', [27, 28, 29, 30, 31]],                  // Planning & Driving Action
+            6 => ['I', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]], // Leading & Motivating
+            7 => ['O', [27, 28, 29, 30, 31, 32, 33]],          // Teamwork
+            8 => ['T', [27, 28, 29, 30, 31, 32, 33]],          // Drive & Courage
+        ];
+
+        $suggestionMapping = [
+            1 => ['F', [17, 18, 19]],                             // Vision & Business Sense
+            2 => ['K', [17, 18, 19, 20, 21, 22, 23]],              // Customer Focus
+            3 => ['Q', [17, 18, 19, 20]],                          // Interpersonal Skill
+            4 => ['V', [17, 18, 19, 20]],                          // Analysis & Judgment
+            5 => ['F', [27, 28, 29, 30, 31]],                      // Planning & Driving Action
+            6 => ['K', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]],  // Leading & Motivating
+            7 => ['Q', [27, 28, 29, 30, 31, 32, 33]],              // Teamwork
+            8 => ['V', [27, 28, 29, 30, 31, 32, 33]],              // Drive & Courage
+        ];
+        // Simpan ke hav_details + isi Excel
+        foreach ($request->alc_ids as $alc_id) {
+            $score = $request->scores[$alc_id] ?? "0";
+            $suggestion = $request->suggestion_development[$alc_id] ?? "";
+
+            DB::table('hav_details')->insert([
+                'hav_id' => $havId,
+                'alc_id' => $alc_id,
+                'score' => $score,
+                'is_assessment' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            if (isset($alcMapping[$alc_id])) {
+                [$col, $rows] = $alcMapping[$alc_id];
+                foreach ($rows as $row) {
+                    $sheet->setCellValue("{$col}{$row}", $score);
+                }
+            }
+            if (isset($suggestionMapping[$alc_id])) {
+                [$sugCol, $sugRows] = $suggestionMapping[$alc_id];
+
+                // Gabungkan rows menjadi satu teks panjang dengan line break antar baris
+                $mergedSuggestionRow = $sugRows[0]; // Tulis di baris awal saja
+                $sheet->mergeCells("{$sugCol}{$sugRows[0]}:{$sugCol}" . end($sugRows)); // Merge kolom
+                $sheet->setCellValue("{$sugCol}{$mergedSuggestionRow}", $suggestion);
+                $sheet->getStyle("{$sugCol}{$mergedSuggestionRow}")
+                    ->getAlignment()->setWrapText(true); // agar teks suggestion bisa panjang & terpotong otomatis
+                $style = $sheet->getStyle("{$sugCol}{$mergedSuggestionRow}");
+                $style->getFont()->setItalic(false);
+            }
+        }
+
+        // Simpan file Excel ke storage
+        $excelFileName = 'hav_uploads/hav_' . now()->timestamp . '.xlsx';
+        $fullPath = storage_path("app/{$excelFileName}");
+        (new Xlsx($spreadsheet))->save($fullPath);
+
+        // Simpan ke hav_comment_histories
+        DB::table('hav_comment_histories')->insert([
+            'hav_id' => $havId,
+            'employee_id' => $request->employee_id,
+            'upload' => $excelFileName,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+
         // $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
 
         // $user = Auth::user();

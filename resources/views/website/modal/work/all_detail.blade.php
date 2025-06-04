@@ -19,17 +19,19 @@
                             </div>
                         </div>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-light-warning edit-experience-btn"
-                                data-experience-id="{{ $exp->id }}"
-                                data-edit-modal-id="editExperienceModal{{ $exp->id }}">
-                                <i class="fas fa-edit"></i>
-                            </button>
+                            @if ($mode === 'edit')
+                                <button class="btn btn-sm btn-light-warning edit-experience-btn"
+                                    data-experience-id="{{ $exp->id }}"
+                                    data-edit-modal-id="editExperienceModal{{ $exp->id }}">
+                                    <i class="fas fa-edit"></i>
+                                </button>
 
-                            <button class="btn btn-sm btn-light-danger delete-experience-btn"
-                                data-delete-modal-id="deleteExperienceModal{{ $exp->id }}">
+                                <button class="btn btn-sm btn-light-danger delete-experience-btn"
+                                    data-delete-modal-id="deleteExperienceModal{{ $exp->id }}">
 
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            @endif
 
                         </div>
                     </div>

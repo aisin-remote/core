@@ -12,8 +12,17 @@
                     <input type="hidden" name="employee_id" value="{{ $employee_id }}">
                     <div class="mb-3">
                         <label class="form-label">Position</label>
-                        <input type="text" class="form-control" name="position" required>
+                        <select name="position" class="form-control" required>
+                            <option value="">-- Pilih Position --</option>
+                            @foreach ($positions as $position)
+                                <option value="{{ $position }}"
+                                    {{ old('position', $experience->position ?? '') === $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Company</label>
                         <input type="text" class="form-control" name="company" required>

@@ -32,17 +32,17 @@
                                         <td class="text-center">{{ $astraTraining->project_score }}</td>
                                         <td class="text-center">{{ $astraTraining->total_score }}</td>
                                         <td class="text-center">
-                                            <button class="btn btn-sm btn-light-warning edit-astra-btn"
-                                                data-astraTraining-id={{ $astraTraining->id }}
-                                                data-edit-modal-id="editAstraTrainingModal{{ $astraTraining->id }}">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-light-danger delete-astra-btn"
-                                                 data-delete-modal-id="deleteAstraTrainingModal{{ $astraTraining->id }}">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-
-
+                                            @if ($mode === 'edit')
+                                                <button class="btn btn-sm btn-light-warning edit-astra-btn"
+                                                    data-astraTraining-id={{ $astraTraining->id }}
+                                                    data-edit-modal-id="editAstraTrainingModal{{ $astraTraining->id }}">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-light-danger delete-astra-btn"
+                                                    data-delete-modal-id="deleteAstraTrainingModal{{ $astraTraining->id }}">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            @endif
                                         </td>
                                     </tr>
                                 @endforeach

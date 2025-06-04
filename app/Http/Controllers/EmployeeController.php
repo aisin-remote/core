@@ -499,6 +499,14 @@ class EmployeeController extends Controller
             ->orderBy('date_end', 'desc') // Urut berdasarkan tanggal selesai terbaru
             ->get();
 
+        $employee = Employee::where('npk', $npk)->firstOrFail();
+        $humanAssets = Hav::with('employee')
+            ->where('employee_id', $employee->id) // gunakan ID employee yang sesuai
+            ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
+            ->groupBy('quadrant', 'year')
+            ->orderByDesc('year')
+            ->get();
+
         $externalTrainings = ExternalTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -547,7 +555,7 @@ class EmployeeController extends Controller
         $departments = Department::all();
         $divisions = Division::all();
         $plants = Plant::all();
-        return view('website.employee.show', compact('employee', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'));
+        return view('website.employee.show', compact('employee','humanAssets','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');;
     }
 
     public function edit($npk)
@@ -629,7 +637,7 @@ class EmployeeController extends Controller
         $plants = Plant::all();
         $sections = Section::all();
         $subSections = SubSection::all();
-        return view('website.employee.update', compact('employee', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'));
+        return view('website.employee.update', compact('employee', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'))->with('mode', 'edit');;
     }
 
     public function update(Request $request, $npk)
@@ -1239,23 +1247,13 @@ class EmployeeController extends Controller
                 ->orderBy('id', 'desc')
                 ->first();
 
-            if ($lastPromotion) {
-                // Jika ada history sebelumnya, rollback grade & position ke data tersebut
-                $employee->position = $lastPromotion->previous_position;
-                $employee->grade = $lastPromotion->previous_grade;
-            } else {
-                // Jika tidak ada promotion history sebelumnya, reset ke nilai default awal
-                $employee->position = $promotion->previous_position;
-                $employee->grade = $promotion->previous_grade;
-            }
-
             $employee->save();
 
             // Hapus promotion history
             $promotion->delete();
 
             DB::commit();
-            return redirect()->back()->with('success', 'Promotion history berhasil dihapus dan posisi/grade dikembalikan.');
+            return redirect()->back()->with('success', 'Promotion history berhasil dihapus.');
         } catch (\Throwable $th) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Promotion history gagal dihapus.');
