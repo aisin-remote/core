@@ -116,6 +116,7 @@
                                             </a>
                                         @endif
                                     @else
+                                     @if ($item->hav)
                                         <a href="#" class="btn btn-info btn-sm btn-add-import" data-bs-toggle="modal"
                                             data-bs-target="#importModal" data-employee-id="{{ $item->employee->id }}">
                                             <i class="fas fa-plus"></i> Add
@@ -124,6 +125,7 @@
                                             href="#">
                                             Comment
                                         </a>
+                                        @endif
                                     @endif
                                 </td>
                             </tr>
