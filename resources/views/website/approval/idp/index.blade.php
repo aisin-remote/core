@@ -99,8 +99,8 @@
                                                             <tbody>
                                                                 @foreach ($employeeIdps as $idp)
                                                                     <tr>
-                                                                        <td class="text-center">{{ $idp->category }}</td>
                                                                         <td class="text-center">{{ $idp->alc->name }}</td>
+                                                                        <td class="text-center">{{ $idp->category }}</td>
                                                                         <td>{{ $idp->development_program }}</td>
                                                                         <td>{{ $idp->development_target }}</td>
                                                                         <td>{{ $idp->date }}</td>

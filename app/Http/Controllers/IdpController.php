@@ -749,11 +749,12 @@ class IdpController extends Controller
                 return response()->json(['message' => 'Tidak ada ALC dengan nilai di bawah 3.'], 400);
             }
 
-            // Update semua IDP milik employee menjadi status = 2
+            // Update semua IDP milik employee menjadi status = 1
             IDP::with('hav.hav.employee')
                 ->whereHas('hav.hav.employee', function ($q) use ($employeeId) {
                     $q->where('employee_id', $employeeId);
                 })
+                ->where('status',0)
                 ->update([
                     'status' => 1
                 ]);
