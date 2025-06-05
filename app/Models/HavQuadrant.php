@@ -151,4 +151,8 @@ class HavQuadrant extends Model
 
         return array_sum($scores);
     }
+    public function hav()
+    {
+        return $this->belongsTo(Hav::class, 'employee_id', 'employee_id');
+    }
 }

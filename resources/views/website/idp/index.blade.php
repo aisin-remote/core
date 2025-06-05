@@ -437,6 +437,14 @@
                                 ->where('alc_id', $weaknessDetail->alc_id)
                                 ->latest()
                                 ->first();
+                            $strength = \App\Models\DetailAssessment::with('assessment.employee')
+                                ->select('strength', 'suggestion_development')
+                                ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
+                                    $query->where('id', $weaknessDetail->hav->employee->id);
+                                })
+                                ->where('alc_id', $weaknessDetail->alc_id)
+                                ->latest()
+                                ->first();
 
                             $idp = \App\Models\Idp::with('commentHistory')
                                 ->where('hav_detail_id', $weaknessDetail?->id)
@@ -471,15 +479,19 @@
 
                                         {{-- Weakness Section (always shown) --}}
                                         <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-4">Weakness & Suggestion Development
+                                            <label class="fs-5 fw-bold form-label mb-4">Description & Suggestion
+                                                Development
                                                 in {{ $title }}</label>
                                             <div class="border p-4 rounded bg-light mb-5"
                                                 style="max-height: 400px; overflow-y: auto;">
-                                                <h6 class="fw-bold mb-">Weakness</h6>
-                                                <p class="mb-5">{{ optional($weakness)->weakness ?? '-' }}</p>
+                                                <h6 class="fw-bold mb-">Description</h6>
+                                                <p class="mb-5">
+                                                    {{ !empty($weakness?->weakness) ? $weakness->weakness : (!empty($strength?->strength) ? $strength->strength : '-') }}
+                                                </p>
+
 
                                                 <h6 class="fw-bold mb-2">Suggestion Development</h6>
-                                                <p>{{ $weaknessDetail?->suggestion_development ?? ($weakness?->suggestion_development ?? '-') }}
+                                                <p>{{ $weaknessDetail?->suggestion_development ?? ($weakness?->suggestion_development ?? '-' ?? ($weakness?->suggestion_development ?? '-')) }}
                                                 </p>
                                             </div>
 
@@ -813,7 +825,7 @@
             @foreach ($assessments as $assessment)
                 <div class="modal fade" id="notes_{{ $assessment->employee->id }}" tabindex="-1" aria-modal="true"
                     role="dialog">
-                    <div class="modal-dialog modal-dialog-centered mw-1000px">
+                    <div class="modal-dialog modal-dialog-centered" style="max-width: 1200px;">
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h2 class="fw-bold">Summary {{ $assessment->employee->name }}</h2>
@@ -870,7 +882,7 @@
                                     @if (count($strengthRows) > 0 || count($weaknessRows) > 0)
                                         <div class="row mt-8">
                                             <div class="card">
-                                                <div class="card-header">
+                                                <div class="card-header bg-light-primary">
                                                     <h3 class="card-title">I. Strength & Weakness</h3>
                                                 </div>
                                                 <div class="card-body table-responsive">
@@ -878,7 +890,7 @@
                                                     @if (count($strengthRows) > 0)
                                                         <table class="table align-middle mb-6">
                                                             <thead>
-                                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                                <tr class="text-start fw-bold fs-6 gs-0">
                                                                     <th class="text-center">Strength</th>
                                                                     <th class="text-center">Description</th>
                                                                 </tr>
@@ -886,9 +898,9 @@
                                                             <tbody>
                                                                 @foreach ($strengthRows as $row)
                                                                     <tr>
-                                                                        <td class="text-center px-3">{{ $row['title'] }}
+                                                                        <td class="text-center fs-7 fw-bold px-3">{{ $row['title'] }}
                                                                         </td>
-                                                                        <td class="text-center px-3">{{ $row['value'] }}
+                                                                        <td class="text-justify fs-7 px-3">{{ $row['value'] }}
                                                                         </td>
                                                                     </tr>
                                                                 @endforeach
@@ -899,7 +911,7 @@
                                                     @if (count($weaknessRows) > 0)
                                                         <table class="table align-middle">
                                                             <thead>
-                                                                <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                                <tr class="text-start fw-bold fs-6 gs-0">
                                                                     <th class="text-center">Weakness</th>
                                                                     <th class="text-center">Description</th>
                                                                 </tr>
@@ -907,9 +919,9 @@
                                                             <tbody>
                                                                 @foreach ($weaknessRows as $row)
                                                                     <tr>
-                                                                        <td class="text-center px-3">{{ $row['title'] }}
+                                                                        <td class="text-center fs-7 fw-bold px-3">{{ $row['title'] }}
                                                                         </td>
-                                                                        <td class="text-center px-3">{{ $row['value'] }}
+                                                                        <td class="text-justify fs-7 px-3">{{ $row['value'] }}
                                                                         </td>
                                                                     </tr>
                                                                 @endforeach
@@ -925,14 +937,14 @@
                                     <!-- Individual Development Program -->
                                     <div class="row mt-8">
                                         <div class="card">
-                                            <div class="card-header">
+                                            <div class="card-header bg-light-primary">
                                                 <h3 class="card-title">II. Individual Development Program</h3>
                                             </div>
                                             <div class="card-body table-responsive">
                                                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                                     <thead>
                                                         <tr>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <tr class="text-start fw-bold fs-6 gs-0">
                                                             <th class="text-center">Development Area</th>
                                                             <th class="text-center">Category</th>
                                                             <th class="text-center">Development Program</th>
@@ -943,19 +955,19 @@
                                                     <tbody>
                                                         @foreach ($assessment->details->filter(fn($item) => $item->idp->isNotEmpty()) as $idp)
                                                             <tr>
-                                                                <td class="text-center px-3">
+                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
                                                                     {{ $idp->alc->name ?? '-' }}
                                                                 </td>
-                                                                <td class="text-center px-3">
+                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
                                                                     {{ $idp->idp->first()?->category }}
                                                                 </td>
-                                                                <td class="text-center px-3">
+                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
                                                                     {{ $idp->idp->first()?->development_program }}
                                                                 </td>
-                                                                <td class="text-center px-3">
+                                                                <td class="text-justify fs-7 px-3"  style="width: 50%;">
                                                                     {{ $idp->idp->first()?->development_target }}
                                                                 </td>
-                                                                <td class="text-center px-3">
+                                                                <td class="text-center fs-7 px-3"  style="width: 20%;" >
                                                                     {{ optional($idp->idp->first())->date ? \Carbon\Carbon::parse($idp->idp->first()->date)->format('d-m-Y') : '-' }}
                                                                 </td>
                                                             </tr>
@@ -969,14 +981,14 @@
                                     <!-- Mid Year Review -->
                                     <div class="row mt-8">
                                         <div class="card">
-                                            <div class="card-header">
+                                            <div class="card-header bg-light-primary">
                                                 <h3 class="card-title">III. Mid Year Review</h3>
                                             </div>
                                             <div class="card-body table-responsive">
                                                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                                     <thead>
                                                         <tr>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <tr class="text-start fw-bold fs-6 gs-0">
                                                             <th class="text-justify px-3">Development Program</th>
                                                             <th class="text-justify px-3">Development Achievement</th>
                                                             <th class="text-justify px-3">Next Action</th>
@@ -987,9 +999,9 @@
                                                             <tr>
                                                                 <td class="text-justify px-3">
                                                                     {{ $items->development_program }}</td>
-                                                                <td class="text-justify px-3">
+                                                                <td class="text-justify fs-7 px-3">
                                                                     {{ $items->development_achievement }}</td>
-                                                                <td class="text-justify px-3">
+                                                                <td class="text-justify fs-7 px-3">
                                                                     {{ $items->next_action }}
                                                                 </td>
                                                             </tr>
@@ -1002,7 +1014,7 @@
 
                                     <div class="row mt-8">
                                         <div class="card">
-                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                            <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                                                 <h3 class="card-title">IV. One Year Review</h3>
                                                 <div class="d-flex align-items-center">
                                                 </div>
@@ -1011,7 +1023,7 @@
                                                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
                                                     id="kt_table_users">
                                                     <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <tr class="text-start fw-bold fs-6 gs-0">
                                                             <th class="text-justify px-3" style="width: 50px">
                                                                 Development Program
                                                             </th>
@@ -1025,7 +1037,7 @@
                                                             <tr>
                                                                 <td class="text-justify px-3">
                                                                     {{ $item->development_program }}</td>
-                                                                <td class="text-justify px-3">
+                                                                <td class="text-justify fs-7 px-3">
                                                                     {{ $item->evaluation_result }}</td>
                                                             </tr>
                                                         @endforeach

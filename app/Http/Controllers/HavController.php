@@ -32,6 +32,7 @@ use Yajra\DataTables\Facades\DataTables;
 use App\Models\PerformanceAppraisalHistory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Database\Events\TransactionBeginning;
+use Illuminate\Database\Eloquent\Builder;
 
 
 class HavController extends Controller
@@ -114,65 +115,54 @@ class HavController extends Controller
     {
         $title = 'Employee List';
         $user = auth()->user();
+
+        $titles = [
+            13 => 'Maximal Contributor',
+            7  => 'Top Performer',
+            3  => 'Future Star',
+            1  => 'Star',
+            14 => 'Contributor',
+            8  => 'Strong Performer',
+            4  => 'Potential Candidate',
+            2  => 'Future Star',
+            15 => 'Minimal Contributor',
+            9  => 'Career Person',
+            6  => 'Candidate',
+            5  => 'Raw Diamond',
+            16 => 'Dead Wood',
+            12 => 'Problem Employee',
+            11 => 'Unfit Employee',
+            10 => 'Most Unfit Employee',
+        ];
+
         if ($user->isHRDorDireksi()) {
-            $havGrouped = HavQuadrant::whereHas('employee', function ($query) use ($company) {
-                $query->where('company_name', $company);
-            })->with('employee')->get()->groupBy('quadrant');
-
-            // Quadrant ID => Judul
-            $titles = [
-                13 => 'Maximal Contributor',
-                7  => 'Top Performer',
-                3  => 'Future Star',
-                1  => 'Star',
-                14 => 'Contributor',
-                8  => 'Strong Performer',
-                4  => 'Potential Candidate',
-                2  => 'Future Star',
-                15 => 'Minimal Contributor',
-                9  => 'Career Person',
-                6  => 'Candidate',
-                5  => 'Raw Diamond',
-                16 => 'Dead Wood',
-                12 => 'Problem Employee',
-                11 => 'Unfit Employee',
-                10 => 'Most Unfit Employee',
-            ];
-
-            $orderedHavGrouped = collect(array_keys($titles))->mapWithKeys(function ($quadrantId) use ($havGrouped) {
-                return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
-            });
+            $havGrouped = HavQuadrant::whereHas('hav', function (Builder $query) {
+                $query->where('status', 2); // Filter dari tabel havs
+            })
+                ->whereHas('employee', function ($query) use ($company) {
+                    $query->where('company_name', $company);
+                })
+                ->with('employee')
+                ->get()
+                ->groupBy('quadrant');
         } else {
-
             $subordinates = auth()->user()->subordinate()->unique()->values();
 
-            $havGrouped = HavQuadrant::whereIn('employee_id', $subordinates)->with('employee', 'employee.departments')->get()->groupBy('quadrant');
-
-            // Quadrant ID => Judul
-            $titles = [
-                13 => 'Maximal Contributor',
-                7  => 'Top Performer',
-                3  => 'Future Star',
-                1  => 'Star',
-                14 => 'Contributor',
-                8  => 'Strong Performer',
-                4  => 'Potential Candidate',
-                2  => 'Future Star',
-                15 => 'Minimal Contributor',
-                9  => 'Career Person',
-                6  => 'Candidate',
-                5  => 'Raw Diamond',
-                16 => 'Dead Wood',
-                12 => 'Problem Employee',
-                11 => 'Unfit Employee',
-                10 => 'Most Unfit Employee',
-            ];
-
-            $orderedHavGrouped = collect(array_keys($titles))->mapWithKeys(function ($quadrantId) use ($havGrouped) {
-                return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
-            });
+            $havGrouped = HavQuadrant::whereIn('employee_id', $subordinates)
+                ->whereHas('hav', function (Builder $query) {
+                    $query->where('status', 2);
+                })
+                ->with('employee', 'employee.departments')
+                ->get()
+                ->groupBy('quadrant');
         }
+
+        $orderedHavGrouped = collect(array_keys($titles))->mapWithKeys(function ($quadrantId) use ($havGrouped) {
+            return [$quadrantId => $havGrouped[$quadrantId] ?? collect()];
+        });
+
         $positions = Employee::select('position')->distinct()->pluck('position')->filter()->values();
+
         $allPositions = [
             'President',
             'Direktur',
@@ -200,7 +190,12 @@ class HavController extends Controller
             ? array_slice($allPositions, $positionIndex)
             : [];
 
-        return view('website.hav.index', compact('orderedHavGrouped', 'titles', 'positions', 'visiblePositions'));
+        return view('website.hav.index', compact(
+            'orderedHavGrouped',
+            'titles',
+            'positions',
+            'visiblePositions'
+        ));
     }
 
 
