@@ -119,9 +119,6 @@
                                         <span class="text-muted">No Employee</span>
                                     @endif
 
-                                    <button class="btn btn-danger btn-sm btn-delete" data-id="{{ $assessment->id }}">
-                                        Delete
-                                    </button>
                                 </td>
                             </tr>
                         @empty
@@ -464,6 +461,9 @@
                     >
                         Detail
                     </a>
+                     <button class="btn btn-danger btn-sm btn-delete" data-id="${assessment.id}">
+                                        Delete
+                                    </button>
                 </td>
             </tr>
         `;

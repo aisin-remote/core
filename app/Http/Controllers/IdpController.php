@@ -156,17 +156,23 @@ class IdpController extends Controller
                 // dd($subordinates);
 
                 // Ambil assessment terbaru hanya milik bawahannya
-                $assessments = hav::with(['details.idp','employee', 'details.alc'])
+                $assessments = hav::with(['details.idp', 'employee', 'details.alc'])
                     ->whereHas('employee', function ($query) use ($subordinates) {
                         $query->whereIn('id', $subordinates);
                     })
-                    ->when($company, fn($query) =>
+                    ->when(
+                        $company,
+                        fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                     )
-                    ->when($npk, fn($query) =>
+                    ->when(
+                        $npk,
+                        fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('npk', $npk))
                     )
-                    ->when($search, fn($query) =>
+                    ->when(
+                        $search,
+                        fn($query) =>
                         $query->whereHas('employee', function ($q) use ($search) {
                             $q->where('name', 'like', '%' . $search . '%')
                                 ->orWhere('npk', 'like', '%' . $search . '%');
@@ -180,7 +186,7 @@ class IdpController extends Controller
                     ->get();
             }
         }
-        
+
         // Ambil semua karyawan
         $employees = Employee::all();
 
@@ -203,7 +209,7 @@ class IdpController extends Controller
         $mid = Development::all();
 
         foreach ($assessments as $assessment) {
-            foreach ($assessment->details as $detail){
+            foreach ($assessment->details as $detail) {
                 // Ambil semua program IDP yang tersimpan
                 $savedPrograms = $detail->idp->where('status', 3)->map(function ($idp) {
                     return [
@@ -211,29 +217,29 @@ class IdpController extends Controller
                         'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
                     ];
                 });
-    
+
                 // Pisahkan berdasarkan due date
                 $midYearPrograms = [];
                 $oneYearPrograms = [];
                 $currentDate = Carbon::now();
-    
+
                 foreach ($savedPrograms as $program) {
                     $dueDate = Carbon::parse($program['date']);
-                
+
                     if ($dueDate->isBefore(now()->addMonths(6))) {
                         $midYearPrograms[] = $program;
                     } else {
                         $oneYearPrograms[] = $program;
                     }
                 }
-    
+
                 // Simpan ke objek detail agar bisa diakses di Blade
                 $detail->recommendedProgramsMidYear = $midYearPrograms;
                 $detail->recommendedProgramsOneYear = $oneYearPrograms;
             }
         }
 
-        
+
 
         return view('website.idp.index', compact(
             'employees',
@@ -265,64 +271,61 @@ class IdpController extends Controller
             8 => 'Drive & Courage'
         ];
 
-        $assessments = collect(); // default kosong
+        $assessments = collect();
 
         if ($user->isHRDorDireksi()) {
             $assessments = Idp::with('hav.hav.employee')
-                ->when($company, function ($query) use ($company) {
-                    $query->whereHas('hav.hav.employee', function ($q) use ($company) {
-                        $q->where('company_name', $company);
-                    });
-                })
-                ->when($npk, function ($query) use ($npk) {
-                    $query->whereHas('hav.hav.employee', function ($q) use ($npk) {
-                        $q->where('npk', $npk);
-                    });
-                })
-                ->when($search, function ($query) use ($search) {
-                    $query->whereHas('hav.hav.employee', function ($q) use ($search) {
-                        $q->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('npk', 'like', '%' . $search . '%');
-                    });
-                })
+                ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
+                ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
+                ->when($search, fn($q) => $q->whereHas('hav.hav.employee', function ($q) use ($search) {
+                    $q->where('name', 'like', "%$search%")
+                        ->orWhere('npk', 'like', "%$search%");
+                }))
                 ->orderByDesc('created_at')
-                ->paginate(10);
+                ->get()
+                ->groupBy(fn($item) => optional($item->hav?->hav?->employee)->id)
+                ->map(fn($group) => $group->first())
+                ->values();
+
+            $assessments = new \Illuminate\Pagination\LengthAwarePaginator(
+                $assessments,
+                $assessments->count(),
+                10,
+                $request->get('page', 1),
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
         } else {
-            // Ambil employee berdasarkan user login
             $emp = Employee::where('user_id', $user->id)->first();
 
-            if (!$emp) {
-                $assessments = collect(); // Kosong jika tidak ada employee
-            } else {
+            if ($emp) {
                 $subordinates = $this->getSubordinatesFromStructure($emp)->pluck('id')->toArray();
 
-                // Ambil IDP bawahan
                 $assessments = Idp::with('hav.hav.employee')
-                    ->whereHas('hav.hav.employee', function ($query) use ($subordinates) {
-                        $query->whereIn('id', $subordinates);
-                    })
-                    ->when($company, function ($query) use ($company) {
-                        $query->whereHas('hav.hav.employee', function ($q) use ($company) {
-                            $q->where('company_name', $company);
-                        });
-                    })
-                    ->when($npk, function ($query) use ($npk) {
-                        $query->whereHas('hav.hav.employee', function ($q) use ($npk) {
-                            $q->where('npk', $npk);
-                        });
-                    })
-                    ->when($search, function ($query) use ($search) {
-                        $query->whereHas('hav.hav.employee', function ($q) use ($search) {
-                            $q->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('npk', 'like', '%' . $search . '%');
+                    ->whereHas('hav.hav.employee', fn($q) => $q->whereIn('id', $subordinates))
+                    ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
+                    ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
+                    ->when($search, function ($q) use ($search) {
+                        $q->whereHas('hav.hav.employee', function ($q) use ($search) {
+                            $q->where('name', 'like', "%$search%")
+                                ->orWhere('npk', 'like', "%$search%");
                         });
                     })
                     ->orderByDesc('created_at')
-                    ->get();
+                    ->get()
+                    ->groupBy(fn($item) => optional($item->hav?->hav?->employee)->id)
+                    ->map(fn($group) => $group->first())
+                    ->values();
+
+                $assessments = new \Illuminate\Pagination\LengthAwarePaginator(
+                    $assessments,
+                    $assessments->count(),
+                    10,
+                    $request->get('page', 1),
+                    ['path' => $request->url(), 'query' => $request->query()]
+                );
             }
         }
 
-        // Data tambahan
         $employees = Employee::all();
         $idps = Idp::with(['assessment', 'employee', 'commentHistory'])->get();
         $details = DevelopmentOne::all();
@@ -343,21 +346,9 @@ class IdpController extends Controller
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
-            : $rawPosition;
-
-        $positionIndex = array_search($currentPosition, $allPositions);
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
-        }
-
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            : [];
-
-        // Static program list
-
+        $currentPosition = Str::contains($rawPosition, 'Act ') ? trim(str_replace('Act', '', $rawPosition)) : $rawPosition;
+        $positionIndex = array_search($currentPosition, $allPositions) ?: array_search('Operator', $allPositions);
+        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
         return view('website.idp.list', compact(
             'employees',
@@ -418,7 +409,6 @@ class IdpController extends Controller
                     'message' => 'Development updated successfully.',
                     'idp' => $idp, // opsional: kirim data IDP terbaru
                 ]);
-
             } else {
                 $newIdp = Idp::create([
                     'hav_detail_id' => $request->hav_detail_id,
@@ -717,8 +707,8 @@ class IdpController extends Controller
                     $query->selectRaw('id')
                         ->from('havs as a')
                         ->whereRaw('a.created_at = (
-                            SELECT MAX(created_at) 
-                            FROM havs 
+                            SELECT MAX(created_at)
+                            FROM havs
                             WHERE employee_id = a.employee_id
                         )');
                 })
@@ -743,10 +733,10 @@ class IdpController extends Controller
             // Filter nilai < 3
             $belowThree = $detailAssessments->flatMap(function ($assessment) {
                 return $assessment->details->filter(function ($detail) {
-                    return $detail->score < 3;  
+                    return $detail->score < 3;
                 });
             });
-            
+
             if ($belowThree->isEmpty()) {
                 return response()->json(['message' => 'Tidak ada ALC dengan nilai di bawah 3.'], 400);
             }
@@ -756,7 +746,7 @@ class IdpController extends Controller
                 ->whereHas('hav.hav.employee', function ($q) use ($employeeId) {
                     $q->where('employee_id', $employeeId);
                 })
-                ->where('status',0)
+                ->where('status', 0)
                 ->update([
                     'status' => 1
                 ]);
@@ -809,7 +799,7 @@ class IdpController extends Controller
             ->whereNotIn('id', $checkIdpIds) // ← filter agar tidak muncul dua kali
             ->get();
 
-        $idps = $checkIdps->merge($approveIdps);        
+        $idps = $checkIdps->merge($approveIdps);
 
         return view('website.approval.idp.index', compact('idps'));
     }

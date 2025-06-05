@@ -202,14 +202,20 @@
                 });
             });
             $(document).ready(function() {
+
+                function safeEncode(str) {
+                    return btoa(unescape(encodeURIComponent(str || '')));
+                }
+
+                function safeDecode(str) {
+                    return decodeURIComponent(escape(atob(str || '')));
+                }
+
                 $(document).on("click", ".history-btn", function(event) {
                     event.preventDefault();
 
                     let employeeId = $(this).data("employee-id");
-                    console.log("Fetching history for Employee ID:", employeeId); // Debug
-                    // <- cek role HRD
 
-                    // Reset data modal sebelum request baru dilakukan
                     $("#npkText").text("-");
                     $("#positionText").text("-");
                     $("#kt_table_assessments tbody").empty();
@@ -218,22 +224,17 @@
                         url: `/assessment/history/${employeeId}`,
                         type: "GET",
                         success: function(response) {
-                            console.log("Response received:", response); // Debug respons
-
                             if (!response.employee) {
-                                console.error("Employee data not found in response!");
                                 alert("Employee not found!");
                                 return;
                             }
 
-                            // Update informasi karyawan
                             $("#npkText").text(response.employee.npk);
                             $("#positionText").text(response.employee.position);
-
-                            // Kosongkan tabel sebelum menambahkan data baru
                             $("#kt_table_assessments tbody").empty();
-                            window.currentUserRole = "{{ strtolower(auth()->user()->role) }}";
-                            let isHRD = window.currentUserRole === "hrd";
+
+                            let isHRD = "{{ strtolower(auth()->user()->role) }}" === "hrd";
+
                             if (response.assessments.length > 0) {
                                 response.assessments.forEach((assessment, index) => {
                                     let editBtn = '';
@@ -246,14 +247,14 @@
                                     data-id="${assessment.id}"
                                     data-employee-id="${assessment.employee_id}"
                                     data-date="${assessment.date}"
-                                    data-description="${assessment.description}"
-                                    data-upload="${assessment.upload}"
+                                    data-description="${safeEncode(assessment.description || '')}"
+                                    data-upload="${assessment.upload || ''}"
                                     data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
                                     data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
-                                    data-alc_name='${btoa(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
-                                    data-strengths='${btoa(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
-                                    data-weaknesses='${btoa(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
-                                    data-suggestion_development='${btoa(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'
+                                    data-alc_name='${safeEncode(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
+                                    data-strengths='${safeEncode(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
+                                    data-weaknesses='${safeEncode(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
+                                    data-suggestion_development='${safeEncode(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'
                                 >Edit</button>
                             `;
 
@@ -296,8 +297,7 @@
 
                             $("#detailAssessmentModal").modal("show");
                         },
-                        error: function(error) {
-                            console.error("Error fetching data:", error);
+                        error: function() {
                             alert("Failed to load assessment data!");
                         }
                     });
@@ -307,45 +307,42 @@
                     let assessmentId = $(this).data("id");
                     let employeeId = $(this).data("employee-id");
                     let date = $(this).data("date");
-                    let description = $(this).data("description");
+
+                    let description = safeDecode($(this).data("description"));
                     let upload = $(this).data("upload");
 
                     let scores = JSON.parse(atob($(this).attr("data-scores")));
                     let alcs = JSON.parse(atob($(this).attr("data-alcs")));
-                    let alcNames = JSON.parse(atob($(this).attr("data-alc_name")));
-                    let strengths = JSON.parse(atob($(this).attr("data-strengths")));
-                    let weaknesses = JSON.parse(atob($(this).attr("data-weaknesses")));
-                    let suggestion_development = JSON.parse(atob($(this).attr("data-suggestion_development")));
-
+                    let alcNames = JSON.parse(safeDecode($(this).attr("data-alc_name")));
+                    let strengths = JSON.parse(safeDecode($(this).attr("data-strengths")));
+                    let weaknesses = JSON.parse(safeDecode($(this).attr("data-weaknesses")));
+                    let suggestion_development = JSON.parse(safeDecode($(this).attr(
+                        "data-suggestion_development")));
 
                     $("#update_assessment_id").val(assessmentId);
                     $("#update_employee_id").val(employeeId);
                     $("#update_date").val(date);
                     $("#update_description").val(description);
-                    $("#update_upload").attr("href", upload).text("Lihat File");
+                    $("#update_upload").attr("href", `/storage/${upload}`).text("Lihat File");
 
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];
                         $(`#update_score_${alcId}_${score}`).prop("checked", true);
                     });
 
-                    // Sinkronisasi dari skor ke strength dan weakness
                     syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses,
                         suggestion_development);
 
                     const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
                     modal.show();
 
-                    // Tutup modal History sebelum membuka modal Update
                     $("#detailAssessmentModal").modal("hide");
 
                     setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal history
-                        $("body").removeClass("modal-open"); // Pastikan body tidak terkunci
+                        $(".modal-backdrop").remove();
+                        $("body").removeClass("modal-open");
 
                         $("#updateAssessmentModal").modal("show");
-
-                        // Buat overlay baru agar tetap ada
                         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
                     }, 10);
                 });

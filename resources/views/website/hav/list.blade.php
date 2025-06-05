@@ -78,7 +78,8 @@
                                 <td>{{ $item->employee->position }}</td>
                                 <td>{{ $item->employee->department?->name }}</td>
                                 <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name }}</span>
+                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name ?? '-' }}
+                                    </span>
                                 </td>
                                 <td class="text-center">
                                     {{-- Summary --}}
@@ -339,9 +340,9 @@
                             </tbody>
                         </table>
                     </div>
-        
+
                 </div>
-               <div class="modal-footer d-flex justify-content-between align-items-center w-100">
+                <div class="modal-footer d-flex justify-content-between align-items-center w-100">
                     <small class="text-muted fw-bold m-0">
                         Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
                     </small>

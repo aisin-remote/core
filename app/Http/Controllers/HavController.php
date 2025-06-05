@@ -222,7 +222,7 @@ class HavController extends Controller
         if ($npk) {
             // Jika ada npk, tampilkan hanya data untuk npk tersebut
 
-            $employees = Hav::with('employee')
+            $employees = Hav::with(['employee', 'quadran'])
 
                 ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
                     $query->where('npk', $npk); // Filter berdasarkan npk
@@ -243,7 +243,7 @@ class HavController extends Controller
         } else {
             // Logika untuk HRD atau selain HRD
             if ($user->isHRDorDireksi()) {
-                $employees = Hav::with('employee')
+                $employees = Hav::with(['employee', 'quadran'])
                     ->whereHas('employee', function ($query) use ($company, $filter, $search) {
                         if ($company) {
                             $query->where('company_name', $company);
@@ -272,7 +272,7 @@ class HavController extends Controller
                 } else {
                     $subordinate =  $this->getSubordinatesFromStructure($user->employee)->pluck('id');
 
-                    $employees = Hav::with('employee')
+                    $employees = Hav::with(['employee', 'quadran'])
                         ->whereIn('employee_id', $subordinate)
                         ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
 
