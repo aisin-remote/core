@@ -18,8 +18,9 @@ class ChecksheetController extends Controller
     {
         $title = 'Checksheet';
         $checksheets  = Checksheet::with('competency')->paginate(10);
-        $competencies= Competency::all();
-
+        $competencies = Competency::with(['group_competency', 'department', 'sub_section', 'section',
+            'division','plant'])->get();
+            
         return view('website.checksheet.index', compact(
             'checksheets', 'title', 'competencies'
         ));

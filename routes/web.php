@@ -17,6 +17,7 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
+use App\Http\Controllers\SkillMatrixController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -70,6 +71,21 @@ Route::get('/checksheet-assessment/view/{employeeCompetencyId}', [ChecksheetAsse
 Route::post('/checksheet-assessment', [ChecksheetAssessmentController::class, 'store'])
     ->name('checksheet-assessment.store'); 
 
+/* Skill Matrix */
+Route::middleware(['auth'])->group(function () {
+    Route::get('skill-matrix', [SkillMatrixController::class, 'index'])
+         ->name('skillMatrix.index');
+    Route::get('skill-matrix/{id}', [SkillMatrixController::class, 'show'])
+         ->name('skillMatrix.show')
+         ->where('id', '[0-9]+');
+    Route::get('skill-matrix/{employeeCompetencyId}/checksheet', 
+         [SkillMatrixController::class, 'checksheet'])
+         ->name('skillMatrix.checksheet')
+         ->where('employeeCompetencyId', '[0-9]+');
+    Route::post('skill-matrix/{id}/upload-evidence', [SkillMatrixController::class, 'uploadEvidence'])
+        ->name('skillMatrix.uploadEvidence')
+        ->where('id', '[0-9]+');
+});
 
 Route::middleware('guest')->group(function () {
     Route::prefix('register')->group(function () {
@@ -121,6 +137,14 @@ Route::middleware('auth')->group(function () {
     Route::prefix('approval')->group(function () {
         Route::get('/list-approval-HAV', [HavController::class, 'approval'])->name('hav.approval');
         Route::get('/list-approval-IDP', [IdpController::class, 'approvalidp'])->name('idp.approvalidp');
+        Route::get('/skill-matrix', [SkillMatrixController::class, 'approval'])
+             ->name('skillMatrix.approval');
+        Route::post('/skill-matrix/{id}/approve', [SkillMatrixController::class, 'approve'])
+             ->name('skillMatrix.approve')
+             ->where('id','[0-9]+');
+        Route::post('/skill-matrix/{id}/unapprove', [SkillMatrixController::class, 'unapprove'])
+             ->name('skillMatrix.unapprove')
+             ->where('id','[0-9]+');
     });
 
     Route::prefix('employee')->group(function () {

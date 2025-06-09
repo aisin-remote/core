@@ -11,7 +11,6 @@ class ChecksheetAssessmentController extends Controller
 {
     public function index($employeeId, $competencyId)
     {
-        // Cek apakah sudah ada assessment
         $employeeCompetency = EmployeeCompetency::where('employee_id', $employeeId)
             ->where('competency_id', $competencyId)
             ->first();
@@ -20,7 +19,6 @@ class ChecksheetAssessmentController extends Controller
             return redirect()->route('checksheet-assessment.view', $employeeCompetency->id);
         }
 
-        // Jika belum ada, buat record baru
         if (!$employeeCompetency) {
             $employeeCompetency = EmployeeCompetency::create([
                 'employee_id' => $employeeId,
