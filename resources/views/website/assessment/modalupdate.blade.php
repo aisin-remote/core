@@ -13,7 +13,7 @@
 
                     <div class="mb-4">
                         <label for="update_employee_id" class="form-label">Employee</label>
-                        <select class="form-control" id="update_employee_id" name="employee_id"  disabled>
+                        <select class="form-control" id="update_employee_id" name="employee_id" disabled>
                             <option value="">Pilih Employee</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->id }}">{{ $employee->name }}</option>
@@ -132,7 +132,7 @@
                         $(".modal-backdrop").remove();
                         $("body").removeClass("modal-open");
                         // Bisa tambah reload data atau refresh halaman jika perlu
-                         location.reload();
+                        location.reload();
                     });
                 })
                 .catch(error => {
@@ -150,41 +150,46 @@
         // Load data ke modal saat tombol update diklik
 
 
-        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "",
-            alcName = "", suggestion =
-            "") {
+        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "",
+            suggestion = "") {
+            console.log(`addAssessmentCard called with type=${type}, alcId=${selectedAlc}`);
+            console.log({
+                descriptions,
+                alcName,
+                suggestion
+            });
+
             let container = document.getElementById(containerId);
             let templateCard = document.createElement("div");
-            templateCard.classList.add("card", "p-3", "mb-3", "assessment-card",
-                `${type}-card`);
+            templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
-            // Tambahkan ID sesuai ALC
             if (selectedAlc) {
                 templateCard.setAttribute("id", `assessment_card_${selectedAlc}`);
             }
 
-            templateCard.innerHTML = `
-            <div class="mb-3">
-                <label>ALC</label>
-                <select class="form-control alc-dropdown" name="${type}_alc_ids[]">
-                    <option value="">Pilih ALC</option>
-                    @foreach ($alcs as $alc)
-                        <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
-                            {{ $alc->name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="mb-3">
-                <label>Description</label>
-                <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
-            </div>
-              <div class="mb-3">
-            <label>Suggestion Development</label>
-           <textarea class="form-control suggestion-textarea" name="suggestion_development[${selectedAlc}]" rows="2">${suggestion}</textarea>
+            // Build options HTML dynamically
+            let optionsHtml = `<option value="">Pilih ALC</option>`;
+            @foreach ($alcs as $alc)
+                optionsHtml +=
+                    `<option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>{{ $alc->name }}</option>`;
+            @endforeach
 
+            templateCard.innerHTML = `
+        <div class="mb-3">
+            <label>ALC</label>
+            <select class="form-control alc-dropdown" name="${type}_alc_ids[]">
+                ${optionsHtml}
+            </select>
         </div>
-        `;
+        <div class="mb-3">
+            <label>Description</label>
+            <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
+        </div>
+        <div class="mb-3">
+            <label>Suggestion Development</label>
+            <textarea class="form-control suggestion-textarea" name="suggestion_development[${selectedAlc}]" rows="2">${suggestion}</textarea>
+        </div>
+    `;
 
             let selectElement = templateCard.querySelector(".alc-dropdown");
             selectElement.addEventListener("change", function() {
@@ -240,78 +245,111 @@
 
         $(document).on("change", ".update-score", function() {
             const radio = $(this);
-            const idParts = radio.attr("id").split("_"); // e.g. update_score_3_4
+            const idParts = radio.attr("id").split("_");
             const alcId = idParts[2];
             const score = parseInt(idParts[3]);
 
             const newType = score >= 3 ? "strength" : "weakness";
             const oldType = score >= 3 ? "weakness" : "strength";
 
-            let card = $(`#assessment_card_${alcId}`);
-            const newWrapper = $(`#update-${newType}s-wrapper`);
+            const containerMap = {
+                strength: "#update-strengths-wrapper",
+                weakness: "#update-weaknesses-wrapper",
+            };
 
-            if (card.length === 0) {
-                // Card belum dibuat → buat ke wrapper yang sesuai
-                addAssessmentCard(newType, `update-${newType}s-wrapper`, alcId);
-                card = $(`#assessment_card_${alcId}`);
-            } else {
-                // Card sudah ada → pindahkan dari wrapper lama ke wrapper baru
-                const detachedCard = $(
-                        `#update-${oldType}s-wrapper #assessment_card_${alcId}`)
-                    .detach();
-                newWrapper.append(detachedCard);
-                card = detachedCard;
+            let card = $(`#assessment_card_${alcId}`);
+            const newWrapper = $(containerMap[newType]);
+            const oldWrapper = $(containerMap[oldType]);
+            const oldCard = oldWrapper.find(`#assessment_card_${alcId}`);
+
+            console.log(`ALC ID: ${alcId}, score: ${score}, oldType: ${oldType}, newType: ${newType}`);
+            console.log("Old card found:", oldCard.length);
+            console.log("New wrapper length:", newWrapper.length);
+            console.log("Old wrapper length:", oldWrapper.length);
+
+            let description = "";
+            let suggestion = "";
+            let alcName = "";
+
+            if (oldCard.length) {
+                description = oldCard.find(`textarea.${oldType}-textarea`).val() || "";
+                suggestion = oldCard.find("textarea.suggestion-textarea").val() || "";
+                alcName = oldCard.find("select.alc-dropdown").val() || "";
+                console.log("Old card data:", {
+                    description,
+                    suggestion,
+                    alcName
+                });
+
+                oldCard.remove();
             }
 
-            // Update name attributes agar sesuai dengan posisi baru
-            const textarea = card.find("textarea");
+            if (card.length === 0) {
+                console.log(
+                    `[INFO] Card ALC ${alcId} not found in newType container, creating new in ${newType}`
+                );
+                addAssessmentCard(newType, containerMap[newType].substring(1), alcId, description,
+                    alcName, suggestion);
+                card = $(`#assessment_card_${alcId}`);
+            } else {
+                console.log(`[INFO] Moving ALC ${alcId} card from ${oldType} to ${newType}`);
+                card.detach().appendTo(newWrapper);
+            }
+
+            // Update name attributes
+            const textarea = card.find("textarea").first();
+            const suggestionTextarea = card.find("textarea.suggestion-textarea");
             const select = card.find("select");
 
             textarea.attr("name", `${newType}[${alcId}]`);
+            suggestionTextarea.attr("name", `suggestion_development[${alcId}]`);
             select.attr("name", `${newType}_alc_ids[]`);
 
-            // Update class supaya style sesuai
+            // Update card class
             card.removeClass("strength-card weakness-card").addClass(`${newType}-card`);
+
+            updateDropdownOptions();
         });
 
 
 
-        function updateDropdownOptions(card, type) {
-            // Memastikan bahwa dropdown ALC hanya bisa memilih ALC yang sesuai dengan kategori strength/weakness
-            const select = card.find("select");
-            const alcId = select.val();
 
-            // Contoh: Jika ALC untuk strength, dropdown hanya menampilkan ALC yang relevan
-            select.find("option").each(function() {
-                const option = $(this);
-                if (type === "strength" && option.val() !== alcId) {
-                    option.prop("disabled", false); // ALC yang boleh dipilih
-                } else if (type === "weakness" && option.val() !== alcId) {
-                    option.prop("disabled", false); // ALC yang boleh dipilih
-                } else {
-                    option.prop("disabled", true); // ALC yang tidak relevan, disable
-                }
+
+        function updateDropdownOptions() {
+            let selectedStrengths = new Set();
+            let selectedWeaknesses = new Set();
+
+            // Ambil ALC yang sudah dipilih di strength
+            document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
+                if (select?.value) selectedStrengths.add(select.value);
+            });
+
+            // Ambil ALC yang sudah dipilih di weakness
+            document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
+                if (select?.value) selectedWeaknesses.add(select.value);
+            });
+
+            // Update dropdown di strength
+            document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
+                const currentValue = select.value;
+                select.querySelectorAll("option").forEach(option => {
+                    option.hidden = (option.value !== currentValue) &&
+                        (selectedStrengths.has(option.value) || selectedWeaknesses.has(option
+                            .value));
+                });
+            });
+
+            // Update dropdown di weakness
+            document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
+                const currentValue = select.value;
+                select.querySelectorAll("option").forEach(option => {
+                    option.hidden = (option.value !== currentValue) &&
+                        (selectedStrengths.has(option.value) || selectedWeaknesses.has(option
+                            .value));
+                });
             });
         }
-        $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-                    if ($(".modal.show").length === 0) {
-                        $("body").removeClass("modal-open");
-                        $(".modal-backdrop").remove();
-                    }
-                });
 
-                // Saat modal history ditutup
-                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    if ($(".modal.show").length === 0) {
-                        $("body").removeClass("modal-open");
-                        $(".modal-backdrop").remove();
-                    }
-                });
-
-                // Jaga z-index backdrop agar tidak terlalu tebal saat banyak modal muncul
-                $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").css("z-index", 1050);
-                });
 
     });
 </script>

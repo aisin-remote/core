@@ -425,7 +425,7 @@
 
                             $assessmentId = DB::table('assessments')
                                 ->select('id')
-                                ->where('employee_id', $weaknessDetail->hav->employee->id)
+                                ->where('employee_id', $weaknessDetail->hav->employee->id)      
                                 ->latest()
                                 ->first();
 

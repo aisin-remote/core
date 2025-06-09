@@ -34,7 +34,7 @@
                 </div>
                 <div class="card-body">
                     <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                        role="tablist" style="cursor:pointer">
+                        role="tablist" style="cursor:pointer ">
                         {{-- Tab Show All --}}
                         <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
@@ -442,83 +442,114 @@
                     }
                 }
 
-                // Fungsi untuk menangani perubahan skor
-                $(document).on("change", "input[name^='update_score_']", function() {
-                    const radio = $(this);
-                    const idParts = radio.attr("id").split("_"); // e.g. update_score_1_2
-                    const alcId = idParts[2];
-                    const score = parseInt(idParts[3]);
-
-                    // Tentukan kategori berdasarkan skor (strength jika >= 3, weakness jika < 3)
-                    const newType = score >= 3 ? "strength" : "weakness";
-                    const oldType = score >= 3 ? "weakness" : "strength";
-
-                    // Dapatkan card yang sesuai
-                    let card = $(`#assessment_card_${alcId}`);
-                    const newWrapper = $(`#update-${newType}s-wrapper`);
-                    const oldWrapper = $(`#update-${oldType}s-wrapper`);
-
-                    // Jika card belum ada, buat card baru
-                    if (card.length === 0) {
-                        addAssessmentCard(newType, `update-${newType}s-wrapper`, alcId);
-                        card = $(`#assessment_card_${alcId}`);
-                    } else {
-                        // Pindahkan card dari wrapper lama ke wrapper baru
-                        const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`)
-                            .detach();
-                        newWrapper.append(detachedCard);
-                        card = detachedCard;
-                    }
-
-                    // Update nama untuk textarea dan select agar sesuai dengan kategori
-                    const textarea = card.find("textarea");
-                    const suggestion = card.find("textarea.suggestion-textarea");
-                    const select = card.find("select");
-
-                    textarea.attr("name", `${newType}[${alcId}]`);
-                    suggestion.attr("name", `suggestion_development[${alcId}]`);
-                    select.attr("name", `${newType}_alc_ids[]`);
-
-                    // Update class card untuk memastikan gaya sesuai kategori
-                    card.removeClass("strength-card weakness-card").addClass(`${newType}-card`);
-
-                    // Memperbarui dropdown options agar tidak ada ALC yang sama di kategori lain
-                    updateDropdownOptions();
-                });
-
-                // Fungsi untuk memperbarui dropdown ALC agar tidak ada pilihan yang tumpang tindih
                 function updateDropdownOptions() {
                     let selectedStrengths = new Set();
                     let selectedWeaknesses = new Set();
 
                     // Ambil ALC yang sudah dipilih di strength
                     document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
-                        if (select.value) selectedStrengths.add(select.value);
+                        if (select?.value) selectedStrengths.add(select.value);
                     });
 
                     // Ambil ALC yang sudah dipilih di weakness
                     document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
-                        if (select.value) selectedWeaknesses.add(select.value);
+                        if (select?.value) selectedWeaknesses.add(select.value);
                     });
 
-                    // Update dropdown ALC di strength agar tidak ada ALC yang sudah dipilih di weakness
+                    // Update dropdown di strength
                     document.querySelectorAll("#update-strengths-wrapper .alc-dropdown").forEach(select => {
-                        let currentValue = select.value;
+                        const currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
-                            option.hidden = (selectedWeaknesses.has(option.value) || selectedStrengths
-                                .has(option.value)) && option.value !== currentValue;
+                            option.hidden = (option.value !== currentValue) &&
+                                (selectedStrengths.has(option.value) || selectedWeaknesses.has(option
+                                    .value));
                         });
                     });
 
-                    // Update dropdown ALC di weakness agar tidak ada ALC yang sudah dipilih di strength
+                    // Update dropdown di weakness
                     document.querySelectorAll("#update-weaknesses-wrapper .alc-dropdown").forEach(select => {
-                        let currentValue = select.value;
+                        const currentValue = select.value;
                         select.querySelectorAll("option").forEach(option => {
-                            option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
-                                .has(option.value)) && option.value !== currentValue;
+                            option.hidden = (option.value !== currentValue) &&
+                                (selectedStrengths.has(option.value) || selectedWeaknesses.has(option
+                                    .value));
                         });
                     });
                 }
+                // Fungsi untuk menangani perubahan skor
+                $(document).on("change", ".update-score", function() {
+                    const radio = $(this);
+                    const idParts = radio.attr("id").split("_");
+                    const alcId = idParts[2];
+                    const score = parseInt(idParts[3]);
+
+                    const newType = score >= 3 ? "strength" : "weakness";
+                    const oldType = score >= 3 ? "weakness" : "strength";
+
+                    const containerMap = {
+                        strength: "#update-strengths-wrapper",
+                        weakness: "#update-weaknesses-wrapper",
+                    };
+
+                    let card = $(`#assessment_card_${alcId}`);
+                    const newWrapper = $(containerMap[newType]);
+                    const oldWrapper = $(containerMap[oldType]);
+                    const oldCard = oldWrapper.find(`#assessment_card_${alcId}`);
+
+                    console.log(`ALC ID: ${alcId}, score: ${score}, oldType: ${oldType}, newType: ${newType}`);
+                    console.log("Old card found:", oldCard.length);
+                    console.log("New wrapper length:", newWrapper.length);
+                    console.log("Old wrapper length:", oldWrapper.length);
+
+                    let description = "";
+                    let suggestion = "";
+                    let alcName = "";
+
+                    if (oldCard.length) {
+                        description = oldCard.find(`textarea.${oldType}-textarea`).val() || "";
+                        suggestion = oldCard.find("textarea.suggestion-textarea").val() || "";
+                        alcName = oldCard.find("select.alc-dropdown").val() || "";
+                        console.log("Old card data:", {
+                            description,
+                            suggestion,
+                            alcName
+                        });
+
+                        oldCard.remove();
+                    }
+
+                    if (card.length === 0) {
+                        console.log(
+                            `[INFO] Card ALC ${alcId} not found in newType container, creating new in ${newType}`
+                            );
+                        addAssessmentCard(newType, containerMap[newType].substring(1), alcId, description,
+                            alcName, suggestion);
+                        card = $(`#assessment_card_${alcId}`);
+                    } else {
+                        console.log(`[INFO] Moving ALC ${alcId} card from ${oldType} to ${newType}`);
+                        card.detach().appendTo(newWrapper);
+                    }
+
+                    // Update name attributes
+                    const textarea = card.find("textarea").first();
+                    const suggestionTextarea = card.find("textarea.suggestion-textarea");
+                    const select = card.find("select");
+
+                    textarea.attr("name", `${newType}[${alcId}]`);
+                    suggestionTextarea.attr("name", `suggestion_development[${alcId}]`);
+                    select.attr("name", `${newType}_alc_ids[]`);
+
+                    // Update card class
+                    card.removeClass("strength-card weakness-card").addClass(`${newType}-card`);
+
+                    updateDropdownOptions();
+                });
+
+
+
+                // Fungsi untuk memperbarui dropdown ALC agar tidak ada pilihan yang tumpang tindih
+
+
 
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
                 // $("#updateAssessmentModal").on("hidden.bs.modal", function() {

@@ -717,7 +717,7 @@
     </div>
     <div class="app-sidebar-user mt-auto px-3 pt-5 pb-5 border-top border-white border-opacity-25"
         style="position: sticky; bottom: 0; background-color: #1e1e2d;">
-        <div class="d-flex align-items-center">
+        <div class="d-flex align-items-center"> 
             <div class="symbol symbol-40px">
                 <img src="{{ auth()->user()->employee && auth()->user()->employee->photo
                     ? asset('storage/' . auth()->user()->employee->photo)
@@ -734,8 +734,21 @@
 </div>
 <!--end::Sidebar-->
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const menuAccordions = document.querySelectorAll(".menu-item.menu-accordion");
+
+        // Jika user baru saja login
+        if (sessionStorage.getItem("justLoggedIn") === "true") {
+            // Bersihkan semua dropdown state
+            Object.keys(localStorage).forEach(key => {
+                if (key.startsWith("menu-")) {
+                    localStorage.removeItem(key);
+                }
+            });
+
+            // Hapus flag setelah digunakan
+            sessionStorage.removeItem("justLoggedIn");
+        }
 
         // Restore dropdown states
         menuAccordions.forEach((menu) => {
@@ -754,24 +767,23 @@
 
             if (!id) return;
 
-            trigger.addEventListener("click", function() {
+            trigger.addEventListener("click", function () {
                 const isExpanded = menu.classList.contains("show");
-                localStorage.setItem(id, !isExpanded); // Save the toggled state to localStorage
+                localStorage.setItem(id, !isExpanded); // Simpan state
             });
         });
-        const currentPath = window.location.pathname;
 
-        // Temukan semua link di sidebar
+        // Aktifkan link berdasarkan URL sekarang
+        const currentPath = window.location.pathname;
         const links = document.querySelectorAll("a.menu-link");
 
         links.forEach(link => {
             const linkPath = link.getAttribute("href");
 
-            // Jika path sama persis, tandai link dan parent accordion-nya
             if (currentPath === linkPath) {
                 link.classList.add("active");
 
-                // Tambahkan class 'show' ke accordion induknya (menu-item)
+                // Buka parent accordion-nya
                 let parent = link.closest(".menu-item.menu-accordion");
                 if (parent) {
                     parent.classList.add("show");
