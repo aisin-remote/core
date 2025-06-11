@@ -354,34 +354,6 @@
                                 </span>
 
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                    {{-- IDP Assign --}}
-                                    <div class="menu-item menu-accordion {{ request()->is('idp/*') ? 'show' : '' }}"
-                                        data-kt-menu-trigger="click">
-                                        <span class="menu-link">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">IDP Assign</span>
-                                            <span class="menu-arrow"></span>
-                                        </span>
-                                        <div class="menu-sub menu-sub-accordion">
-                                            <div class="menu-item">
-                                                <a class="menu-link {{ request()->is('idp/aii') ? 'active' : '' }}"
-                                                    href="/idp/aii">
-                                                    <span class="menu-bullet"><span
-                                                            class="bullet bullet-dot"></span></span>
-                                                    <span class="menu-title">AII</span>
-                                                </a>
-                                            </div>
-                                            <div class="menu-item">
-                                                <a class="menu-link {{ request()->is('idp/aiia') ? 'active' : '' }}"
-                                                    href="/idp/aiia">
-                                                    <span class="menu-bullet"><span
-                                                            class="bullet bullet-dot"></span></span>
-                                                    <span class="menu-title">AIIA</span>
-                                                </a>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     {{-- IDP List --}}
                                     <div class="menu-item menu-accordion {{ request()->is('idp/list/*') ? 'show' : '' }}"
                                         data-kt-menu-trigger="click">
@@ -717,7 +689,7 @@
     </div>
     <div class="app-sidebar-user mt-auto px-3 pt-5 pb-5 border-top border-white border-opacity-25"
         style="position: sticky; bottom: 0; background-color: #1e1e2d;">
-        <div class="d-flex align-items-center"> 
+        <div class="d-flex align-items-center">
             <div class="symbol symbol-40px">
                 <img src="{{ auth()->user()->employee && auth()->user()->employee->photo
                     ? asset('storage/' . auth()->user()->employee->photo)

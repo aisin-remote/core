@@ -8,11 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 class Development extends Model {
     use HasFactory;
 
-    protected $fillable = ['employee_id','development_program', 'development_achievement', 'next_action'];
+       protected $guarded = ['id'];
 
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id');
     }
+     public function idp()
+    {
+        return $this->hasOne(Idp::class, 'id');
+    }
+
 
 }

@@ -421,40 +421,54 @@
                     @foreach ($alcs as $id => $title)
                         @php
                             set_time_limit(60);
+
                             $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
 
-                            $assessmentId = DB::table('assessments')
-                                ->select('id')
-                                ->where('employee_id', $weaknessDetail->hav->employee->id)      
-                                ->latest()
-                                ->first();
-
-                            $weakness = \App\Models\DetailAssessment::with('assessment.employee')
-                                ->select('weakness', 'suggestion_development')
-                                ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
-                                    $query->where('id', $weaknessDetail->hav->employee->id);
-                                })
-                                ->where('alc_id', $weaknessDetail->alc_id)
-                                ->latest()
-                                ->first();
-                            $strength = \App\Models\DetailAssessment::with('assessment.employee')
-                                ->select('strength', 'suggestion_development')
-                                ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
-                                    $query->where('id', $weaknessDetail->hav->employee->id);
-                                })
-                                ->where('alc_id', $weaknessDetail->alc_id)
-                                ->latest()
-                                ->first();
-
-                            $idp = \App\Models\Idp::with('commentHistory')
-                                ->where('hav_detail_id', $weaknessDetail?->id)
-                                ->where('alc_id', $id)
-                                ->first();
-
+                            $assessmentId = null;
+                            $weakness = null;
+                            $strength = null;
+                            $idp = null;
                             $assessment_detail_id = null;
-                            foreach ($assessment->details as $detail) {
-                                if ($idp && $detail->assesment_id == $idp->id) {
-                                    $assessment_detail_id = $detail->id;
+
+                            if ($weaknessDetail) {
+                                // Ambil assessment ID berdasarkan employee dari weaknessDetail
+                                $assessmentId = DB::table('assessments')
+                                    ->select('id')
+                                    ->where('employee_id', $weaknessDetail->hav->employee->id)
+                                    ->latest()
+                                    ->first();
+
+                                // Ambil data weakness
+                                $weakness = \App\Models\DetailAssessment::with('assessment.employee')
+                                    ->select('weakness', 'suggestion_development')
+                                    ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
+                                        $query->where('id', $weaknessDetail->hav->employee->id);
+                                    })
+                                    ->where('alc_id', $weaknessDetail->alc_id)
+                                    ->latest()
+                                    ->first();
+
+                                // Ambil data strength
+                                $strength = \App\Models\DetailAssessment::with('assessment.employee')
+                                    ->select('strength', 'suggestion_development')
+                                    ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
+                                        $query->where('id', $weaknessDetail->hav->employee->id);
+                                    })
+                                    ->where('alc_id', $weaknessDetail->alc_id)
+                                    ->latest()
+                                    ->first();
+
+                                // Ambil IDP
+                                $idp = \App\Models\Idp::with('commentHistory')
+                                    ->where('hav_detail_id', $weaknessDetail->id)
+                                    ->where('alc_id', $id)
+                                    ->first();
+
+                                // Cari assessment_detail_id yang cocok
+                                foreach ($assessment->details as $detail) {
+                                    if ($idp && $detail->assesment_id == $idp->id) {
+                                        $assessment_detail_id = $detail->id;
+                                    }
                                 }
                             }
 
@@ -491,7 +505,7 @@
 
 
                                                 <h6 class="fw-bold mb-2">Suggestion Development</h6>
-                                                <p>{{ $weaknessDetail?->suggestion_development ?? ($weakness?->suggestion_development ?? '-' ?? ($weakness?->suggestion_development ?? '-')) }}
+                                                <p>{{ $weaknessDetail?->suggestion_development ?? ($weakness?->suggestion_development ?? ('-' ?? ($weakness?->suggestion_development ?? '-'))) }}
                                                 </p>
                                             </div>
 
@@ -653,6 +667,9 @@
                                                 value="{{ $assessment->employee->id }}">
                                             <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
 
+
+                                            {{--  --}}
+
                                             <div id="programContainerMid_{{ $assessment->employee->id }}">
                                                 @if (!empty($assessment->details))
                                                     @php $hasMidYearData = false; @endphp
@@ -679,6 +696,10 @@
                                                                     value="{{ $program->recommendedProgramsMidYear[0]['date'] ?? '-' }}"
                                                                     readonly>
                                                             </div>
+                                                             <div class="mb-3">
+                                                               <input type="hidden" name="idp_id" value="{{ $program->idp[0]['id'] ?? '-' }}">
+                                                            </div>
+                                        
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
                                                                     Achievement</label>
@@ -898,9 +919,11 @@
                                                             <tbody>
                                                                 @foreach ($strengthRows as $row)
                                                                     <tr>
-                                                                        <td class="text-center fs-7 fw-bold px-3">{{ $row['title'] }}
+                                                                        <td class="text-center fs-7 fw-bold px-3">
+                                                                            {{ $row['title'] }}
                                                                         </td>
-                                                                        <td class="text-justify fs-7 px-3">{{ $row['value'] }}
+                                                                        <td class="text-justify fs-7 px-3">
+                                                                            {{ $row['value'] }}
                                                                         </td>
                                                                     </tr>
                                                                 @endforeach
@@ -919,9 +942,11 @@
                                                             <tbody>
                                                                 @foreach ($weaknessRows as $row)
                                                                     <tr>
-                                                                        <td class="text-center fs-7 fw-bold px-3">{{ $row['title'] }}
+                                                                        <td class="text-center fs-7 fw-bold px-3">
+                                                                            {{ $row['title'] }}
                                                                         </td>
-                                                                        <td class="text-justify fs-7 px-3">{{ $row['value'] }}
+                                                                        <td class="text-justify fs-7 px-3">
+                                                                            {{ $row['value'] }}
                                                                         </td>
                                                                     </tr>
                                                                 @endforeach
@@ -955,19 +980,22 @@
                                                     <tbody>
                                                         @foreach ($assessment->details->filter(fn($item) => $item->idp->isNotEmpty()) as $idp)
                                                             <tr>
-                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
+                                                                <td class="text-center fs-7 fw-bold px-3"
+                                                                    style="width: 10%;">
                                                                     {{ $idp->alc->name ?? '-' }}
                                                                 </td>
-                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
+                                                                <td class="text-center fs-7 fw-bold px-3"
+                                                                    style="width: 10%;">
                                                                     {{ $idp->idp->first()?->category }}
                                                                 </td>
-                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
+                                                                <td class="text-center fs-7 fw-bold px-3"
+                                                                    style="width: 10%;">
                                                                     {{ $idp->idp->first()?->development_program }}
                                                                 </td>
-                                                                <td class="text-justify fs-7 px-3"  style="width: 50%;">
+                                                                <td class="text-justify fs-7 px-3" style="width: 50%;">
                                                                     {{ $idp->idp->first()?->development_target }}
                                                                 </td>
-                                                                <td class="text-center fs-7 px-3"  style="width: 20%;" >
+                                                                <td class="text-center fs-7 px-3" style="width: 20%;">
                                                                     {{ optional($idp->idp->first())->date ? \Carbon\Carbon::parse($idp->idp->first()->date)->format('d-m-Y') : '-' }}
                                                                 </td>
                                                             </tr>
@@ -1014,7 +1042,8 @@
 
                                     <div class="row mt-8">
                                         <div class="card">
-                                            <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
+                                            <div
+                                                class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                                                 <h3 class="card-title">IV. One Year Review</h3>
                                                 <div class="d-flex align-items-center">
                                                 </div>

@@ -30,6 +30,7 @@ class Hav extends Model
         return $this->hasMany(HavCommentHistory::class, 'hav_id');
     }
 
+
     // Many-to-One: Hav -> Employee
     public function quadran()
     {

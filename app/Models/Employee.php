@@ -2,14 +2,15 @@
 
 namespace App\Models;
 
-use Carbon\Carbon;
 use App\Models\Assessment;
 use App\Models\Competency;
 use App\Models\Department;
-use Illuminate\Support\Str;
 use App\Models\EmployeeCompetency;
-use Illuminate\Database\Eloquent\Model;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class Employee extends Model
 {
@@ -278,8 +279,8 @@ class Employee extends Model
         if ($normalizedPosition === 'vpd') {
             $managerIds = Department::pluck('manager_id')->filter();
             $gmIds = Division::pluck('gm_id')->filter();
-        
-            $subordinateIds = $managerIds->merge($gmIds)->unique();        
+
+            $subordinateIds = $managerIds->merge($gmIds)->unique();
         } elseif($normalizedPosition === 'president') {
             $subordinateIds = Division::pluck('gm_id')->filter()->unique();
         }
@@ -357,7 +358,7 @@ class Employee extends Model
             'gm' => 'vp',
             'vp' => 'president',
         ];
-    }    
+    }
 
     private function getDirectSuperiorOf(Employee $employee)
     {
@@ -405,7 +406,7 @@ class Employee extends Model
             'act leader'       => 'leader',
             'act jp'           => 'jp',
             'act gm'           => 'gm',
-            'GM'               => 'gm',
+            'gm'               => 'gm',
             'direktur'         => 'direktur',
             'director'         => 'direktur',
             'vpd'              => 'vpd',
@@ -452,7 +453,7 @@ class Employee extends Model
     public static function getLast3Performance($employee_id, $year)
     {
         $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
-            ->whereIn(\DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
+            ->whereIn(DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
             ->get();
 
         return $performance;

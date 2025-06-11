@@ -156,7 +156,7 @@ class IdpController extends Controller
                 // dd($subordinates);
 
                 // Ambil assessment terbaru hanya milik bawahannya
-                $assessments = hav::with(['details.idp', 'employee', 'details.alc'])
+                $assessments = Hav::with(['details.idp', 'employee', 'details.alc'])
                     ->whereHas('employee', function ($query) use ($subordinates) {
                         $query->whereIn('id', $subordinates);
                     })
@@ -438,6 +438,7 @@ class IdpController extends Controller
     public function storeMidYear(Request $request, $employee_id)
     {
         $request->validate([
+            'idp_id' => 'required',
             'development_program' => 'required|array',
             'development_achievement' => 'required|array',
             'next_action' => 'required|array',
@@ -446,6 +447,7 @@ class IdpController extends Controller
         foreach ($request->development_program as $key => $program) {
             Development::create([
                 'employee_id' => $employee_id,
+                'idp_id' => $request->idp_id,
                 'development_program' => $program,
                 'development_achievement' => $request->development_achievement[$key] ?? '',
                 'next_action' => $request->next_action[$key] ?? '',

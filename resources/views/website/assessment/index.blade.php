@@ -36,8 +36,10 @@
                     <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                         role="tablist" style="cursor:pointer ">
                         {{-- Tab Show All --}}
+                        {{-- Tab Show All --}}
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                            <a class="nav-link text-active-primary pb-4
+        {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                                 href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                                 Show All
                             </a>
@@ -521,7 +523,7 @@
                     if (card.length === 0) {
                         console.log(
                             `[INFO] Card ALC ${alcId} not found in newType container, creating new in ${newType}`
-                            );
+                        );
                         addAssessmentCard(newType, containerMap[newType].substring(1), alcId, description,
                             alcName, suggestion);
                         card = $(`#assessment_card_${alcId}`);

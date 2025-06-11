@@ -32,12 +32,12 @@
                     role="tablist" style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                        <a class="nav-link text-active-primary pb-4
+        {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             Show All
                         </a>
                     </li>
-
                     {{-- Tab Dinamis --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
@@ -174,9 +174,13 @@
                 <!--begin::Modal header-->
                 <div class="modal-header">
                     <!--begin::Modal title-->
-                    <h2 id="nameTitle">Herizal Arfiansyah</h2>
+                    <h2 id="nameTitle"></h2>
                     <!--end::Modal title-->
-
+                    <a href="#" id="btnExportExcel" class="btn btn-success btn-sm position-absolute"
+                        style="top: 1rem; right: 8rem; padding: 0.8rem 0.5rem; font-size: 0.75rem; z-index: 1050;"
+                        target="_blank">
+                        Export HAV
+                    </a>
                     <!--begin::Close-->
                     <div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
                         <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
@@ -203,6 +207,8 @@
                                         <div class="fv-row">
                                             <!--begin::Label-->
                                             <label class="d-flex align-items-center fs-5 fw-semibold mb-4">
+
+
                                                 <span class="required">Astra Leadership Competency Score</span>
 
 
@@ -212,6 +218,7 @@
                                                             class="path1"></span><span class="path2"></span><span
                                                             class="path3"></span></i></span> </label>
                                             <!--end::Label-->
+
 
                                             <!--begin:Options-->
                                             <div class="fv-row">
@@ -295,6 +302,7 @@
                                         </div>
                                         <!--end::Input group-->
                                     </div>
+
                                 </div>
                         </div>
                     </div>
@@ -393,11 +401,6 @@
     <script>
         $(document).ready(function() {
             function showCommentHistoryModal(response) {
-                $('#commentHistoryModal').modal('show');
-
-                // Clear sebelumnya
-                $('#commentList').empty();
-
                 // Tampilkan last upload info (jika ada)
                 if (response.lastUpload) {
                     const date = new Date(response.lastUpload.created_at);
@@ -418,6 +421,8 @@
 
                 // Render komentar dst...
             }
+
+
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
 
@@ -535,6 +540,8 @@
                     processData: false,
                     contentType: false,
                     success: function(response) {
+                          showCommentHistoryModal(response);
+
                         console.log("Response received:", response);
                         // Debug respons
                         let rows = '';
@@ -547,6 +554,9 @@
                                     `;
                         });
                         $('#performanceBody').html(rows);
+
+
+
                     },
                     error: function(xhr, status, error) {
                         rows = `
@@ -556,6 +566,7 @@
                             `;
                         $('#performanceBody').html(rows);
                     }
+
                 });
 
 
@@ -571,7 +582,7 @@
 
                         // Tampilkan modal setelah data dimuat
                         $("#detailAssessmentModal").modal("hide");
-                        $("#havDetail").modal("show");
+                          $("#havDetail").modal("show");
                     } catch (error) {
                         console.error("Error parsing data:", error);
                         alert("Data tidak valid.");

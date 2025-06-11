@@ -889,9 +889,9 @@ class HavController extends Controller
                 $employees = collect();
             } else {
 
-                $approvallevel = (auth()->user()->employee->getFirstApproval());
-                $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
-
+                $approvallevel = $employee->getFirstApproval();
+                $subordinate =  $employee->getSubordinatesByLevel($approvallevel)->pluck('id');
+                // dd($approvallevel);
                 $employees = Hav::with('employee')
                     ->select('havs.*', 'havs.status as hav_status')
                     ->whereIn('employee_id', $subordinate)
