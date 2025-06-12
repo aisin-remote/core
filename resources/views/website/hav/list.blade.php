@@ -109,7 +109,7 @@
                             <!-- Last upload info akan diisi via JS -->
                         </div>
 
-                        <a href="#" id="btnExportExcel" class="btn btn-success btn-sm" target="_blank"
+                        <a href="#" id="btnExportExcel" class="btn btn-success btn-sm"
                             style="padding: 0.80rem 0.5rem; font-size: 0.75rem;">
                             Export HAV
                         </a>
@@ -176,11 +176,7 @@
                     <!--begin::Modal title-->
                     <h2 id="nameTitle"></h2>
                     <!--end::Modal title-->
-                    <a href="#" id="btnExportExcel" class="btn btn-success btn-sm position-absolute"
-                        style="top: 1rem; right: 8rem; padding: 0.8rem 0.5rem; font-size: 0.75rem; z-index: 1050;"
-                        target="_blank">
-                        Export HAV
-                    </a>
+
                     <!--begin::Close-->
                     <div class="btn btn-sm btn-icon btn-active-color-primary" data-bs-dismiss="modal">
                         <i class="ki-duotone ki-cross fs-1"><span class="path1"></span><span class="path2"></span></i>
@@ -205,6 +201,11 @@
 
                                         <!--begin::Input group-->
                                         <div class="fv-row">
+                                            <a href="#" id="btnExportExcelDetail"
+                                                class="btn btn-success btn-sm position-absolute"
+                                                style="top: 1rem; right: 8rem; padding: 0.8rem 0.5rem; font-size: 0.75rem; z-index: 1050;">
+                                                Export HAV
+                                            </a>
                                             <!--begin::Label-->
                                             <label class="d-flex align-items-center fs-5 fw-semibold mb-4">
 
@@ -422,6 +423,33 @@
                 // Render komentar dst...
             }
 
+            function showCommentHistoryModalDetail(response) {
+                console.log("showCommentHistoryModalDetail response:", response); // 🔍 Tambahkan ini
+
+                if (response.lastUpload) {
+                    const date = new Date(response.lastUpload.created_at);
+                    const formattedDate = date.toLocaleDateString('id-ID', {
+                        day: '2-digit',
+                        month: 'long',
+                        year: 'numeric'
+                    });
+
+                    $('#lastUploadInfo').html(`Last Submit: <strong>${formattedDate}</strong>`);
+                } else {
+                    $('#lastUploadInfo').html('No uploads found');
+                }
+
+                // Update link download di modal HAV Detail
+                if (response.hav && response.hav.id) {
+                    console.log("Setting download link to:", `/hav/download-upload/${response.hav.id}`);
+                    $('#btnExportExcelDetail').attr('href', `/hav/download-upload/${response.hav.id}`);
+                } else {
+                    console.warn("HAV ID not found in response.");
+                    $('#btnExportExcelDetail').attr('href', '#');
+                }
+            }
+
+
 
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
@@ -523,66 +551,74 @@
                 });
             });
 
-            $(document).on("click", ".btn-hav-detail", function() {
+            $(document).on("click", ".btn-hav-detail", function(event) {
                 event.preventDefault();
                 const havDetails = $(this).data("detail");
                 const employee_id = $(this).data("employeeid");
                 const year = $(this).data("tahun");
                 const nama = $(this).data("nama");
-                $(`#nameTitle`).text(nama + ' - ' + year);
-                console.log("Employee ID:", employee_id); // Debug
 
-                // Ambil data dari atribut data-upload
-                let url = "{{ url('/hav/get3-last-performance') }}/" + employee_id + "/" + year;
+                $(`#nameTitle`).text(nama + ' - ' + year);
+
+                const url = "{{ url('/hav/get3-last-performance') }}/" + employee_id + "/" + year;
+
                 $.ajax({
                     url: url,
                     type: "GET",
                     processData: false,
                     contentType: false,
                     success: function(response) {
-                          showCommentHistoryModal(response);
-
                         console.log("Response received:", response);
-                        // Debug respons
+                        if (!response.hav) {
+                            response.hav = {
+                                id: havDetails[0]?.hav_id // asumsi data ada di detail
+                            };
+                        }
+
+                        showCommentHistoryModalDetail(response);
+
                         let rows = '';
-                        response.performanceAppraisals.forEach(function(item) {
-                            rows += `
-                                        <tr>
-                                            <td>${new Date(item.date).getFullYear()}</td>
-                                            <td>${item.score}</td>
-                                        </tr>
-                                    `;
-                        });
+
+                        if (response.performanceAppraisals && response.performanceAppraisals
+                            .length > 0) {
+                            response.performanceAppraisals.forEach(function(item) {
+                                rows += `
+                        <tr>
+                            <td>${new Date(item.date).getFullYear()}</td>
+                            <td>${item.score}</td>
+                        </tr>
+                    `;
+                            });
+                        } else {
+                            rows = `
+                    <tr>
+                        <td colspan="2" class="text-center text-muted">No performance data found</td>
+                    </tr>
+                `;
+                        }
+
                         $('#performanceBody').html(rows);
 
-
-
+                        // gunakan versi khusus untuk HAV Detail
                     },
-                    error: function(xhr, status, error) {
-                        rows = `
-                                <tr>
-                                    <td colspan="2" class="text-center text-muted">No performance data found</td>
-                                </tr>
-                            `;
+                    error: function() {
+                        const rows = `
+                <tr>
+                    <td colspan="2" class="text-center text-muted">No performance data found</td>
+                </tr>
+            `;
                         $('#performanceBody').html(rows);
                     }
-
                 });
 
-
-                // Cek apakah data ada
                 if (havDetails) {
                     try {
-
                         havDetails.forEach((item) => {
-                            console.log(item.alc_id);
                             $(`#alc${item.alc_id}`).text(item.score);
                         });
 
-
-                        // Tampilkan modal setelah data dimuat
                         $("#detailAssessmentModal").modal("hide");
-                          $("#havDetail").modal("show");
+                        $("#havDetail").modal("show");
                     } catch (error) {
                         console.error("Error parsing data:", error);
                         alert("Data tidak valid.");
@@ -590,8 +626,9 @@
                 } else {
                     alert("Data HAV tidak ditemukan.");
                 }
-
             });
+
+
 
             $(document).on("click", ".btn-hav-comment", function() {
                 let hav_id = $(this).data("id"); // Get the employee ID from the button's data attribute

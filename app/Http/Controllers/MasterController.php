@@ -37,38 +37,33 @@ class MasterController extends Controller
     {
         $title = 'Employee';
         $user = auth()->user();
-        $filter = $request->input('filter', 'all'); // posisi (default: all)
+        $filter = $request->input('filter', 'all');
+        $search = $request->input('search');
 
-        if ($user->role === 'HRD') {
-            $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-                ->when($company, fn($query) => $query->where('company_name', $company))
-                ->when($filter !== 'all', fn($query) => $query->where('position', $filter))
-                ->where(function ($query) {
-                    $query->where('user_id', '!=', auth()->id())
-                        ->orWhereNull('user_id');
-                })
-                ->get();
-        } else {
-            $emp = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-                ->where('user_id', $user->id)
-                ->first();
+        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+            ->when($company, fn($query) => $query->where('company_name', $company)) // Filter berdasarkan perusahaan
+            ->where(function ($query) {
+                $query->where('user_id', '!=', auth()->id())
+                    ->orWhereNull('user_id');
+            })
+            ->when($search, function ($query, $search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('npk', 'like', "%{$search}%")
+                        ->orWhere('company_name', 'like', "%{$search}%");
+                });
+            })
+            ->when($filter && $filter !== 'all', function ($query) use ($filter) {
+                $query->where(function ($q) use ($filter) {
+                    $q->where('position', $filter)
+                        ->orWhere('position', 'like', "Act %{$filter}");
+                });
+            })
+            ->paginate(10);
 
-            if (!$emp) {
-                $employee = collect();
-            } else {
-                $subordinates = $this->getSubordinates($emp->id);
-
-                $employee = $subordinates->filter(function ($item) use ($emp, $filter) {
-                    if ($filter !== 'all' && $item->position !== $filter) {
-                        return false;
-                    }
-                    return $item->company_name === $emp->company_name;
-                })->values();
-            }
-        }
-
-        return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company'));
+        return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company', 'search'));
     }
+
 
 
 
@@ -280,27 +275,27 @@ class MasterController extends Controller
     }
 
     public function subSectionUpdate(Request $request, $id)
-{
-    $request->validate([
-        'name' => 'required|string',
-        'section_id' => 'required',
-        'leader_id' => 'string',
-    ]);
-
-    try {
-        $subSection = SubSection::findOrFail($id);
-
-        $subSection->update([
-            'name' => $request->name,
-            'section_id' => $request->section_id,
-            'leader_id' => $request->leader_id
+    {
+        $request->validate([
+            'name' => 'required|string',
+            'section_id' => 'required',
+            'leader_id' => 'string',
         ]);
 
-        return redirect()->back()->with('success', 'Sub Section berhasil diperbarui.');
-    } catch (\Exception $e) {
-        return redirect()->back()->with('error', 'Gagal memperbarui Sub Section: ' . $e->getMessage());
+        try {
+            $subSection = SubSection::findOrFail($id);
+
+            $subSection->update([
+                'name' => $request->name,
+                'section_id' => $request->section_id,
+                'leader_id' => $request->leader_id
+            ]);
+
+            return redirect()->back()->with('success', 'Sub Section berhasil diperbarui.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal memperbarui Sub Section: ' . $e->getMessage());
+        }
     }
-}
 
     public function subSectionDestroy($id)
     {
@@ -335,7 +330,7 @@ class MasterController extends Controller
     }
     public function section()
     {
-        $supervisors = Employee::whereIn('position', ['Section Head', 'Act Section Head', 'Supervisor', 'Act Supervisor','Act Manager','Manager'])->get();
+        $supervisors = Employee::whereIn('position', ['Section Head', 'Act Section Head', 'Supervisor', 'Act Supervisor', 'Act Manager', 'Manager'])->get();
         $departments  = Department::all();
         $sections = Section::with(['department', 'supervisor'])->paginate(10);
         return view('website.master.section.index', compact('sections', 'departments', 'supervisors'));
@@ -345,8 +340,8 @@ class MasterController extends Controller
     {
         $leaders = Employee::whereIn('position', ['Leader', 'Act Leader'])->get();
         $sections = Section::all();
-        $subSections = SubSection::with('leader','section')->paginate(10);
-        return view('website.master.subSection.index', compact('subSections','leaders', 'sections'));
+        $subSections = SubSection::with('leader', 'section')->paginate(10);
+        return view('website.master.subSection.index', compact('subSections', 'leaders', 'sections'));
     }
 
 
@@ -366,17 +361,17 @@ class MasterController extends Controller
         if ($user->role === 'HRD' || $employee->position == 'Direktur') {
             switch ($filter) {
                 case 'department':
-                    $data = Department::with('short','mid','long')->where('division_id', $division_id)->get();
+                    $data = Department::with('short', 'mid', 'long')->where('division_id', $division_id)->get();
                     break;
 
                 case 'section':
-                    $data = Section::with('short','mid','long')->whereHas('department', function ($q) use ($division_id) {
+                    $data = Section::with('short', 'mid', 'long')->whereHas('department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
                     })->get();
                     break;
 
                 case 'sub_section':
-                    $data = SubSection::with('short','mid','long')->whereHas('section.department', function ($q) use ($division_id) {
+                    $data = SubSection::with('short', 'mid', 'long')->whereHas('section.department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
                     })->get();
                     break;
@@ -388,10 +383,10 @@ class MasterController extends Controller
         } else {
             switch ($filter) {
                 case 'section':
-                    $data = Section::with('short','mid','long')->where('department_id', $division_id)->get();
+                    $data = Section::with('short', 'mid', 'long')->where('department_id', $division_id)->get();
                     break;
                 case 'sub_section':
-                    $data = SubSection::with('section','short','mid','long')->whereHas('section', function ($q) use ($division_id) {
+                    $data = SubSection::with('section', 'short', 'mid', 'long')->whereHas('section', function ($q) use ($division_id) {
                         $q->where('department_id', $division_id);
                     })->get();
                     break;

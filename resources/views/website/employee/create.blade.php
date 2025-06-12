@@ -165,11 +165,21 @@
                             @endif
                             <div class="mb-3">
                                 <label class="form-label">Grade</label>
-                                <input type="text" name="grade" class="form-control" value="{{ old('grade') }}">
+                                <select name="grade" class="form-control">
+                                    <option value="">-- Select Grade --</option>
+                                    @foreach ($grade as $g)
+                                        <option value="{{ $g->aisin_grade }}"
+                                            {{ old('grade') == $g->aisin_grade ? 'selected' : '' }}>
+                                            {{ $g->aisin_grade }}
+                                        </option>
+                                    @endforeach
+                                </select>
+
                                 @error('grade')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
+
                         </div>
                     </div>
                 </div>

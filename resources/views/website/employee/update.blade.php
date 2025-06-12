@@ -139,7 +139,7 @@
                                                     <label class="form-label fw-bold fs-6">Email</label>
                                                     <input type="text" name="email"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Email" value="{{ $employee->user->email }}">
+                                                        placeholder="Email" value="{{ $employee->user->email ?? '-' }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Phone Number</label>

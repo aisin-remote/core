@@ -21,7 +21,7 @@ class Idp extends Model
     {
         return $this->belongsTo(Assessment::class, 'assessment_id', 'id');
     }
-    
+
     public function hav()
     {
         return $this->belongsTo(HavDetail::class, 'hav_detail_id', 'id');
@@ -36,4 +36,15 @@ class Idp extends Model
     {
         return $this->hasMany(IdpCommentHistory::class, 'idp_id');
     }
+    public function developments()
+{
+    return $this->hasMany(Development::class, 'idp_id', 'id');
+}
+
+  public function developmentsones()
+{
+    return $this->hasMany(DevelopmentOne::class, 'idp_id', 'id');
+}
+
+
 }

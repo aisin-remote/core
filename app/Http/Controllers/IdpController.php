@@ -300,7 +300,7 @@ class IdpController extends Controller
             if ($emp) {
                 $subordinates = $this->getSubordinatesFromStructure($emp)->pluck('id')->toArray();
 
-                $assessments = Idp::with('hav.hav.employee')
+                $assessments = Idp::with(['hav.hav.employee', 'developments'])
                     ->whereHas('hav.hav.employee', fn($q) => $q->whereIn('id', $subordinates))
                     ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
                     ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
@@ -311,10 +311,7 @@ class IdpController extends Controller
                         });
                     })
                     ->orderByDesc('created_at')
-                    ->get()
-                    ->groupBy(fn($item) => optional($item->hav?->hav?->employee)->id)
-                    ->map(fn($group) => $group->first())
-                    ->values();
+                    ->get();
 
                 $assessments = new \Illuminate\Pagination\LengthAwarePaginator(
                     $assessments,
@@ -327,7 +324,7 @@ class IdpController extends Controller
         }
 
         $employees = Employee::all();
-        $idps = Idp::with(['assessment', 'employee', 'commentHistory'])->get();
+        $idps = Idp::with(['assessment', 'employee', 'commentHistory', 'developments'])->get();
         $details = DevelopmentOne::all();
         $mid = Development::all();
 
@@ -438,7 +435,7 @@ class IdpController extends Controller
     public function storeMidYear(Request $request, $employee_id)
     {
         $request->validate([
-            'idp_id' => 'required',
+            'idp_id' => 'required|array',
             'development_program' => 'required|array',
             'development_achievement' => 'required|array',
             'next_action' => 'required|array',
@@ -447,7 +444,7 @@ class IdpController extends Controller
         foreach ($request->development_program as $key => $program) {
             Development::create([
                 'employee_id' => $employee_id,
-                'idp_id' => $request->idp_id,
+                'idp_id' => $request->idp_id[$key] ?? '',
                 'development_program' => $program,
                 'development_achievement' => $request->development_achievement[$key] ?? '',
                 'next_action' => $request->next_action[$key] ?? '',
@@ -462,20 +459,17 @@ class IdpController extends Controller
         $request->validate([
             'development_program' => 'required|array',
             'evaluation_result' => 'required|array',
+            'idp_id' => 'required|array',
         ]);
 
-        foreach ($request->development_program as $empId => $programs) {
-            if (!is_array($programs)) {
-                continue;
-            }
+        foreach ($request->development_program as $index => $program) {
+            DevelopmentOne::create([
+                'employee_id' => $employee_id,
+                'idp_id' => $request->idp_id[$index] ?? '',
+                'development_program' => $program,
+                'evaluation_result' => $request->evaluation_result[$index] ?? '',
+            ]);
 
-            foreach ($programs as $key => $program) {
-                DevelopmentOne::create([
-                    'employee_id' => $employee_id,
-                    'development_program' => $program,
-                    'evaluation_result' => $request->evaluation_result[$empId][$key] ?? '',
-                ]);
-            }
         }
 
         return redirect()->route('idp.index')->with('success', 'One-Year Development added successfully.');

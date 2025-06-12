@@ -98,12 +98,12 @@
                                 <td>{{ $employee->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 <td class="text-center">
-                                    @if (auth()->user()->role == 'HRD')
+                                    {{-- @if (auth()->user()->role == 'HRD')
                                         <a href="{{ route('employee.edit', $employee->npk) }}"
                                             class="btn btn-warning btn-sm">
                                             <i class="fa fa-pencil-alt"></i>
                                         </a>
-                                    @endif
+                                    @endif --}}
                                     <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
                                         <i class="fa fa-eye"></i>
                                     </a>

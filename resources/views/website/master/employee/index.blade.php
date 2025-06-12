@@ -39,7 +39,7 @@
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
+                        style="width: 200px;" value="{{ request('search') }}">
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
@@ -56,55 +56,55 @@
 
             <div class="card-body">
                 @if (auth()->user()->role == 'HRD')
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist" style="cursor:pointer">
-                    <li class="nav-item" role="presentation">
-                    <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
-                        href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                        Show All
-                    </a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
-                            Direktur
-                        </a>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Section Head']) }}">Section
-                            Head</a>
-                    </li>
+                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                        role="tablist" style="cursor:pointer">
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                                Show All
+                            </a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
+                                Direktur
+                            </a>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
+                                Head</a>
+                        </li>
 
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
-                    </li>
-                </ul>
-            @endif
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
+                                href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
+                        </li>
+                    </ul>
+                @endif
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -122,35 +122,36 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($employee as $index => $employee)
+                        @forelse ($employee as $index => $employees)
                             <tr>
-                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $employee->firstItem() + $index }}</td>
+
                                 <td class="text-center">
-                                    <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                    <img src="{{ $employees->photo ? asset('storage/' . $employees->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
                                         style="object-fit: cover;">
                                 </td>
-                                <td>{{ $employee->npk }}</td>
-                                <td>{{ $employee->name }}</td>
-                                <td>{{ $employee->company_name }}</td>
-                                <td>{{ $employee->position }}</td>
-                                <td>{{ $employee->department?->name }}</td>
-                                <td>{{ $employee->grade }}</td>
-                                <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
+                                <td>{{ $employees->npk }}</td>
+                                <td>{{ $employees->name }}</td>
+                                <td>{{ $employees->company_name }}</td>
+                                <td>{{ $employees->position }}</td>
+                                <td>{{ $employees->bagian }}</td>
+                                <td>{{ $employees->grade }}</td>
+                                <td>{{ \Carbon\Carbon::parse($employees->birthday_date)->age }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('employee.edit', $employee->npk) }}"
+                                    <a href="{{ route('employee.edit', $employees->npk) }}"
                                         class="btn btn-warning btn-sm"><i class="fa fa-edit"></i>
                                     </a>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $employee->npk }}"><i class="fa fa-trash"></i>
+                                        data-id="{{ $employees->npk }}"><i class="fa fa-trash"></i>
                                     </button>
                                 </td>
                                 <td class="text-center">
                                     <button type="button"
-                                        class="btn {{ $employee->is_active ? 'btn-light-success' : 'btn-light-danger' }} btn-sm status-btn"
-                                        data-id="{{ $employee->id }}" data-name="{{ $employee->name }}"
-                                        data-status="{{ $employee->is_active ? 'Non Active' : 'Active' }}">
-                                        {{ $employee->is_active ? 'Active' : 'Non Active' }}
+                                        class="btn {{ $employees->is_active ? 'btn-light-success' : 'btn-light-danger' }} btn-sm status-btn"
+                                        data-id="{{ $employees->id }}" data-name="{{ $employees->name }}"
+                                        data-status="{{ $employees->is_active ? 'Non Active' : 'Active' }}">
+                                        {{ $employees->is_active ? 'Active' : 'Non Active' }}
                                     </button>
                                 </td>
                             </tr>
@@ -161,6 +162,9 @@
                         @endforelse
                     </tbody>
                 </table>
+                <div class="d-flex justify-content-end mt-3">
+                    {{ $employee->links('pagination::bootstrap-5') }}
+                </div>
 
             </div>
         </div>
@@ -244,9 +248,7 @@
             }
 
             // Event Pencarian
-            searchInput.addEventListener("keyup", function() {
-                filterTable();
-            });
+           
 
             // Event Filter Dropdown
             filterItems.forEach(item => {
@@ -331,6 +333,15 @@
                         }
                     });
                 });
+            });
+            document.getElementById('searchButton').addEventListener('click', function() {
+                const search = document.getElementById('searchInput').value;
+                const url = new URL(window.location.href);
+
+                url.searchParams.set('search', search);
+                url.searchParams.set('page', 1); // Reset to first page on new search
+
+                window.location.href = url.toString();
             });
         });
     </script>

@@ -91,13 +91,21 @@
                     </tr>
                     </thead>
                     <tbody>
-                        @forelse ($assessments as $index => $assessment)
+                        @php
+                            // Grouping by employee_id
+                            $grouped = $assessments->groupBy(
+                                fn($item) => optional(optional($item->hav)->hav)->employee->id,
+                            );
+                        @endphp
+
+                        @forelse ($grouped as $employeeId => $group)
                             @php
-                                $hav = $assessment->hav; // karena hasMany
+                                $firstAssessment = $group->first();
+                                $hav = $firstAssessment->hav;
                                 $employee = optional(optional($hav)->hav)->employee;
                             @endphp
                             <tr>
-                                <td class="text-center">{{ $index + 1 }}</td>
+                                <td class="text-center">{{ $loop->iteration }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employee?->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
@@ -118,12 +126,11 @@
                                     @else
                                         <span class="text-muted">No Employee</span>
                                     @endif
-
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="11" class="text-center text-muted">No data found.</td>
+                                <td colspan="9" class="text-center">No data available</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -174,9 +181,8 @@
     </div>
 
     @foreach ($assessments as $assessment)
-    {{-- @dd($assessment->assessment->details) --}}
-        <div class="modal fade" id="notes_{{ $assessment->hav->hav->employee->id }}" tabindex="-1" aria-modal="true"
-            role="dialog">
+        {{-- @dd($assessments) --}}
+        <div class="modal fade" id="notes_{{ $assessment->id }}" tabindex="-1" aria-modal="true" role="dialog">
             <div class="modal-dialog modal-dialog-centered mw-1000px">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -311,7 +317,8 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach ($mid->where('employee_id', $assessment->assessment->employee_id) as $items)
+                                                @foreach ($assessment->developments as $items)
+
                                                     <tr>
                                                         <td class="text-justify px-3">
                                                             {{ $items->development_program }}</td>
@@ -329,7 +336,8 @@
 
                             <div class="row mt-8">
                                 <div class="card">
-                                    <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
+                                    <div
+                                        class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                                         <h3 class="card-title">IV. One Year Review</h3>
                                         <div class="d-flex align-items-center">
                                         </div>
@@ -348,12 +356,12 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @foreach ($details->where('employee_id', $assessment->hav->hav->employee->id) as $item)
+                                              @foreach ($assessment->developmentsones as $items)
                                                     <tr>
                                                         <td class="text-justify px-3">
-                                                            {{ $item->development_program }}</td>
+                                                            {{ $items->development_program }}</td>
                                                         <td class="text-justify  fs-7 px-3">
-                                                            {{ $item->evaluation_result }}</td>
+                                                            {{ $items->evaluation_result }}</td>
                                                     </tr>
                                                 @endforeach
                                             </tbody>
@@ -450,6 +458,7 @@
 
                         if (response.assessments.length > 0) {
                             response.assessments.forEach((assessment, index) => {
+                                console.log(assessment);
                                 let row = `
             <tr>
                 <td class="text-center">${index + 1}</td>
@@ -458,7 +467,7 @@
                     <a
                         class="btn btn-info btn-sm btn-idp-detail"
                         data-bs-toggle="modal"
-                        data-bs-target="#notes_${response.employee.id}"
+                        data-bs-target="#notes_${assessment.id}"
                     >
                         Detail
                     </a>

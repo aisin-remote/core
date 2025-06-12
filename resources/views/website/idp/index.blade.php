@@ -679,6 +679,7 @@
                                                             @continue
                                                         @endif
 
+
                                                         @php $hasMidYearData = true; @endphp
 
                                                         <div class="programItem">
@@ -696,10 +697,12 @@
                                                                     value="{{ $program->recommendedProgramsMidYear[0]['date'] ?? '-' }}"
                                                                     readonly>
                                                             </div>
-                                                             <div class="mb-3">
-                                                               <input type="hidden" name="idp_id" value="{{ $program->idp[0]['id'] ?? '-' }}">
+                                                            <div class="mb-3">
+                                                                <input type="hidden" name="idp_id[]"
+                                                                    value="{{ $program->idp[0]['id'] ?? '-' }}">
                                                             </div>
-                                        
+
+
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
                                                                     Achievement</label>
@@ -759,27 +762,27 @@
                                                                     value="{{ $program->recommendedProgramsOneYear[0]['program'] }}"
                                                                     readonly>
                                                             </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Date</label>
+                                                               <div class="mb-3">
+                                                                <label class="form-label fw-bold">
+                                                                    Date</label>
                                                                 <input type="text" class="form-control"
-                                                                    value="{{ $program->recommendedProgramsOneYear[0]['date'] ?? '-' }}"
+                                                                    name="date[]"
+                                                                    value="{{ $program->recommendedProgramsOneYear[0]['date'] }}"
                                                                     readonly>
                                                             </div>
-                                                            <div class="mb-3">
-                                                                <label class="form-label fw-bold">Development
-                                                                    Achievement</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="development_achievement[]"
-                                                                    placeholder="Enter achievement" required>
+                                                           <div class="mb-3">
+                                                                <input type="hidden" name="idp_id[]"
+                                                                    value="{{ $program->idp[0]->id?? '-' }}">
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label fw-bold">Next Action</label>
+                                                                <label class="form-label fw-bold">Evaluation Result</label>
                                                                 <input type="text" class="form-control"
-                                                                    name="next_action[]" placeholder="Enter next action"
-                                                                    required>
+                                                                    name="evaluation_result[]"
+                                                                    placeholder="Enter evaluation result" required>
                                                             </div>
                                                             <hr>
                                                         </div>
+
                                                     @endforeach
 
                                                     @if (!$hasData)
