@@ -9,6 +9,7 @@ use App\Models\Employee;
 use App\Models\Department;
 use App\Models\SubSection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 
 class MasterController extends Controller
 {
@@ -59,9 +60,42 @@ class MasterController extends Controller
                         ->orWhere('position', 'like', "Act %{$filter}");
                 });
             })
+            ->orderByDesc('created_at')
             ->paginate(10);
 
-        return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company', 'search'));
+        $allPositions = [
+            'President',
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        // Cari index posisi saat ini
+        $positionIndex = array_search($currentPosition, $allPositions);
+
+        // Fallback jika tidak ditemukan
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        // Ambil posisi di bawahnya (tanpa posisi user)
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
+
+
+        return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company', 'search','visiblePositions'));
     }
 
 

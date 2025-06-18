@@ -18,6 +18,8 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
+use App\Http\Controllers\IcpController;
+
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -102,6 +104,20 @@ Route::middleware('auth')->group(function () {
 
     Route::prefix('todolist')->group(function () {
         Route::get('/', [ToDoListController::class, 'index'])->name('todolist.index');
+    });
+
+    Route::prefix('icp')->group(function () {
+        // Pindahkan create di atas agar tidak tertabrak oleh {company}
+
+       Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
+
+        Route::get('/create', [IcpController::class, 'create'])->name('icp.create');
+        Route::post('/', [IcpController::class, 'store'])->name('icp.store');
+          Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
+
+        Route::get('/history/{id}', [IcpController::class, 'show'])->name('icp.show');
+        Route::get('/export/{employee_id}', [IcpController::class, 'export'])->name('icp.export');
+
     });
 
     Route::prefix('hav')->group(function () {
@@ -210,6 +226,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
     });
+
 
     Route::prefix('rtc')->group(function () {
         Route::get('/summary', [RtcController::class, 'summary'])->name('rtc.summary');

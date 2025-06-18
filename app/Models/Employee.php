@@ -35,6 +35,10 @@ class Employee extends Model
     {
         return $this->hasMany(Assessment::class, 'employee_id', 'id');
     }
+     public function icp()
+    {
+        return $this->hasMany(Icp::class, 'employee_id', 'id');
+    }
 
     public function employeeCompetencies()
     {
@@ -55,6 +59,16 @@ class Employee extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($employee) {
+            if ($employee->user) {
+                $employee->user->delete();
+            }
+        });
     }
 
     public function promotionHistory()
@@ -281,7 +295,7 @@ class Employee extends Model
             $gmIds = Division::pluck('gm_id')->filter();
 
             $subordinateIds = $managerIds->merge($gmIds)->unique();
-        } elseif($normalizedPosition === 'president') {
+        } elseif ($normalizedPosition === 'president') {
             $subordinateIds = Division::pluck('gm_id')->filter()->unique();
         }
 
@@ -442,8 +456,8 @@ class Employee extends Model
     {
         return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 4,
-            'supervisor', 'manager', 'gm' => 3,
-            'vpd', 'president' =>1,
+            'supervisor', 'manager', 'gm','direktur' => 3,
+            'vpd', 'president' => 1,
             default => 0,
         };
     }

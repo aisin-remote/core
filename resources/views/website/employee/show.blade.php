@@ -829,7 +829,7 @@
 
             <!-- Tombol Back di bagian bawah card -->
             <div class="card-footer text-end mt-4">
-                <a href="{{ route('employee.index') }}" class="btn btn-secondary">
+                <a href="{{ url()->previous() }}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left-circle"></i> Back
                 </a>
             </div>

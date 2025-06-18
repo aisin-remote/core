@@ -181,6 +181,7 @@ class EmployeeController extends Controller
                 ->where('user_id', $user->id)
                 ->first();
 
+
             if (!$employee) {
                 $employees = collect();
             } else {
@@ -281,7 +282,7 @@ class EmployeeController extends Controller
         $sections = Section::all();
         $grade = GradeConversion::all();
         $subSections = SubSection::all();
-        return view('website.employee.create', compact('title', 'departments','grade', 'divisions', 'plants', 'sections', 'subSections'));
+        return view('website.employee.create', compact('title', 'departments', 'grade', 'divisions', 'plants', 'sections', 'subSections'));
     }
 
     /**
@@ -299,6 +300,7 @@ class EmployeeController extends Controller
                 'birthday_date' => 'required|date',
                 'gender' => 'required|in:Male,Female',
                 'company_name' => 'required|string',
+                'phone_number' => 'nullable|string',
                 'aisin_entry_date' => 'required|date',
                 'company_group' => 'required|string',
                 'position' => 'required|string',
@@ -453,9 +455,8 @@ class EmployeeController extends Controller
             }
 
             DB::commit();
-          return redirect()->route('employee.master.index', ['company' => $employee->company_name])
-    ->with('success', 'Karyawan berhasil ditambahkan!');
-
+            return redirect()->route('employee.master.index', ['company' => $employee->company_name])
+                ->with('success', 'Karyawan berhasil ditambahkan!');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
@@ -559,11 +560,12 @@ class EmployeeController extends Controller
         $departments = Department::all();
         $divisions = Division::all();
         $plants = Plant::all();
-        return view('website.employee.show', compact('employee','humanAssets','promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');;
+        return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');;
     }
 
     public function edit($npk)
     {
+        $grade = GradeConversion::all();
         $promotionHistories = PromotionHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
@@ -641,7 +643,9 @@ class EmployeeController extends Controller
         $plants = Plant::all();
         $sections = Section::all();
         $subSections = SubSection::all();
-        return view('website.employee.update', compact('employee', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'))->with('mode', 'edit');;
+
+
+        return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'))->with('mode', 'edit');;
     }
 
     public function update(Request $request, $npk)
@@ -658,6 +662,7 @@ class EmployeeController extends Controller
                 'birthday_date' => 'nullable|date',
                 'gender' => 'nullable|in:Male,Female',
                 'company_name' => 'nullable|string',
+                'phone_number' => 'nullable|string',
                 'aisin_entry_date' => 'nullable|date',
                 'company_group' => 'nullable|string',
                 'position' => 'nullable|string',
@@ -833,7 +838,8 @@ class EmployeeController extends Controller
                 }
             });
 
-            return redirect()->back()->with('success', 'Data karyawan berhasil diperbarui!');
+            return redirect()->route('employee.master.index', ['company' => $employee->company_name])
+                ->with('success', 'Data karyawan berhasil diperbarui!');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Karyawan tidak ditemukan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -904,15 +910,15 @@ class EmployeeController extends Controller
 
     public function destroy($npk)
     {
-        $employee = Employee::where('npk', $npk)->firstOrFail();
+        $employee = Employee::where('id', $npk)->firstOrFail();
 
         if ($employee->photo) {
             Storage::delete('public/' . $employee->photo);
         }
 
-        $employee->delete();
+        $employee->delete(); // otomatis hapus user juga via model
 
-        return redirect()->back()->with('success', 'Karyawan berhasil dihapus!');
+        return redirect()->route('employee.master.index')->with('success', 'Karyawan dan akun pengguna berhasil dihapus!');
     }
 
     public function profile($npk)
@@ -932,7 +938,7 @@ class EmployeeController extends Controller
             Excel::import(new MasterImports, $request->file('file'));
             session()->flash('success', 'Semua data berhasil diimport!');
         } catch (\Exception $e) {
-            session()->flash('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            session()->flash('error', 'File Tidak Sesuai, Gunakan Template Yang Sudah Di Sediakan');
         }
 
         return redirect()->back();
