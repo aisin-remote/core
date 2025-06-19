@@ -1548,7 +1548,7 @@
                             body: JSON.stringify({
                                 employee_id: employeeId
                             })
-                        })
+                        })  
                         .then(async res => {
                             const data = await res.json();
                             if (!res.ok) {

@@ -5,9 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Department;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Models\GradeConversion;
 use App\Models\Icp;
 use App\Models\IcpDetail;
 use App\Models\MatrixCompetency;
+use App\Models\PerformanceAppraisalHistory;
 use App\Models\Section;
 use App\Models\SubSection;
 use Carbon\Carbon;
@@ -230,9 +232,11 @@ class IcpController extends Controller
         $departments = Department::all();
         $employees = Employee::all();
 
+        $grades = GradeConversion::all();
+
         $technicalCompetencies = MatrixCompetency::all();
 
-        return view('website.icp.create', compact('title', 'departments', 'employees', 'technicalCompetencies'));
+        return view('website.icp.create', compact('title', 'grades', 'departments', 'employees', 'technicalCompetencies'));
     }
 
     public function store(Request $request)
@@ -242,6 +246,9 @@ class IcpController extends Controller
             'aspiration' => 'required',
             'career_target' => 'required',
             'date' => 'required',
+            'job_function' => 'required',
+            'position' => 'required',
+            'level' => 'required',
 
 
             // Validasi array untuk detail
@@ -260,6 +267,9 @@ class IcpController extends Controller
                 'aspiration' => $request->aspiration,
                 'career_target' => $request->career_target,
                 'date' => $request->date,
+                'job_function' => $request->job_function,
+                'position' => $request->position,
+                'level' => $request->level,
                 'status' => '0',
             ]);
 
@@ -292,7 +302,7 @@ class IcpController extends Controller
         }
 
         $assessments = Icp::where('employee_id', $employee_id)
-            ->select('id', 'employee_id',  'aspiration', 'career_target', 'date')
+            ->select('id', 'employee_id',  'aspiration', 'career_target', 'date', 'job_function', 'position', 'level')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
                 $query->select('icp_id', 'current_technical', 'current_nontechnical', 'required_technical', 'required_nontechnical', 'development_technical', 'development_nontechnical');
@@ -307,63 +317,108 @@ class IcpController extends Controller
 
     public function export($employee_id)
     {
+        // Ambil employee + ICP terbaru + details + edukasi + promosi
         $employee = Employee::with([
+            'educations',
+            'promotionHistory',
             'icp' => function ($query) {
                 $query->latest()->with('details');
             },
-            'educations',
-            'promotionHistory'// tambahkan ini
         ])->findOrFail($employee_id);
 
+        // Ambil ICP terbaru
         $icp = $employee->icp->first();
         $edu = $employee->educations->first();
-         $prom = $employee->promotionHistory->first(); // ambil ICP terbaru
+        $prom = $employee->promotionHistory->first();
 
         if (!$icp) {
             return back()->with('error', 'Data ICP tidak ditemukan untuk employee ini.');
         }
 
-        $year = Carbon::parse($prom->last_promotion_date)->format('Y');
+        $year = $prom ? Carbon::parse($prom->last_promotion_date)->format('Y') : '-';
         $ais = Carbon::parse($employee->aisin_entry_date)->format('d/m/Y');
 
-        // Load template
+        // Ambil 3 tahun terakhir dari performance_appraisal_histories
+        $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
+            ->selectRaw('YEAR(date) as year, score')
+            ->orderByDesc('date')
+            ->get()
+            ->groupBy('year')
+            ->map(fn($items) => $items->first()->score)
+            ->sortKeys()
+            ->take(3)
+            ->toArray();
+
+
+        // Load Excel template
         $filePath = public_path('assets/file/Template_ICP.xlsx');
         $spreadsheet = IOFactory::load($filePath);
         $sheet = $spreadsheet->getActiveSheet();
 
-        $yearStart = now()->year; // atau bisa pakai Carbon::now()->year
+        // Isi header tahun
+        $yearStart = now()->year;
         $yearEnd = $yearStart + 1;
         $sheet->setCellValue('G2', "Year  :  {$yearStart} - {$yearEnd}");
-
-        // Bold dan center
         $sheet->getStyle('G2')->applyFromArray([
-            'font' => [
-                'bold' => true,
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-            ],
+            'font' => ['bold' => true],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);
 
-        // Isi data ke template (edit sesuai template kamu)
+        $sheet->getStyle('V5')->applyFromArray([
+            'font' => ['bold' => true],
+        ]);
+
+        // Isi 3 tahun appraisal ke R5, T5, dan V5
+        $columns = ['R', 'T', 'V'];
+        $i = 0;
+
+        foreach ($performanceData as $year => $score) {
+            $sheet->setCellValue($columns[$i] . '5', "{$year} = {$score}");
+            $i++;
+        }
+
+        for (; $i < 3; $i++) {
+            $sheet->setCellValue($columns[$i] . '5', '-');
+        }
+
+
+
+        // Data employee
         $sheet->setCellValue('G5', $employee->name);
         $sheet->setCellValue('G6', $employee->company_name);
         $sheet->setCellValue('G7', $employee->position);
         $sheet->setCellValue('G8', $employee->grade);
         $sheet->setCellValue('R8', $employee->birthday_date);
-        $sheet->setCellValue('R9', $edu->educational_level . '/' . $edu->major . '/' . $edu->institute);
         $sheet->setCellValue('R6', '3');
+
+        if ($edu) {
+            $sheet->setCellValue('R9', $edu->educational_level . '/' . $edu->major . '/' . $edu->institute);
+        }
+
+        $sheet->setCellValue('D27', $icp->job_function . '/' . $icp->position . '/' . $icp->level);
         $sheet->setCellValue('J8', $year);
         $sheet->setCellValue('G9', $ais);
         $sheet->setCellValue('C13', $icp->aspiration);
         $sheet->setCellValue('F16', $icp->career_target);
         $sheet->setCellValue('L16', \Carbon\Carbon::parse($icp->date)->format('Y'));
 
+        // Detail pengembangan
+        $startRow = 27;
+        foreach ($icp->details ?? [] as $i => $detail) {
+            $row = $startRow + $i;
+            $sheet->setCellValue("J{$row}", '- ' . $detail->current_technical);
+            $sheet->setCellValue("N{$row}", '- ' . $detail->current_nontechnical);
+            $sheet->setCellValue("O{$row}", '- ' . $detail->required_technical);
+            $sheet->setCellValue("T{$row}", '- ' . $detail->required_nontechnical);
+            $sheet->setCellValue("U{$row}", '- ' . $detail->development_technical);
+            $sheet->setCellValue("X{$row}", '- ' . $detail->development_nontechnical);
+        }
+
         // Simpan output ke file sementara dan download
         $filename = 'ICP_' . $employee->name . '.xlsx';
         $tempPath = storage_path('app/' . $filename);
 
-        $writer = new Xlsx($spreadsheet);
+        $writer = new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet);
         $writer->save($tempPath);
 
         return response()->download($tempPath)->deleteFileAfterSend(true);

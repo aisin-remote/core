@@ -17,8 +17,8 @@ class Icp extends Model
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
 
-     public function details()
+    public function details()
     {
-        return $this->belongsTo(IcpDetail::class, 'employee_id', 'id');
+        return $this->hasMany(IcpDetail::class, 'icp_id', 'id');
     }
 }

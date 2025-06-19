@@ -96,6 +96,75 @@
                                 <input type="date" name="date" class="form-control" value="{{ old('date') }}"
                                     required>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold fs-6">Job Function</label>
+                                <select name="job_function" id="job-function-select"
+                                    class="form-select form-select-sm fw-semibold" data-control="select2" required>
+                                    <option value="">Select Job Function</option>
+                                    @foreach ($departments as $department)
+                                        <option value="{{ $department->name }}"
+                                            {{ old('job_function', $employee->job_function ?? '') == $department->name ? 'selected' : '' }}>
+                                            {{ $department->name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('job_function')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold fs-6">Position</label>
+                                <select name="position" id="position-select" class="form-select form-select-sm fw-semibold"
+                                    data-control="select2">
+                                    <option value="">Select Position</option>
+                                    @php
+                                        $positions = [
+                                            'GM' => 'General Manager',
+                                            'Act GM' => 'Act General Manager',
+                                            'Manager' => 'Manager',
+                                            'Act Manager' => 'Act Manager',
+                                            'Coordinator' => 'Coordinator',
+                                            'Act Coordinator' => 'Act Coordinator',
+                                            'Section Head' => 'Section Head',
+                                            'Act Section Head' => 'Act Section Head',
+                                            'Supervisor' => 'Supervisor',
+                                            'Act Supervisor' => 'Act Supervisor',
+                                            'Act Leader' => 'Act Leader',
+                                            'Act JP' => 'Act JP',
+                                            'Operator' => 'Operator',
+                                            'Direktur' => 'Direktur',
+                                        ];
+                                    @endphp
+                                    @foreach ($positions as $value => $label)
+                                        <option value="{{ $value }}"
+                                            {{ old('position', $employee->position ?? '') == $value ? 'selected' : '' }}>
+                                            {{ $label }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('position')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+
+
+
+                            <div class="mb-3">
+                                <label class="form-label">Level</label>
+                                <select name="level" class="form-select" required>
+                                    <option value="">-- Select Level --</option>
+                                    @foreach ($grades as $grade)
+                                        <option value="{{ $grade->aisin_grade }}"
+                                            {{ old('level') == $grade->aisin_grade ? 'selected' : '' }}>
+                                            {{ $grade->aisin_grade }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+
                         </div>
                     </div>
                     <div class="row mt-4">
@@ -130,7 +199,7 @@
         let container = document.getElementById("education-container");
         let index = container.children.length;
         let newEntry = document.createElement("div");
-        newEntry.classList.add("education-entry", "p-3", "rounded", "mt-3", "position-relative");
+        newEntry.classList.add("education-entry", "p-3", "rounded", "mt-3", "border", "bg-light");
 
         let technicalOptionsHtml = '<option value="">Select Technical</option>';
         technicalOptions.forEach(opt => {
@@ -138,40 +207,40 @@
         });
 
         newEntry.innerHTML = `
-            <div class="row align-items-end border rounded p-3">
-                <div class="col-md-4">
-                    <label class="form-label">Current Technical</label>
-                    <select name="details[${index}][current_technical]" class="form-select" required>
-                        ${technicalOptionsHtml}
-                    </select>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Current Non-Technical</label>
-                    <input type="text" name="details[${index}][current_nontechnical]" class="form-control" required>
-                </div>
-                <div class="col-md-4">
-                    <label class="form-label">Required Technical</label>
-                    <input type="text" name="details[${index}][required_technical]" class="form-control" required>
-                </div>
-                <div class="col-md-4 mt-3">
-                    <label class="form-label">Required Non-Technical</label>
-                    <input type="text" name="details[${index}][required_nontechnical]" class="form-control" required>
-                </div>
-                <div class="col-md-4 mt-3">
-                    <label class="form-label">Development Technical</label>
-                    <input type="text" name="details[${index}][development_technical]" class="form-control" required>
-                </div>
-                <div class="col-md-4 mt-3">
-                    <label class="form-label">Development Non-Technical</label>
-                    <input type="text" name="details[${index}][development_nontechnical]" class="form-control" required>
-                </div>
-                <div class="col-12 mt-3 text-end">
-                    <button type="button" class="btn btn-danger btn-sm" onclick="removeEntry(this)">
-                        <i class="bi bi-trash"></i> Remove
-                    </button>
-                </div>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label">Current Tech</label>
+                <select name="details[${index}][current_technical]" class="form-select form-select-sm" required>
+                    ${technicalOptionsHtml}
+                </select>
             </div>
-        `;
+            <div class="col-md-2">
+                <label class="form-label">Current Non-Tech</label>
+                <input type="text" name="details[${index}][current_nontechnical]" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Required Tech</label>
+                <input type="text" name="details[${index}][required_technical]" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Required Non-Tech</label>
+                <input type="text" name="details[${index}][required_nontechnical]" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Development Technical</label>
+                <input type="text" name="details[${index}][development_technical]" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Development Non-Tech</label>
+                <input type="text" name="details[${index}][development_nontechnical]" class="form-control form-control-sm" required>
+            </div>
+        </div>
+        <div class="text-end mt-2">
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeEntry(this)">
+                <i class="bi bi-trash"></i> Remove
+            </button>
+        </div>
+    `;
 
         container.appendChild(newEntry);
     }
@@ -181,16 +250,6 @@
     }
 
     $(document).ready(function() {
-        $('#employee_id').select2({
-            placeholder: "Pilih Employee",
-            allowClear: false,
-            width: '100%'
-        });
-
-        $('#employee_id').on('change', function() {
-            const selectedOption = $(this).find('option:selected');
-            const position = selectedOption.data('position') || '';
-            $('#description').val(position);
-        });
+        $('#position-select').select2();
     });
 </script>

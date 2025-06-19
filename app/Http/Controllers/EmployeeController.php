@@ -295,7 +295,7 @@ class EmployeeController extends Controller
         try {
             // Validasi
             $validatedData = $request->validate([
-                'npk' => 'required|string|max:255',
+                'npk' => 'required|string|max:255|unique:employees,npk',
                 'name' => 'required|string|max:255',
                 'birthday_date' => 'required|date',
                 'gender' => 'required|in:Male,Female',
@@ -459,7 +459,8 @@ class EmployeeController extends Controller
                 ->with('success', 'Karyawan berhasil ditambahkan!');
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            return redirect()->route('employee.master.index', ['company' => $request->input('company_name')])
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
 
