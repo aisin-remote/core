@@ -62,25 +62,38 @@
                                         } elseif ($division->name == 'ENGINEERING') {
                                             $file = 'rtc_eng.xlsx';
                                         }
+
+                                        $terms = ['short', 'mid', 'long'];
                                     @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $division->name }}</td>
-                                        <td class="text-center">
-                                            <span class="{{ $division->short?->name ? '' : 'text-danger' }}">
-                                                {{ $division->short?->name ?? 'not set' }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="{{ $division->mid?->name ? '' : 'text-danger' }}">
-                                                {{ $division->mid?->name ?? 'not set' }}
-                                            </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <span class="{{ $division->long?->name ? '' : 'text-danger' }}">
-                                                {{ $division->long?->name ?? 'not set' }}
-                                            </span>
-                                        </td>
+
+                                        @foreach ($terms as $term)
+                                            @php
+                                                $rtcForTerm = $rtcs->firstWhere(
+                                                    fn($rtc) => $rtc->area_id == $division->id && $rtc->term == $term,
+                                                );
+                                                $termName = $division->{$term}?->name ?? null;
+                                                $status = $rtcForTerm?->status;
+                                            @endphp
+                                            <td class="text-center">
+                                                {{-- Display term name only if it's set or if status is not Submitted --}}
+                                                @if ($termName || $status !== 0)
+                                                    <span class="{{ $termName ? '' : 'text-danger' }}">
+                                                        {{ $termName ?? 'not set' }}
+                                                    </span>
+                                                @endif
+
+                                                {{-- Show badge only if status is 0 or 1 --}}
+                                                @if ($status === 1)
+                                                    <span class="text-center badge badge-info">Checked</span>
+                                                @elseif ($status === 0)
+                                                    <span class="text-center badge badge-warning">Submitted</span>
+                                                @endif
+                                            </td>
+                                        @endforeach
+
                                         <td class="text-center">
                                             <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
                                                 class="btn btn-sm btn-primary" title="Detail">
@@ -95,8 +108,7 @@
                                                 data-bs-target="#addPlanModal">
                                                 <i class="fas fa-plus-circle"></i>
                                             </a>
-                                            {{-- <a href="{{ asset('assets/file/' . $file) }}" class="btn btn-sm btn-warning"
-                                                title="Export" download>
+                                            {{-- <a href="{{ asset('assets/file/' . $file) }}" class="btn btn-sm btn-warning" title="Export" download>
                                                 <i class="fas fa-upload"></i>
                                             </a> --}}
                                         </td>
@@ -106,6 +118,7 @@
                                         <td colspan="3" class="text-center text-muted">No data available</td>
                                     </tr>
                                 @endforelse
+
                             </tbody>
                         </table>
                     </div>

@@ -78,7 +78,7 @@
                                                     @elseif($item['type'] === 'need_check')
                                                         <i class="fas fa-exclamation-circle me-2"></i> Need Check
                                                     @elseif($item['type'] === 'need_approval')
-                                                        <i class="fas fa-hourglass-half me-2"></i> Need Approval
+                                                        <i class="fas fa-hourglass-half me-2"></i> Need Approve
                                                     @elseif($item['type'] === 'draft')
                                                         <i class="fas fa-exclamation-circle me-2"></i> Need Submit
                                                     @else
@@ -122,7 +122,7 @@
                                     <a href="{{ route('hav.approval') }}" class="text-decoration-none text-dark">
                                         <div
                                             class="card border-0 shadow-sm
-                                            @if ($item->getRawOriginal('status') === 1) bg-danger-subtle
+                                            @if ($item->getRawOriginal('status') === 1) bg-info-subtle
                                             @elseif($item->getRawOriginal('status') === 0) bg-warning-subtle
                                             @else bg-light @endif
                                             hover-shadow">
@@ -132,12 +132,12 @@
                                                 </div>
                                                 <span
                                                     class="badge
-                                                    @if ($item->getRawOriginal('status') === 1) badge-danger
+                                                    @if ($item->getRawOriginal('status') === 1) badge-info
                                                     @elseif($item->getRawOriginal('status') === 0) badge-warning
                                                     @else badge-secondary @endif
                                                     rounded-pill px-3 py-2">
                                                     @if ($item->getRawOriginal('status') === 1)
-                                                        <i class="fas fa-exclamation-circle me-2"></i> To Be Assign
+                                                        <i class="fas fa-hourglass-half me-2"></i> To Be Assign
                                                     @elseif($item->getRawOriginal('status') === 0)
                                                         <i class="fas fa-exclamation-circle me-2"></i> Need Approve
                                                     @else
@@ -171,20 +171,54 @@
                     <div class="card-header bg-light text-white">
                         <h3 class="card-title mb-0">
                             <i class="fas fa-tasks me-2"></i><span class="fw-bold">RTC</span> -
-                            [0 Items]
+                            [{{ $allRtcTasks->count() }}
+                            Items]
                         </h3>
                     </div>
                     <div class="card-body overflow-auto" style="max-height: 600px;">
                         <div class="row g-3">
-                            <div class="col-md-12 py-1">
-                                <div class="card border-0 bg-light-success hover-shadow">
-                                    <div class="card-body text-center">
-                                        <h5 class="mb-0 text-success">
-                                            <i class="fas fa-check-circle me-2"></i> No Task.
-                                        </h5>
+                            @forelse ($allRtcTasks as $item)
+                                <div class="col-md-12">
+                                    <a href="{{ route('rtc.approval') }}" class="text-decoration-none text-dark">
+                                        <div
+                                            class="card border-0 shadow-sm
+                                            @if ($item->getRawOriginal('status') === 1) bg-info-subtle
+                                            @elseif($item->getRawOriginal('status') === 0) bg-warning-subtle
+                                            @else bg-light @endif
+                                            hover-shadow">
+                                            <div class="card-body d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h5 class="mb-2">{{ $item->employee->name }}</h5>
+                                                </div>
+                                                <span
+                                                    class="badge
+                                                    @if ($item->getRawOriginal('status') === 1) badge-info
+                                                    @elseif($item->getRawOriginal('status') === 0) badge-warning
+                                                    @else badge-secondary @endif
+                                                    rounded-pill px-3 py-2">
+                                                    @if ($item->getRawOriginal('status') === 1)
+                                                        <i class="fas fa-hourglass-half me-2"></i> Need Approve
+                                                    @elseif($item->getRawOriginal('status') === 0)
+                                                        <i class="fas fa-exclamation-circle me-2"></i> Need Check
+                                                    @else
+                                                        Unknown
+                                                    @endif
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                            @empty
+                                <div class="col-md-12 py-1">
+                                    <div class="card border-0 bg-light-success hover-shadow">
+                                        <div class="card-body text-center">
+                                            <h5 class="mb-0 text-success">
+                                                <i class="fas fa-check-circle me-2"></i> No Task.
+                                            </h5>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            @endforelse
                         </div>
                     </div>
                 </div>

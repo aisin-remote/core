@@ -670,7 +670,8 @@
 
                     <!-- Division -->
                     <div class="menu-item">
-                        <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}" href="#">
+                        <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
+                            href="{{ route('rtc.approval') }}">
                             {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                             <span class="menu-title ps-1">RTC</span>
                         </a>
@@ -706,7 +707,7 @@
 </div>
 <!--end::Sidebar-->
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         const menuAccordions = document.querySelectorAll(".menu-item.menu-accordion");
 
         // Jika user baru saja login
@@ -739,7 +740,7 @@
 
             if (!id) return;
 
-            trigger.addEventListener("click", function () {
+            trigger.addEventListener("click", function() {
                 const isExpanded = menu.classList.contains("show");
                 localStorage.setItem(id, !isExpanded); // Simpan state
             });

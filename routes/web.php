@@ -131,9 +131,13 @@ Route::middleware('auth')->group(function () {
         Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
         Route::patch('/hav/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
         Route::patch('/hav/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
+        
         Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
         Route::get('/idp/{id}', [IdpController::class, 'approve'])->name('idp.approve');
         Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
+        
+        Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
+        Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
     });
 
     Route::prefix('employee')->group(function () {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Rtc;
 use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
@@ -48,8 +49,10 @@ class RtcController extends Controller
                                         ->get();
             }
         }        
+
+        $rtcs = Rtc::all();
         
-        return view('website.rtc.index', compact('divisions', 'employees', 'table'));
+        return view('website.rtc.index', compact('divisions', 'employees', 'table', 'rtcs'));
     }
 
     public function list(Request $request)
@@ -171,27 +174,25 @@ class RtcController extends Controller
 
             $filter = $request->input('filter');
             $id = $request->input('id');
+            
+            $terms = [
+                'short' => $request->input('short_term'),
+                'mid' => $request->input('mid_term'),
+                'long' => $request->input('long_term'),
+            ];
 
-            $filter = strtolower($filter);
+            // update rtc table
+            foreach ($terms as $term => $employeeId) {
+                Rtc::create([
+                    'employee_id' => $employeeId,
+                    'area' => $filter,
+                    'area_id' => $id,
+                    'term' => $term,
+                    'status' => 0,
+                ]);
+            }
 
-            $modelClass = match ($filter) {
-                'division' => \App\Models\Division::class,
-                'department' => \App\Models\Department::class,
-                'section' => \App\Models\Section::class,
-                'sub_section' => \App\Models\SubSection::class,
-                default => throw new \Exception("Invalid filter value: $filter")
-            };
-
-            $record = $modelClass::findOrFail($id);
-
-            $updateData = collect(['short_term', 'mid_term', 'long_term'])
-                ->filter(fn($field) => $request->filled($field))
-                ->mapWithKeys(fn($field) => [$field => $request->input($field)])
-                ->toArray();
-
-            $record->update($updateData);
-
-            session()->flash('success', 'Plan updated successfully');
+            session()->flash('success', 'Plan submited successfully');
 
             return response()->json([
                 'status' => 'success',
@@ -206,4 +207,85 @@ class RtcController extends Controller
         }
     }
 
+    public function approval()
+    {
+        $user = auth()->user();
+        $employee = $user->employee;
+
+        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
+        $checkLevel = $employee->getFirstApproval();
+        $approveLevel = $employee->getFinalApproval();
+
+        $normalized = $employee->getNormalizedPosition();
+
+        if ($normalized === 'vpd') {
+            // Jika VPD, filter GM untuk check dan Manager untuk approve
+            $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+        } else {
+            // Default (tidak filter posisi bawahannya)
+            $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+        }
+
+        $checkRtc = Rtc::with('employee')
+            ->where('status', 0)
+            ->whereIn('employee_id', $subCheck)
+            ->get();        
+
+        $checkRtcIds = $checkRtc->pluck('id')->toArray();
+
+        $approveRtc = Rtc::with('employee')
+            ->where('status', 1)
+            ->whereIn('employee_id', $subApprove)
+            ->get();
+
+        $rtcs = $checkRtc->merge($approveRtc);
+
+        return view('website.approval.rtc.index', compact('rtcs'));
+    }
+
+    public function approve($id)
+    {
+        $rtc = Rtc::findOrFail($id);
+
+        if ($rtc->status == 0) {
+            $rtc->status = 1;
+            $rtc->save();
+
+            return response()->json([
+                'message' => 'rtc has been approved!'
+            ]);
+        }
+
+        if ($rtc->status == 1) {
+            $rtc->status = 2;
+            $rtc->save();
+
+            $area = strtolower($rtc->area);
+
+            // update planning 
+            $modelClass = match ($area) {
+                'division' => \App\Models\Division::class,
+                'department' => \App\Models\Department::class,
+                'section' => \App\Models\Section::class,
+                'sub_section' => \App\Models\SubSection::class,
+                default => throw new \Exception("Invalid filter value: $area")
+            };
+
+            $record = $modelClass::findOrFail($rtc->area_id);
+            
+            $record->update([
+                $rtc->term . '_term' => $rtc->employee_id
+            ]);
+
+            return response()->json([
+                'message' => 'rtc has been approved!'
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Something went wrong!'
+        ], 400);
+    }
 }

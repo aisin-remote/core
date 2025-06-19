@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Models\Hav;
 use App\Models\Idp;
+use App\Models\Rtc;
 use App\Models\Employee;
 use App\Models\Assessment;
 use Illuminate\Support\Facades\View;
@@ -122,32 +123,23 @@ class AppServiceProvider extends ServiceProvider
             ->get();
 
             // Ambil IDP yang statusnya 1 (perlu dicek)
-            $checkIdps = Employee::with(['hav.details' => function ($query) {
-                $query->whereHas('idp', function ($q) {
-                    $q->where('status', 1);
-                })->with(['idp' => function ($q) {
-                    $q->where('status', 1);
-                }])->orderBy('created_at')->take(1);
-            }])
-            ->whereIn('id', $subCheck)
-            ->whereHas('hav.details.idp', function ($query) {
-                $query->where('status', 1);
-            })
-            ->get();
-
-            // Ambil IDP yang statusnya 2 (perlu di-approve)
-            $approveIdps = Employee::with(['hav.details' => function ($query) {
-                $query->whereHas('idp', function ($q) {
-                    $q->where('status', 2);
-                })->with(['idp' => function ($q) {
-                    $q->where('status', 2);
-                }])->orderBy('created_at')->take(1);
-            }])
-            ->whereIn('id', $subApprove)
-            ->whereHas('hav.details.idp', function ($query) {
-                $query->where('status', 2);
-            })
-            ->get();
+            $checkIdps = Employee::with(['hav.details.idp' => function ($query) {
+                    $query->where('status', 1)->orderBy('created_at');
+                }])
+                ->whereIn('id', $subCheck)
+                ->whereHas('hav.details.idp', function ($query) {
+                    $query->where('status', 1);
+                })
+                ->get();
+                
+            $approveIdps = Employee::with(['hav.details.idp' => function ($query) {
+                    $query->where('status', 2)->orderBy('created_at');
+                }])
+                ->whereIn('id', $subApprove)
+                ->whereHas('hav.details.idp', function ($query) {
+                    $query->where('status', 2);
+                })
+                ->get();
 
             // Gabungkan IDP yang perlu dicek dan approve
             $pendingIdps = $checkIdps->merge($approveIdps);
@@ -177,28 +169,35 @@ class AppServiceProvider extends ServiceProvider
 
             // Koleksi: pending (need_check / need_approval)
             $pendingIdpCollection = $pendingIdps->flatMap(function ($employee) {
-                $hav = $employee->hav->first(); // ambil satu model Hav
-                $detail = optional($hav?->details->first()); // ambil satu detail
+                return $employee->hav->flatMap(function ($hav) use ($employee) {
+                    return collect($hav->details)->flatMap(function ($detail) use ($employee) {
+                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
             
-                $idps = $detail?->idp ?? collect();
-            
-                return $idps->map(function ($idp) use ($employee) {
-                    return [
-                        'type' => $idp->status === 1 ? 'need_check' : 'need_approval',
-                        'employee_name' => $employee->name,
-                        'employee_npk' => $employee->npk,
-                        'employee_company' => $employee->company_name,
-                        'category' => $idp->category ?? '-',
-                        'program' => $idp->development_program ?? '-',
-                        'target' => $idp->development_target ?? '-',
-                    ];
+                        return $idps->map(function ($idp) use ($employee) {
+                            return [
+                                'type' => $idp->status === 1 ? 'need_check' : 'need_approval',
+                                'employee_name' => $employee->name,
+                                'employee_npk' => $employee->npk,
+                                'employee_company' => $employee->company_name,
+                                'category' => $idp->category ?? '-',
+                                'program' => $idp->development_program ?? '-',
+                                'target' => $idp->development_target ?? '-',
+                                'created_at' => $idp->created_at,
+                            ];
+                        });
+                    });
                 });
-            });
+            })
+            // Sort by IDP creation time if needed
+            ->sortBy('created_at')
+            // Hapus duplikat berdasarkan employee_npk
+            ->unique('employee_npk')
+            ->values(); // Reset index
             
             // Gabungkan semua ke satu koleksi
             $allIdpTasks = $unassignedIdps
-            ->merge($draftIdpCollection)
-            ->merge($pendingIdpCollection);
+                ->merge($draftIdpCollection)
+                ->merge($pendingIdpCollection);
 
 
             // HAV //
@@ -208,9 +207,18 @@ class AppServiceProvider extends ServiceProvider
                 ->get()
                 ->unique('employee_id')
                 ->values();
+            
+            // RTC //
+            $allRtcTasks = Rtc::with('employee')
+                ->whereIn('employee_id', $subCheck)
+                ->where('status', 0)
+                ->get()
+                ->unique('employee_id')
+                ->values();
 
             $view->with('allIdpTasks', $allIdpTasks);
             $view->with('allHavTasks', $allHavTasks);
+            $view->with('allRtcTasks', $allRtcTasks);
         });
     }
 }

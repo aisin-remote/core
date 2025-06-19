@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Hav;
 use App\Models\Idp;
+use App\Models\Rtc;
 use App\Models\Employee;
 use App\Models\Assessment;
 use Illuminate\Http\Request;
@@ -37,18 +38,17 @@ class ToDoListController extends Controller
         // Ambil assessment terbaru hanya milik bawahannya
         $assessments = Hav::with(['employee', 'details.idp', 'details.alc']) // tambahkan details.alc
             ->whereIn('employee_id', $subCreate)
-            ->when(
-                $company,
-                fn($query) =>
-                $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
-            )
+            // ->when(
+            //     $company,
+            //     fn($query) =>
+            //     $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
+            // )
             ->whereIn('id', function ($query) {
                 $query->selectRaw('id')
                     ->from('havs as a')
                     ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM havs WHERE employee_id = a.employee_id)');
             })
             ->get();
-
         
         $emp = [];
         foreach ($assessments as $assessment) {
@@ -106,32 +106,23 @@ class ToDoListController extends Controller
         ->get();
 
         // Ambil IDP yang statusnya 1 (perlu dicek)
-        $checkIdps = Employee::with(['hav.details' => function ($query) {
-            $query->whereHas('idp', function ($q) {
-                $q->where('status', 1);
-            })->with(['idp' => function ($q) {
-                $q->where('status', 1);
-            }])->orderBy('created_at')->take(1);
-        }])
-        ->whereIn('id', $subCheck)
-        ->whereHas('hav.details.idp', function ($query) {
-            $query->where('status', 1);
-        })
-        ->get();
-
-        // Ambil IDP yang statusnya 2 (perlu di-approve)
-        $approveIdps = Employee::with(['hav.details' => function ($query) {
-            $query->whereHas('idp', function ($q) {
-                $q->where('status', 2);
-            })->with(['idp' => function ($q) {
-                $q->where('status', 2);
-            }])->orderBy('created_at')->take(1);
-        }])
-        ->whereIn('id', $subApprove)
-        ->whereHas('hav.details.idp', function ($query) {
-            $query->where('status', 2);
-        })
-        ->get();
+        $checkIdps = Employee::with(['hav.details.idp' => function ($query) {
+                $query->where('status', 1)->orderBy('created_at');
+            }])
+            ->whereIn('id', $subCheck)
+            ->whereHas('hav.details.idp', function ($query) {
+                $query->where('status', 1);
+            })
+            ->get();
+            
+        $approveIdps = Employee::with(['hav.details.idp' => function ($query) {
+                $query->where('status', 2)->orderBy('created_at');
+            }])
+            ->whereIn('id', $subApprove)
+            ->whereHas('hav.details.idp', function ($query) {
+                $query->where('status', 2);
+            })
+            ->get();
 
         // Gabungkan IDP yang perlu dicek dan approve
         $pendingIdps = $checkIdps->merge($approveIdps);
@@ -161,24 +152,31 @@ class ToDoListController extends Controller
 
         // Koleksi: pending (need_check / need_approval)
         $pendingIdpCollection = $pendingIdps->flatMap(function ($employee) {
-            $hav = $employee->hav->first(); // ambil satu model Hav
-            $detail = optional($hav?->details->first()); // ambil satu detail
+            return $employee->hav->flatMap(function ($hav) use ($employee) {
+                return collect($hav->details)->flatMap(function ($detail) use ($employee) {
+                    $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
         
-            $idps = $detail?->idp ?? collect();
-        
-            return $idps->map(function ($idp) use ($employee) {
-                return [
-                    'type' => $idp->status === 1 ? 'need_check' : 'need_approval',
-                    'employee_name' => $employee->name,
-                    'employee_npk' => $employee->npk,
-                    'employee_company' => $employee->company_name,
-                    'category' => $idp->category ?? '-',
-                    'program' => $idp->development_program ?? '-',
-                    'target' => $idp->development_target ?? '-',
-                ];
+                    return $idps->map(function ($idp) use ($employee) {
+                        return [
+                            'type' => $idp->status === 1 ? 'need_check' : 'need_approval',
+                            'employee_name' => $employee->name,
+                            'employee_npk' => $employee->npk,
+                            'employee_company' => $employee->company_name,
+                            'category' => $idp->category ?? '-',
+                            'program' => $idp->development_program ?? '-',
+                            'target' => $idp->development_target ?? '-',
+                            'created_at' => $idp->created_at,
+                        ];
+                    });
+                });
             });
-        });
-
+        })
+        // Sort by IDP creation time if needed
+        ->sortBy('created_at')
+        // Hapus duplikat berdasarkan employee_npk
+        ->unique('employee_npk')
+        ->values(); // Reset index               
+        
         // Gabungkan semua ke satu koleksi
         $allIdpTasks = $unassignedIdps
         ->merge($draftIdpCollection)
@@ -192,8 +190,21 @@ class ToDoListController extends Controller
             ->get()
             ->unique('employee_id')
             ->values();
-
+            
+        // RTC //
+        $allRtcTasks = Rtc::with('employee')
+            ->where(function ($query) use ($subCheck, $subApprove) {
+                $query->where(function ($q) use ($subCheck) {
+                    $q->whereIn('employee_id', $subCheck)
+                    ->where('status', 0);
+                })->orWhere(function ($q) use ($subApprove) {
+                    $q->whereIn('employee_id', $subApprove)
+                    ->where('status', 1);
+                });
+            })
+            ->get();
+            
         // Kirim ke view
-        return view('website.todolist.index', compact('allIdpTasks','allHavTasks'));
+        return view('website.todolist.index', compact('allIdpTasks','allHavTasks','allRtcTasks'));
     }
 }

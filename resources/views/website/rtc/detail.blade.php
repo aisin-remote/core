@@ -126,40 +126,68 @@
     </div>
 
     <style>
+        .rtc-header {
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            padding: 12px;
+        }
+
         /* Same CSS as before */
-        .color-1 {
-            border-top: 4px solid #4CAF50;
-            /* Green */
+        .color-1 .rtc-header {
+            background-color: #4CAF50;
+            color: white !important;
+            padding: 12px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+
         }
 
-        .color-2 {
-            border-top: 4px solid #2196F3;
-            /* Blue */
+        .color-2 .rtc-header {
+            background-color: #2196F3;
+            color: white !important;
+            padding: 12px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
-        .color-3 {
-            border-top: 4px solid #FF9800;
-            /* Orange */
+        .color-3 .rtc-header {
+            background-color: #FF9800;
+            color: white !important;
+            padding: 12px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
-        .color-4 {
-            border-top: 4px solid #9C27B0;
-            /* Purple */
+        .color-4 .rtc-header {
+            background-color: #9C27B0;
+            color: white !important;
+            padding: 12px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
-        .color-5 {
-            border-top: 4px solid #E91E63;
-            /* Pink */
+        .color-5 .rtc-header {
+            background-color: #E91E63;
+            color: white !important;
+            padding: 12px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
-        .color-6 {
-            border-top: 4px solid #00BCD4;
-            /* Cyan */
+        .color-6 .rtc-header {
+            background-color: #00BCD4;
+            color: white !important;
+            padding: 12px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
-        .color-7 {
-            border-top: 4px solid #FFC107;
-            /* Amber */
+        .color-7 .rtc-header {
+            background-color: #FFC107;
+            color: white !important;
+            padding: 12px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
         }
 
         .rtc-container {
@@ -200,10 +228,13 @@
             margin-bottom: 15px;
         }
 
-        .rtc-title,
-        .rtc-department,
-        .rtc-section {
-            color: #444;
+        .rtc-section,
+        .rtc-department {
+            color: white;
+        }
+
+        .rtc-title.rtc-section {
+            color: #333;
             margin: 0;
         }
 
