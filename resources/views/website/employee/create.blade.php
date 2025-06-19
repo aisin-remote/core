@@ -40,14 +40,14 @@
                             <h4 class="fw-bold mb-4">Personal Information</h4>
                             <div class="mb-3">
                                 <label class="form-label">NPK</label>
-                                <input type="text" name="npk" class="form-control" value="{{ old('npk') }}">
+                                <input type="text" name="npk" class="form-control" value="{{ old('npk') }}" required>
                                 @error('npk')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Name</label>
-                                <input type="text" name="name" class="form-control" value="{{ old('name') }}">
+                                <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
                                 @error('name')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -55,21 +55,28 @@
                             <div class="mb-3">
                                 <label class="form-label">Birthday Date</label>
                                 <input type="date" name="birthday_date" class="form-control"
-                                    value="{{ old('birthday_date') }}">
+                                    value="{{ old('birthday_date') }}"required>
                                 @error('birthday_date')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+                               <div class="mb-3">
+                                <label class="form-label">Phone Number</label>
+                                <input type="text" name="phone_number" class="form-control" value="{{ old('phone_number') }}" required>
+                                @error('phone_number')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Photo</label>
-                                <input type="file" name="photo" class="form-control">
+                                <input type="file" name="photo" class="form-control" required>
                                 @error('photo')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Gender</label>
-                                <select name="gender" class="form-select">
+                                <select name="gender" class="form-select" required>
                                     <option value="Male" {{ old('gender') == 'Male' ? 'selected' : '' }}>Male</option>
                                     <option value="Female" {{ old('gender') == 'Female' ? 'selected' : '' }}>Female
                                     </option>
@@ -88,7 +95,7 @@
                             <div class="mb-3">
                                 <label class="form-label">Join Date</label>
                                 <input type="date" name="aisin_entry_date" class="form-control"
-                                    value="{{ old('aisin_entry_date') }}">
+                                    value="{{ old('aisin_entry_date') }}" required>
                                 @error('aisin_entry_date')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -96,7 +103,7 @@
                             <div class="mb-3">
                                 <label class="form-label">Company Group</label>
                                 <input type="text" name="company_group" class="form-control"
-                                    value="{{ old('company_group') }}">
+                                    value="{{ old('company_group') }}" required>
                                 @error('company_group')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -107,7 +114,7 @@
                                         <label class="form-label">Company</label>
                                     </label>
                                     <select name="company_name" aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Company..." class="form-select form-select-lg fw-semibold">
+                                        data-placeholder="Select Company..." class="form-select form-select-lg fw-semibold" required>
                                         <option value="">Select Company</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="AIIA">
                                             Aisin Indonesia Automotive
@@ -128,7 +135,7 @@
                                     </label>
                                     <select name="position" aria-label="Select a Country" data-control="select2"
                                         data-placeholder="Select Position..."
-                                        class="form-select form-select-lg fw-semibold">
+                                        class="form-select form-select-lg fw-semibold" required>
                                         <option value="">Select Position</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager</option>
@@ -165,7 +172,7 @@
                             @endif
                             <div class="mb-3">
                                 <label class="form-label">Grade</label>
-                                <select name="grade" class="form-control">
+                                <select name="grade" class="form-control" required>
                                     <option value="">-- Select Grade --</option>
                                     @foreach ($grade as $g)
                                         <option value="{{ $g->aisin_grade }}"
@@ -208,7 +215,7 @@
                 </div>
 
                 <div class="text-end mt-4">
-                    <a href="{{ route('employee.master.index') }}" class="btn btn-secondary">
+                    <a href="{{ url()->previous() }}" class="btn btn-secondary">
                         <i class="bi bi-arrow-left-circle"></i> Back
                     </a>
                     <button type="submit" class="btn btn-primary">

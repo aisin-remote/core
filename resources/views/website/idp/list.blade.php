@@ -318,7 +318,6 @@
                                             </thead>
                                             <tbody>
                                                 @foreach ($assessment->developments as $items)
-
                                                     <tr>
                                                         <td class="text-justify px-3">
                                                             {{ $items->development_program }}</td>
@@ -356,7 +355,7 @@
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                              @foreach ($assessment->developmentsones as $items)
+                                                @foreach ($assessment->developmentsones as $items)
                                                     <tr>
                                                         <td class="text-justify px-3">
                                                             {{ $items->development_program }}</td>
@@ -382,49 +381,8 @@
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('.btn-delete').on('click', function() {
-                const id = $(this).data('id');
 
-                Swal.fire({
-                    title: 'Are you sure?',
-                    text: 'This IDP will be permanently deleted!',
-                    icon: 'warning',
-                    showCancelButton: true,
-                    confirmButtonText: 'Yes, delete it!',
-                    cancelButtonText: 'Cancel'
-                }).then(result => {
-                    if (result.isConfirmed) {
-                        Swal.fire({
-                            title: 'Deleting...',
-                            allowOutsideClick: false,
-                            didOpen: () => Swal.showLoading()
-                        });
 
-                        $.ajax({
-                            url: `/idp/delete/${id}`,
-                            type: 'POST',
-                            data: {
-                                _token: $('meta[name="csrf-token"]').attr(
-                                    'content') // ← CSRF Token
-                            },
-                            success: function(response) {
-                                Swal.fire({
-                                    title: 'Deleted!',
-                                    text: response.message ||
-                                        'IDP successfully deleted.',
-                                    icon: 'success',
-                                    timer: 2000,
-                                    showConfirmButton: false
-                                });
-                                setTimeout(() => location.reload(), 1500);
-                            },
-                            error: function() {
-                                Swal.fire('Error!', 'Something went wrong.', 'error');
-                            }
-                        });
-                    }
-                });
-            });
 
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
@@ -513,6 +471,50 @@
                 if (modalId.startsWith('notes_')) {
                     $('#detailAssessmentModal').modal('show');
                 }
+            });
+            $(document).on('click', '.btn-delete', function() {
+                const id = $(this).data('id');
+
+                Swal.fire({
+                    title: 'Are you sure?',
+                    text: 'This IDP will be permanently deleted!',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, delete it!',
+                    cancelButtonText: 'Cancel'
+                }).then(result => {
+                    if (result.isConfirmed) {
+                        Swal.fire({
+                            title: 'Deleting...',
+                            allowOutsideClick: false,
+                            didOpen: () => Swal.showLoading()
+                        });
+
+                        $.ajax({
+                            url: `/idp/delete/${id}`,
+                            type: 'POST',
+                            data: {
+                                _token: $('meta[name="csrf-token"]').attr('content')
+                            },
+                            success: function(response) {
+                                Swal.fire({
+                                    title: 'Deleted!',
+                                    text: response.message ||
+                                        'IDP successfully deleted.',
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
+
+                                // Hapus baris dari tabel langsung tanpa reload
+                                $(`button[data-id="${id}"]`).closest('tr').remove();
+                            },
+                            error: function() {
+                                Swal.fire('Error!', 'Something went wrong.', 'error');
+                            }
+                        });
+                    }
+                });
             });
         });
     </script>

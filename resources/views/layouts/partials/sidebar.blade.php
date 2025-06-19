@@ -65,6 +65,7 @@
                 $isAssessment = str_starts_with($currentPath, 'assessment');
                 $isHav = str_starts_with($currentPath, 'hav');
                 $isIdp = str_starts_with($currentPath, 'idp');
+                $isIcp = str_starts_with($currentPath, 'icp');
                 $isRtc = str_starts_with($currentPath, 'rtc');
                 $isgrade = str_starts_with($currentPath, 'grade');
                 $isdivision = str_starts_with($currentPath, 'division');
@@ -425,6 +426,70 @@
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">AIIA</span>
                                         </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+                        @if ($isUser)
+                            {{-- IDP menu for regular User --}}
+                            <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
+                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
+                                <span class="menu-link {{ $isIcp ? 'active' : '' }}">
+                                    <span class="menu-title ps-1">ICP</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'icp' ? 'active' : '' }}"
+                                            href="{{ route('icp.assign') }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">ICP Assign</span>
+                                        </a>
+                                    </div>
+                                     <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'icp/list' ? 'active' : '' }}"
+                                            href="{{ route('icp.list', ['company' => null]) }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">ICP List</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @elseif ($isHRDorTop)
+                            <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
+                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
+                                <span class="menu-link {{ $isIcp ? 'active' : '' }}">
+                                    <span class="menu-title ps-1">ICP</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    {{-- IDP List --}}
+                                    <div class="menu-item menu-accordion {{ request()->is('icp/list/*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">ICP List</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('icp/list/aii') ? 'active' : '' }}"
+                                                    href="/idp/list/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('icp/list/aiia') ? 'active' : '' }}"
+                                                    href="/idp/list/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

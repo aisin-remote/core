@@ -43,7 +43,7 @@
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
                         <a class="nav-link text-active-primary pb-4
-        {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                            {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             Show All
                         </a>

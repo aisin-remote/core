@@ -469,7 +469,6 @@ class IdpController extends Controller
                 'development_program' => $program,
                 'evaluation_result' => $request->evaluation_result[$index] ?? '',
             ]);
-
         }
 
         return redirect()->route('idp.index')->with('success', 'One-Year Development added successfully.');
@@ -694,8 +693,8 @@ class IdpController extends Controller
                 return response()->json(['message' => 'Employee ID tidak valid.'], 400);
             }
 
-            // Ambil semua detail assessment ALC untuk employee
-            $detailAssessments = Hav::with(['employee', 'details.idp', 'details.alc']) // tambah alc pada eager loading
+            // Ambil semua HAV terakhir untuk employee yang dimaksud
+            $detailAssessments = Hav::with(['employee', 'details.idp', 'details.alc'])
                 ->whereHas('employee', function ($query) use ($employeeId) {
                     $query->where('employee_id', $employeeId);
                 })
@@ -703,30 +702,23 @@ class IdpController extends Controller
                     $query->selectRaw('id')
                         ->from('havs as a')
                         ->whereRaw('a.created_at = (
-                            SELECT MAX(created_at)
-                            FROM havs
-                            WHERE employee_id = a.employee_id
-                        )');
+                        SELECT MAX(created_at)
+                        FROM havs
+                        WHERE employee_id = a.employee_id
+                    )');
                 })
                 ->get();
 
-            // Cek apakah ada detail HAV dengan score < 3 tapi belum punya IDP
-            $missingIdp = false;
-
+            // Cek jika ada nilai < 3 tapi belum dibuat IDP
             foreach ($detailAssessments as $assessment) {
                 foreach ($assessment->details as $detail) {
                     if ($detail->score < 3 && empty($detail->idp)) {
-                        $missingIdp = true;
-                        break 2; // keluar dari kedua foreach
+                        return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat!'], 400);
                     }
                 }
             }
 
-            if ($missingIdp) {
-                return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat!'], 400);
-            }
-
-            // Filter nilai < 3
+            // Cek jika semua ALC nilainya >= 3
             $belowThree = $detailAssessments->flatMap(function ($assessment) {
                 return $assessment->details->filter(function ($detail) {
                     return $detail->score < 3;
@@ -737,24 +729,30 @@ class IdpController extends Controller
                 return response()->json(['message' => 'Tidak ada ALC dengan nilai di bawah 3.'], 400);
             }
 
-            // Update semua IDP milik employee menjadi status = 1
-            IDP::with('hav.hav.employee')
+            // Ambil semua IDP yang masih status 0
+            $idps = IDP::with('hav.hav.employee')
                 ->whereHas('hav.hav.employee', function ($q) use ($employeeId) {
                     $q->where('employee_id', $employeeId);
                 })
                 ->where('status', 0)
-                ->update([
-                    'status' => 1
-                ]);
+                ->get();
+
+            if ($idps->isEmpty()) {
+                return response()->json(['message' => 'Tidak ada IDP yang dikirim.'], 400);
+            }
+
+            // Update status IDP
+            $idps->each->update(['status' => 1]);
 
             return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
         } catch (\Throwable $e) {
             return response()->json([
                 'message' => 'Terjadi kesalahan saat mengirim IDP. Silakan coba lagi.',
-                'error' => $e->getMessage(), // Boleh dihapus di production
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
+
 
 
     public function approval()
@@ -765,6 +763,7 @@ class IdpController extends Controller
         // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
         $checkLevel = $employee->getFirstApproval();
         $approveLevel = $employee->getFinalApproval();
+
 
         $normalized = $employee->getNormalizedPosition();
 

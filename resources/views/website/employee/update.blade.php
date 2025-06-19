@@ -143,7 +143,7 @@
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Phone Number</label>
-                                                    <input type="text" name="email"
+                                                    <input type="text" name="phone_number"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Phone Number" value="{{ $employee->phone_number }}">
                                                 </div>
@@ -325,19 +325,28 @@
 
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Aisin Grade</label>
-                                                    <input type="text" name="grade"
-                                                        class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Grade" value="{{ old('grade', $employee->grade) }}">
+                                                    <select name="grade"
+                                                        class="form-control form-control-sm form-control-solid" required>
+                                                        <option value="">-- Select Grade --</option>
+                                                        @foreach ($grade as $g)
+                                                            <option value="{{ $g->aisin_grade }}"
+                                                                {{ old('grade', $employee->grade) == $g->aisin_grade ? 'selected' : '' }}>
+                                                                {{ $g->aisin_grade }}
+                                                            </option>
+                                                        @endforeach
+                                                    </select>
                                                     @error('grade')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Astra Grade</label>
                                                     <input readonly type="text"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Grade" value="{{ $employee->astra_grade }}">
                                                 </div>
+
                                             </div>
                                         </div>
                                     </div>
@@ -1134,7 +1143,7 @@
 
             <!-- Tombol Back di bagian bawah card -->
             <div class="card-footer text-end mt-4">
-                <a href="{{ route('employee.index') }}" class="btn btn-secondary">
+                <a href="{{ url()->previous() }}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left-circle"></i> Back
                 </a>
             </div>

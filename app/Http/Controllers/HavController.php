@@ -239,51 +239,54 @@ class HavController extends Controller
             // Logika untuk HRD atau selain HRD
             if ($user->isHRDorDireksi()) {
                 $employees = Hav::with(['employee', 'quadran'])
-                    ->whereHas('employee', function ($query) use ($company, $filter, $search) {
-                        if ($company) {
-                            $query->where('company_name', $company);
-                        }
-                        if ($filter && $filter !== 'all') {
-                            $query->where(function ($q) use ($filter) {
-                                $q->where('position', $filter)
-                                    ->orWhere('position', 'like', "Act %{$filter}");
-                            });
-                        }
-                        if ($search) {
-                            $query->where(function ($q) use ($search) {
-                                $q->where('name', 'like', '%' . $search . '%')
-                                    ->orWhere('npk', 'like', '%' . $search . '%');
-                            });
-                        }
+                    ->whereIn('id', function ($query) use ($company, $filter, $search) {
+                        $query->selectRaw('MAX(h.id)')
+                            ->from('havs as h')
+                            ->join('employees as e', 'e.id', '=', 'h.employee_id')
+                            ->when($company, function ($q) use ($company) {
+                                $q->where('e.company_name', $company);
+                            })
+                            ->when($filter && $filter !== 'all', function ($q) use ($filter) {
+                                $q->where(function ($q2) use ($filter) {
+                                    $q2->where('e.position', $filter)
+                                        ->orWhere('e.position', 'like', "Act %{$filter}");
+                                });
+                            })
+                            ->when($search, function ($q) use ($search) {
+                                $q->where(function ($q2) use ($search) {
+                                    $q2->where('e.name', 'like', '%' . $search . '%')
+                                        ->orWhere('e.npk', 'like', '%' . $search . '%');
+                                });
+                            })
+                            ->groupBy('h.employee_id');
                     })
-                    ->get()
-                    ->unique('employee_id')
-                    ->values();
+                    ->get();
             } else {
                 $employee = Employee::where('user_id', $user->id)->first();
 
                 if (!$employee) {
                     $employees = collect();
                 } else {
-                    $subordinate =  $this->getSubordinatesFromStructure($user->employee)->pluck('id');
+                    $subordinate = $this->getSubordinatesFromStructure($employee)->pluck('id');
 
                     $employees = Hav::with(['employee', 'quadran'])
-                        ->whereIn('employee_id', $subordinate)
-                        ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
-
-                            if ($filter && $filter !== 'all') {
-                                $query->where(function ($q) use ($filter) {
-                                    $q->where('position', $filter)
-                                        ->orWhere('position', 'like', "Act %{$filter}");
-                                });
-                            }
-                            if ($search) {
-                                $query->where('name', 'like', '%' . $search . '%');
-                            }
+                        ->whereIn('id', function ($query) use ($subordinate, $filter, $search) {
+                            $query->selectRaw('MAX(h.id)')
+                                ->from('havs as h')
+                                ->join('employees as e', 'e.id', '=', 'h.employee_id')
+                                ->whereIn('h.employee_id', $subordinate)
+                                ->when($filter && $filter !== 'all', function ($q) use ($filter) {
+                                    $q->where(function ($q2) use ($filter) {
+                                        $q2->where('e.position', $filter)
+                                            ->orWhere('e.position', 'like', "Act %{$filter}");
+                                    });
+                                })
+                                ->when($search, function ($q) use ($search) {
+                                    $q->where('e.name', 'like', '%' . $search . '%');
+                                })
+                                ->groupBy('h.employee_id');
                         })
-                        ->get()
-                        ->unique('employee_id')
-                        ->values();
+                        ->get();
                 }
             }
         }
@@ -356,11 +359,26 @@ class HavController extends Controller
 
         $employees = $subordinates->map(function ($emp) {
             $latestHav = $emp->hav ? $emp->hav->first() : null;
+
+            $allowAdd = false;
+            $virtualStatus = optional($latestHav)->status;
+
+            if ($latestHav && $latestHav->status == 2) {
+                $addAfter = \Carbon\Carbon::parse($latestHav->created_at)->addYear();
+                if (now()->gte($addAfter)) {
+                    $allowAdd = true;
+                    $virtualStatus = null; // Set status virtual jadi '-' (null)
+                }
+            }
+
             return (object)[
                 'employee' => $emp,
                 'hav' => $latestHav,
+                'allowAdd' => $allowAdd,
+                'virtualStatus' => $virtualStatus,
             ];
         });
+
 
         return view('website.hav.assign', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }

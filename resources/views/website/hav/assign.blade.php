@@ -81,6 +81,8 @@
                                     <span class="badge badge-light-warning fs-7 fw-bold">
                                         @if ($status === 0 && $isAssessmentOne)
                                             Not Created
+                                        @elseif ($status === 2 && \Carbon\Carbon::parse($item->hav->created_at)->addYear()->isPast())
+                                            -
                                         @else
                                             {{ match ($status) {
                                                 0 => 'Submited',
@@ -93,43 +95,46 @@
                                     </span>
                                 </td>
 
-                               <td class="text-center">
-    @if (!$item->hav)
-        {{-- Tidak ada data HAV --}}
-        <a href="#" class="btn btn-info btn-sm btn-add-import"
-            data-bs-toggle="modal" data-bs-target="#importModal"
-            data-employee-id="{{ $item->employee->id }}">
-            <i class="fas fa-plus"></i> Add
-        </a>
-    @else
-        @php
-            $isAssessment = $item->hav->details->first()?->is_assessment ?? 1;
-        @endphp
 
-        @if ($isAssessment == 0)
-            @if ($item->hav->status == 1)
-                <a href="#" class="btn btn-warning btn-sm btn-revise-import"
-                    data-bs-toggle="modal" data-bs-target="#importModal"
-                    data-hav-id="{{ $item->hav->id }}"
-                    data-employee-id="{{ $item->employee->id }}">
-                    <i class="fas fa-upload"></i> Revise
-                </a>
-            @endif
-        @else
-            {{-- Data HAV tapi bukan hasil assessment, izinkan Add ulang --}}
-            <a href="#" class="btn btn-info btn-sm btn-add-import"
-                data-bs-toggle="modal" data-bs-target="#importModal"
-                data-employee-id="{{ $item->employee->id }}">
-                <i class="fas fa-plus"></i> Add
-            </a>
-        @endif
+                                <td class="text-center">
+                                    @if (!$item->hav || $item->allowAdd)
+                                        {{-- Tidak ada HAV atau status 2 sudah lebih dari 1 tahun --}}
+                                        <a href="#" class="btn btn-info btn-sm btn-add-import" data-bs-toggle="modal"
+                                            data-bs-target="#importModal" data-employee-id="{{ $item->employee->id }}">
+                                            <i class="fas fa-plus"></i> Add
+                                        </a>
+                                    @else
+                                        @php
+                                            $isAssessment = $item->hav->details->first()?->is_assessment ?? 1;
+                                            $status = $item->hav->status;
+                                        @endphp
 
-        {{-- Tombol Comment selalu muncul jika ada data HAV --}}
-        <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment" href="#">
-            Comment
-        </a>
-    @endif
-</td>
+                                        @if ($isAssessment == 0 && $status == 1)
+                                            <a href="#" class="btn btn-warning btn-sm btn-revise-import"
+                                                data-bs-toggle="modal" data-bs-target="#importModal"
+                                                data-hav-id="{{ $item->hav->id }}"
+                                                data-employee-id="{{ $item->employee->id }}">
+                                                <i class="fas fa-upload"></i> Revise
+                                            </a>
+                                        @elseif ($isAssessment == 1)
+                                            <a href="#" class="btn btn-info btn-sm btn-add-import"
+                                                data-bs-toggle="modal" data-bs-target="#importModal"
+                                                data-employee-id="{{ $item->employee->id }}">
+                                                <i class="fas fa-plus"></i> Add
+                                            </a>
+                                        @endif
+                                    @endif
+
+                                    {{-- Tombol Comment selalu tampil --}}
+                                    @if ($item->hav)
+                                        <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment"
+                                            href="#">
+                                            Comment
+                                        </a>
+                                    @endif
+                                </td>
+
+
 
                             </tr>
                         @endforeach
@@ -181,8 +186,7 @@
                 </div>
 
                 <div class="modal-body">
-                    <form id="importForm" action="{{ route('hav.import') }}" method="POST"
-                        enctype="multipart/form-data">
+                    <form id="importForm" action="{{ route('hav.import') }}" method="POST" enctype="multipart/form-data">
                         @csrf
 
                         <div class="mb-3">
@@ -376,10 +380,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                                                                                                                                                                            data-id="${hav.id}"
-                                                                                                                                                                                                            class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                                                                                                                                                                History
-                                                                                                                                                                                                            </a>`}
+                                                                                                                                                                                                                                data-id="${hav.id}"
+                                                                                                                                                                                                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                                                                                                                                                                    History
+                                                                                                                                                                                                                                </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>
