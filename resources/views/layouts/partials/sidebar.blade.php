@@ -430,8 +430,8 @@
                                 </div>
                             </div>
                         @endif
-                        @if ($isUser)
-                            {{-- IDP menu for regular User --}}
+
+                        {{-- @if ($isUser)
                             <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
                                 <span class="menu-link {{ $isIcp ? 'active' : '' }}">
@@ -446,7 +446,7 @@
                                             <span class="menu-title">ICP Assign</span>
                                         </a>
                                     </div>
-                                     <div class="menu-item">
+                                    <div class="menu-item">
                                         <a class="menu-link {{ $currentPath === 'icp/list' ? 'active' : '' }}"
                                             href="{{ route('icp.list', ['company' => null]) }}">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
@@ -464,7 +464,6 @@
                                 </span>
 
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                    {{-- IDP List --}}
                                     <div class="menu-item menu-accordion {{ request()->is('icp/list/*') ? 'show' : '' }}"
                                         data-kt-menu-trigger="click">
                                         <span class="menu-link">
@@ -493,7 +492,7 @@
                                     </div>
                                 </div>
                             </div>
-                        @endif
+                        @endif --}}
                     </div>
                 </div>
             </div>
