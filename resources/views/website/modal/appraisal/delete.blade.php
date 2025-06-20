@@ -12,9 +12,7 @@
                 @csrf
                 @method('DELETE')
                 <div class="modal-body">
-                    <p>Apakah Anda yakin ingin menghapus appraisal id-
-                        <strong>{{ $appraisal->id }} </strong> dari riwayat
-                        appraisal?
+                    <p>Apakah Anda yakin ingin menghapus data ini?
                     </p>
                 </div>
                 <div class="modal-footer">

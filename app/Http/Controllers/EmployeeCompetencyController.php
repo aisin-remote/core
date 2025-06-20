@@ -7,6 +7,7 @@ use App\Models\Competency;
 use App\Models\Employee;
 use App\Models\GroupCompetency;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 
@@ -19,34 +20,77 @@ class EmployeeCompetencyController extends Controller
      */
     public function index($company = null)
     {
+        $user = Auth::user();
+        if (! $user) {
+            abort(403, 'Unauthorized');
+        }
+
         $title = 'Employee Competency';
+
+        // Hierarki posisi tertinggi → terendah
+        $hierarchy = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        // Ambil semua karyawan (HRD akan melihat semua)
         $emps = Employee::with('employeeCompetencies.competency.group_competency')
-            ->when($company, function ($query) use ($company) {
-                $query->where('company_name', $company);
-            })
+            ->when($company, fn($q) => $q->where('company_name', $company))
             ->get();
 
-        $matrixData = $emps->map(function($e){
+        // Cek posisi user sekarang
+        $myPos   = $user->employee->position;
+        $myIndex = array_search($myPos, $hierarchy);
+        if ($myIndex === false) {
+            $myIndex = count($hierarchy) - 1;
+        }
+
+        // Posisi yang boleh dia lihat di tab
+        $positionsAllowed = $user->role === 'HRD'
+            ? $hierarchy
+            : array_slice($hierarchy, $myIndex + 1);
+
+        // Jika bukan HRD, filter data karyawan yang lebih rendah levelnya
+        if ($user->role !== 'HRD') {
+            $emps = $emps->filter(function($e) use ($hierarchy, $myIndex) {
+                $otherIndex = array_search($e->position, $hierarchy);
+                return $otherIndex !== false && $otherIndex > $myIndex;
+            })->values();
+        }
+
+        // Mapping ke matrixData
+        $matrixData = $emps->map(function($e) {
             return [
                 'id'       => $e->id,
                 'name'     => $e->name,
                 'position' => $e->position,
-                'comps'    => $e->employeeCompetencies->map(function($ec){
-                    return [
-                        'group' => $ec->competency->group_competency->name,
-                        'name'  => $ec->competency->name,
-                        'act'   => $ec->act,
-                        'plan'  => $ec->competency->plan,
-                    ];
-                })->toArray(),
+                'comps'    => $e->employeeCompetencies->map(fn($ec) => [
+                    'group' => $ec->competency->group_competency->name,
+                    'name'  => $ec->competency->name,
+                    'act'   => $ec->act,
+                    'plan'  => $ec->competency->plan,
+                ])->toArray(),
             ];
         })->toArray();
+
         $groups = GroupCompetency::pluck('name')->toArray();
 
         return view('website.employee_competency.index', compact(
-            'title', 'matrixData', 'groups', 'company'
+            'title',
+            'matrixData',
+            'groups',
+            'company',
+            'positionsAllowed'
         ));
     }
+
 
     /**
      * Show the form for creating a new resource.

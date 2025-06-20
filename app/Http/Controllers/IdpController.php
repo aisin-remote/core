@@ -3,14 +3,17 @@
 namespace App\Http\Controllers;
 
 use Carbon\Carbon;
+use App\Models\Hav;
 use App\Models\Idp;
 use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Models\HavDetail;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
 use App\Models\Development;
+use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\DevelopmentOne;
 use App\Models\DetailAssessment;
@@ -27,11 +30,11 @@ class IdpController extends Controller
     private function getSubordinatesFromStructure(Employee $employee)
     {
         $subordinateIds = collect();
-        
+
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
-            
+
             $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
 
@@ -94,10 +97,12 @@ class IdpController extends Controller
         return $subordinateIds->merge($operatorIds);
     }
 
-    public function index($company = null, $reviewType = 'mid_year')
+    public function index(Request $request, $company = null, $reviewType = 'mid_year')
     {
         $user = auth()->user();
         $employee = $user->employee;
+        $npk = $request->query('npk');
+        $search = $request->query('search');
         $alcs = [
             1 => 'Vision & Business Sense',
             2 => 'Customer Focus',
@@ -110,42 +115,73 @@ class IdpController extends Controller
         ];
 
         // Ambil assessment terbaru berdasarkan created_at
-        if ($user->role === 'HRD') {
-            $assessments = Assessment::whereIn('id', function ($query) {
-                $query->selectRaw('id')
-                    ->from('assessments as a')
-                    ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM assessments WHERE employee_id = a.employee_id)');
-            })
-                ->with(['employee', 'details', 'idp'])
-                ->when(
-                    $company,
-                    fn($query) =>
-                    $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
-                )
-                ->orderByDesc('created_at')
-                ->paginate(10);
+        if ($user->isHRDorDireksi()) {
+            $assessments = Hav::with(['details.idp', 'employee'])
+                ->when($company, function ($query) use ($company) {
+                    $query->whereHas('employee', function ($q) use ($company) {
+                        $q->where('company_name', $company);
+                    });
+                })
+                ->when($npk, function ($query) use ($npk) {
+                    $query->whereHas('employee', function ($q) use ($npk) {
+                        $q->where('npk', $npk);
+                    });
+                })
+                ->when($search, function ($query) use ($search) {
+                    $query->whereHas('employee', function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('npk', 'like', '%' . $search . '%');
+                    });
+                })
+                ->whereIn('id', function ($query) {
+                    $query->selectRaw('MAX(id)')
+                        ->from('havs')
+                        ->groupBy('employee_id');
+                })
+                ->orderByDesc('created_at') // tambahkan ini jika tetap ingin urut terbaru
+                ->paginate(10); // sesuaikan jika perlu pagination
+
         } else {
             // Ambil employee berdasarkan user login
             $emp = Employee::where('user_id', $user->id)->first();
+
+
             if (!$emp) {
                 $assessments = collect(); // Kosong jika tidak ada employee
             } else {
+
                 // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-                $viewLevel = $employee->getSubAuth();
-                $subordinates = $employee->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
-                
+                $viewLevel = $emp->getCreateAuth();
+                $subordinates = $emp->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
+                // dd($subordinates);
+
                 // Ambil assessment terbaru hanya milik bawahannya
-                $assessments = Assessment::with(['employee', 'details', 'idp'])
-                    ->whereIn('employee_id', $subordinates)
+                $assessments = hav::with(['details.idp', 'employee', 'details.alc'])
+                    ->whereHas('employee', function ($query) use ($subordinates) {
+                        $query->whereIn('id', $subordinates);
+                    })
                     ->when(
                         $company,
                         fn($query) =>
                         $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
                     )
+                    ->when(
+                        $npk,
+                        fn($query) =>
+                        $query->whereHas('employee', fn($q) => $q->where('npk', $npk))
+                    )
+                    ->when(
+                        $search,
+                        fn($query) =>
+                        $query->whereHas('employee', function ($q) use ($search) {
+                            $q->where('name', 'like', '%' . $search . '%')
+                                ->orWhere('npk', 'like', '%' . $search . '%');
+                        })
+                    )
                     ->whereIn('id', function ($query) {
-                        $query->selectRaw('id')
-                            ->from('assessments as a')
-                            ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM assessments WHERE employee_id = a.employee_id)');
+                        $query->selectRaw('MAX(id)')
+                            ->from('havs')
+                            ->groupBy('employee_id');
                     })
                     ->get();
             }
@@ -155,7 +191,7 @@ class IdpController extends Controller
         $employees = Employee::all();
 
         // Ambil IDP
-        $idps = Idp::with('assessment', 'employee')->get();
+        $idps = Idp::with('hav', 'employee', 'commentHistory')->get();
 
         // Daftar program
         $programs = [
@@ -173,33 +209,37 @@ class IdpController extends Controller
         $mid = Development::all();
 
         foreach ($assessments as $assessment) {
-            // Ambil semua program IDP yang tersimpan
-            $savedPrograms = $assessment->idp->map(function ($idp) {
-                return [
-                    'program' => $idp->development_program,
-                    'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
-                ];
-            });
+            foreach ($assessment->details as $detail) {
+                // Ambil semua program IDP yang tersimpan
+                $savedPrograms = $detail->idp->where('status', 3)->map(function ($idp) {
+                    return [
+                        'program' => $idp->development_program,
+                        'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
+                    ];
+                });
 
-            // Pisahkan berdasarkan due date
-            $midYearPrograms = [];
-            $oneYearPrograms = [];
-            $currentDate = Carbon::now();
+                // Pisahkan berdasarkan due date
+                $midYearPrograms = [];
+                $oneYearPrograms = [];
+                $currentDate = Carbon::now();
 
-            foreach ($savedPrograms as $program) {
-                $dueDate = Carbon::parse($program['date']); // Menggunakan 'date' dari database
-                $midYearPrograms[] = $program;
-                $oneYearPrograms[] = $program;
+                foreach ($savedPrograms as $program) {
+                    $dueDate = Carbon::parse($program['date']);
+
+                    if ($dueDate->isBefore(now()->addMonths(6))) {
+                        $midYearPrograms[] = $program;
+                    } else {
+                        $oneYearPrograms[] = $program;
+                    }
+                }
+
+                // Simpan ke objek detail agar bisa diakses di Blade
+                $detail->recommendedProgramsMidYear = $midYearPrograms;
+                $detail->recommendedProgramsOneYear = $oneYearPrograms;
             }
-
-            // Simpan ke objek assessment agar bisa diakses di Blade
-            $assessment->recommendedProgramsMidYear = $midYearPrograms;
-            $assessment->recommendedProgramsOneYear = $oneYearPrograms;
-
-            // Tambahkan strengths & weaknesses
-            $assessment->strengths = $assessment->strength;
-            $assessment->weaknesses = $assessment->weakness;
         }
+
+
 
         return view('website.idp.index', compact(
             'employees',
@@ -213,44 +253,183 @@ class IdpController extends Controller
         ));
     }
 
+    public function list(Request $request, $company = null, $reviewType = 'mid_year')
+    {
+        $user = auth()->user();
+        $search = $request->query('search');
+        $npk = $request->query('npk');
+        $filter = $request->query('filter', 'all');
+
+        $alcs = [
+            1 => 'Vision & Business Sense',
+            2 => 'Customer Focus',
+            3 => 'Interpersonal Skill',
+            4 => 'Analysis & Judgment',
+            5 => 'Planning & Driving Action',
+            6 => 'Leading & Motivating',
+            7 => 'Teamwork',
+            8 => 'Drive & Courage'
+        ];
+
+        $assessments = collect();
+
+        if ($user->isHRDorDireksi()) {
+            $assessments = Idp::with('hav.hav.employee')
+                ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
+                ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
+                ->when($search, fn($q) => $q->whereHas('hav.hav.employee', function ($q) use ($search) {
+                    $q->where('name', 'like', "%$search%")
+                        ->orWhere('npk', 'like', "%$search%");
+                }))
+                ->orderByDesc('created_at')
+                ->get()
+                ->groupBy(fn($item) => optional($item->hav?->hav?->employee)->id)
+                ->map(fn($group) => $group->first())
+                ->values();
+
+            $assessments = new \Illuminate\Pagination\LengthAwarePaginator(
+                $assessments,
+                $assessments->count(),
+                10,
+                $request->get('page', 1),
+                ['path' => $request->url(), 'query' => $request->query()]
+            );
+        } else {
+            $emp = Employee::where('user_id', $user->id)->first();
+
+            if ($emp) {
+                $subordinates = $this->getSubordinatesFromStructure($emp)->pluck('id')->toArray();
+
+                $assessments = Idp::with('hav.hav.employee')
+                    ->whereHas('hav.hav.employee', fn($q) => $q->whereIn('id', $subordinates))
+                    ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
+                    ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
+                    ->when($search, function ($q) use ($search) {
+                        $q->whereHas('hav.hav.employee', function ($q) use ($search) {
+                            $q->where('name', 'like', "%$search%")
+                                ->orWhere('npk', 'like', "%$search%");
+                        });
+                    })
+                    ->orderByDesc('created_at')
+                    ->get()
+                    ->groupBy(fn($item) => optional($item->hav?->hav?->employee)->id)
+                    ->map(fn($group) => $group->first())
+                    ->values();
+
+                $assessments = new \Illuminate\Pagination\LengthAwarePaginator(
+                    $assessments,
+                    $assessments->count(),
+                    10,
+                    $request->get('page', 1),
+                    ['path' => $request->url(), 'query' => $request->query()]
+                );
+            }
+        }
+
+        $employees = Employee::all();
+        $idps = Idp::with(['assessment', 'employee', 'commentHistory'])->get();
+        $details = DevelopmentOne::all();
+        $mid = Development::all();
+
+        $allPositions = [
+            'President',
+            'VPD',
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ') ? trim(str_replace('Act', '', $rawPosition)) : $rawPosition;
+        $positionIndex = array_search($currentPosition, $allPositions) ?: array_search('Operator', $allPositions);
+        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
+
+        return view('website.idp.list', compact(
+            'employees',
+            'assessments',
+            'alcs',
+            'visiblePositions',
+            'filter',
+            'details',
+            'mid',
+            'idps',
+            'company'
+        ));
+    }
+    public function show($employee_id)
+    {
+        $employee = Employee::with('assessments')->find($employee_id);
+
+        if (!$employee) {
+            return response()->json([
+                'error' => 'Employee not found'
+            ], 404);
+        }
+
+        $assessments = Idp::with('hav.hav.employee')
+            ->whereHas('hav.hav.employee', function ($q) use ($employee) {
+                $q->where('id', $employee->id);
+            })
+            ->orderBy('date', 'desc')
+            ->get();
+
+        return response()->json([
+            'employee' => $employee,
+            'assessments' => $assessments
+        ]);
+    }
+
     public function store(Request $request)
     {
-        // $request->validate([
-        //     'development_program' => 'required|array',
-        //     'category' => 'required|array',
-        //     'development_target' => 'required',
-        //     'date' => 'required',
-        // ]);
-
         $assessment = Assessment::where('id', $request->assessment_id)->first();
-
         try {
-            $idp = Idp::where('assessment_id', $request->assessment_id)
+            DB::beginTransaction();
+            $idp = Idp::where('hav_detail_id', $request->hav_detail_id)
                 ->where('alc_id', $request->alc_id)
                 ->first();
 
             if ($idp) {
                 $idp->update([
-                    'development_program' => $request->development_program,
-                    'category' => $request->category,
-                    'development_target' => $request->development_target,
-                    'date' => $request->date,
+                    'development_program' => $request->development_program ?? $idp->development_program,
+                    'category' => $request->category ?? $idp->category,
+                    'development_target' => $request->development_target ?? $idp->development_target,
+                    'date' => $request->date ?? $idp->date,
                 ]);
-                return redirect()->route('idp.index')->with('success', 'Development updated successfully.');
+
+                DB::commit();
+
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Development updated successfully.',
+                    'idp' => $idp, // opsional: kirim data IDP terbaru
+                ]);
             } else {
-                Idp::create([
+                $newIdp = Idp::create([
+                    'hav_detail_id' => $request->hav_detail_id,
                     'alc_id' => $request->alc_id,
                     'assessment_id' => $request->assessment_id,
-                    'employee_id' => $assessment->employee_id,
                     'development_program' => $request->development_program,
                     'category' => $request->category,
                     'development_target' => $request->development_target,
-                    'status' => 1,
+                    'status' => 0,
                     'date' => $request->date,
                 ]);
-                return redirect()->route('idp.index')->with('success', 'Development added successfully.');
+
+                DB::commit();
+                return response()->json([
+                    'status' => 'success',
+                    'message' => 'Development added successfully.',
+                    'idp' => $newIdp, // opsional: kirim data IDP yang baru dibuat
+                ]);
             }
         } catch (\Exception $e) {
+            DB::rollBack();
             return back()->with('error', $e->getMessage());
         }
     }
@@ -512,51 +691,176 @@ class IdpController extends Controller
 
     public function sendIdpToSupervisor(Request $request)
     {
-        $employeeId = $request->input('employee_id');
+        try {
+            $employeeId = $request->input('employee_id');
 
-        if (!$employeeId) {
-            return response()->json(['message' => 'Employee ID tidak valid.'], 400);
+            if (!$employeeId) {
+                return response()->json(['message' => 'Employee ID tidak valid.'], 400);
+            }
+
+            // Ambil semua detail assessment ALC untuk employee
+            $detailAssessments = Hav::with(['employee', 'details.idp', 'details.alc']) // tambah alc pada eager loading
+                ->whereHas('employee', function ($query) use ($employeeId) {
+                    $query->where('employee_id', $employeeId);
+                })
+                ->whereIn('id', function ($query) {
+                    $query->selectRaw('id')
+                        ->from('havs as a')
+                        ->whereRaw('a.created_at = (
+                            SELECT MAX(created_at)
+                            FROM havs
+                            WHERE employee_id = a.employee_id
+                        )');
+                })
+                ->get();
+
+            // Cek apakah ada detail HAV dengan score < 3 tapi belum punya IDP
+            $missingIdp = false;
+
+            foreach ($detailAssessments as $assessment) {
+                foreach ($assessment->details as $detail) {
+                    if ($detail->score < 3 && empty($detail->idp)) {
+                        $missingIdp = true;
+                        break 2; // keluar dari kedua foreach
+                    }
+                }
+            }
+
+            if ($missingIdp) {
+                return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat!'], 400);
+            }
+
+            // Filter nilai < 3
+            $belowThree = $detailAssessments->flatMap(function ($assessment) {
+                return $assessment->details->filter(function ($detail) {
+                    return $detail->score < 3;
+                });
+            });
+
+            if ($belowThree->isEmpty()) {
+                return response()->json(['message' => 'Tidak ada ALC dengan nilai di bawah 3.'], 400);
+            }
+
+            // Update semua IDP milik employee menjadi status = 1
+            IDP::with('hav.hav.employee')
+                ->whereHas('hav.hav.employee', function ($q) use ($employeeId) {
+                    $q->where('employee_id', $employeeId);
+                })
+                ->where('status', 0)
+                ->update([
+                    'status' => 1
+                ]);
+
+            return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'message' => 'Terjadi kesalahan saat mengirim IDP. Silakan coba lagi.',
+                'error' => $e->getMessage(), // Boleh dihapus di production
+            ], 500);
         }
-
-        // Ambil semua detail assessment ALC untuk employee
-        $detailAssessments = DetailAssessment::whereHas('assessment', function ($query) use ($employeeId) {
-            $query->where('employee_id', $employeeId);
-        })->whereHas('alc')->get();
-
-        if ($detailAssessments->isEmpty()) {
-            return response()->json(['message' => 'Belum ada data ALC yang dinilai.'], 400);
-        }
-
-        // Filter nilai < 3
-        $belowThree = $detailAssessments->filter(function ($detail) {
-            return $detail->score < 3;
-        });
-
-        if ($belowThree->isEmpty()) {
-            return response()->json(['message' => 'Tidak ada ALC dengan nilai di bawah 3.'], 400);
-        }
-
-        // Pastikan semua ALC < 3 sudah dinilai (dihitung berdasarkan jumlah unik ALC)
-        $alcIdsBelowThree = $belowThree->pluck('alc_id')->unique();
-
-        $totalExpected = $alcIdsBelowThree->count();
-        $totalActual = DetailAssessment::whereIn('alc_id', $alcIdsBelowThree)
-            ->whereHas('assessment', function ($q) use ($employeeId) {
-                $q->where('employee_id', $employeeId);
-            })->count();
-
-        if ($totalActual < $totalExpected) {
-            return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat.'], 400);
-        }
-
-        // Update semua IDP milik employee menjadi status = 2
-        IDP::where('employee_id', $employeeId)
-            ->update([
-                'status' => 2
-            ]);
-
-        return response()->json(['message' => 'IDP berhasil dikirim ke atasan dan status diperbarui.']);
     }
-    
 
+
+    public function approval()
+    {
+        $user = auth()->user();
+        $employee = $user->employee;
+
+        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
+        $checkLevel = $employee->getFirstApproval();
+        $approveLevel = $employee->getFinalApproval();
+
+        $normalized = $employee->getNormalizedPosition();
+
+        if ($normalized === 'vpd') {
+            // Jika VPD, filter GM untuk check dan Manager untuk approve
+            $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+        } else {
+            // Default (tidak filter posisi bawahannya)
+            $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+        }
+
+        $checkIdps = Idp::with('hav.hav.employee', 'hav')
+            ->where('status', 1)
+            ->whereHas('hav.hav.employee', function ($q) use ($subCheck) {
+                $q->whereIn('employee_id', $subCheck);
+            })
+            ->get();
+
+        $checkIdpIds = $checkIdps->pluck('id')->toArray();
+
+        $approveIdps = Idp::with('hav.hav.employee', 'hav')
+            ->where('status', 2)
+            ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
+                $q->whereIn('employee_id', $subApprove);
+            })
+            ->whereNotIn('id', $checkIdpIds) // ← filter agar tidak muncul dua kali
+            ->get();
+
+        $idps = $checkIdps->merge($approveIdps);
+
+        return view('website.approval.idp.index', compact('idps'));
+    }
+    public function approve($id)
+    {
+        $idp = Idp::findOrFail($id);
+
+        if ($idp->status == 1) {
+            $idp->status = 2;
+            $idp->save();
+
+            return response()->json([
+                'message' => 'IDP has been approved!'
+            ]);
+        }
+
+        if ($idp->status == 2) {
+            $idp->status = 3;
+            $idp->save();
+
+            return response()->json([
+                'message' => 'IDP has been approved!'
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Something went wrong!'
+        ], 400);
+    }
+
+
+    public function revise(Request $request)
+    {
+        $idp = Idp::findOrFail($request->id);
+
+        // Menyimpan status HAV sebagai disetujui
+        $idp->status = 0; // Status disetujui
+
+        // Ambil komentar dari input request
+        $comment = $request->input('comment');
+        $employee = auth()->user()->employee;
+        // Menyimpan komentar ke dalam tabel hav_comment_history
+        if ($employee) {
+            $idp->commentHistory()->create([
+                'comment' => $comment,
+                'employee_id' =>  $employee->id  // Menyimpan siapa yang memberikan komentar
+            ]);
+        }
+
+        // Simpan perubahan status HAV
+        $idp->save();
+
+        // Kembalikan respons JSON
+        return response()->json(['message' => 'Data berhasil direvisi.']);
+    }
+
+    public function destroy($id)
+    {
+        $idp = Idp::findOrFail($id);
+        $idp->delete();
+
+        return redirect()->back()->with('success', 'IDP deleted successfully.');
+    }
 }

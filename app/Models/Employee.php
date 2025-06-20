@@ -3,6 +3,11 @@
 namespace App\Models;
 
 use Carbon\Carbon;
+use App\Models\Assessment;
+use App\Models\Competency;
+use App\Models\Department;
+use Illuminate\Support\Str;
+use App\Models\EmployeeCompetency;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -34,11 +39,11 @@ class Employee extends Model
     {
         return $this->hasMany(EmployeeCompetency::class, 'employee_id', 'id');
     }
-    
+
     public function competencies()
     {
         return $this->belongsToMany(Competency::class)
-                    ->withPivot('score');
+            ->withPivot('score');
     }
 
     public function supervisor()
@@ -48,12 +53,17 @@ class Employee extends Model
 
     public function user()
     {
-        return $this->hasOne(User::class, 'employee_id', 'id');
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     public function promotionHistory()
     {
         return $this->hasMany(PromotionHistory::class, 'employee_id', 'id');
+    }
+
+    public function idpCommentHistory()
+    {
+        return $this->hasMany(IdpCommentHistory::class, 'employee_id', 'id');
     }
 
     public function astratraining()
@@ -138,6 +148,7 @@ class Employee extends Model
             : null;
     }
 
+
     // Mengambil Hav
     public function hav()
     {
@@ -167,12 +178,17 @@ class Employee extends Model
     // Accessor untuk Department
     public function getDepartmentAttribute()
     {
+        // dd($this->leadingSubSection);
         if ($this->subSection?->section?->department) {
             return $this->subSection->section->department;
         }
 
         if ($this->section?->department) {
             return $this->section->department;
+        }
+
+        if ($this->leadingSubSection?->section->department) {
+            return $this->leadingSubSection->section->department;
         }
 
         if ($this->leadingSection?->department) {
@@ -223,7 +239,7 @@ class Employee extends Model
     }
 
     // ambil bawahan
-    public function getSubordinatesByLevel(int $level = 1)
+    public function getSubordinatesByLevel(int $level = 1, array $allowedPositions = [])
     {
         $currentEmployees = collect([$this]);
 
@@ -235,35 +251,52 @@ class Employee extends Model
             }
 
             if ($nextEmployees->isEmpty()) {
-                break;
+                return collect();  // langsung return kosong kalau gak ada bawahan di iterasi ini
             }
 
             $currentEmployees = $nextEmployees;
         }
 
-        return $currentEmployees;
+        // Jika tidak diberikan posisi yang diizinkan, gunakan default lama
+        if (empty($allowedPositions)) {
+            $allowedPositions = ['manager', 'supervisor', 'leader', 'jp', 'operator', 'gm'];
+        }
+
+        return $currentEmployees->filter(function ($employee) use ($allowedPositions) {
+            $normalized = $employee->getNormalizedPosition();
+            return in_array($normalized, $allowedPositions);
+        });
     }
 
     private function getDirectSubordinatesOf(Employee $employee)
     {
         $subordinateIds = collect();
 
+        $normalizedPosition = $employee->getNormalizedPosition();
+
+
+        if ($normalizedPosition === 'vpd') {
+            $managerIds = Department::pluck('manager_id')->filter();
+            $gmIds = Division::pluck('gm_id')->filter();
+        
+            $subordinateIds = $managerIds->merge($gmIds)->unique();        
+        } elseif($normalizedPosition === 'president') {
+            $subordinateIds = Division::pluck('gm_id')->filter()->unique();
+        }
+
+        // Lanjutkan ke kondisi biasa
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
             $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
-
         } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
             $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
-
         } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
             $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
-
         } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
             $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
-
         } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
             $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
                 ->where('id', '!=', $employee->id)
@@ -318,14 +351,13 @@ class Employee extends Model
         return $superiors;
     }
 
-    public function manualSuperiorMap()
+    public static function manualSuperiorMap()
     {
         return [
-            'gm' => 'vp',           // GM ke Vice President
-            'vp' => 'president',    // VP ke President
-            // Tambahkan sesuai kebutuhan
+            'gm' => 'vp',
+            'vp' => 'president',
         ];
-    }
+    }    
 
     private function getDirectSuperiorOf(Employee $employee)
     {
@@ -333,7 +365,7 @@ class Employee extends Model
         if ($employee->leadingDivision && $employee->leadingDivision->plant && $employee->leadingDivision->plant->director_id) {
             return Employee::find($employee->leadingDivision->plant->director_id);
         }
-        
+
         if ($employee->leadingDepartment && $employee->leadingDepartment->division && $employee->leadingDepartment->division->gm_id) {
             return Employee::find($employee->leadingDepartment->division->gm_id);
         }
@@ -349,7 +381,7 @@ class Employee extends Model
         if ($employee->subSection && $employee->subSection->leader_id) {
             return Employee::find($employee->subSection->leader_id);
         }
-        
+
         // Fallback manual berdasarkan posisi
         $map = self::manualSuperiorMap();
         $myPosition = strtolower($employee->position);
@@ -361,37 +393,86 @@ class Employee extends Model
         return null;
     }
 
+    public function getNormalizedPosition()
+    {
+        $aliasMap = [
+            'section head'     => 'supervisor',
+            'act section head' => 'supervisor',
+            'coordinator'      => 'manager',
+            'act coordinator'  => 'manager',
+            'act manager'      => 'manager',
+            'act supervisor'   => 'supervisor',
+            'act leader'       => 'leader',
+            'act jp'           => 'jp',
+            'act gm'           => 'gm',
+            'GM'               => 'gm',
+            'direktur'         => 'direktur',
+            'director'         => 'direktur',
+            'vpd'              => 'vpd',
+            'president'        => 'president',
+        ];
+
+        $position = strtolower($this->position);
+        return $aliasMap[$position] ?? $position;
+    }
+
+
     // mapping create authorization
     public function getCreateAuth()
     {
-        return match (strtolower($this->position)) {
+        return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 2,
-            'supervisor', 'manager', 'gm', 'section head' => 1,
-            default => 0,
-        };
-    }
-    
-    public function getFirstApproval()
-    {
-        return match (strtolower($this->position)) {
-            'jp', 'operator', 'leader' => 3,
-            'supervisor', 'manager', 'gm' => 2,
-            default => 0,
-        };
-    }
-    public function getFinalApproval()
-    {
-        return match (strtolower($this->position)) {
-            'jp', 'operator', 'leader' => 4,
-            'supervisor', 'manager', 'gm' => 3,
+            'supervisor', 'manager', 'gm', 'direktur' => 1,
             default => 0,
         };
     }
 
+    public function getFirstApproval()
+    {
+        return match ($this->getNormalizedPosition()) {
+            'jp', 'operator', 'leader', 'manager' => 3,
+            'supervisor', 'gm', 'direktur' => 2,
+            'vpd' => 1,
+            default => 0,
+        };
+    }
+
+    public function getFinalApproval()
+    {
+        return match ($this->getNormalizedPosition()) {
+            'jp', 'operator', 'leader' => 4,
+            'supervisor', 'manager', 'gm' => 3,
+            'vpd', 'president' =>1,
+            default => 0,
+        };
+    }
+
+
+    // Get average from 3 last performance appraisal history by employee_id
+    public static function getLast3Performance($employee_id, $year)
+    {
+        $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
+            ->whereIn(\DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
+            ->get();
+
+        return $performance;
+    }
+
+    // astra grade conversion
+    public function conversion()
+    {
+        return $this->hasOne(GradeConversion::class, 'aisin_grade', 'grade');
+    }
+
+    public function getAstraGradeAttribute()
+    {
+        $conversion = $this->conversion;
+        return $conversion ? $conversion->astra_grade : null;
+    }
     public function availableCompetencies()
     {
         $department = $this->departments->first();
-        
+
         if (!$department) {
             return collect();
         }
@@ -401,5 +482,23 @@ class Employee extends Model
             ->whereNotIn('id', $this->employeeCompetencies->pluck('competency_id'))
             ->get();
     }
-    
+    public function getBagianAttribute()
+    {
+        $position = $this->getNormalizedPosition() ?? '';
+        $position = strtolower($position);
+        return match (true) {
+            Str::contains($position, 'president') => 'President',
+            Str::contains($position, 'direktur') => $this->leadingPlant->name ?? 'Tidak Ada Plant',
+            Str::contains($position, 'gm') => $this->leadingDivision->name ?? 'Tidak Ada Divisi',
+            Str::contains($position, 'manager') => $this->leadingDepartment->name ?? 'Tidak Ada Departemen',
+            default => $this->department->name
+                ?? 'Tidak Ada Departemen',
+        };
+    }
+
+    public function isDireksi(): bool
+    {
+        $direksiPositions = ['President', 'VPD'];  // Tambah posisi direksi lain kalau perlu
+        return in_array($this->position, $direksiPositions);
+    }
 }

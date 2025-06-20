@@ -16,4 +16,9 @@ class PerformanceAppraisalHistory extends Model
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
     }
+
+    public function masterPerformance()
+    {
+        return $this->belongsTo(PerformanceMaster::class, 'score', 'code');
+    }
 }

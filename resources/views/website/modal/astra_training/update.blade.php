@@ -14,12 +14,6 @@
                     <input type="hidden" name="employee_id" value="{{ $astraTraining->employee_id }}">
 
                     <div class="mb-3">
-                        <label class="form-label">Date</label>
-                        <input type="date" name="year" class="form-control" required
-                            value="{{ \Carbon\Carbon::parse($astraTraining->date_end)->format('Y-m-d') }}">
-                    </div>
-
-                    <div class="mb-3">
                         <label class="form-label">Program</label>
                         <input type="text" name="program" class="form-control" required
                             value="{{ $astraTraining->program }}">
@@ -41,6 +35,24 @@
                         <label class="form-label">Total Score</label>
                         <input type="number" name="total_score" class="form-control" required step="0.01"
                             value="{{ $astraTraining->total_score }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Start Date</label>
+                        <input type="date" name="date_start" class="form-control" required
+                            value="{{ $astraTraining->date_start }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">End Date</label>
+                        <input type="date" name="date_end" class="form-control" required
+                            value="{{ $astraTraining->date_end }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Institusi</label>
+                        <input type="text" name="institusi" class="form-control" required
+                            value="{{ $astraTraining->institusi }}">
                     </div>
                 </div>
 

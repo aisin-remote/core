@@ -11,13 +11,16 @@ use App\Http\Controllers\PlantController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\RegisterController;
+use App\Http\Controllers\ToDoListController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\ChecksheetController;
 use App\Http\Controllers\CompetencyController;
-use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
+use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\SkillMatrixController;
+use App\Http\Controllers\ChecksheetUserController;
+use App\Http\Controllers\EvaluationController;
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -41,9 +44,9 @@ Route::prefix('employeeCompetencies')->group(function () {
     Route::get('/get-competencies', [EmployeeCompetencyController::class, 'getCompetencies']);
     Route::get('/employee/{employee}', [EmployeeCompetencyController::class, 'show'])->name('employeeCompetencies.show');
     Route::delete('/delete-all/{employee}', [EmployeeCompetencyController::class, 'destroyAll'])->name('employeeCompetencies.destroyAll');
-    Route::get('/{id}/checksheet', [EmployeeCompetencyController::class,'checksheet']);
+    Route::get('/{id}/checksheet', [EmployeeCompetencyController::class, 'checksheet']);
 });
-    
+
 /* Group Competency */
 Route::resource('group_competency', GroupCompetencyController::class);
 Route::resource('competency', CompetencyController::class);
@@ -69,7 +72,24 @@ Route::get('/checksheet-assessment/{employeeId}/{competencyId}', [ChecksheetAsse
 Route::get('/checksheet-assessment/view/{employeeCompetencyId}', [ChecksheetAssessmentController::class, 'show'])
      ->name('checksheet-assessment.view');
 Route::post('/checksheet-assessment', [ChecksheetAssessmentController::class, 'store'])
-    ->name('checksheet-assessment.store'); 
+     ->name('checksheet-assessment.store');
+Route::get('/checksheet-assessment/history/{employeeId}/{competencyId}', [ChecksheetAssessmentController::class, 'competencyHistory'])
+    ->name('checksheet-assessment.competency-history');
+
+/* Checksheet User */
+Route::get('/checksheet_user', [ChecksheetUserController::class, 'index'])->name('checksheet_user.index');
+Route::post('/checksheet_user/create', [ChecksheetUserController::class, 'create'])->name('checksheet_user.create');
+Route::post('/checksheet_user/store', [ChecksheetUserController::class, 'store'])->name('checksheet_user.store');
+Route::delete('/checksheet_user/{checksheetUser}', [ChecksheetUserController::class, 'destroy'])->name('checksheet_user.destroy');
+Route::get('/get-competencies', [ChecksheetUserController::class, 'getCompetencies'])->name('get.competencies');
+
+/* Evaluation */
+Route::get('/evaluation/checksheet-users/{employeeId}/{competencyId}', [EvaluationController::class,'getChecksheetUsers'])
+    ->name('evaluation.checksheet-users');
+Route::get('/evaluation/{employee_competency_id}', [EvaluationController::class,'index'])
+    ->name('evaluation.index');
+Route::post('/evaluation', [EvaluationController::class,'store'])
+    ->name('evaluation.store');
 
 /* Skill Matrix */
 Route::middleware(['auth'])->group(function () {
@@ -116,6 +136,10 @@ Route::middleware('auth')->group(function () {
         return view('website.dashboard.people');
     })->name('people.index');
 
+    Route::prefix('todolist')->group(function () {
+        Route::get('/', [ToDoListController::class, 'index'])->name('todolist.index');
+    });
+
     Route::prefix('hav')->group(function () {
         Route::get('/list-create', [HavController::class, 'listCreate'])->name('hav.list-create');
         Route::get('/generate-create/{id}', [HavController::class, 'generateCreate'])->name('hav.generate-create');
@@ -124,16 +148,21 @@ Route::middleware('auth')->group(function () {
         Route::get('/hav/ajax-list', [HavController::class, 'ajaxList'])->name('hav.ajax.list');
         Route::delete('/{id}', [HavController::class, 'destroy'])->name('hav.destroy');
         Route::get('/hav/export', [HavController::class, 'export'])->name('hav.export');
+        Route::get('/download-upload/{havId}', [HavController::class, 'downloadLatestUpload'])
+            ->name('download.upload');
         Route::get('/history/{id}', [HavController::class, 'show'])->name('hav.show');
+        Route::get('/get3-last-performance/{id}/{year}', [HavController::class, 'get3LastPerformance'])->name('hav.get3LastPerformance');
         Route::post('/import', [HavController::class, 'import'])->name('hav.import');
+        Route::get('/get-history/{hav_id}', [HavController::class, 'getComment'])->name('hav.getComment');
 
-        Route::get('/hav/test-import', function () {
-        });
+        Route::get('/exportassign/{id}', [HavController::class, 'exportassign'])->name('hav.exportassign');
 
         // Pindahkan ke atas
         Route::get('/list/{company?}', [HavController::class, 'list'])->name('hav.list');
+        Route::get('/assign/{company?}', [HavController::class, 'assign'])->name('hav.assign');
         Route::get('/{company?}', [HavController::class, 'index'])->name('hav.index');
     });
+
     Route::prefix('approval')->group(function () {
         Route::get('/list-approval-HAV', [HavController::class, 'approval'])->name('hav.approval');
         Route::get('/list-approval-IDP', [IdpController::class, 'approvalidp'])->name('idp.approvalidp');
@@ -147,9 +176,26 @@ Route::middleware('auth')->group(function () {
              ->where('id','[0-9]+');
     });
 
+    Route::prefix('approval')->group(function () {
+        Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
+        Route::patch('/hav/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
+        Route::patch('/hav/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
+        Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
+        Route::get('/idp/{id}', [IdpController::class, 'approve'])->name('idp.approve');
+        Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
+        Route::get('/skill-matrix', [SkillMatrixController::class, 'approval'])
+        ->name('skillMatrix.approval');
+        Route::post('/skill-matrix/{id}/approve', [SkillMatrixController::class, 'approve'])
+            ->name('skillMatrix.approve')
+            ->where('id','[0-9]+');
+        Route::post('/skill-matrix/{id}/unapprove', [SkillMatrixController::class, 'unapprove'])
+            ->name('skillMatrix.unapprove')
+            ->where('id','[0-9]+');
+    });
+
     Route::prefix('employee')->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
-        Route::get('/{company?}', [EmployeeController::class, 'index'])->name('employee.index');
+
         Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
         Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
         Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
@@ -162,6 +208,7 @@ Route::middleware('auth')->group(function () {
         // promotion
         Route::prefix('promotion')->group(function () {
             Route::delete('/delete/{id}', [EmployeeController::class, 'promotionDestroy'])->name('promotion.destroy');
+            Route::put('/update/{id}', [EmployeeController::class, 'promotionUpdate'])->name('promotion.update');
         });
 
         // work experience
@@ -202,6 +249,7 @@ Route::middleware('auth')->group(function () {
         Route::prefix('profile')->group(function () {
             Route::get('/{id}/profile', [EmployeeController::class, 'profile'])->name('employee.profile');
         });
+        Route::get('/{company?}', [EmployeeController::class, 'index'])->name('employee.index');
     });
 
 
@@ -221,14 +269,15 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/summary', [RtcController::class, 'summary'])->name('rtc.summary');
+        Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/list', [RtcController::class, 'list'])->name('rtc.list');
         Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
     });
 
     Route::prefix('idp')->group(function () {
+        Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
         Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
         Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
@@ -236,9 +285,10 @@ Route::middleware('auth')->group(function () {
         Route::post('/idp/store-one-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('idp.storeMidYear');
         Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
         Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
-        Route::delete('/idp/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
+        Route::post('/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
         Route::get('/getData', [IdpController::class, 'getData'])->name('idp.getData');
         Route::get('/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])->name('idp.exportTemplate');
+        Route::get('/history/{id}', [IdpController::class, 'show'])->name('idp.show');
         Route::get('/', function () {
             $employee = Employee::all(); // Ambil semua data karyawan
             return view('website.idp.index', [
@@ -258,6 +308,8 @@ Route::middleware('auth')->group(function () {
         Route::prefix('plant')->group(function () {
             Route::get('/', [PlantController::class, 'plant'])->name('plant.master.index');
             Route::post('/store', [PlantController::class, 'Store'])->name('plant.master.store');
+            Route::put('/update/{id}', [PlantController::class, 'update'])->name('plant.master.update');
+
             Route::delete('/delete/{id}', [PlantController::class, 'plantDestroy'])->name('plant.master.destroy');
         });
 
@@ -265,11 +317,15 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
+            Route::get('/get-managers/{company}', [MasterController::class, 'getManagers']);
+            Route::put('/update/{id}', [MasterController::class, 'departmentUpdate'])->name('department.master.update');
         });
 
         Route::prefix('division')->group(function () {
             Route::get('/', [MasterController::class, 'division'])->name('division.master.index');
             Route::post('/store', [MasterController::class, 'divisionStore'])->name('division.master.store');
+            Route::put('/master/update/{id}', [MasterController::class, 'updateDivision'])->name('division.master.update');
+
             Route::delete('/delete/{id}', [MasterController::class, 'divisionDestroy'])->name('division.master.destroy');
         });
 
@@ -278,11 +334,15 @@ Route::middleware('auth')->group(function () {
             Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
             Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
+            Route::put('/update/{id}', [MasterController::class, 'sectionUpdate'])->name('section.master.update');
         });
 
         Route::prefix('subSection')->group(function () {
             Route::get('/', [MasterController::class, 'subSection'])->name('subSection.master.index');
             Route::post('/store', [MasterController::class, 'subSectionStore'])->name('subSection.master.store');
+
+            Route::put('/update/{id}', [MasterController::class, 'subSectionUpdate'])->name('sub-section.master.update');
+
             Route::delete('/delete/{id}', [MasterController::class, 'subSectionDestroy'])->name('subSection.master.destroy');
         });
 

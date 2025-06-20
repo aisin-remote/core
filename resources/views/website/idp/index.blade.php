@@ -40,16 +40,32 @@
 </style>
 
 @section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                Swal.fire({
+                    title: "Sukses!",
+                    text: "{{ session('success') }}",
+                    icon: "success",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
     <div id="kt_app_content_container" class="app-container  container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInputEmployee" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
+                    <form method="GET" action="{{ url()->current() }}" class="d-flex mb-3">
+                        <input type="text" id="searchInputEmployee" name="search" class="form-control me-2"
+                            placeholder="Search..." style="width: 250px;" value="{{ request('search') }}">
+                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
+                            Search
+                        </button>
+                    </form>
+
+
                 </div>
             </div>
 
@@ -98,7 +114,7 @@
                                             @foreach ($alcs as $id => $title)
                                                 <th class="text-center" style="width: 100px">{{ $title }}</th>
                                             @endforeach
-                                            <th class="text-center">Status</th>
+                                            <th class="text-center" style="width: 150px">Status</th>
                                             <th class="text-center">Actions</th>
                                         </tr>
                                     </thead>
@@ -114,108 +130,243 @@
                                                         ->where('employee.position', $position)
                                                         ->groupBy('employee_id')
                                                         ->map(fn($group) => $group->sortByDesc('created_at')->first());
+                                            $rowNumber = 1;
                                         @endphp
 
                                         @forelse ($filteredEmployees as $index => $assessment)
-                                            <tr>
-                                                <td class="text-center">{{ $loop->iteration }}</td>
-                                                <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
+                                            @php
+                                                // Cek apakah assessment memiliki minimal satu detail dengan score
+                                                $hasScore = $assessment->details->contains(function ($detail) {
+                                                    return !is_null($detail->score);
+                                                });
+                                            @endphp
+                                            @if ($hasScore)
+                                                <tr>
+                                                    <td class="text-center">{{ $rowNumber++ }}</td>
+                                                    <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
+                                                    @foreach ($assessment->details as $title)
+                                                        @php
+                                                            $score = $title->score ?? '-';
+                                                            $idpExists = DB::table('idp')
+                                                                ->where('hav_detail_id', $title->id)
+                                                                ->where('alc_id', $title->alc_id)
+                                                                ->exists();
 
-                                                @foreach ($alcs as $id => $title)
-                                                    @php
-                                                        $detail = $assessment->details->where('alc_id', $id)->first();
-                                                        $score = $detail->score ?? '-';
-                                                        $idpExists = DB::table('idp')
-                                                            ->where('assessment_id', $assessment->id)
-                                                            ->where('alc_id', $id)
-                                                            ->exists();
+                                                            $assessmentId = DB::table('assessments')
+                                                                ->select('id')
+                                                                ->where('employee_id', $index)
+                                                                ->latest()
+                                                                ->first();
 
-                                                        // Ambil level approval dari employee yang sedang di-assess
-                                                        $approvalLevel = $assessment->employee->getCreateAuth();
+                                                            // Ambil level approval dari employee yang sedang di-assess
+                                                            $approvalLevel = $assessment->employee->getCreateAuth();
 
-                                                        // Ambil atasan dari employee tsb berdasarkan level approval
-                                                        $superiors = $assessment->employee->getSuperiorsByLevel(
-                                                            $approvalLevel,
-                                                        );
+                                                            // Ambil atasan dari employee tsb berdasarkan level approval
+                                                            $superiors = $assessment->employee->getSuperiorsByLevel(
+                                                                $approvalLevel,
+                                                            );
 
-                                                        $isSuperior = $superiors->contains(
-                                                            'id',
-                                                            auth()->user()->employee->id,
-                                                        );
-                                                    @endphp
-                                                    <td class="text-center">
-                                                        @if ($score >= 3 || $score === '-')
-                                                            <span class="badge badge-lg badge-success d-block w-100">
-                                                                {{ $score }}
-                                                            </span>
-                                                        @else
-                                                            @if ($isSuperior)
-                                                                {{-- Boleh klik --}}
-                                                                <span class="badge badge-lg badge-danger d-block w-100"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
-                                                                    data-title="Update IDP - {{ $title }}"
-                                                                    data-assessment="{{ $assessment->id }}"
-                                                                    data-alc="{{ $id }}"
-                                                                    style="cursor: pointer;">
+                                                            $isSuperior = $superiors->contains(
+                                                                'id',
+                                                                auth()->user()->employee->id,
+                                                            );
+
+                                                            $emp = [];
+                                                            foreach ($assessment->details as $assessmentDetail) {
+                                                                if ($assessmentDetail->score < 3) {
+                                                                    $emp[$assessment->employee_id][] = [
+                                                                        'assessment_id' =>
+                                                                            $assessmentDetail->assessment_id,
+                                                                        'alc_id' => $assessmentDetail->alc_id,
+                                                                        'alc_name' =>
+                                                                            $assessmentDetail->alc->name ?? 'Unknown',
+                                                                    ];
+                                                                }
+                                                            }
+
+                                                            $status = 'no_approval_needed'; // default jika semua skor >= 3
+
+                                                            foreach ($assessment->details as $detail) {
+                                                                if (
+                                                                    $detail->score < 3 ||
+                                                                    $detail->suggestion_development !== null
+                                                                ) {
+                                                                    $idp = \App\Models\Idp::where(
+                                                                        'hav_detail_id',
+                                                                        $detail->id,
+                                                                    )
+                                                                        ->where('alc_id', $detail->alc_id)
+                                                                        ->first();
+
+                                                                    if (!$idp) {
+                                                                        $status = 'not_created';
+                                                                        break;
+                                                                    } elseif ($idp->status === 0) {
+                                                                        $status = 'draft';
+                                                                        break;
+                                                                    } elseif (
+                                                                        $idp->status === 1 &&
+                                                                        $status !== 'draft'
+                                                                    ) {
+                                                                        $status = 'waiting';
+                                                                    } elseif (
+                                                                        $idp->status === 2 &&
+                                                                        !in_array($status, [
+                                                                            'not_created',
+                                                                            'draft',
+                                                                            'waiting',
+                                                                        ])
+                                                                    ) {
+                                                                        $status = 'checked';
+                                                                        break;
+                                                                    } elseif (
+                                                                        $idp->status === 3 &&
+                                                                        !in_array($status, [
+                                                                            'not_created',
+                                                                            'draft',
+                                                                            'waiting',
+                                                                            'checked',
+                                                                        ])
+                                                                    ) {
+                                                                        $status = 'approved';
+                                                                    }
+                                                                }
+                                                            }
+
+                                                            $badges = [
+                                                                'no_approval_needed' => [
+                                                                    'text' => '-',
+                                                                    'class' => 'light-primary',
+                                                                ],
+                                                                'not_created' => [
+                                                                    'text' => 'Not Created',
+                                                                    'class' => 'light-dark',
+                                                                ],
+                                                                'draft' => [
+                                                                    'text' => 'Need Submit',
+                                                                    'class' => 'light-secondary',
+                                                                ],
+                                                                'waiting' => [
+                                                                    'text' => 'Waiting',
+                                                                    'class' => 'light-warning',
+                                                                ],
+                                                                'checked' => [
+                                                                    'text' => 'Checked',
+                                                                    'class' => 'light-info',
+                                                                ],
+                                                                'approved' => [
+                                                                    'text' => 'Approved',
+                                                                    'class' => 'light-success',
+                                                                ],
+                                                                'revise' => [
+                                                                    'text' => 'Revise',
+                                                                    'class' => 'light-danger',
+                                                                ],
+                                                            ];
+
+                                                            $badge = $badges[$status] ?? $badges['approved'];
+
+                                                            $badgeClass = 'badge-lg d-block w-100 ';
+                                                            if ($score < 3) {
+                                                                $badgeClass .= 'badge-danger';
+                                                            } elseif ($title->suggestion_development !== null) {
+                                                                $badgeClass .= 'badge-warning';
+                                                            } else {
+                                                                $badgeClass .= 'badge-success';
+                                                            }
+
+                                                            $showIcon = false;
+                                                            if ($score < 3) {
+                                                                $showIcon = true;
+                                                            } elseif (
+                                                                $title->suggestion_development !== null &&
+                                                                !$idpExists
+                                                            ) {
+                                                                $showIcon = true;
+                                                            }
+
+                                                        @endphp
+                                                        <td class="text-center">
+                                                            @if ($score === '-')
+                                                                <span class="badge badge-lg badge-success d-block w-100">
                                                                     {{ $score }}
-                                                                    <i
-                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
                                                                 </span>
                                                             @else
-                                                                {{-- Tidak boleh klik --}}
-                                                                <span class="badge badge-lg badge-danger d-block w-100">
+                                                                <span class="badge {{ $badgeClass }}"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $title->alc_id }}"
+                                                                    data-title="Update IDP - {{ $title->alc->name }}"
+                                                                    data-assessment="{{ $assessmentId?->id }}"
+                                                                    data-alc="{{ $title->alc_id }}"
+                                                                    style="cursor: pointer;">
+
                                                                     {{ $score }}
-                                                                    <i
-                                                                        class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+
+                                                                    @if ($showIcon)
+                                                                        <i
+                                                                            class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                                    @endif
                                                                 </span>
                                                             @endif
-                                                        @endif
+                                                        </td>
+                                                    @endforeach
+                                                    <td class="text-center">
+                                                        <span class="badge badge-{{ $badge['class'] }}"
+                                                            style="
+                                                            min-width: 90px;
+                                                            display: inline-block;
+                                                            padding: 0.75rem;
+                                                            text-align: center;
+                                                            font-size: 0.85rem;
+                                                            font-weight: 600;
+                                                            border-radius: 0.375rem;
+                                                            white-space: nowrap;
+                                                        ">
+                                                            {{ $badge['text'] }}
+                                                        </span>
                                                     </td>
-                                                @endforeach
-                                                <td class="text-center">
-                                                    @php
-                                                        // count assesment yang skor < 3
-                                                        $below = 0;
-                                                        foreach ($assessment->details as $alc) {
-                                                            if ((int) $alc->score < 3) {
-                                                                $below++;
-                                                            }
-                                                        }
-                                                    @endphp
+                                                    <td class="text-center" style="width: 50px">
+                                                        <div class="d-flex gap-2 justify-content-center">
+                                                            @php
+                                                                $user = auth()->user();
+                                                                $isHRDorDireksi = $user->isHRDorDireksi();
+                                                                $exportablePositions = [
+                                                                    'Manager',
+                                                                    'GM',
+                                                                    'Act Group Manager',
+                                                                    'Direktur',
+                                                                ];
+                                                            @endphp
 
-                                                    @if ($below > $assessment->idp->count())
-                                                        <!-- IDP sudah dikirim -->
-                                                        <span class="badge badge-lg badge-info">Waiting</span>
-                                                    @elseif ($below == $assessment->idp->count())
-                                                        <!-- IDP belum dikirim, status Pending -->
-                                                        <span class="badge badge-lg badge-warning">Pending</span>
-                                                    @endif
-                                                </td>
-                                                <td class="text-center" style="width: 50px">
-                                                    <div class="d-flex gap-2 justify-content-center">
-                                                        <button type="button" class="btn btn-sm btn-primary"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
-                                                            <i class="fas fa-pencil-alt"></i>
-                                                        </button>
-                                                        <button type="button" class="btn btn-sm btn-info"
-                                                            data-bs-toggle="modal"
-                                                            data-bs-target="#notes_{{ $assessment->employee->id }}">
-                                                            <i class="fas fa-eye"></i>
-                                                        </button>
-                                                        @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
-                                                            <button type="button" class="btn btn-sm btn-success"
-                                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                                <i class="fas fa-file-export"></i>
+                                                            @if (!$isHRDorDireksi)
+                                                                <button type="button" class="btn btn-sm btn-primary"
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
+                                                                    <i class="fas fa-pencil-alt"></i>
+                                                                </button>
+                                                            @endif
+
+                                                            <button type="button" class="btn btn-sm btn-info"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#notes_{{ $assessment->employee->id }}">
+                                                                <i class="fas fa-eye"></i>
                                                             </button>
-                                                        @endif
-                                                        <button type="button" class="btn btn-sm btn-warning"
-                                                            onclick="sendDataConfirmation()">
-                                                            <i class="fas fa-paper-plane"></i>
-                                                        </button>
 
-                                                        {{-- <button type="button" class="btn btn-sm btn-success"
+                                                            @if (in_array($jobPositions, $exportablePositions))
+                                                                <button type="button" class="btn btn-sm btn-success"
+                                                                    onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
+                                                                    <i class="fas fa-file-export"></i>
+                                                                </button>
+                                                            @endif
+
+                                                            @if (!$isHRDorDireksi)
+                                                                <button type="button" class="btn btn-sm btn-warning"
+                                                                    onclick="sendDataConfirmation({{ $assessment->employee->id }})">
+                                                                    <i class="fas fa-paper-plane"></i>
+                                                                </button>
+                                                            @endif
+
+                                                            {{-- <button type="button" class="btn btn-sm btn-success"
                                                             onclick="approveAction()">
                                                             <i class="fas fa-check-circle"></i>
                                                         </button>
@@ -223,10 +374,11 @@
                                                             onclick="rejectAction()">
                                                             <i class="fas fa-times-circle"></i>
                                                         </button> --}}
-                                                    </div>
+                                                        </div>
 
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                </tr>
+                                            @endif
                                         @empty
                                             <tr>
                                                 <td colspan="{{ count($alcs) + 3 }}" class="text-center text-muted py-4">
@@ -237,10 +389,19 @@
                                     </tbody>
                                 </table>
                             </div>
+                            <div class="d-flex justify-content-between">
+                                @if ($assessments->count())
+                                    @if ($assessments instanceof \Illuminate\Pagination\LengthAwarePaginator)
+                                        {{ $assessments->links('pagination::bootstrap-5') }}
+                                    @endif
+                                @else
+                                    <span>No data found.</span>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>
-                <div class="d-flex align-items-center gap-4 mt-3">
+                <div class="d-flex align-items-center gap-4 mt-5">
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
                         <span class="ms-2 text-muted">Below Standard</span>
@@ -254,8 +415,50 @@
 
             @foreach ($assessments as $assessment)
                 @if (isset($assessment->employee))
-                    @php $employee = $assessment->employee; @endphp
+                    @php
+                        $employee = $assessment->employee;
+                    @endphp
                     @foreach ($alcs as $id => $title)
+                        @php
+                            set_time_limit(60);
+                            $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
+
+                            $assessmentId = DB::table('assessments')
+                                ->select('id')
+                                ->where('employee_id', $weaknessDetail->hav->employee->id)
+                                ->latest()
+                                ->first();
+
+                            $weakness = \App\Models\DetailAssessment::with('assessment.employee')
+                                ->select('weakness', 'suggestion_development')
+                                ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
+                                    $query->where('id', $weaknessDetail->hav->employee->id);
+                                })
+                                ->where('alc_id', $weaknessDetail->alc_id)
+                                ->latest()
+                                ->first();
+                            $strength = \App\Models\DetailAssessment::with('assessment.employee')
+                                ->select('strength', 'suggestion_development')
+                                ->whereHas('assessment.employee', function ($query) use ($weaknessDetail) {
+                                    $query->where('id', $weaknessDetail->hav->employee->id);
+                                })
+                                ->where('alc_id', $weaknessDetail->alc_id)
+                                ->latest()
+                                ->first();
+
+                            $idp = \App\Models\Idp::with('commentHistory')
+                                ->where('hav_detail_id', $weaknessDetail?->id)
+                                ->where('alc_id', $id)
+                                ->first();
+
+                            $assessment_detail_id = null;
+                            foreach ($assessment->details as $detail) {
+                                if ($idp && $detail->assesment_id == $idp->id) {
+                                    $assessment_detail_id = $detail->id;
+                                }
+                            }
+
+                        @endphp
                         <div class="modal fade" id="kt_modal_warning_{{ $assessment->id }}_{{ $id }}"
                             tabindex="-1" style="display: none;" aria-modal="true" role="dialog">
                             <div class="modal-dialog modal-dialog-centered mw-750px">
@@ -267,87 +470,142 @@
                                             aria-label="Close"></button>
                                     </div>
 
-                                    @php
-                                        // Mengambil data IDP berdasarkan assessment_id dan alc_id
-                                        $idp = DB::table('idp')
-                                            ->where('assessment_id', $assessment->id)
-                                            ->where('alc_id', $id)
-                                            ->select(
-                                                'id',
-                                                'category',
-                                                'development_program',
-                                                'development_target',
-                                                'date',
-                                            )
-                                            ->first();
-                                    @endphp
-
                                     <div class="modal-body scroll-y mx-2 mt-5">
                                         <input type="hidden" name="employee_id" value="{{ $assessment->id }}">
-                                        <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
+                                        <input type="hidden" name="assessment_id" value="{{ $assessment_detail_id }}">
                                         <input type="hidden" name="alc_id"
                                             id="alc_id_{{ $assessment->id }}_{{ $id }}"
                                             value="{{ $id }}">
 
+                                        {{-- Weakness Section (always shown) --}}
                                         <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2"><span
-                                                    class="required">Category</span></label>
-                                            <select id="category_select_{{ $assessment->id }}_{{ $id }}"
-                                                name="category" aria-label="Select Category" data-control="select2"
-                                                data-placeholder="Select categories..."
-                                                class="form-select form-select-solid form-select-lg fw-semibold">
-                                                <option value="">Select Category</option>
-                                                @foreach (['Feedback', 'Self Development', 'Shadowing', 'On Job Development', 'Mentoring', 'Training'] as $category)
-                                                    <option value="{{ $category }}"
-                                                        {{ isset($idp) && $idp->category == $category ? 'selected' : '' }}>
-                                                        {{ $category }}</option>
-                                                @endforeach
-                                            </select>
+                                            <label class="fs-5 fw-bold form-label mb-4">Description & Suggestion
+                                                Development
+                                                in {{ $title }}</label>
+                                            <div class="border p-4 rounded bg-light mb-5"
+                                                style="max-height: 400px; overflow-y: auto;">
+                                                <h6 class="fw-bold mb-">Description</h6>
+                                                <p class="mb-5">
+                                                    {{ !empty($weakness?->weakness) ? $weakness->weakness : (!empty($strength?->strength) ? $strength->strength : '-') }}
+                                                </p>
+
+
+                                                <h6 class="fw-bold mb-2">Suggestion Development</h6>
+                                                <p>{{ $weaknessDetail?->suggestion_development ?? ($weakness?->suggestion_development ?? '-' ?? ($weakness?->suggestion_development ?? '-')) }}
+                                                </p>
+                                            </div>
+
+                                            <!-- Countdown Text -->
+                                            <div id="countdownText_{{ $assessment->id }}_{{ $id }}"
+                                                class="text-dark text-center mb-2">
+                                                Please wait <span class="countdown-seconds">for a</span> seconds...
+                                            </div>
+
+                                            <!-- Checkbox -->
+                                            <div class="form-check d-none"
+                                                id="checkboxWrapper_{{ $assessment->id }}_{{ $id }}">
+                                                <input class="form-check-input agree-checkbox" type="checkbox"
+                                                    id="agreeCheckbox_{{ $assessment->id }}_{{ $id }}"
+                                                    data-target="additionalContent_{{ $assessment->id }}_{{ $id }}">
+                                                <label class="form-check-label text-dark"
+                                                    for="agreeCheckbox_{{ $assessment->id }}_{{ $id }}">
+                                                    I have read and understood the content above.
+                                                </label>
+                                            </div>
+
                                         </div>
 
-                                        <div class="col-lg-12 mb-10">
-                                            <label class="fs-5 fw-bold form-label mb-2"><span class="required">Development
-                                                    Program</span></label>
-                                            <select id="program_select_{{ $assessment->id }}_{{ $id }}"
-                                                name="development_program" aria-label="Select Development Program"
-                                                data-control="select2" data-placeholder="Select Programs..."
-                                                class="form-select form-select-solid form-select-lg fw-semibold">
-                                                <option value="">Select Development Program</option>
-                                                @foreach (['Superior (DGM & GM)', 'Book Reading', 'FIGURE LEADER', 'Team Leader', 'SR PROJECT', 'People Development Program', 'Leadership', 'Developing Sub Ordinate'] as $program)
-                                                    <option value="{{ $program }}"
-                                                        {{ isset($idp) && $idp->development_program == $program ? 'selected' : '' }}>
-                                                        {{ $program }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        {{-- Additional content (hidden by default) --}}
+                                        <div class="additional-content d-none"
+                                            id="additionalContent_{{ $assessment->id }}_{{ $id }}">
+                                            <div class="col-lg-12 mb-10">
+                                                <hr>
+                                            </div>
 
-                                        <div class="col-lg-12 fv-row mb-10">
-                                            <label for="target_{{ $assessment->id }}_{{ $id }}"
-                                                class="fs-5 fw-bold form-label mb-2 required">Development Target</label>
-                                            <textarea id="target_{{ $assessment->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
-                                        </div>
+                                            <div class="col-lg-12 mb-10">
+                                                <label class="fs-5 fw-bold form-label mb-2"><span
+                                                        class="required">Category</span></label>
+                                                <select id="category_select_{{ $assessmentId?->id }}_{{ $id }}"
+                                                    name="category" class="form-select form-select-lg fw-semibold"
+                                                    data-control="select2" data-placeholder="Select categories...">
+                                                    <option value="">Select Category</option>
+                                                    @foreach (['Feedback', 'Self Development', 'Shadowing', 'On Job Development', 'Mentoring', 'Training'] as $category)
+                                                        <option value="{{ $category }}"
+                                                            {{ isset($idp) && $idp->category == $category ? 'selected' : '' }}>
+                                                            {{ $category }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
 
-                                        <div class="col-lg-12 fv-row mb-5">
-                                            <label for="due_date_{{ $assessment->id }}"
-                                                class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
-                                            <input type="date"
-                                                id="due_date_{{ $assessment->id }}_{{ $id }}" name="date"
-                                                class="form-control" value="{{ isset($idp) ? $idp->date : '' }}" />
-                                        </div>
+                                            <div class="col-lg-12 mb-10">
+                                                <label class="fs-5 fw-bold form-label mb-2"><span
+                                                        class="required">Development Program</span></label>
+                                                <select id="program_select_{{ $assessmentId?->id }}_{{ $id }}"
+                                                    name="development_program"
+                                                    class="form-select form-select-lg fw-semibold" data-control="select2"
+                                                    data-placeholder="Select Programs...">
+                                                    <option value="">Select Development Program</option>
+                                                    @foreach (['Superior (DGM & GM)', 'Book Reading', 'FIGURE LEADER', 'Team Leader', 'SR PROJECT', 'People Development Program', 'Leadership', 'Developing Sub Ordinate'] as $program)
+                                                        <option value="{{ $program }}"
+                                                            {{ isset($idp) && $idp->development_program == $program ? 'selected' : '' }}>
+                                                            {{ $program }}
+                                                        </option>
+                                                    @endforeach
+                                                </select>
+                                            </div>
 
-                                        <div class="text-center pt-15">
-                                            @if (!isset($idp))
-                                                <!-- Cek apakah IDP sudah ada di database -->
-                                                <button type="button" class="btn btn-primary btn-create-idp"
-                                                    data-assessment="{{ $assessment->id }}"
-                                                    data-alc="{{ $id }}">
+                                            <div class="col-lg-12 fv-row mb-10">
+                                                <label for="target_{{ $assessmentId?->id }}_{{ $id }}"
+                                                    class="fs-5 fw-bold form-label mb-2 required">Development
+                                                    Target</label>
+                                                <textarea id="target_{{ $assessmentId?->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
+                                            </div>
+
+                                            <div class="col-lg-12 fv-row mb-5">
+                                                <label for="due_date_{{ $assessmentId?->id }}_{{ $id }}"
+                                                    class="fs-5 fw-bold form-label mb-2 required">Due Date</label>
+                                                <input type="date"
+                                                    id="due_date_{{ $assessmentId?->id }}_{{ $id }}"
+                                                    name="date" class="form-control"
+                                                    value="{{ isset($idp) ? $idp->date : '' }}" />
+                                            </div>
+
+                                            <div class="col-lg-12 fv-row mb-5">
+                                                <hr>
+                                            </div>
+
+                                            @if ($idp && $idp->commentHistory && $idp->commentHistory->isNotEmpty())
+                                                <div class="col-lg-12 fv-row mb-5">
+                                                    <label class="fs-5 fw-bold form-label mb-2">Comment
+                                                        History</label>
+                                                    @foreach ($idp->commentHistory as $comment)
+                                                        <div class="border rounded p-3 mb-3 bg-light">
+                                                            <div class="fw-semibold mb-2">
+                                                                {{ $comment->employee->name ?? 'Unknown Employee' }} —
+                                                                <small class="text-muted">
+                                                                    {{ \Carbon\Carbon::parse($comment->created_at)->format('d M Y H:i') }}
+                                                                </small>
+                                                            </div>
+                                                            <div class="text-muted fst-italic">
+                                                                {{ $comment->comment }}
+                                                            </div>
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @endif
+
+                                            <div class="text-center pt-15">
+                                                <button type="button"
+                                                    id="confirm-button-{{ $assessment->id }}-{{ $id }}"
+                                                    class="btn btn-primary btn-create-idp"
+                                                    data-assessment="{{ $assessmentId?->id }}"
+                                                    data-hav="{{ $weaknessDetail?->id }}" data-alc="{{ $id }}"
+                                                    disabled>
                                                     Submit
                                                 </button>
-                                            @else
-                                                <button type="button" class="btn btn-secondary"
-                                                    disabled>Submitted</button>
-                                            @endif
-                                        </div>
+                                            </div>
+                                        </div> <!-- end .additional-content -->
                                     </div>
                                 </div>
                             </div>
@@ -396,20 +654,30 @@
                                             <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
 
                                             <div id="programContainerMid_{{ $assessment->employee->id }}">
-                                                @if (!empty($assessment->recommendedProgramsMidYear))
-                                                    @foreach ($assessment->recommendedProgramsMidYear as $index => $program)
+                                                @if (!empty($assessment->details))
+                                                    @php $hasMidYearData = false; @endphp
+
+                                                    @foreach ($assessment->details as $program)
+                                                        @if (empty($program->recommendedProgramsMidYear) || empty($program->recommendedProgramsMidYear[0]['program']))
+                                                            @continue
+                                                        @endif
+
+                                                        @php $hasMidYearData = true; @endphp
+
                                                         <div class="programItem">
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
                                                                     Program</label>
                                                                 <input type="text" class="form-control"
                                                                     name="development_program[]"
-                                                                    value="{{ $program['program'] }}" readonly>
+                                                                    value="{{ $program->recommendedProgramsMidYear[0]['program'] }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Date</label>
                                                                 <input type="text" class="form-control"
-                                                                    value="{{ $program['date'] }}" readonly>
+                                                                    value="{{ $program->recommendedProgramsMidYear[0]['date'] ?? '-' }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
@@ -427,6 +695,10 @@
                                                             <hr>
                                                         </div>
                                                     @endforeach
+
+                                                    @if (!$hasMidYearData)
+                                                        <p class="text-center text-muted">No data available</p>
+                                                    @endif
                                                 @else
                                                     <p class="text-center text-muted">No data available</p>
                                                 @endif
@@ -447,30 +719,51 @@
 
                                             <div id="programContainerOne_{{ $assessment->employee->id }}"
                                                 class="programContainer">
-                                                @if (!empty($assessment->recommendedProgramsOneYear))
-                                                    @foreach ($assessment->recommendedProgramsOneYear as $index => $program)
+                                                @if (!empty($assessment->details))
+                                                    @php $hasData = false; @endphp
+
+                                                    @foreach ($assessment->details as $program)
+                                                        @if (empty($program->recommendedProgramsOneYear) || empty($program->recommendedProgramsOneYear[0]['program']))
+                                                            @continue
+                                                        @endif
+
+                                                        @php $hasData = true; @endphp
+
                                                         <div class="programItem">
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
                                                                     Program</label>
                                                                 <input type="text" class="form-control"
-                                                                    name="development_program[{{ $assessment->employee->id }}][]"
-                                                                    value="{{ $program['program'] }}" readonly>
+                                                                    name="development_program[]"
+                                                                    value="{{ $program->recommendedProgramsOneYear[0]['program'] }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Date</label>
                                                                 <input type="text" class="form-control"
-                                                                    name="date[{{ $assessment->employee->id }}][]"
-                                                                    value="{{ $program['date'] }}" readonly>
+                                                                    value="{{ $program->recommendedProgramsOneYear[0]['date'] ?? '-' }}"
+                                                                    readonly>
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label fw-bold">Evaluation Result</label>
+                                                                <label class="form-label fw-bold">Development
+                                                                    Achievement</label>
                                                                 <input type="text" class="form-control"
-                                                                    name="evaluation_result[{{ $assessment->employee->id }}][]"
-                                                                    placeholder="Evaluation Result" required>
+                                                                    name="development_achievement[]"
+                                                                    placeholder="Enter achievement" required>
                                                             </div>
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold">Next Action</label>
+                                                                <input type="text" class="form-control"
+                                                                    name="next_action[]" placeholder="Enter next action"
+                                                                    required>
+                                                            </div>
+                                                            <hr>
                                                         </div>
                                                     @endforeach
+
+                                                    @if (!$hasData)
+                                                        <p class="text-center text-muted">No data available</p>
+                                                    @endif
                                                 @else
                                                     <p class="text-center text-muted">No data available</p>
                                                 @endif
@@ -492,12 +785,47 @@
                 </div>
             @endforeach
 
+            <!-- Modal History Komentar -->
+            <div class="modal fade" id="notesHistory" tabindex="-1" aria-labelledby="notesHistoryLabel"
+                aria-hidden="true">
+                <div class="modal-dialog modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="notesHistoryLabel">Comment History</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="mb-4">
+                                <h6>Employee: <span id="employeeName">Ferry Avianto</span></h6>
+                            </div>
+                            <!-- List of comments -->
+                            <div class="list-group" id="commentHistory">
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <h6 class="fw-bold">Customer Focus</h6>
+                                    <p>Dokumen kurang lengkap.</p>
+                                    <small class="text-muted">Date: 2023-05-01 10:00 AM</small>
+                                </a>
+                                <a href="#" class="list-group-item list-group-item-action">
+                                    <h6 class="fw-bold">Analysis & Judgment</h6>
+                                    <p>Dokumen tidak lengkap</p>
+                                    <small class="text-muted">Date: 2023-05-02 11:30 AM</small>
+                                </a>
+                                <!-- More comments can be added dynamically -->
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Modal -->
             @foreach ($assessments as $assessment)
                 <div class="modal fade" id="notes_{{ $assessment->employee->id }}" tabindex="-1" aria-modal="true"
                     role="dialog">
-                    <div class="modal-dialog modal-dialog-centered mw-1000px">
+                    <div class="modal-dialog modal-dialog-centered" style="max-width: 1200px;">
                         <div class="modal-content">
                             <div class="modal-header">
                                 <h2 class="fw-bold">Summary {{ $assessment->employee->name }}</h2>
@@ -507,85 +835,116 @@
 
                             <div class="modal-body scroll-y mx-2">
                                 <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                                <h3 class="card-title">I. Development Program</h3>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle">
-                                                    <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-center">Strength</th>
-                                                            <th class="text-center">Description</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $strengths = $assessment->details
-                                                                ->filter(fn($item) => !empty($item->strength))
-                                                                ->values();
-                                                        @endphp
+                                    @php
+                                        $strengthRows = [];
+                                        $weaknessRows = [];
 
-                                                        @foreach ($strengths as $detail)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->alc->name ?? '-' }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->strength ?? '-' }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
+                                        foreach ($alcs as $id => $title) {
+                                            $weaknessDetail = $assessment->details->where('alc_id', $id)->first();
+                                            $detailAlc = null;
+
+                                            if (
+                                                $weaknessDetail &&
+                                                $weaknessDetail->hav &&
+                                                $weaknessDetail->hav->employee
+                                            ) {
+                                                $employeeId = $weaknessDetail->hav->employee->id;
+
+                                                $detailAlc = \App\Models\DetailAssessment::with('assessment.employee')
+                                                    ->whereHas('assessment.employee', function ($query) use (
+                                                        $employeeId,
+                                                    ) {
+                                                        $query->where('id', $employeeId);
+                                                    })
+                                                    ->where('alc_id', $weaknessDetail->alc_id)
+                                                    ->latest()
+                                                    ->first();
+                                            }
+
+                                            if ($detailAlc) {
+                                                if ($detailAlc->strength) {
+                                                    $strengthRows[] = [
+                                                        'title' => $title ?? '-',
+                                                        'value' => $detailAlc->strength,
+                                                    ];
+                                                }
+
+                                                if ($detailAlc->weakness) {
+                                                    $weaknessRows[] = [
+                                                        'title' => $title ?? '-',
+                                                        'value' => $detailAlc->weakness,
+                                                    ];
+                                                }
+                                            }
+                                        }
+                                    @endphp
+
+                                    @if (count($strengthRows) > 0 || count($weaknessRows) > 0)
+                                        <div class="row mt-8">
+                                            <div class="card">
+                                                <div class="card-header bg-light-primary">
+                                                    <h3 class="card-title">I. Strength & Weakness</h3>
+                                                </div>
+                                                <div class="card-body table-responsive">
+
+                                                    @if (count($strengthRows) > 0)
+                                                        <table class="table align-middle mb-6">
+                                                            <thead>
+                                                                <tr class="text-start fw-bold fs-6 gs-0">
+                                                                    <th class="text-center">Strength</th>
+                                                                    <th class="text-center">Description</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach ($strengthRows as $row)
+                                                                    <tr>
+                                                                        <td class="text-center fs-7 fw-bold px-3">{{ $row['title'] }}
+                                                                        </td>
+                                                                        <td class="text-justify fs-7 px-3">{{ $row['value'] }}
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    @endif
+
+                                                    @if (count($weaknessRows) > 0)
+                                                        <table class="table align-middle">
+                                                            <thead>
+                                                                <tr class="text-start fw-bold fs-6 gs-0">
+                                                                    <th class="text-center">Weakness</th>
+                                                                    <th class="text-center">Description</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach ($weaknessRows as $row)
+                                                                    <tr>
+                                                                        <td class="text-center fs-7 fw-bold px-3">{{ $row['title'] }}
+                                                                        </td>
+                                                                        <td class="text-justify fs-7 px-3">{{ $row['value'] }}
+                                                                        </td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    @endif
+
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-
-
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header">
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle">
-                                                    <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
-                                                            <th class="text-center">Weakness</th>
-                                                            <th class="text-center">Description</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @php
-                                                            $weakness = $assessment->details
-                                                                ->filter(fn($item) => !empty($item->weakness))
-                                                                ->values();
-                                                        @endphp
-
-                                                        @foreach ($weakness as $detail)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->alc->name ?? '-' }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $detail->weakness ?? '-' }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    @endif
 
                                     <!-- Individual Development Program -->
                                     <div class="row mt-8">
                                         <div class="card">
-                                            <div class="card-header">
+                                            <div class="card-header bg-light-primary">
                                                 <h3 class="card-title">II. Individual Development Program</h3>
                                             </div>
                                             <div class="card-body table-responsive">
                                                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                                     <thead>
                                                         <tr>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <tr class="text-start fw-bold fs-6 gs-0">
                                                             <th class="text-center">Development Area</th>
                                                             <th class="text-center">Category</th>
                                                             <th class="text-center">Development Program</th>
@@ -594,16 +953,22 @@
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @foreach ($idps->where('employee_id', $assessment->employee->id) as $idp)
+                                                        @foreach ($assessment->details->filter(fn($item) => $item->idp->isNotEmpty()) as $idp)
                                                             <tr>
-                                                                <td class="text-justify px-3">{{ $idp->alc->name }}</td>
-                                                                <td class="text-justify px-3">{{ $idp->category }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $idp->development_program }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $idp->development_target }}</td>
-                                                                <td class="text-justify px-3">
-                                                                    {{ \Carbon\Carbon::parse($idp->date)->format('d-m-Y') }}
+                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
+                                                                    {{ $idp->alc->name ?? '-' }}
+                                                                </td>
+                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
+                                                                    {{ $idp->idp->first()?->category }}
+                                                                </td>
+                                                                <td class="text-center fs-7 fw-bold px-3"  style="width: 10%;">
+                                                                    {{ $idp->idp->first()?->development_program }}
+                                                                </td>
+                                                                <td class="text-justify fs-7 px-3"  style="width: 50%;">
+                                                                    {{ $idp->idp->first()?->development_target }}
+                                                                </td>
+                                                                <td class="text-center fs-7 px-3"  style="width: 20%;" >
+                                                                    {{ optional($idp->idp->first())->date ? \Carbon\Carbon::parse($idp->idp->first()->date)->format('d-m-Y') : '-' }}
                                                                 </td>
                                                             </tr>
                                                         @endforeach
@@ -616,27 +981,28 @@
                                     <!-- Mid Year Review -->
                                     <div class="row mt-8">
                                         <div class="card">
-                                            <div class="card-header">
+                                            <div class="card-header bg-light-primary">
                                                 <h3 class="card-title">III. Mid Year Review</h3>
                                             </div>
                                             <div class="card-body table-responsive">
                                                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
                                                     <thead>
                                                         <tr>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <tr class="text-start fw-bold fs-6 gs-0">
                                                             <th class="text-justify px-3">Development Program</th>
                                                             <th class="text-justify px-3">Development Achievement</th>
                                                             <th class="text-justify px-3">Next Action</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
-                                                        @foreach ($mid->where('employee_id', $assessment->employee->id) as $items)
+                                                        @foreach ($mid->where('employee_id', $assessment->employee_id) as $items)
                                                             <tr>
                                                                 <td class="text-justify px-3">
                                                                     {{ $items->development_program }}</td>
-                                                                <td class="text-justify px-3">
+                                                                <td class="text-justify fs-7 px-3">
                                                                     {{ $items->development_achievement }}</td>
-                                                                <td class="text-justify px-3">{{ $items->next_action }}
+                                                                <td class="text-justify fs-7 px-3">
+                                                                    {{ $items->next_action }}
                                                                 </td>
                                                             </tr>
                                                         @endforeach
@@ -648,7 +1014,7 @@
 
                                     <div class="row mt-8">
                                         <div class="card">
-                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                            <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                                                 <h3 class="card-title">IV. One Year Review</h3>
                                                 <div class="d-flex align-items-center">
                                                 </div>
@@ -657,7 +1023,7 @@
                                                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
                                                     id="kt_table_users">
                                                     <thead>
-                                                        <tr class="text-start text-muted fw-bold fs-8 gs-0">
+                                                        <tr class="text-start fw-bold fs-6 gs-0">
                                                             <th class="text-justify px-3" style="width: 50px">
                                                                 Development Program
                                                             </th>
@@ -671,7 +1037,7 @@
                                                             <tr>
                                                                 <td class="text-justify px-3">
                                                                     {{ $item->development_program }}</td>
-                                                                <td class="text-justify px-3">
+                                                                <td class="text-justify fs-7 px-3">
                                                                     {{ $item->evaluation_result }}</td>
                                                             </tr>
                                                         @endforeach
@@ -685,429 +1051,539 @@
                     </div>
                 </div>
             @endforeach
-        @endsection
+        </div>
+    </div>
+@endsection
 
-        @push('scripts')
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-            <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
-            <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
-            <script>
-                // document.addEventListener("DOMContentLoaded", function() {
-                //     document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
-                //         button.addEventListener('click', function() {
-                //             var targetModalId = this.getAttribute('data-bs-target');
-                //             var title = this.getAttribute('data-title');
-                //             var alc = this.getAttribute('data-alc');
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+    <script>
+        // document.addEventListener("DOMContentLoaded", function() {
+        //     document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
+        //         button.addEventListener('click', function() {
+        //             var targetModalId = this.getAttribute('data-bs-target');
+        //             var title = this.getAttribute('data-title');
+        //             var alc = this.getAttribute('data-alc');
 
-                //             const modalAlcInput = document.querySelector(targetModalId +
-                //                 ' input[name=\"alc\"]');
-                //             if (modalAlcInput) {
-                //                 modalAlcInput.value = alc;
-                //             }
+        //             const modalAlcInput = document.querySelector(targetModalId +
+        //                 ' input[name=\"alc\"]');
+        //             if (modalAlcInput) {
+        //                 modalAlcInput.value = alc;
+        //             }
 
-                //             const modalTitle = document.querySelector(targetModalId + ' .modal-header h2');
-                //             if (modalAlcInput) {
-                //                 modalAlcInput.value = alc;
-                //             }
-                //             if (title && modalTitle) {
-                //                 modalTitle.textContent = title;
-                //             }
+        //             const modalTitle = document.querySelector(targetModalId + ' .modal-header h2');
+        //             if (modalAlcInput) {
+        //                 modalAlcInput.value = alc;
+        //             }
+        //             if (title && modalTitle) {
+        //                 modalTitle.textContent = title;
+        //             }
 
-                //             const alcInput = document.querySelector(
-                //                 `${targetModalId} input[name="alc_id"]`);
-                //             if (alcInput) {
-                //                 alcInput.value = alc;
-                //             }
-                //         });
-                //     });
-                // });
+        //             const alcInput = document.querySelector(
+        //                 `${targetModalId} input[name="alc_id"]`);
+        //             if (alcInput) {
+        //                 alcInput.value = alc;
+        //             }
+        //         });
+        //     });
+        // });
+        document.addEventListener('DOMContentLoaded', function() {
+            const modals = document.querySelectorAll('.modal');
 
-                document.addEventListener("DOMContentLoaded", function() {
-                    const maxAge = 5 * 60 * 1000;
+            modals.forEach(modal => {
+                let countdownInterval = null;
 
-                    document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
-                        button.addEventListener('click', function() {
-                            const alc = this.getAttribute('data-alc');
-                            const assessmentId = this.getAttribute('data-assessment');
-                            const modalTarget = this.getAttribute('data-bs-target');
-                            const title = this.getAttribute('data-title');
+                modal.addEventListener('shown.bs.modal', function() {
+                    const modalId = modal.getAttribute('id');
+                    const [_, __, ___, assessId, alcId] = modalId.split('_');
 
-                            const modal = document.querySelector(modalTarget);
-                            if (!modal) return;
+                    const checkboxWrapper = document.getElementById(
+                        `checkboxWrapper_${assessId}_${alcId}`);
+                    const countdownText = document.getElementById(
+                        `countdownText_${assessId}_${alcId}`);
+                    const checkbox = document.getElementById(`agreeCheckbox_${assessId}_${alcId}`);
+                    const target = document.getElementById(
+                        `additionalContent_${assessId}_${alcId}`);
+                    const btn = document.getElementById(`confirm-button-${assessId}-${alcId}`);
 
-                            const modalTitle = modal.querySelector('.modal-header h2');
-                            if (title && modalTitle) {
-                                modalTitle.textContent = title;
+                    // Reset visual
+                    checkboxWrapper.classList.add('d-none');
+                    countdownText.classList.remove('d-none');
+                    checkbox.checked = false;
+                    btn.setAttribute('disabled', true);
+                    target.classList.add('d-none');
+
+                    // Jalankan countdown
+                    startCountdown(() => {
+                        countdownText.classList.add('d-none');
+                        checkboxWrapper.classList.remove('d-none');
+                    });
+
+                    // Checkbox listener
+                    checkbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            target.classList.remove('d-none');
+                            btn.removeAttribute('disabled');
+                        } else {
+                            target.classList.add('d-none');
+                            btn.setAttribute('disabled', true);
+
+                            // Ulang timer dan sembunyikan checkbox
+                            checkboxWrapper.classList.add('d-none');
+                            countdownText.classList.remove('d-none');
+                            startCountdown(() => {
+                                countdownText.classList.add('d-none');
+                                checkboxWrapper.classList.remove('d-none');
+                            });
+                        }
+                    });
+
+                    function startCountdown(callback) {
+                        clearInterval(countdownInterval); // prevent duplicate
+                        const totalSeconds = 2;
+                        let secondsLeft = totalSeconds;
+                        let messageToggle = true;
+
+                        updateMessage();
+
+                        countdownInterval = setInterval(() => {
+                            secondsLeft--;
+
+                            if (secondsLeft >= 0) {
+                                if (messageToggle) {
+                                    countdownText.innerHTML =
+                                        `Please wait <span class="countdown-seconds">for a</span> seconds...`;
+                                } else {
+                                    countdownText.textContent =
+                                        "Make sure you read all content above...";
+                                }
+
+                                if ((totalSeconds - secondsLeft) % 2 === 0) {
+                                    messageToggle = !messageToggle;
+                                }
                             }
 
-                            const alcInput = modal.querySelector(
-                                `input[id="alc_id_${assessmentId}_${alc}"]`);
-                            if (alcInput) alcInput.value = alc;
+                            if (secondsLeft <= 0) {
+                                clearInterval(countdownInterval);
+                                callback();
+                            }
+                        }, 1000);
 
-                            const key = `idp_modal_${assessmentId}_${alc}`;
-                            const savedData = JSON.parse(localStorage.getItem(key));
-                            const now = Date.now();
-
-                            const categorySelect = modal.querySelector(
-                                `select[id="category_select_${assessmentId}_${alc}"]`);
-                            const programSelect = modal.querySelector(
-                                `select[id="program_select_${assessmentId}_${alc}"]`);
-                            const targetInput = modal.querySelector(
-                                `textarea[id="target_${assessmentId}_${alc}"]`);
-                            const dueDateInput = modal.querySelector(
-                                `input[id="due_date_${assessmentId}_${alc}"]`);
-
-
-
-                            if (savedData && (now - savedData.timestamp < maxAge)) {
-                                if (categorySelect) {
-                                    categorySelect.value = savedData.category;
-                                    $(categorySelect).trigger('change');
-                                }
-                                if (programSelect) {
-                                    programSelect.value = savedData.program;
-                                    $(programSelect).trigger('change');
-                                }
-                                if (targetInput) targetInput.value = savedData.target ?? '';
-                                if (dueDateInput) dueDateInput.value = savedData.date ?? '';
+                        function updateMessage() {
+                            if (messageToggle) {
+                                countdownText.innerHTML =
+                                    `Please wait <span class="countdown-seconds">for a</span> seconds...`;
                             } else {
-                                $.ajax({
-                                    url: '/idp/getData',
-                                    method: 'GET',
-                                    data: {
-                                        assessment_id: assessmentId,
-                                        alc_id: alc
-                                    },
-                                    success: function(response) {
-                                        if (response.idp) {
-                                            if (categorySelect) {
-                                                categorySelect.value = response.idp.category;
-                                                $(categorySelect).trigger('change');
-                                            }
-                                            if (programSelect) {
-                                                programSelect.value = response.idp
-                                                    .development_program;
-                                                $(programSelect).trigger('change');
-                                            }
-                                            if (targetInput) targetInput.value = response.idp
-                                                .development_target ?? '';
-                                            if (dueDateInput) dueDateInput.value = response.idp
-                                                .date ?? '';
-                                        } else {
-                                            if (categorySelect) categorySelect.value = '';
-                                            if (programSelect) programSelect.value = '';
-
-                                        }
-                                    }
-                                });
+                                countdownText.textContent =
+                                    "Make sure you read all content above...";
                             }
-                        });
-                    });
+                        }
+                    }
+                });
+
+                modal.addEventListener('hidden.bs.modal', function() {
+                    clearInterval(countdownInterval);
+                    const modalId = modal.getAttribute('id');
+                    const [_, __, ___, assessId, alcId] = modalId.split('_');
+
+                    // Reset saat modal ditutup
+                    const checkboxWrapper = document.getElementById(
+                        `checkboxWrapper_${assessId}_${alcId}`);
+                    const countdownText = document.getElementById(
+                        `countdownText_${assessId}_${alcId}`);
+                    const checkbox = document.getElementById(`agreeCheckbox_${assessId}_${alcId}`);
+                    const target = document.getElementById(
+                        `additionalContent_${assessId}_${alcId}`);
+                    const btn = document.getElementById(`confirm-button-${assessId}-${alcId}`);
+
+                    checkboxWrapper.classList.add('d-none');
+                    countdownText.classList.remove('d-none');
+                    checkbox.checked = false;
+                    btn.setAttribute('disabled', true);
+                    target.classList.add('d-none');
+                });
+            });
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            const maxAge = 5 * 60 * 1000;
+
+            document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
+                button.addEventListener('click', function() {
+                    const alc = this.getAttribute('data-alc');
+                    const assessmentId = this.getAttribute('data-assessment');
+                    console.log(assessmentId);
+                    const modalTarget = this.getAttribute('data-bs-target');
+                    const title = this.getAttribute('data-title');
+
+                    const modal = document.querySelector(modalTarget);
+                    if (!modal) return;
+
+                    const modalTitle = modal.querySelector('.modal-header h2');
+                    if (title && modalTitle) {
+                        modalTitle.textContent = title;
+                    }
+
+                    const alcInput = modal.querySelector(
+                        `input[id="alc_id_${assessmentId}_${alc}"]`);
+                    if (alcInput) alcInput.value = alc;
+
+                    const key = `idp_modal_${assessmentId}_${alc}`;
+                    const savedData = JSON.parse(localStorage.getItem(key));
+                    const now = Date.now();
+
+                    const categorySelect = modal.querySelector(
+                        `select[id="category_select_${assessmentId}_${alc}"]`);
+                    const programSelect = modal.querySelector(
+                        `select[id="program_select_${assessmentId}_${alc}"]`);
+                    const targetInput = modal.querySelector(
+                        `textarea[id="target_${assessmentId}_${alc}"]`);
+                    const dueDateInput = modal.querySelector(
+                        `input[id="due_date_${assessmentId}_${alc}"]`);
 
 
-                    document.querySelectorAll('.btn-create-idp').forEach(button => {
-                        button.addEventListener('click', function() {
-                            const assessmentId = this.getAttribute('data-assessment');
-                            const alcId = this.getAttribute('data-alc');
 
-                            const category = document.getElementById(
-                                `category_select_${assessmentId}_${alcId}`).value;
-                            const program = document.getElementById(
-                                `program_select_${assessmentId}_${alcId}`).value;
-                            const target = document.getElementById(`target_${assessmentId}_${alcId}`).value;
-                            const date = document.getElementById(`due_date_${assessmentId}_${alcId}`).value;
-
-
-
-                            const key = `idp_modal_${assessmentId}_${alcId}`;
-
-                            localStorage.setItem(key, JSON.stringify({
+                    if (savedData && (now - savedData.timestamp < maxAge)) {
+                        if (categorySelect) {
+                            categorySelect.value = savedData.category;
+                            $(categorySelect).trigger('change');
+                        }
+                        if (programSelect) {
+                            programSelect.value = savedData.program;
+                            $(programSelect).trigger('change');
+                        }
+                        if (targetInput) targetInput.value = savedData.target ?? '';
+                        if (dueDateInput) dueDateInput.value = savedData.date ?? '';
+                    } else {
+                        $.ajax({
+                            url: '/idp/getData',
+                            method: 'GET',
+                            data: {
                                 assessment_id: assessmentId,
-                                alc_id: alcId,
-                                category: category,
-                                program: program,
-                                target: target,
-                                date: date,
-                                timestamp: Date.now()
-                            }));
-
-                            $.ajax({
-                                url: "{{ route('idp.store') }}",
-                                type: "POST",
-                                data: {
-                                    alc_id: alcId,
-                                    assessment_id: assessmentId,
-                                    development_program: program,
-                                    category: category,
-                                    development_target: target,
-                                    date: date,
-                                    '_token': "{{ csrf_token() }}",
-                                },
-                                success: function(response) {
-                                    Swal.fire({
-                                        title: "Berhasil!",
-                                        text: "IDP berhasil diperbarui!",
-                                        icon: "success",
-                                        confirmButtonText: "OK"
-                                    }).then(() => {
-                                        localStorage.removeItem(key);
-                                        $(`#kt_modal_warning_${assessmentId}_${alcId}`)
-                                            .modal('hide');
-                                        location.reload();
-                                    });
-                                },
-                                error: function(xhr, status, error) {
-                                    alert(error);
-                                }
-                            });
-                        });
-                    });
-                });
-                // document.addEventListener("DOMContentLoaded", function() {
-                //     document.querySelectorAll("form").forEach(form => {
-                //         form.addEventListener("submit", function(e) {
-                //             let isValid = true;
-
-                //             // Cek apakah kategori dan program dipilih
-                //             const category = form.querySelector('select[name="category[]"]').value;
-                //             const program = form.querySelector('select[name="development_program[]"]')
-                //                 .value;
-                //             const dueDate = form.querySelector('input[name="due_date"]').value;
-
-                //             if (!category || !program || !dueDate) {
-                //                 isValid = false;
-                //                 alert("Semua bidang wajib diisi!");
-                //             }
-
-                //             if (!isValid) {
-                //                 e.preventDefault(); // Hentikan submit jika ada error
-                //             }
-                //         });
-                //     });
-                // });
-
-                document.addEventListener("DOMContentLoaded", function() {
-                    // Fungsi pencarian
-                    document.getElementById("searchButton").addEventListener("click", function() {
-                        var searchValue = document.getElementById("searchInput").value.toLowerCase();
-                        var table = document.getElementById("kt_table_users").getElementsByTagName("tbody")[0];
-                        var rows = table.getElementsByTagName("tr");
-
-                        for (var i = 0; i < rows.length; i++) {
-                            var nameCell = rows[i].getElementsByTagName("td")[1];
-                            if (nameCell) {
-                                var nameText = nameCell.textContent || nameCell.innerText;
-                                rows[i].style.display = nameText.toLowerCase().includes(searchValue) ? "" : "none";
-                            }
-                        }
-                    });
-
-                    // document.addEventListener("DOMContentLoaded", function() {
-                    //     document.querySelectorAll(".score").forEach(function(badge) {
-                    //         badge.addEventListener("click", function() {
-                    //             var title = this.getAttribute("data-title");
-                    //             var assessmentId = this.getAttribute("data-assessment");
-
-                    //             if (assessmentId) {
-                    //                 var modalTitle = document.querySelector("#modal-title-" +
-                    //                     assessmentId);
-                    //                 if (modalTitle) {
-                    //                     modalTitle.textContent = title;
-                    //                 }
-                    //             }
-                    //         });
-                    //     });
-                    // });
-
-
-                    document.addEventListener("DOMContentLoaded", function() {
-                        document.querySelectorAll(".open-modal").forEach(button => {
-                            button.addEventListener("click", function() {
-                                let id = this.getAttribute("data-id");
-                                let modal = new bootstrap.Modal(document.getElementById(
-                                    `notes_${id}`));
-                                modal.show();
-                            });
-                        });
-                    });
-
-
-
-                    // SweetAlert untuk tombol delete
-                    document.querySelectorAll('.delete-btn').forEach(button => {
-                        button.addEventListener('click', function() {
-                            let employeeId = this.getAttribute('data-id');
-
-                            Swal.fire({
-                                title: "Are you sure?",
-                                text: "You won't be able to revert this!",
-                                icon: "warning",
-                                showCancelButton: true,
-                                confirmButtonColor: "#d33",
-                                cancelButtonColor: "#3085d6",
-                                confirmButtonText: "Yes, delete it!"
-                            }).then((result) => {
-                                if (result.isConfirmed) {
-                                    let form = document.createElement('form');
-                                    form.method = 'POST';
-                                    form.action = `/employee/${employeeId}`;
-
-                                    let csrfToken = document.createElement('input');
-                                    csrfToken.type = 'hidden';
-                                    csrfToken.name = '_token';
-                                    csrfToken.value = '{{ csrf_token() }}';
-
-                                    let methodField = document.createElement('input');
-                                    methodField.type = 'hidden';
-                                    methodField.name = '_method';
-                                    methodField.value = 'DELETE';
-
-                                    form.appendChild(csrfToken);
-                                    form.appendChild(methodField);
-                                    document.body.appendChild(form);
-                                    form.submit();
-                                }
-                            });
-                        });
-                    });
-                });
-
-                document.addEventListener('DOMContentLoaded', function() {
-                    const dateInput = document.getElementById('kt_datepicker_7');
-
-                    flatpickr(dateInput, {
-                        altInput: true,
-                        altFormat: "F j, Y",
-                        dateFormat: "Y-m-d",
-                        mode: "range"
-                    });
-                });
-
-                document.addEventListener("DOMContentLoaded", function() {
-                    let dueDateInput = document.getElementById("kt_datepicker_7");
-
-                    let startDate = new Date(2025, 11, 8).toISOString().split("T")[0];
-                    let endDate = new Date(2025, 11, 17).toISOString().split("T")[0];
-
-                    dueDateInput.value = startDate;
-                    dueDateInput.min = startDate;
-                    dueDateInput.max = endDate;
-                });
-
-                document.addEventListener("DOMContentLoaded", function() {
-                    document.querySelectorAll(".open-modal").forEach(button => {
-                        button.addEventListener("click", function() {
-                            let id = this.getAttribute("data-id");
-                            let modal = new bootstrap.Modal(document.getElementById(
-                                `notes_${id}`));
-                            modal.show();
-                        });
-                    });
-                });
-
-                function sendDataConfirmation() {
-                    Swal.fire({
-                        title: 'Kirim Data?',
-                        text: "Data akan dikirim ke atasan untuk ditindaklanjuti.",
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonColor: '#3085d6',
-                        cancelButtonColor: '#d33',
-                        confirmButtonText: 'Ya, Kirim!',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            Swal.fire(
-                                'Terkirim!',
-                                'Data berhasil dikirim ke atasan.',
-                                'success'
-                            )
-                            // TODO: Tambahkan AJAX atau redirect ke route pengiriman di sini
-                        }
-                    })
-                }
-
-                const employeeId = "{{ $employees->first()->id }}"; // pastikan $employee dikirim dari controller
-
-                function sendDataConfirmation() {
-                    Swal.fire({
-                        title: 'Kirim IDP ke atasan?',
-                        text: 'Pastikan semua ALC bernilai < 3 sudah dibuat.',
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Kirim',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            fetch("{{ route('send.idp') }}", {
-                                    method: "POST",
-                                    headers: {
-                                        "Content-Type": "application/json",
-                                        "X-CSRF-TOKEN": document.querySelector('meta[name=\"csrf-token\"]')
-                                            .getAttribute('content')
-                                    },
-                                    body: JSON.stringify({
-                                        employee_id: employeeId
-                                    })
-                                })
-                                .then(async res => {
-                                    const data = await res.json();
-                                    if (!res.ok) {
-                                        throw new Error(data.message || "Terjadi kesalahan.");
+                                alc_id: alc
+                            },
+                            success: function(response) {
+                                if (response.idp) {
+                                    if (categorySelect) {
+                                        categorySelect.value = response.idp.category;
+                                        $(categorySelect).trigger('change');
                                     }
-                                    Swal.fire('Berhasil!', data.message, 'success');
-                                })
-                                .catch(err => {
-                                    Swal.fire('Gagal', err.message || 'Terjadi kesalahan saat mengirim IDP.', 'error');
-                                    console.error(err);
-                                });
+                                    if (programSelect) {
+                                        programSelect.value = response.idp
+                                            .development_program;
+                                        $(programSelect).trigger('change');
+                                    }
+                                    if (targetInput) targetInput.value = response.idp
+                                        .development_target ?? '';
+                                    if (dueDateInput) dueDateInput.value = response.idp
+                                        .date ?? '';
+                                } else {
+                                    if (categorySelect) categorySelect.value = '';
+                                    if (programSelect) programSelect.value = '';
+
+                                }
+                            }
+                        });
+                    }
+                });
+            });
+
+
+            document.querySelectorAll('.btn-create-idp').forEach(button => {
+                button.addEventListener('click', function() {
+                    const assessmentId = this.getAttribute('data-assessment');
+                    const havDetailId = this.getAttribute('data-hav');
+                    const alcId = this.getAttribute('data-alc');
+                    const category = document.getElementById(
+                        `category_select_${assessmentId}_${alcId}`).value;
+                    const program = document.getElementById(
+                        `program_select_${assessmentId}_${alcId}`).value;
+                    const target = document.getElementById(`target_${assessmentId}_${alcId}`).value;
+                    const date = document.getElementById(`due_date_${assessmentId}_${alcId}`).value;
+
+
+
+                    const key = `idp_modal_${assessmentId}_${alcId}`;
+
+                    localStorage.setItem(key, JSON.stringify({
+                        assessment_id: assessmentId,
+                        hav_detail_id: havDetailId,
+                        alc_id: alcId,
+                        category: category,
+                        program: program,
+                        target: target,
+                        date: date,
+                        timestamp: Date.now()
+                    }));
+
+                    $.ajax({
+                        url: "{{ route('idp.store') }}",
+                        type: "POST",
+                        data: {
+                            hav_detail_id: havDetailId,
+                            alc_id: alcId,
+                            assessment_id: assessmentId,
+                            development_program: program,
+                            category: category,
+                            development_target: target,
+                            date: date,
+                            '_token': "{{ csrf_token() }}",
+                        },
+                        success: function(response) {
+                            Swal.fire({
+                                title: "Berhasil!",
+                                text: response.message,
+                                icon: "success",
+                                confirmButtonText: "OK"
+                            }).then(() => {
+                                localStorage.removeItem(key);
+                                $(`#kt_modal_warning_${assessmentId}_${alcId}`)
+                                    .modal('hide');
+                                location.reload();
+                            });
+                        },
+                        error: function(xhr, status, error) {
+                            alert(error);
                         }
                     });
+                });
+            });
+        });
+        // document.addEventListener("DOMContentLoaded", function() {
+        //     document.querySelectorAll("form").forEach(form => {
+        //         form.addEventListener("submit", function(e) {
+        //             let isValid = true;
+
+        //             // Cek apakah kategori dan program dipilih
+        //             const category = form.querySelector('select[name="category[]"]').value;
+        //             const program = form.querySelector('select[name="development_program[]"]')
+        //                 .value;
+        //             const dueDate = form.querySelector('input[name="due_date"]').value;
+
+        //             if (!category || !program || !dueDate) {
+        //                 isValid = false;
+        //                 alert("Semua bidang wajib diisi!");
+        //             }
+
+        //             if (!isValid) {
+        //                 e.preventDefault(); // Hentikan submit jika ada error
+        //             }
+        //         });
+        //     });
+        // });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Fungsi pencarian
+            document.getElementById("searchButton").addEventListener("click", function() {
+                var searchValue = document.getElementById("searchInput").value.toLowerCase();
+                var table = document.getElementById("kt_table_users").getElementsByTagName("tbody")[0];
+                var rows = table.getElementsByTagName("tr");
+
+                for (var i = 0; i < rows.length; i++) {
+                    var nameCell = rows[i].getElementsByTagName("td")[1];
+                    if (nameCell) {
+                        var nameText = nameCell.textContent || nameCell.innerText;
+                        rows[i].style.display = nameText.toLowerCase().includes(searchValue) ? "" : "none";
+                    }
                 }
+            });
 
-                // function approveAction() {
-                //     Swal.fire({
-                //         title: 'Setujui Data?',
-                //         icon: 'success',
-                //         text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
-                //         showCancelButton: true,
-                //         confirmButtonText: 'Ya, Setujui',
-                //         cancelButtonText: 'Batal'
-                //     }).then((result) => {
-                //         if (result.isConfirmed) {
-                //             Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
-                //             // TODO: Kirim ke server via AJAX atau redirect di sini
-                //         }
-                //     });
-                // }
+            // document.addEventListener("DOMContentLoaded", function() {
+            //     document.querySelectorAll(".score").forEach(function(badge) {
+            //         badge.addEventListener("click", function() {
+            //             var title = this.getAttribute("data-title");
+            //             var assessmentId = this.getAttribute("data-assessment");
 
-                // function rejectAction() {
-                //     Swal.fire({
-                //         title: 'Revisi Data?',
-                //         input: 'textarea',
-                //         inputLabel: 'Alasan Revisi',
-                //         inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
-                //         inputAttributes: {
-                //             'aria-label': 'Catatan Revisi'
-                //         },
-                //         showCancelButton: true,
-                //         confirmButtonText: 'Revisi',
-                //         cancelButtonText: 'Batal',
-                //         inputValidator: (value) => {
-                //             if (!value) {
-                //                 return 'Catatan wajib diisi untuk Revisi!';
-                //             }
-                //         }
-                //     }).then((result) => {
-                //         if (result.isConfirmed) {
-                //             Swal.fire(
-                //                 'Revisi!',
-                //                 'Note: ' + result.value,
-                //                 'error'
-                //             );
-                //             // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
-                //         }
-                //     });
-                // }
-            </script>
-        @endpush
+            //             if (assessmentId) {
+            //                 var modalTitle = document.querySelector("#modal-title-" +
+            //                     assessmentId);
+            //                 if (modalTitle) {
+            //                     modalTitle.textContent = title;
+            //                 }
+            //             }
+            //         });
+            //     });
+            // });
+
+
+            document.addEventListener("DOMContentLoaded", function() {
+                document.querySelectorAll(".open-modal").forEach(button => {
+                    button.addEventListener("click", function() {
+                        let id = this.getAttribute("data-id");
+                        let modal = new bootstrap.Modal(document.getElementById(
+                            `notes_${id}`));
+                        modal.show();
+                    });
+                });
+            });
+
+
+
+            // SweetAlert untuk tombol delete
+            document.querySelectorAll('.delete-btn').forEach(button => {
+                button.addEventListener('click', function() {
+                    let employeeId = this.getAttribute('data-id');
+
+                    Swal.fire({
+                        title: "Are you sure?",
+                        text: "You won't be able to revert this!",
+                        icon: "warning",
+                        showCancelButton: true,
+                        confirmButtonColor: "#d33",
+                        cancelButtonColor: "#3085d6",
+                        confirmButtonText: "Yes, delete it!"
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            let form = document.createElement('form');
+                            form.method = 'POST';
+                            form.action = `/employee/${employeeId}`;
+
+                            let csrfToken = document.createElement('input');
+                            csrfToken.type = 'hidden';
+                            csrfToken.name = '_token';
+                            csrfToken.value = '{{ csrf_token() }}';
+
+                            let methodField = document.createElement('input');
+                            methodField.type = 'hidden';
+                            methodField.name = '_method';
+                            methodField.value = 'DELETE';
+
+                            form.appendChild(csrfToken);
+                            form.appendChild(methodField);
+                            document.body.appendChild(form);
+                            form.submit();
+                        }
+                    });
+                });
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateInput = document.getElementById('kt_datepicker_7');
+
+            flatpickr(dateInput, {
+                altInput: true,
+                altFormat: "F j, Y",
+                dateFormat: "Y-m-d",
+                mode: "range"
+            });
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            let dueDateInput = document.getElementById("kt_datepicker_7");
+
+            let startDate = new Date(2025, 11, 8).toISOString().split("T")[0];
+            let endDate = new Date(2025, 11, 17).toISOString().split("T")[0];
+
+            dueDateInput.value = startDate;
+            dueDateInput.min = startDate;
+            dueDateInput.max = endDate;
+        });
+
+        document.addEventListener("DOMContentLoaded", function() {
+            document.querySelectorAll(".open-modal").forEach(button => {
+                button.addEventListener("click", function() {
+                    let id = this.getAttribute("data-id");
+                    let modal = new bootstrap.Modal(document.getElementById(
+                        `notes_${id}`));
+                    modal.show();
+                });
+            });
+        });
+
+        // const employeeId = "{{ $employees->first()->id }}"; // pastikan $employee dikirim dari controller
+        // alert(employeeId);
+
+        function sendDataConfirmation(employeeId) {
+            Swal.fire({
+                title: 'Kirim IDP ke atasan?',
+                text: 'Pastikan semua ALC bernilai < 3 sudah dibuat.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonText: 'Kirim',
+                cancelButtonText: 'Batal'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    fetch("{{ route('send.idp') }}", {
+                            method: "POST",
+                            headers: {
+                                "Content-Type": "application/json",
+                                "X-CSRF-TOKEN": document.querySelector('meta[name=\"csrf-token\"]')
+                                    .getAttribute('content')
+                            },
+                            body: JSON.stringify({
+                                employee_id: employeeId
+                            })
+                        })
+                        .then(async res => {
+                            const data = await res.json();
+                            if (!res.ok) {
+                                throw new Error(data.message || "Terjadi kesalahan.");
+                            }
+                            Swal.fire('Berhasil!', data.message, 'success').then(() => {
+                                // reload halaman setelah user klik OK pada alert sukses
+                                location.reload();
+                            });
+                        })
+                        .catch(err => {
+                            Swal.fire('Gagal', err.message || 'Terjadi kesalahan saat mengirim IDP.', 'error');
+                            console.error(err);
+                        });
+                }
+            });
+        }
+        document.getElementById('searchInputEmployee').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                document.getElementById('searchButton').click();
+            }
+        });
+
+        // function approveAction() {
+        //     Swal.fire({
+        //         title: 'Setujui Data?',
+        //         icon: 'success',
+        //         text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
+        //         showCancelButton: true,
+        //         confirmButtonText: 'Ya, Setujui',
+        //         cancelButtonText: 'Batal'
+        //     }).then((result) => {
+        //         if (result.isConfirmed) {
+        //             Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
+        //             // TODO: Kirim ke server via AJAX atau redirect di sini
+        //         }
+        //     });
+        // }
+
+        // function rejectAction() {
+        //     Swal.fire({
+        //         title: 'Revisi Data?',
+        //         input: 'textarea',
+        //         inputLabel: 'Alasan Revisi',
+        //         inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
+        //         inputAttributes: {
+        //             'aria-label': 'Catatan Revisi'
+        //         },
+        //         showCancelButton: true,
+        //         confirmButtonText: 'Revisi',
+        //         cancelButtonText: 'Batal',
+        //         inputValidator: (value) => {
+        //             if (!value) {
+        //                 return 'Catatan wajib diisi untuk Revisi!';
+        //             }
+        //         }
+        //     }).then((result) => {
+        //         if (result.isConfirmed) {
+        //             Swal.fire(
+        //                 'Revisi!',
+        //                 'Note: ' + result.value,
+        //                 'error'
+        //             );
+        //             // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
+        //         }
+        //     });
+        // }
+    </script>
+@endpush

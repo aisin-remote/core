@@ -37,7 +37,7 @@
         <div class="container mt-4">
             <div class="row">
                 <div class="col-md-4 col-sm-12">
-                    <div class="card mb-5 mb-xl-10" style="height: 1340px !important">
+                    <div class="card mb-5 mb-xl-10" style="height: 1020px !important">
                         <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
@@ -61,8 +61,20 @@
                                             </div>
                                         </div>
                                         <h4 class="mt-6 fw-bolder text-center">{{ $employee->name }}</h4>
+                                        @php
+                                            $position = $employee->position;
+
+                                            $positionLabelMap = [
+                                                'Direktur' => $employee->plant?->name,
+                                                'GM' => $employee->division?->name,
+                                                'Act GM' => $employee->division?->name,
+                                            ];
+
+                                            $unitName = $positionLabelMap[$position] ?? $employee->department?->name;
+                                        @endphp
+
                                         <p class="fw-bolder text-muted text-center">
-                                            {{ $employee->position }} - {{ $employee->department?->name }}
+                                            {{ $employee->position }} - {{ $unitName }}
                                         </p>
                                     </div>
 
@@ -70,7 +82,7 @@
                                     <div class="mt-4">
                                         <div class="mt-2">
                                             <div class="row">
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">NPK</label>
                                                     <input readonly type="text" name="npk"
                                                         class="form-control form-control-sm form-control-solid"
@@ -80,30 +92,42 @@
                                                     <label class="form-label fw-bold fs-6">Gender</label>
                                                     <input readonly type="text" name="gender"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Gender"
                                                         value="{{ old('gender', $employee->gender) }}">
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Birthday Date</label>
                                                     <input readonly type="date" name="birthday_date"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Birthday Date"
                                                         value="{{ old('birthday_date', $employee->birthday_date) }}">
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                @php
+                                                    $age = $employee->birthday_date
+                                                        ? Carbon\Carbon::parse($employee->birthday_date)->age
+                                                        : null;
+                                                @endphp
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Age</label>
+                                                    <input readonly type="text" name="age"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Age" value="{{ $age }}">
+                                                </div>
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Email</label>
-                                                    <input readonly type="text" name=""
+                                                    <input readonly type="email" name="email"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="arief.widodo@aisin-indonesia.co.id">
+                                                        placeholder="Email"
+                                                        value="{{ old('email', $employee->user?->email) }}">
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Phone Number</label>
-                                                    <input readonly type="text" name="email"
+                                                    <input readonly type="text" name="phone_number"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap" value="-">
+                                                        placeholder="Phone Number"
+                                                        value="{{ old('phone_number', $employee->phone_number) }}">
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Name</label>
                                                     <select disabled name="company_name" class="form-select form-select-sm"
                                                         data-control="select2">
@@ -116,47 +140,96 @@
                                                             Aisin Indonesia Automotive</option>
                                                     </select>
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Group</label>
                                                     <input readonly type="text" name="company_group"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Company Group"
                                                         value="{{ old('company_group', $employee->company_group) }}">
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Join Date</label>
                                                     <input readonly type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Join Date"
                                                         value="{{ old('aisin_entry_date', $employee->aisin_entry_date) }}">
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Working Period</label>
                                                     <input readonly type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
+                                                        placeholder="Working Period"
                                                         value="{{ old('working_period', $employee->working_period) }}">
                                                 </div>
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Aisin Grade</label>
+                                                    <input readonly type="text" name="grade"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Grade" value="{{ old('grade', $employee->grade) }}">
+                                                </div>
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Astra Grade</label>
+                                                    <input readonly type="text" name="grade"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Grade" value="{{ $employee->astra_grade }}">
+                                                </div>
+                                                @php
+                                                    $position = $employee->position;
+                                                    $selectData = [
+                                                        'Direktur' => [
+                                                            'label' => 'Plant',
+                                                            'name' => 'plant_id',
+                                                            'options' => $plants,
+                                                            'selected' => (int) old('plant_id', $employee->plant?->id),
+                                                        ],
+                                                        'GM' => [
+                                                            'label' => 'Division',
+                                                            'name' => 'division_id',
+                                                            'options' => $divisions,
+                                                            'selected' => (int) old(
+                                                                'division_id',
+                                                                $employee->division?->id,
+                                                            ),
+                                                        ],
+                                                        'Act GM' => [
+                                                            'label' => 'Division',
+                                                            'name' => 'division_id',
+                                                            'options' => $divisions,
+                                                            'selected' => (int) old(
+                                                                'division_id',
+                                                                $employee->division?->id,
+                                                            ),
+                                                        ],
+                                                    ];
+
+                                                    // Default (untuk semua posisi lainnya)
+                                                    $default = [
+                                                        'label' => 'Department',
+                                                        'name' => 'department_id',
+                                                        'options' => $departments,
+                                                        'selected' => (int) old(
+                                                            'department_id',
+                                                            $employee->department?->id,
+                                                        ),
+                                                    ];
+
+                                                    $field = $selectData[$position] ?? $default;
+                                                @endphp
+
                                                 <div class="col-12 mb-8">
-                                                    <label class="form-label fw-bold fs-6">Department</label>
-                                                    <select disabled name="department_id" aria-label="Pilih Departemen"
-                                                        data-control="select2" data-placeholder="Pilih departement"
+                                                    <label class="form-label fw-bold fs-6">{{ $field['label'] }}</label>
+                                                    <select disabled name="{{ $field['name'] }}"
+                                                        aria-label="Pilih {{ $field['label'] }}" data-control="select2"
+                                                        data-placeholder="Pilih {{ strtolower($field['label']) }}"
                                                         class="form-select form-select-sm fw-semibold">
-                                                        <option value="">Pilih Departemen</option>
-                                                        @foreach ($departments as $department)
-                                                            <option value="{{ $department->id }}"
-                                                                {{ old('department_id', (int) $employee->leadingDepartment?->id ?? '') == (int) $department->id ? 'selected' : '' }}>
-                                                                {{ $department->name }}
+                                                        <option value="">Pilih {{ $field['label'] }}</option>
+                                                        @foreach ($field['options'] as $option)
+                                                            <option value="{{ $option->id }}"
+                                                                {{ $field['selected'] == (int) $option->id ? 'selected' : '' }}>
+                                                                {{ $option->name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
-                                                </div>
-                                                <div class="col-12 mb-8">
-                                                    <label class="form-label fw-bold fs-6">Grade</label>
-                                                    <input readonly type="text" name="grade"
-                                                        class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Nama Lengkap"
-                                                        value="{{ old('grade', $employee->grade) }}">
                                                 </div>
                                             </div>
                                         </div>
@@ -185,14 +258,8 @@
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        @php
-                                            $totalEducation = $educations->count();
-                                            $maxSlots = 3;
-                                        @endphp
-
-                                        @for ($i = 0; $i < $maxSlots; $i++)
-                                            @if (isset($educations[$i]))
-                                                @php $education = $educations[$i]; @endphp
+                                        @if ($educations->isNotEmpty())
+                                            @foreach ($educations->take(3) as $index => $education)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold">
@@ -202,30 +269,20 @@
                                                             {{ $education->institute }}
                                                         </div>
                                                     </div>
-                                                    <div class="text-muted fs-7">
-                                                        {{ \Illuminate\Support\Carbon::parse($education->start_date)->format('Y') }}
-                                                        -
-                                                        {{ \Illuminate\Support\Carbon::parse($education->end_date)->format('Y') }}
-                                                    </div>
+                                                    <span class="text-muted fs-7">
+                                                        {{ $education->start_date ? \Carbon\Carbon::parse($education->start_date)->format('Y') . ' - ' : '' }}{{ $education->end_date ? \Carbon\Carbon::parse($education->end_date)->format('Y') : 'Present' }}
+                                                    </span>
                                                 </div>
-                                            @else
-                                                <!-- Slot kosong -->
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <a class="fw-semibold"
-                                                            href="{{ route('employee.edit', $employee->npk) }}">
-                                                            Go to employee edit page
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            @endif
 
-                                            @unless ($i == $maxSlots - 1)
-                                                <div class="separator separator-dashed my-3"></div>
-                                            @endunless
-                                        @endfor
+                                                @if (!$loop->last)
+                                                    <div class="separator separator-dashed my-3"></div>
+                                                @endif
+                                            @endforeach
+                                        @else
+                                            <div class="text-center text-muted mb-3">
+                                                No educational background data available.
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -252,22 +309,16 @@
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        @php
-                                            $maxSlots = 3;
-                                            $experienceCount = $workExperiences->count();
-                                        @endphp
-
-                                        @for ($i = 0; $i < $maxSlots; $i++)
-                                            @if (isset($workExperiences[$i]))
-                                                @php $experience = $workExperiences[$i]; @endphp
+                                        @if ($workExperiences->isNotEmpty())
+                                            @foreach ($workExperiences->take(3) as $experience)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold">
+                                                            {{ $experience->department }}
+                                                        </div>
+                                                        {{-- <div class="fw-semibold text-gray-600">
                                                             {{ $experience->position }}
-                                                        </div>
-                                                        <div class="fw-semibold text-gray-600">
-                                                            {{ $experience->company }}
-                                                        </div>
+                                                        </div> --}}
                                                     </div>
                                                     <div class="text-muted fs-7">
                                                         {{ \Illuminate\Support\Carbon::parse($experience->start_date)->format('Y') }}
@@ -275,24 +326,16 @@
                                                         {{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('Y') : 'Present' }}
                                                     </div>
                                                 </div>
-                                            @else
-                                                <!-- Slot kosong -->
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <a class="fw-semibold"
-                                                            href="{{ route('employee.edit', $employee->npk) }}">
-                                                            Go to employee edit page
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            @endif
 
-                                            @unless ($i == $maxSlots - 1)
-                                                <div class="separator separator-dashed my-3"></div>
-                                            @endunless
-                                        @endfor
+                                                @if (!$loop->last)
+                                                    <div class="separator separator-dashed my-3"></div>
+                                                @endif
+                                            @endforeach
+                                        @else
+                                            <div class="text-center text-muted mb-3">
+                                                No work experience data available.
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -319,14 +362,8 @@
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        @php
-                                            $maxSlots = 3;
-                                            $appraisalCount = $performanceAppraisals->count();
-                                        @endphp
-
-                                        @for ($i = 0; $i < $maxSlots; $i++)
-                                            @if (isset($performanceAppraisals[$i]))
-                                                @php $appraisal = $performanceAppraisals[$i]; @endphp
+                                        @if ($performanceAppraisals->isNotEmpty())
+                                            @foreach ($performanceAppraisals->take(3) as $appraisal)
                                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <div class="fs-6 fw-bold">Score - {{ $appraisal->score }}</div>
@@ -335,24 +372,12 @@
                                                         </div>
                                                     </div>
                                                 </div>
-                                            @else
-                                                <!-- Slot kosong -->
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <a class="fw-semibold"
-                                                            href="{{ route('employee.edit', $employee->npk) }}">
-                                                            Go to employee edit page
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                            @endif
 
-                                            @unless ($i == $maxSlots - 1)
-                                                <div class="separator separator-dashed my-3"></div>
-                                            @endunless
-                                        @endfor
+                                                @if (!$loop->last)
+                                                    <div class="separator separator-dashed my-3"></div>
+                                                @endif
+                                            @endforeach
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -361,63 +386,81 @@
 
                     @include('website.modal.appraisal.all_detail')
 
-                    <div class="row">
-                        <!-- Card 2: Historical Human Assets Value -->
-                        <div class="col-md-12">
-                            <div class="card mb-5 mb-xl-10">
-                                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                                    data-bs-toggle="collapse" data-bs-target="#kt_account_human_assets"
-                                    aria-expanded="true" aria-controls="kt_account_human_assets">
-                                    <div class="card-title m-0">
-                                        <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
+                    @if (auth()->user()->role == 'HRD')
+                        <div class="row">
+                            <!-- Card 2: Historical Human Assets Value -->
+                            <div class="col-md-12">
+                                <div class="card mb-5 mb-xl-10">
+                                    <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                                        role="button">
+                                        <div class="card-title m-0">
+                                            <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
+                                        </div>
+
+                                        <a class="btn btn-sm btn-info"
+                                            href="{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                                            <i class="fas fa-info"></i>
+                                            Detail
+                                        </a>
                                     </div>
-                                </div>
 
-                                <div id="kt_account_human_assets" class="collapse show">
-                                    <div class="card-body border-top p-10">
-                                        <!-- Mengurangi padding agar card lebih kecil -->
-                                        @php
-                                            $humanAssets = [];
-                                            $maxSlots = 3; // Set jumlah maksimum slot
-                                            $humanAssetsCount = count($humanAssets);
-                                        @endphp
+                                    <div id="kt_account_human_assets" class="collapse show">
+                                        <div class="card-body border-top p-10">
+                                            @php
+                                                $humanAssetsCount = isset($humanAssets) ? count($humanAssets) : 0;
+                                                $titles = [
+                                                    1 => 'Star',
+                                                    2 => 'Future Star',
+                                                    3 => 'Future Star',
+                                                    4 => 'Potential Candidate',
+                                                    5 => 'Raw Diamond',
+                                                    6 => 'Candidate',
+                                                    7 => 'Top Performer',
+                                                    8 => 'Strong Performer',
+                                                    9 => 'Career Person',
+                                                    10 => 'Most Unfit Employee',
+                                                    11 => 'Unfit Employee',
+                                                    12 => 'Problem Employee',
+                                                    13 => 'Maximal Contributor',
+                                                    14 => 'Contributor',
+                                                    15 => 'Minimal Contributor',
+                                                    16 => 'Dead Wood',
+                                                ];
+                                            @endphp
 
-                                        @if ($humanAssetsCount === 0)
-                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
-                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <a class="fw-semibold"
-                                                            href="{{ route('hav.index', $employee->npk) }}">
-                                                            Go to hav page
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                <div class="separator separator-dashed mt-4"></div>
-                                            @endfor
-                                        @else
-                                            @foreach ($humanAssets as $asset)
-                                                <div class="d-flex flex-wrap align-items-center">
-                                                    <div id="kt_signin_email">
-                                                        <div class="fs-6 fw-bold mb-1">{{ $asset['title'] }}
-                                                            [{{ $asset['count'] }}]
-                                                            <div class="text-muted fs-7">
-                                                                {{ $asset['year'] }}
+
+                                            @if ($humanAssetsCount > 0)
+                                                @foreach ($humanAssets->take(3) as $asset)
+                                                    <div class="d-flex flex-wrap align-items-center">
+                                                        <div id="kt_signin_email">
+                                                            <div class="fs-6 fw-bold mb-1">
+                                                                {{ $titles[(int) $asset['quadrant']] ?? 'Unknown' }}
+                                                                [{{ $asset['count'] }}]
+                                                                <div class="text-muted fs-7">
+                                                                    {{ $asset['year'] }}
+                                                                </div>
                                                             </div>
+
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                <div class="separator separator-dashed my-4"></div>
-                                            @endforeach
-                                        @endif
+                                                    @if (!$loop->last)
+                                                        <div class="separator separator-dashed my-4"></div>
+                                                    @endif
+                                                @endforeach
+                                            @else
+                                                <div class="text-center text-muted mb-3">
+                                                    No human asset data available.
+                                                </div>
+                                            @endif
+
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
+
                 </div>
             </div>
 
@@ -435,6 +478,7 @@
                                     data-bs-target="#detailAstraTrainingModal">
                                     <i class="fas fa-info"></i> Detail
                                 </button>
+
                             </div>
                         </div>
 
@@ -462,24 +506,11 @@
                                                     <td colspan="3" class="text-center text-muted">No data available
                                                     </td>
                                                 </tr>
-                                                <tr>
-                                                    <td colspan="3">
-                                                        <div
-                                                            class="d-flex justify-content-between align-items-center gap-3">
-                                                            <span class="text-muted">[Empty slot]</span>
-                                                            <a class="fw-semibold text-primary"
-                                                                href="{{ route('employee.edit', $employee->npk) }}">
-                                                                Go to employee edit page
-                                                            </a>
-                                                        </div>
-                                                    </td>
-                                                </tr>
                                             @else
                                                 @for ($i = 0; $i < $maxSlots; $i++)
                                                     @if (isset($astraTrainings[$i]))
                                                         @php $training = $astraTrainings[$i]; @endphp
                                                         <tr>
-
                                                             <td class="text-center">
                                                                 {{ \Illuminate\Support\Carbon::parse($training->date_end)->format('Y') }}
                                                             </td>
@@ -488,22 +519,12 @@
                                                                 {{ $training->ict_score }}/{{ $training->project_score }}/{{ $training->total_score }}
                                                             </td>
                                                         </tr>
-                                                    @else
-                                                        <tr>
-                                                            <td colspan="3">
-                                                                <div
-                                                                    class="d-flex justify-content-between align-items-center gap-3">
-                                                                    <span class="text-muted">[Empty slot]</span>
-                                                                    <a class="fw-semibold text-primary"
-                                                                        href="{{ route('employee.edit', $employee->npk) }}">
-                                                                        Go to employee edit page
-                                                                    </a>
-                                                                </div>
-                                                            </td>
-                                                        </tr>
                                                     @endif
                                                 @endfor
                                             @endif
+
+                                            {{-- Tampilkan 1 tombol di akhir jika jumlah pelatihan < maxSlots --}}
+
                                         </tbody>
                                     </table>
                                 </div>
@@ -553,18 +574,6 @@
                                                     <td colspan="3" class="text-center text-muted">No data available
                                                     </td>
                                                 </tr>
-                                                <tr>
-                                                    <td colspan="3">
-                                                        <div
-                                                            class="d-flex justify-content-between align-items-center gap-3">
-                                                            <span class="text-muted">[Empty slot]</span>
-                                                            <a class="fw-semibold text-primary"
-                                                                href="{{ route('employee.edit', $employee->npk) }}">
-                                                                Go to employee edit page
-                                                            </a>
-                                                        </div>
-                                                    </td>
-                                                </tr>
                                             @else
                                                 @for ($i = 0; $i < $maxSlots; $i++)
                                                     @if (isset($externalTrainings[$i]))
@@ -576,19 +585,6 @@
                                                                 {{ \Illuminate\Support\Carbon::parse($training->date_end)->format('Y') }}
                                                             </td>
                                                             <td class="text-center">{{ $training->vendor }}</td>
-                                                        </tr>
-                                                    @else
-                                                        <tr>
-                                                            <td colspan="3">
-                                                                <div
-                                                                    class="d-flex justify-content-between align-items-center gap-3">
-                                                                    <span class="text-muted">[Empty slot]</span>
-                                                                    <a class="fw-semibold text-primary"
-                                                                        href="{{ route('employee.edit', $employee->npk) }}">
-                                                                        Go to employee edit page
-                                                                    </a>
-                                                                </div>
-                                                            </td>
                                                         </tr>
                                                     @endif
                                                 @endfor
@@ -639,7 +635,7 @@
 
                             <!--begin::Tbody-->
                             <tbody class="fw-6 fw-semibold text-gray-600">
-                                @forelse ($promotionHistories as $promotionHistory)
+                                @forelse ($promotionHistories->take(3) as $promotionHistory)
                                     <tr>
                                         <td class="text-center">{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $promotionHistory->previous_grade }}</td>
@@ -669,13 +665,27 @@
             <div class="row">
                 <!-- Strength -->
                 <div class="col-md-6">
-                    <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                            data-bs-toggle="collapse" data-bs-target="#strength_section">
+                    <div class="card mb-5 ">
+                        <div class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center cursor-pointer"
+                            role="button">
+
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
                             </div>
+
+                            @if ($assessment && $assessment->date)
+                                <a class="btn btn-sm btn-info"
+                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    <i class="fas fa-info"></i> Detail
+                                </a>
+                            @else
+                                <button class="btn btn-sm btn-info" onclick="showAssessmentAlert()">
+                                    Detail
+                                </button>
+                            @endif
                         </div>
+
+
                         <div id="strength_section" class="collapse show">
                             <div class="card-body border-top p-10">
                                 @if (!$assessment)
@@ -710,6 +720,8 @@
                                     @endforeach
                                 @endif
                             </div>
+
+
                         </div>
                     </div>
                 </div>
@@ -717,12 +729,25 @@
                 <!-- Areas for Development -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                            data-bs-toggle="collapse" data-bs-target="#weakness_section">
+                        <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                            role="button">
+
                             <div class="card-title m-0">
-                                <h3 class="fw-bold m-0">Areas for Development</h3>
+                                <h3 class="fw-bold m-0">Weakness</h3>
                             </div>
+
+                            @if ($assessment && $assessment->date)
+                                <a class="btn btn-sm btn-info"
+                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    <i class="fas fa-info"></i> Detail
+                                </a>
+                            @else
+                                <button class="btn btn-sm btn-info" onclick="showAssessmentAlert()">
+                                    Detail
+                                </button>
+                            @endif
                         </div>
+
                         <div id="weakness_section" class="collapse show">
                             <div class="card-body border-top p-10">
                                 @if (!$assessment)
@@ -764,11 +789,17 @@
 
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
-                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                    data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
+                <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
+                    role="button">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
                     </div>
+                    <a class="btn btn-sm btn-info"
+                        href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                        <i class="fas fa-info"></i>
+                        Detail
+                    </a>
+
                 </div>
 
                 <div class="card-body">
@@ -793,6 +824,7 @@
                         </tbody>
                     </table>
                 </div>
+
             </div>
 
             <!-- Tombol Back di bagian bawah card -->
@@ -849,5 +881,14 @@
                 $(this).siblings(".show-more").removeClass("d-none");
             });
         });
+
+        function showAssessmentAlert() {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Assessment Not Found',
+                text: 'Assessment belum tersedia untuk data ini.',
+                confirmButtonText: 'OK'
+            });
+        }
     </script>
 @endpush

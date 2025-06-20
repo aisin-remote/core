@@ -26,99 +26,81 @@
                                 <option value="{{ $department }}">{{ $department }}</option>
                             @endforeach
                         </select> --}}
-                        @if (auth()->user()->role == 'HRD')
+                        @if (auth()->user()->role == 'HRD' && auth()->user()->employee->position != 'President')
                             <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#addAssessmentModal">Add</a>
                         @endif
                     </div>
                 </div>
                 <div class="card-body">
-                    @if (auth()->user()->role == 'HRD')
-                        <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                            role="tablist" style="cursor:pointer">
+                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                        role="tablist" style="cursor:pointer">
+                        {{-- Tab Show All --}}
+                        <li class="nav-item" role="presentation">
                             <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
                                 href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                                 Show All
                             </a>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
-                                    Direktur
-                                </a>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'GM' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'GM']) }}">GM</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Manager' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Section Head']) }}">Section
-                                    Head</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Leader' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Leader']) }}">Leader</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'JP' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'JP']) }}">JP</a>
-                            </li>
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == 'Operator' ? 'active' : '' }}"
-                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Operator']) }}">Operator</a>
-                            </li>
-                        </ul>
-                    @endif
+                        </li>
 
+                        {{-- Tab Dinamis --}}
+                        @foreach ($visiblePositions as $position)
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                                    href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                    {{ $position }}
+                                </a>
+                            </li>
+                        @endforeach
+                    </ul>
 
                     <div class="card-body">
                         <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                             <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
+                                    <th>Photo</th>
                                     <th>Employee Name</th>
-                                    <th>Department</th>
-                                    <th>Position</th>
                                     <th>NPK</th>
+                                    <th>Company</th>
+                                    <th>Position</th>
+                                    <th>Department</th>
+                                    <th>Grade</th>
                                     <th>Age</th>
+                                    <th class="text-center">Last Assessment</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($assessments as $index => $assessment)
-                                    <tr data-position="{{ $assessment->employee->position ?? '-' }}">
+                                    @php
+                                        $employee = $assessment->employee;
+                                        $birthdate = $employee->birthday_date;
+                                        $age = $birthdate ? \Carbon\Carbon::parse($birthdate)->age : null;
+                                        $lastAssessmentDate = optional($employee->assessments()->latest()->first())
+                                            ->date;
+                                    @endphp
+                                    <tr data-position="{{ $employee->position ?? '-' }}">
                                         <td>{{ $assessments->firstItem() + $index }}</td>
-                                        <td>{{ $assessment->employee->name ?? '-' }}</td>
-                                        <td>
-                                            @if ($assessment->employee->department)
-                                                {{ $assessment->employee->department->name }}
-                                            @else
-                                                Tidak Ada Departemen
-                                            @endif
+                                        <td class="text-center">
+                                            <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                                                alt="Employee Photo" class="rounded" width="40" height="40"
+                                                style="object-fit: cover;">
                                         </td>
-                                        <td>{{ $assessment->employee->position ?? '-' }}</td>
-                                        <td>{{ $assessment->employee->npk ?? '-' }}</td>
-                                        <td>
-                                            @php
-                                                $birthdate = $assessment->employee->birthday_date;
-                                                $age = $birthdate ? \Carbon\Carbon::parse($birthdate)->age : null;
-                                            @endphp
-                                            {{ $age ?? '-' }}
+                                        <td>{{ $employee->name ?? '-' }}</td>
+                                        <td>{{ $employee->npk ?? '-' }}</td>
+                                        <td>{{ $employee->company_name ?? '-' }}</td>
+                                        <td>{{ $employee->position ?? '-' }}</td>
+                                        <td>{{ $employee->bagian }}</td>
+
+                                        <td>{{ $employee->grade ?? '-' }}</td>
+                                        <td>{{ $age ?? '-' }}</td>
+                                        <td class="text-center">
+                                            {{ $lastAssessmentDate ? \Carbon\Carbon::parse($lastAssessmentDate)->format('d M Y') : '-' }}
                                         </td>
                                         <td class="text-center">
                                             <a class="btn btn-info btn-sm history-btn"
-                                                data-employee-id="{{ $assessment->employee->id }}" data-bs-toggle="modal"
+                                                data-employee-id="{{ $employee->id }}" data-bs-toggle="modal"
                                                 data-bs-target="#detailAssessmentModal">
                                                 History
                                             </a>
@@ -127,12 +109,17 @@
                                 @endforeach
                             </tbody>
 
+
                         </table>
-                        <div class="d-flex justify-content-between">
-                            <span>Showing {{ $assessments->firstItem() }} to {{ $assessments->lastItem() }} of
-                                {{ $assessments->total() }} entries</span>
+                        <div class="d-flex justify-content-end mt-4">
                             {{ $assessments->links('pagination::bootstrap-5') }}
                         </div>
+
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted fw-bold">
+                            Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
+                        </small>
                     </div>
                 </div>
             </div>
@@ -215,13 +202,20 @@
                 });
             });
             $(document).ready(function() {
+
+                function safeEncode(str) {
+                    return btoa(unescape(encodeURIComponent(str || '')));
+                }
+
+                function safeDecode(str) {
+                    return decodeURIComponent(escape(atob(str || '')));
+                }
+
                 $(document).on("click", ".history-btn", function(event) {
                     event.preventDefault();
 
                     let employeeId = $(this).data("employee-id");
-                    console.log("Fetching history for Employee ID:", employeeId); // Debug
 
-                    // Reset data modal sebelum request baru dilakukan
                     $("#npkText").text("-");
                     $("#positionText").text("-");
                     $("#kt_table_assessments tbody").empty();
@@ -230,149 +224,150 @@
                         url: `/assessment/history/${employeeId}`,
                         type: "GET",
                         success: function(response) {
-                            console.log("Response received:", response); // Debug respons
-
                             if (!response.employee) {
-                                console.error("Employee data not found in response!");
                                 alert("Employee not found!");
                                 return;
                             }
 
-                            // Update informasi karyawan
                             $("#npkText").text(response.employee.npk);
                             $("#positionText").text(response.employee.position);
-
-                            // Kosongkan tabel sebelum menambahkan data baru
                             $("#kt_table_assessments tbody").empty();
+
+                            let isHRD = "{{ strtolower(auth()->user()->role) }}" === "hrd";
 
                             if (response.assessments.length > 0) {
                                 response.assessments.forEach((assessment, index) => {
-                                    let row = `
-                        <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td class="text-center">${assessment.date}</td>
-                           <td class="text-center">${assessment.description || '-'}</td>
+                                    let editBtn = '';
+                                    let deleteBtn = '';
 
-                            <td class="text-center">
-                                <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
-                                    Detail
-                                </a>
-                              ${`
-                                                                            <a class="btn btn-primary btn-sm"
-                                                                                target="_blank"
-                                                                                href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
-                                                                                onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                                                                View PDF
-                                                                            </a>
-                                                                `}
-
+                                    if (isHRD) {
+                                        editBtn = `
                                 <button type="button" class="btn btn-warning btn-sm updateAssessment"
-                                data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
-                                data-id="${assessment.id}"
-                                data-employee-id="${assessment.employee_id}"
-                                data-date="${assessment.date}"
-                                data-description="${assessment.description}"
-                                data-upload="${assessment.upload}"
-                                data-scores='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.score)))}'
-                                data-alcs='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
-                                data-alc_name='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
-                                data-strengths='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
-                                data-weaknesses='${encodeURIComponent(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'>
-                                Edit
-                            </button>
+                                    data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
+                                    data-id="${assessment.id}"
+                                    data-employee-id="${assessment.employee_id}"
+                                    data-date="${assessment.date}"
+                                    data-description="${safeEncode(assessment.description || '')}"
+                                    data-upload="${assessment.upload || ''}"
+                                    data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
+                                    data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
+                                    data-alc_name='${safeEncode(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
+                                    data-strengths='${safeEncode(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
+                                    data-weaknesses='${safeEncode(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
+                                    data-suggestion_development='${safeEncode(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'
+                                >Edit</button>
+                            `;
 
-                                                                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                                                                        data-id="${assessment.id}">Delete</button>
-                                                                                </td>
-                                                                            </tr>
-                                                                        `;
+                                        deleteBtn = `
+                                <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                    data-id="${assessment.id}">Delete</button>
+                            `;
+                                    }
+
+                                    let row = `
+                            <tr>
+                                <td class="text-center">${index + 1}</td>
+                                <td class="text-center">${assessment.date}</td>
+                                <td class="text-center">${assessment.description || '-'}</td>
+                                <td class="text-center">
+                                    <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
+                                        Detail
+                                    </a>
+                                    <a class="btn btn-primary btn-sm"
+                                       target="_blank"
+                                       href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                       onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                        View PDF
+                                    </a>
+                                    ${editBtn}
+                                    ${deleteBtn}
+                                </td>
+                            </tr>
+                        `;
+
                                     $("#kt_table_assessments tbody").append(row);
                                 });
                             } else {
                                 $("#kt_table_assessments tbody").append(`
-                                                                        <tr>
-                                                                            <td colspan="3" class="text-center text-muted">No assessment found</td>
-                                                                        </tr>
-                                                                    `);
+                        <tr>
+                            <td colspan="4" class="text-center text-muted">No assessment found</td>
+                        </tr>
+                    `);
                             }
 
-                            // Tampilkan modal setelah data dimuat
                             $("#detailAssessmentModal").modal("show");
                         },
-                        error: function(error) {
-                            console.error("Error fetching data:", error);
+                        error: function() {
                             alert("Failed to load assessment data!");
                         }
                     });
                 });
+
                 $(document).on("click", ".updateAssessment", function() {
                     let assessmentId = $(this).data("id");
                     let employeeId = $(this).data("employee-id");
                     let date = $(this).data("date");
-                    let description = $(this).data("description");
+
+                    let description = safeDecode($(this).data("description"));
                     let upload = $(this).data("upload");
 
-                    let scores = JSON.parse(decodeURIComponent($(this).attr("data-scores")));
-                    let alcs = JSON.parse(decodeURIComponent($(this).attr("data-alcs")));
-                    let alcNames = JSON.parse(decodeURIComponent($(this).attr("data-alc_name")));
-                    let strengths = JSON.parse(decodeURIComponent($(this).attr("data-strengths")));
-                    let weaknesses = JSON.parse(decodeURIComponent($(this).attr("data-weaknesses")));
+                    let scores = JSON.parse(atob($(this).attr("data-scores")));
+                    let alcs = JSON.parse(atob($(this).attr("data-alcs")));
+                    let alcNames = JSON.parse(safeDecode($(this).attr("data-alc_name")));
+                    let strengths = JSON.parse(safeDecode($(this).attr("data-strengths")));
+                    let weaknesses = JSON.parse(safeDecode($(this).attr("data-weaknesses")));
+                    let suggestion_development = JSON.parse(safeDecode($(this).attr(
+                        "data-suggestion_development")));
 
                     $("#update_assessment_id").val(assessmentId);
                     $("#update_employee_id").val(employeeId);
                     $("#update_date").val(date);
                     $("#update_description").val(description);
-                    $("#update_upload").attr("href", upload).text("Lihat File");
+                    $("#update_upload").attr("href", `/storage/${upload}`).text("Lihat File");
 
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];
                         $(`#update_score_${alcId}_${score}`).prop("checked", true);
                     });
 
-                    // Sinkronisasi dari skor ke strength dan weakness
-                    syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses);
+                    syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses,
+                        suggestion_development);
 
                     const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
                     modal.show();
 
-                    // Tutup modal History sebelum membuka modal Update
                     $("#detailAssessmentModal").modal("hide");
 
                     setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal history
-                        $("body").removeClass("modal-open"); // Pastikan body tidak terkunci
+                        $(".modal-backdrop").remove();
+                        $("body").removeClass("modal-open");
 
                         $("#updateAssessmentModal").modal("show");
-
-                        // Buat overlay baru agar tetap ada
                         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 300);
+                    }, 10);
                 });
 
-                function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses) {
+                function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses, suggestions) {
                     let strengthContainer = document.getElementById("update-strengths-wrapper");
                     let weaknessContainer = document.getElementById("update-weaknesses-wrapper");
 
-                    // Bersihkan kontainer strength dan weakness sebelum memperbarui
                     strengthContainer.innerHTML = "";
                     weaknessContainer.innerHTML = "";
 
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];
                         let alcName = alcNames[index];
-                        let description = (score >= 3) ? strengths[alcId] : weaknesses[
-                            alcId]; // Ambil deskripsi berdasarkan skor
+                        let description = (score >= 3) ? strengths[index] : weaknesses[index];
+                        let suggestion = suggestions[index] || "";
 
-                        // Tentukan apakah ALC ini masuk ke strength atau weakness
                         let type = score >= 3 ? "strength" : "weakness";
                         let containerId = type === "strength" ? "update-strengths-wrapper" :
                             "update-weaknesses-wrapper";
 
-                        // Tambahkan ALC sesuai dengan kategori yang sesuai
-                        addAssessmentCard(type, containerId, alcId, description, alcName);
+                        addAssessmentCard(type, containerId, alcId, description, alcName, suggestion);
                     });
 
-                    updateDropdownOptions(); // Perbarui opsi dropdown ALC setelah sinkronisasi
+                    updateDropdownOptions();
                 }
 
                 function populateAssessmentCards(type, containerId, data, alcs, alcNames) {
@@ -392,33 +387,37 @@
                     updateDropdownOptions();
                 }
 
-                function addAssessmentCard(type, containerId, alcId = "", descriptions = "", alcName = "") {
+                function addAssessmentCard(type, containerId, alcId = "", description = "", alcName = "", suggestion =
+                    "") {
                     let container = document.getElementById(containerId);
                     let templateCard = document.createElement("div");
                     templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
 
-                    // Tentukan ID untuk card berdasarkan ALC
                     if (alcId) {
                         templateCard.setAttribute("id", `assessment_card_${alcId}`);
                     }
 
                     templateCard.innerHTML = `
-                                <div class="mb-3">
-                                    <label>ALC</label>
-                                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
-                                        <option value="">Pilih ALC</option>
-                                        @foreach ($alcs as $alc)
-                                            <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
-                                                {{ $alc->name }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label>Description</label>
-                                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${descriptions}</textarea>
-                                </div>
-                            `;
+        <div class="mb-3">
+            <label>ALC</label>
+            <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
+                <option value="">Pilih ALC</option>
+                @foreach ($alcs as $alc)
+                    <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
+                        {{ $alc->name }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="mb-3">
+            <label>Description</label>
+            <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${description}</textarea>
+        </div>
+        <div class="mb-3">
+            <label>Suggestion Development</label>
+            <textarea class="form-control suggestion-textarea" name="suggestion_development[${alcId}]" rows="2">${suggestion}</textarea>
+        </div>
+    `;
 
                     let selectElement = templateCard.querySelector(".alc-dropdown");
                     selectElement.addEventListener("change", function() {
@@ -473,9 +472,11 @@
 
                     // Update nama untuk textarea dan select agar sesuai dengan kategori
                     const textarea = card.find("textarea");
+                    const suggestion = card.find("textarea.suggestion-textarea");
                     const select = card.find("select");
 
                     textarea.attr("name", `${newType}[${alcId}]`);
+                    suggestion.attr("name", `suggestion_development[${alcId}]`);
                     select.attr("name", `${newType}_alc_ids[]`);
 
                     // Update class card untuk memastikan gaya sesuai kategori
@@ -520,34 +521,38 @@
                 }
 
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+                // $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                //     setTimeout(() => {
+                //         $(".modal-backdrop").remove(); // Hapus overlay modal update
+                //         $("body").removeClass("modal-open");
+
+                //         $("#detailAssessmentModal").modal("hide");
+
+                //         // Tambahkan overlay kembali untuk modal history
+                //         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
+                //     }, 300);
+                // });
+                // Saat modal update ditutup
                 $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        $(".modal-backdrop").remove(); // Hapus overlay modal update
+                    if ($(".modal.show").length === 0) {
                         $("body").removeClass("modal-open");
-
-                        $("#detailAssessmentModal").modal("show");
-
-                        // Tambahkan overlay kembali untuk modal history
-                        $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 300);
+                        $(".modal-backdrop").remove();
+                    }
                 });
 
-
-                // ===== HAPUS OVERLAY SAAT MODAL HISTORY DITUTUP =====
+                // Saat modal history ditutup
                 $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    setTimeout(() => {
-                        if (!$("#updateAssessmentModal").hasClass("show")) {
-                            $(".modal-backdrop").remove(); // Pastikan tidak ada overlay tertinggal
-                            $("body").removeClass("modal-open");
-                        }
-                    }, 300);
+                    if ($(".modal.show").length === 0) {
+                        $("body").removeClass("modal-open");
+                        $(".modal-backdrop").remove();
+                    }
                 });
 
-                // ===== CEGAH OVERLAY BERLAPIS =====
+                // Jaga z-index backdrop agar tidak terlalu tebal saat banyak modal muncul
                 $(".modal").on("shown.bs.modal", function() {
-                    $(".modal-backdrop").last().css("z-index",
-                        1050); // Atur overlay agar tidak bertumpuk terlalu tebal
+                    $(".modal-backdrop").css("z-index", 1050);
                 });
+
 
 
 
@@ -726,10 +731,29 @@
                 $('#assessmentForm').submit(function(e) {
                     e.preventDefault();
                     let assessment_id = $('#assessment_id').val();
+
+                    const fileInput = document.getElementById("upload"); // Ganti ini kalau ID-nya beda
+                    if (fileInput && fileInput.files.length > 0) {
+                        const fileSize = fileInput.files[0].size;
+                        if (fileSize > 2 * 1024 * 1024) {
+                            Swal.fire({
+                                title: "Gagal!",
+                                text: "Ukuran file maksimal 2 MB.",
+                                icon: "error",
+                                confirmButtonText: "OK"
+                            });
+                            return;
+                        }
+                    }
+
                     let formData = new FormData(this);
                     let url = assessment_id ? "{{ url('/assessment') }}/" + assessment_id :
                         "{{ route('assessments.store') }}";
-                    let method = assessment_id ? "PUT" : "POST";
+                    let method = assessment_id ? "POST" : "POST";
+                    if (assessment_id) {
+                        formData.append('_method', 'PUT');
+                    }
+
                     $.ajax({
                         url: url,
                         type: method,
@@ -744,8 +768,8 @@
                                 icon: "success",
                                 confirmButtonText: "OK"
                             }).then(() => {
-                                $('#addAssessmentModal').modal('hide'); // Tutup modal
-                                location.reload(); // Refresh halaman setelah sukses
+                                $('#addAssessmentModal').modal('hide');
+                                location.reload();
                             });
                         },
                         error: function(xhr, status, error) {
@@ -762,8 +786,8 @@
                             });
                         }
                     });
-
                 });
+
             });
 
             document.addEventListener("DOMContentLoaded", function() {
@@ -787,11 +811,7 @@
                     });
                 });
 
-                // Event listener untuk department dropdown
-                departmentFilter.addEventListener("change", function() {
-                    currentDepartmentFilter = this.value.toLowerCase();
-                    applyFilters();
-                });
+
 
 
 

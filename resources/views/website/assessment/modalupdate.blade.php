@@ -13,7 +13,7 @@
 
                     <div class="mb-4">
                         <label for="update_employee_id" class="form-label">Employee</label>
-                        <select class="form-control" id="update_employee_id" name="employee_id" required>
+                        <select class="form-control" id="update_employee_id" name="employee_id"  disabled>
                             <option value="">Pilih Employee</option>
                             @foreach ($employees as $employee)
                                 <option value="{{ $employee->id }}">{{ $employee->name }}</option>
@@ -25,9 +25,9 @@
                         <label for="update_date" class="form-label">Date Assessment</label>
                         <input type="date" class="form-control" id="update_date" name="date" required>
                     </div>
-                    <div class="mb-4">
+                    <div class="mb-4" style="display: none;">
                         <label for="update_description" class="form-label">Description Assessment</label>
-                        <input type="text" class="form-control" id="update_description" name="description" required>
+                        <input type="hidden" class="form-control" id="update_description" name="description" required>
                     </div>
 
                     <div class="mb-4">
@@ -41,7 +41,8 @@
                                         @for ($i = 1; $i <= 5; $i++)
                                             <div class="form-check">
                                                 <input class="form-check-input update-score" type="radio"
-                                                    name="scores[{{ $alc->id }}]" id="update_score_{{ $alc->id }}_{{ $i }}"
+                                                    name="scores[{{ $alc->id }}]"
+                                                    id="update_score_{{ $alc->id }}_{{ $i }}"
                                                     value="{{ $i }}" required>
                                                 <label class="form-check-label"
                                                     for="update_score_{{ $alc->id }}_{{ $i }}">{{ $i }}</label>
@@ -60,7 +61,7 @@
                     <div id="update-weaknesses-wrapper"></div>
 
                     <div class="mb-4">
-                        <label for="update_upload" class="form-label">Upload File Assessment (PDF, JPG, PNG)</label>
+                        <label for="update_upload" class="form-label">Upload File Assessment (PDF)</label>
                         <input type="file" class="form-control" id="update_upload" name="upload"
                             accept=".pdf,.jpg,.png">
                         <small id="update-upload-info"></small>
@@ -74,121 +75,88 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
+    document.addEventListener("DOMContentLoaded", function() {
         const updateForm = document.getElementById("updateAssessmentForm");
 
-        // Event listener untuk form submit
-        updateForm.addEventListener("submit", function (event) {
-            event.preventDefault(); // Mencegah halaman reload
+        updateForm.addEventListener("submit", function(event) {
+            event.preventDefault();
 
-            let formData = new FormData(updateForm); // Ambil semua data form
+            const fileInput = document.getElementById("update_upload");
+            if (fileInput.files.length > 0) {
+                const fileSize = fileInput.files[0].size;
+                if (fileSize > 2 * 1024 * 1024) { // 2 MB limit
+                    Swal.fire({
+                        title: "Gagal!",
+                        text: "Ukuran file maksimal 2 MB.",
+                        icon: "error",
+                        confirmButtonText: "OK"
+                    });
+                    return; // stop submit
+                }
+            }
+
+            let formData = new FormData(updateForm);
 
             fetch("/assessment/update", {
-                method: "POST",
-                body: formData,
-                headers: {
-                    'Accept': 'application/json'
-                }
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.message) { // Jika update berhasil
-                        Swal.fire({
-                            title: "Berhasil!",
-                            text: "Assessment berhasil diperbarui!",
-                            icon: "success",
-                            confirmButtonText: "OK"
-                        }).then(() => {
-                            $("#updateAssessmentModal").modal('hide');
-                            $("#detailAssessmentModal").modal('hide');
-
-                            $(".modal-backdrop").remove();
-                            $("body").removeClass("modal-open");
-                        });
-                    } else {
-                        throw new Error("Gagal memperbarui assessment. Silakan coba lagi.");
+                    method: "POST",
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                            .getAttribute('content')
                     }
+                })
+                .then(async response => {
+                    if (!response.ok) {
+                        // Kalau response error, ambil pesan validasi Laravel
+                        const errorData = await response.json();
+                        let errorMsg = "Terjadi kesalahan.";
+                        if (errorData.errors) {
+                            errorMsg = Object.values(errorData.errors).flat().join("\n");
+                        } else if (errorData.message) {
+                            errorMsg = errorData.message;
+                        }
+                        throw new Error(errorMsg);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    Swal.fire({
+                        title: "Berhasil!",
+                        text: data.message || "Assessment berhasil diperbarui!",
+                        icon: "success",
+                        confirmButtonText: "OK"
+                    }).then(() => {
+                        $("#updateAssessmentModal").modal('hide');
+                        $("#detailAssessmentModal").modal('hide');
+                        $(".modal-backdrop").remove();
+                        $("body").removeClass("modal-open");
+                        // Bisa tambah reload data atau refresh halaman jika perlu
+                         location.reload();
+                    });
                 })
                 .catch(error => {
                     Swal.fire({
                         title: "Gagal!",
-                        text: "Terjadi kesalahan saat memperbarui assessment. " + error
-                            .message,
+                        text: error.message,
                         icon: "error",
                         confirmButtonText: "OK"
                     });
                 });
         });
 
+
+
         // Load data ke modal saat tombol update diklik
-        document.querySelectorAll(".updateAssessment").forEach(button => {
-            button.addEventListener("click", function () {
-                const id = this.dataset.id;
-                const employeeId = this.dataset.employeeId;
-                const date = this.dataset.date;
-                const description = this.dataset.description;
-                const upload = this.dataset.upload;
-                const scores = JSON.parse(this.dataset.scores);
-                const alcs = JSON.parse(this.dataset.alcs);
-                const strengths = JSON.parse(this.dataset.strengths);
-                const weaknesses = JSON.parse(this.dataset.weaknesses);
 
-                document.getElementById("update_assessment_id").value = id;
-                document.getElementById("update_employee_id").value = employeeId;
-                document.getElementById("update_date").value = date;
-                document.getElementById("update_description").value = description;
-                document.getElementById("update-upload-info").textContent = upload ?
-                    `File: ${upload}` : "";
 
-                // Set nilai radio button untuk scores
-                alcs.forEach((alcId, index) => {
-                    const score = scores[index];
-                    const radio = document.getElementById(
-                        `update_score_${alcId}_${score}`);
-                    if (radio) {
-                        radio.checked = true;
-                    }
-                });
-
-                // Mengisi Strengths
-                const strengthContainer = document.getElementById("update-strengths-wrapper");
-                strengthContainer.innerHTML = "";
-                strengths.forEach((strength, idx) => {
-                    if (strength) {
-                        addAssessmentCard("strength", "update-strengths-wrapper", alcs[
-                            idx], strength);
-                    }
-                });
-
-                if (strengths.length === 0) {
-                    addAssessmentCard("strength", "update-strengths-wrapper");
-                }
-
-                // Mengisi Weaknesses
-                const weaknessContainer = document.getElementById("update-weaknesses-wrapper");
-                weaknessContainer.innerHTML = "";
-                weaknesses.forEach((weakness, idx) => {
-                    if (weakness) {
-                        addAssessmentCard("weakness", "update-weaknesses-wrapper", alcs[
-                            idx], weakness);
-                    }
-                });
-
-                if (weaknesses.length === 0) {
-                    addAssessmentCard("weakness", "update-weaknesses-wrapper");
-                }
-
-                // Tampilkan modal
-                const modal = new bootstrap.Modal(document.getElementById(
-                    "updateAssessmentModal"));
-                modal.show();
-            });
-        });
-
-        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "") {
+        function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "",
+            alcName = "", suggestion =
+            "") {
             let container = document.getElementById(containerId);
             let templateCard = document.createElement("div");
-            templateCard.classList.add("card", "p-3", "mb-3", "assessment-card", `${type}-card`);
+            templateCard.classList.add("card", "p-3", "mb-3", "assessment-card",
+                `${type}-card`);
 
             // Tambahkan ID sesuai ALC
             if (selectedAlc) {
@@ -198,7 +166,7 @@
             templateCard.innerHTML = `
             <div class="mb-3">
                 <label>ALC</label>
-                <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                <select class="form-control alc-dropdown" name="${type}_alc_ids[]">
                     <option value="">Pilih ALC</option>
                     @foreach ($alcs as $alc)
                         <option value="{{ $alc->id }}" ${selectedAlc == "{{ $alc->id }}" ? "selected" : ""}>
@@ -211,10 +179,15 @@
                 <label>Description</label>
                 <textarea class="form-control ${type}-textarea" name="${type}[${selectedAlc}]" rows="2">${descriptions}</textarea>
             </div>
+              <div class="mb-3">
+            <label>Suggestion Development</label>
+           <textarea class="form-control suggestion-textarea" name="suggestion_development[${selectedAlc}]" rows="2">${suggestion}</textarea>
+
+        </div>
         `;
 
             let selectElement = templateCard.querySelector(".alc-dropdown");
-            selectElement.addEventListener("change", function () {
+            selectElement.addEventListener("change", function() {
                 updateDescriptionName(selectElement, type);
                 updateDropdownOptions();
             });
@@ -249,11 +222,12 @@
                         let buttonGroup = card.querySelector(".button-group");
                         let removeButton = document.createElement("button");
                         removeButton.type = "button";
-                        removeButton.classList.add("btn", "btn-danger", "btn-sm", "remove-card",
+                        removeButton.classList.add("btn", "btn-danger", "btn-sm",
+                            "remove-card",
                             "me-2");
                         removeButton.textContent = "Hapus";
 
-                        removeButton.addEventListener("click", function () {
+                        removeButton.addEventListener("click", function() {
                             card.remove();
                             updateRemoveButtons(container);
                         });
@@ -264,7 +238,7 @@
             }
         }
 
-        $(document).on("change", ".update-score", function () {
+        $(document).on("change", ".update-score", function() {
             const radio = $(this);
             const idParts = radio.attr("id").split("_"); // e.g. update_score_3_4
             const alcId = idParts[2];
@@ -282,7 +256,9 @@
                 card = $(`#assessment_card_${alcId}`);
             } else {
                 // Card sudah ada → pindahkan dari wrapper lama ke wrapper baru
-                const detachedCard = $(`#update-${oldType}s-wrapper #assessment_card_${alcId}`).detach();
+                const detachedCard = $(
+                        `#update-${oldType}s-wrapper #assessment_card_${alcId}`)
+                    .detach();
                 newWrapper.append(detachedCard);
                 card = detachedCard;
             }
@@ -306,7 +282,7 @@
             const alcId = select.val();
 
             // Contoh: Jika ALC untuk strength, dropdown hanya menampilkan ALC yang relevan
-            select.find("option").each(function () {
+            select.find("option").each(function() {
                 const option = $(this);
                 if (type === "strength" && option.val() !== alcId) {
                     option.prop("disabled", false); // ALC yang boleh dipilih
@@ -317,7 +293,25 @@
                 }
             });
         }
+        $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                    if ($(".modal.show").length === 0) {
+                        $("body").removeClass("modal-open");
+                        $(".modal-backdrop").remove();
+                    }
+                });
 
+                // Saat modal history ditutup
+                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
+                    if ($(".modal.show").length === 0) {
+                        $("body").removeClass("modal-open");
+                        $(".modal-backdrop").remove();
+                    }
+                });
+
+                // Jaga z-index backdrop agar tidak terlalu tebal saat banyak modal muncul
+                $(".modal").on("shown.bs.modal", function() {
+                    $(".modal-backdrop").css("z-index", 1050);
+                });
 
     });
 </script>

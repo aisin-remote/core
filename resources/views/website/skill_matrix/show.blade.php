@@ -77,7 +77,7 @@
                             <th class="text-center">Weight</th>
                             <th class="text-center">Plan</th>
                             <th class="text-center">Act</th>
-                            <th class="text-center">Status</th>
+                            <th class="text-center">Status Level 1</th>
                             <th class="text-center">Due Date</th>
                         </tr>
                     </thead>
@@ -89,17 +89,51 @@
                             <td class="text-center">{{ $employeeCompetency->competency->plan }}</td>
                             <td class="text-center">{{ $employeeCompetency->act }}</td>
                             <td class="text-center">
-                                <span class="badge {{ $employeeCompetency->status ? 'bg-success' : 'bg-warning' }}">
-                                    {{ $employeeCompetency->status ? 'Approved' : 'Waiting' }}
-                                </span>
-                            </td>
+                                @if($employeeCompetency->act == 1)
+                                    <span class="badge bg-success">Approved</span>
+                                @else
+                                    <span class="badge bg-warning">Waiting</span>
+                                @endif
+                            </td>    
                             <td class="text-center">{{ \Carbon\Carbon::parse($employeeCompetency->due_date)->format('M Y') }}</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
         </div>
-        
+
+        {{-- History of uploaded files --}}
+        @if($employeeCompetency->evidenceHistories->count())
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5>File Submission History</h5>
+            </div>
+            <div class="card-body">
+                <ul class="list-group">
+                    @foreach($employeeCompetency->evidenceHistories as $history)
+                        <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                            <div>
+                                {{ $history->created_at->format('d M Y H:i') }} – 
+                                <strong>{{ $history->actor->name }}</strong> 
+                                {{ $history->action === 'approve' ? 'Approved' : 'Unapproved' }}
+                            </div>
+                            @if($employeeCompetency->file)
+                            <li class="list-group-item d-flex justify-content-between align-items-center flex-wrap">
+                                <div>
+                                    <strong>Latest File</strong> – File utama yang di-submit
+                                </div>
+                                <a href="{{ asset('storage/' . $employeeCompetency->file) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-download"></i> Download
+                                </a>
+                            </li>
+                            @endif
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+        </div>
+        @endif
+
         <div class="text-end mt-4">
             <a href="{{ route('skillMatrix.index') }}" class="btn btn-secondary">
                 <i class="bi bi-arrow-left-circle"></i> Back

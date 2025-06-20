@@ -30,7 +30,7 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h3 class="card-title">{{ $table }} List</h3>
                         <div class="d-flex align-items-center">
-                            <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
+                            <input type="text" id="searchInput" class="form-control me-2" placeholder="Search ..."
                                 style="width: 200px;">
                             <button type="button" class="btn btn-primary me-3" id="searchButton">
                                 <i class="fas fa-search"></i> Search
@@ -38,15 +38,6 @@
                             <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
                                 data-kt-menu-placement="bottom-end">
                                 <i class="fas fa-filter"></i> Filter
-                            </button>
-                            <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
-                                <i class="fas fa-plus"></i>
-                                Add
-                            </a>
-                            <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
-                                data-bs-target="#importModal">
-                                <i class="fas fa-upload"></i>
-                                Import
                             </button>
                         </div>
                     </div>
@@ -56,21 +47,47 @@
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
                                     <th class="text-center">{{ $table }}</th>
+                                    <th class="text-center">Short Term</th>
+                                    <th class="text-center">Mid Term</th>
+                                    <th class="text-center">Long Term</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @forelse ($divisions as $division)
+                                    @php
+                                        $file = null;
+                                        if ($division->name == 'PRODUCTION & ELECTRIC') {
+                                            $file = 'rtc_prod.xlsx';
+                                        } elseif ($division->name == 'ENGINEERING') {
+                                            $file = 'rtc_eng.xlsx';
+                                        }
+                                    @endphp
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $division->name }}</td>
+                                        <td class="text-center">
+                                            <span class="{{ $division->short?->name ? '' : 'text-danger' }}">
+                                                {{ $division->short?->name ?? 'not set' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="{{ $division->mid?->name ? '' : 'text-danger' }}">
+                                                {{ $division->mid?->name ?? 'not set' }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="{{ $division->long?->name ? '' : 'text-danger' }}">
+                                                {{ $division->long?->name ?? 'not set' }}
+                                            </span>
+                                        </td>
                                         <td class="text-center">
                                             <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
                                                 class="btn btn-sm btn-primary" title="Detail">
                                                 <i class="fas fa-info-circle"></i>
                                             </a>
-                                            <a href="{{ route('rtc.summary', ['id' => $division->id]) }}"
-                                                class="btn btn-sm btn-info" title="View">
+                                            <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
+                                                class="btn btn-sm btn-info" title="View" target="_blank">
                                                 <i class="fas fa-eye"></i>
                                             </a>
                                             <a href="#" class="btn btn-sm btn-success open-add-plan-modal"
@@ -78,9 +95,10 @@
                                                 data-bs-target="#addPlanModal">
                                                 <i class="fas fa-plus-circle"></i>
                                             </a>
-                                            <a href="#" class="btn btn-sm btn-warning" title="Export">
+                                            {{-- <a href="{{ asset('assets/file/' . $file) }}" class="btn btn-sm btn-warning"
+                                                title="Export" download>
                                                 <i class="fas fa-upload"></i>
-                                            </a>
+                                            </a> --}}
                                         </td>
                                     </tr>
                                 @empty
@@ -109,7 +127,7 @@
                         @foreach (['short_term' => 'Short Term', 'mid_term' => 'Mid Term', 'long_term' => 'Long Term'] as $key => $label)
                             <div class="mb-3">
                                 <label for="{{ $key }}" class="form-label">{{ $label }}</label>
-                                <select id="{{ $key }}" class="form-select" name="{{ $key }}">
+                                <select id="{{ $key }}" class="form-select " name="{{ $key }}">
                                     <option value="">-- Select --</option>
                                     @foreach ($employees as $employee)
                                         <option value="{{ $employee->id }}">{{ $employee->name }}</option>
@@ -134,11 +152,25 @@
 
         $(document).on('click', '.open-add-plan-modal', function() {
             currentDivisionId = $(this).data('id');
+            $('#addPlanModal').modal('show');
         });
+
+        // Inisialisasi select2 hanya sekali saat modal pertama kali ditampilkan
+        $('#addPlanModal').on('shown.bs.modal', function() {
+            $(this).find('.select2').each(function() {
+                if (!$(this).hasClass("select2-hidden-accessible")) {
+                    $(this).select2({
+                        dropdownParent: $('#addPlanModal .modal-content')
+                    });
+                }
+            });
+        });
+
+        let filter = @json($table);
 
         $('#submitPlanBtn').on('click', function() {
             const formData = {
-                filter: 'division',
+                filter: filter,
                 id: currentDivisionId,
                 short_term: $('#short_term').val(),
                 mid_term: $('#mid_term').val(),
@@ -160,6 +192,28 @@
                     alert('Something went wrong!');
                     console.log(xhr.responseText);
                 }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const table = document.getElementById('kt_table_users');
+            const rows = table.querySelectorAll('tbody tr');
+
+            searchInput.addEventListener('keyup', function() {
+                const query = this.value.toLowerCase();
+
+                rows.forEach(row => {
+                    const cells = row.querySelectorAll('td');
+                    const text = Array.from(cells).map(cell => cell.textContent.toLowerCase()).join(
+                        ' ');
+
+                    if (text.includes(query)) {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = 'none';
+                    }
+                });
             });
         });
     </script>

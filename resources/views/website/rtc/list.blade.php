@@ -39,21 +39,12 @@
                                 data-kt-menu-placement="bottom-end">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
-                            <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
-                                <i class="fas fa-plus"></i>
-                                Add
-                            </a>
-                            <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
-                                data-bs-target="#importModal">
-                                <i class="fas fa-upload"></i>
-                                Import
-                            </button>
                         </div>
                     </div>
                     <div class="card-body">
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                             role="tablist" style="cursor:pointer">
-                            @if (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Director')
+                            @if (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Direktur')
                                 <li class="nav-item" role="presentation">
                                     <a class="nav-link text-active-primary pb-4 filter-tab active"
                                         data-filter="department">Department</a>
@@ -72,6 +63,9 @@
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
                                     <th class="text-center">Name</th>
+                                    <th class="text-center">Short Term</th>
+                                    <th class="text-center">Mid Term</th>
+                                    <th class="text-center">Long Term</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -113,9 +107,32 @@
         </div>
     </div>
 
+    <style>
+        #viewDetailModal .modal-dialog {
+            max-width: 100vw;
+            width: 100vw;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            max-height: 100vh;
+        }
+
+        #viewDetailModal .modal-content {
+            height: 100vh;
+            border-radius: 0;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #viewDetailModal .modal-body {
+            flex: 1 1 auto;
+            overflow-y: auto;
+            padding: 1rem 2rem;
+        }
+    </style>
     {{-- modal detail --}}
     <div class="modal fade" id="viewDetailModal" tabindex="-1" aria-labelledby="viewDetailLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="viewDetailLabel">Detail</h5>
@@ -123,11 +140,13 @@
                 </div>
                 <div class="modal-body" id="viewDetailContent">
                     <!-- Konten akan diisi lewat AJAX -->
-                    <div class="text-center py-5">
-                        <div class="spinner-border text-primary" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                    <div class="d-flex justify-content-center align-items-center" style="height: 100%;">
+                        <div class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3">Loading data...</p>
                         </div>
-                        <p class="mt-3">Loading data...</p>
                     </div>
                 </div>
             </div>
@@ -168,7 +187,7 @@
 
 
             let currentFilter
-            if (user.employee.position == 'Director' || user.role == 'HRD') {
+            if (user.employee.position == 'Direktur' || user.role == 'HRD') {
                 currentFilter = 'department'; // default tab
             } else {
                 currentFilter = 'section'; // default tab

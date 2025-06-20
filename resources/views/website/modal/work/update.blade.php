@@ -14,13 +14,26 @@
                     @method('PUT')
                     <div class="mb-3">
                         <label class="form-label">Position</label>
-                        <input type="text" class="form-control" name="position" value="{{ $experience->position }}"
-                            required>
+                        <select name="position" class="form-control" required>
+                            <option value="">-- Pilih Position --</option>
+                            @foreach ($positions as $position)
+                                <option value="{{ $position }}"
+                                    {{ $experience->position === $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Company</label>
                         <input type="text" class="form-control" name="company" value="{{ $experience->company }}"
                             required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" name="department"
+                            value="{{ $experience->department }}" required>
                     </div>
                     <div class="row mb-3">
                         <div class="col-6">
@@ -36,10 +49,6 @@
                                 value="{{ $experience->end_date ? \Illuminate\Support\Carbon::parse($experience->end_date)->format('Y-m-d') : '' }}">
 
                         </div>
-                    </div>
-                    <div class="mb-10">
-                        <label class="form-label">Job Description</label>
-                        <textarea class="form-control" name="description" rows="3">{{ $experience->description }}</textarea>
                     </div>
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary">Save

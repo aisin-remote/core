@@ -108,8 +108,12 @@
             </tbody>
           </table>
           @foreach($matrixData as $item)
-            @if($item['act'] === 0)
-              @include('website.skill_matrix.modal', ['id' => $item['employee_competency_id']])
+            @if(! empty($item['file']) || $item['act'] === 0)
+              @include('website.skill_matrix.modal', [
+                'id'   => $item['employee_competency_id'],
+                'file' => $item['file'] ?? null,
+                'act'  => $item['act']
+              ])
             @endif
           @endforeach
         </div>
@@ -198,6 +202,13 @@
                 <i class="fas fa-file-alt"></i>
               </a>
 
+              <a href="/evaluation/${item.employee_competency_id}"
+                  class="btn btn-primary btn-sm"
+                  title="Evaluasi Kompetensi">
+                <i class="fas fa-clipboard-check"></i>
+              </a>
+
+              
               ${item.act === 0
                 ? `<button
                     class="btn btn-warning btn-sm"
@@ -207,7 +218,8 @@
                   </button>`
                 : ``
               } 
-            </td>
+            </div>
+          </td>
         </tr>
       `);
     });

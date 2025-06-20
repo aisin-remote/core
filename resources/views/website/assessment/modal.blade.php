@@ -8,10 +8,17 @@
         border-bottom: 3px solid #000;
         margin: 20px 0;
     }
-    .is-invalid {
-    border-color: red !important;
-}
 
+    .select2-container .select2-selection--single {
+        height: 38px;
+        padding: 6px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+    }
+
+    .is-invalid {
+        border-color: red !important;
+    }
 </style>
 
 <div class="modal fade" id="addAssessmentModal" tabindex="-1" aria-labelledby="addAssessmentModalLabel" aria-hidden="true">
@@ -28,12 +35,14 @@
 
                     <div class="mb-4">
                         <label for="employee_id" class="form-label">Employee</label>
-                        <select class="form-control" id="employee_id" name="employee_id" required>
-                            <option value="">Pilih Employee</option>
+                        <select id="employee_id" name="employee_id" class="form-select">
                             @foreach ($employees as $employee)
-                                <option value="{{ $employee->id }}">{{ $employee->name }}</option>
+                                <option value="{{ $employee->id }}" data-position="{{ $employee->position }}">
+                                    {{ $employee->name }}
+                                </option>
                             @endforeach
                         </select>
+
                     </div>
 
                     <div class="mb-4">
@@ -42,8 +51,9 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="description" class="form-label">Description Assessment</label>
-                        <textarea type="text" class="form-control" id="description" name="description" required></textarea>
+
+                        <input type="hidden" id="description" name="description" required>
+
                     </div>
 
                     <div class="mb-4">
@@ -76,9 +86,11 @@
                     <div class="section-title">Weakness</div>
                     <div id="weakness-container"></div>
 
+
                     <div class="mb-4">
-                        <label for="upload" class="form-label">Upload File Assessment (PDF, JPG, PNG)</label>
-                        <input type="file" class="form-control" id="upload" name="upload" accept=".pdf,.jpg,.png">
+                        <label for="upload" class="form-label">Upload File Assessment (PDF)</label>
+                        <input type="file" class="form-control" id="upload" name="upload"
+                            accept=".pdf,.jpg,.png">
                     </div>
 
                     <button type="submit" class="btn btn-primary" id="btnSubmit">Simpan</button>
@@ -87,8 +99,10 @@
         </div>
     </div>
 </div>
+
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
+    document.addEventListener('DOMContentLoaded', function() {
+
         function updateDescriptionName(selectElement, type) {
             const card = selectElement.closest('.assessment-card');
             const textarea = card.querySelector(`.${type}-textarea`);
@@ -116,7 +130,8 @@
             document.querySelectorAll('.alc-dropdown').forEach(select => {
                 const currentValue = select.value;
                 select.querySelectorAll('option').forEach(option => {
-                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses.has(option.value)) && option.value !== currentValue;
+                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
+                        .has(option.value)) && option.value !== currentValue;
                 });
             });
         }
@@ -135,14 +150,18 @@
                 </div>
                 <div class="mb-3">
                     <label>Description</label>
-                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2" required></textarea>
+                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2" ></textarea>
+                </div>
+                  <div class="mb-3">
+                    <label>Suggestion Development</label>
+                    <textarea class="form-control" name="suggestion_development[${alcId}]" rows="2"></textarea>
                 </div>
             `;
 
             container.appendChild(card);
 
             const dropdown = card.querySelector('.alc-dropdown');
-            dropdown.addEventListener('change', function () {
+            dropdown.addEventListener('change', function() {
                 updateDescriptionName(this, type);
                 updateDropdownOptions();
             });
@@ -153,7 +172,8 @@
         function handleAutoWeakness(alcId, alcName, score) {
             if (score < 3) {
                 const container = document.getElementById('weakness-container');
-                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select.value === alcId);
+                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
+                    .value === alcId);
                 if (!existing) createAssessmentCard('weakness', alcId, alcName);
                 removeStrengthIfExists(alcId);
             }
@@ -162,7 +182,8 @@
         function handleAutoStrength(alcId, alcName, score) {
             if (score >= 3) {
                 const container = document.getElementById('strength-container');
-                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select.value === alcId);
+                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
+                    .value === alcId);
                 if (!existing) createAssessmentCard('strength', alcId, alcName);
                 removeWeaknessIfExists(alcId);
             }
@@ -186,12 +207,14 @@
 
         // Saat user memilih skor
         document.querySelectorAll('input[type=radio][name^="scores"]').forEach(radio => {
-            radio.addEventListener('change', function () {
+            radio.addEventListener('change', function() {
                 const match = this.name.match(/scores\[(\d+)\]/);
                 if (match) {
                     const alcId = match[1];
                     const score = parseInt(this.value);
-                    const alcName = document.querySelector(`input[name="alc_ids[]"][value="${alcId}"]`)?.closest('.card')?.querySelector('h6')?.innerText;
+                    const alcName = document.querySelector(
+                            `input[name="alc_ids[]"][value="${alcId}"]`)?.closest('.card')
+                        ?.querySelector('h6')?.innerText;
 
                     if (alcName) {
                         if (score < 3) {
@@ -205,7 +228,7 @@
         });
 
         // Reset modal saat ditutup
-        document.getElementById('addAssessmentModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('addAssessmentModal').addEventListener('hidden.bs.modal', function() {
             document.getElementById('assessmentForm').reset();
 
             ['strength', 'weakness'].forEach(type => {
@@ -219,12 +242,14 @@
 
             document.getElementById('upload').value = '';
             document.getElementById('assessment_id').value = '';
+            $('#employee_id').val(null).trigger('change');
+            $('#description').val('');
 
             updateDropdownOptions();
         });
 
         // Validasi sebelum submit
-        document.getElementById('assessmentForm').addEventListener('submit', function (e) {
+        document.getElementById('assessmentForm').addEventListener('submit', function(e) {
             let isValid = true;
             const strengthDropdowns = document.querySelectorAll('#strength-container .alc-dropdown');
             const weaknessDropdowns = document.querySelectorAll('#weakness-container .alc-dropdown');
@@ -249,30 +274,22 @@
                 }
             });
 
-            strengthDescriptions.forEach(textarea => {
-                if (!textarea.value.trim()) {
-                    isValid = false;
-                    textarea.classList.add('is-invalid');
-                } else {
-                    textarea.classList.remove('is-invalid');
-                }
-            });
 
-            weaknessDescriptions.forEach(textarea => {
-                if (!textarea.value.trim()) {
-                    isValid = false;
-                    textarea.classList.add('is-invalid');
-                } else {
-                    textarea.classList.remove('is-invalid');
-                }
-            });
-
-            if (!isValid) {
-                e.preventDefault();
-                alert('Harap isi semua field Strength dan Weakness dengan lengkap.');
-            }
         });
 
         updateDropdownOptions();
+    });
+    $(document).ready(function() {
+        $('#employee_id').select2({
+            dropdownParent: $('#addAssessmentModal'),
+            placeholder: "Pilih Employee",
+            allowClear: false,
+            width: '100%'
+        });
+        $('#employee_id').on('change', function() {
+            const selectedOption = $(this).find('option:selected');
+            const position = selectedOption.data('position') || '';
+            $('#description').val(position);
+        });
     });
 </script>

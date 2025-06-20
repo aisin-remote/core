@@ -16,18 +16,38 @@ class RtcController extends Controller
         $user = auth()->user();
         $employee = $user->employee;
 
-        // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
-        if ($user->role === 'HRD' || $employee->position == 'Director') {
-            $table = 'Division';
-            $divisions = Division::where('company', $company)->get();
-            $employees = Employee::whereIn('position', ['Manager','Coordinator'])->get();
-        } else {
-            $table = 'Department';
-            // Ambil data divisi yang dipegang user login
-            $data = Division::where('gm_id', $employee->id)->first();
-            $divisions = Department::where('division_id', $data->id)->get();
-            $employees = Employee::whereIn('position', ['Supervisor','Section Head'])->get();
+        if($company == null){
+            $company = $user->employee->company_name;
         }
+
+        // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
+        if ($user->isHRDorDireksi()) {
+            $table = 'Division';
+        
+            $divisions = Division::where('company', $company)->get();
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])->get();
+        } else {
+            if ($employee->position === 'Direktur') {
+                $table = 'Division';
+                $plant = $employee->plant;
+        
+                $divisions = Division::where('company', $company)
+                    ->where('plant_id', $plant->id)
+                    ->get();
+        
+                $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                                        ->where('company_name', $employee->company_name)
+                                        ->get();
+            } else {
+                $table = 'Department';
+        
+                $division = Division::where('gm_id', $employee->id)->first();
+                $divisions = Department::where('division_id', $division?->id)->get();
+                $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
+                                        ->where('company_name', $employee->company_name)
+                                        ->get();
+            }
+        }        
         
         return view('website.rtc.index', compact('divisions', 'employees', 'table'));
     }
@@ -50,22 +70,24 @@ class RtcController extends Controller
         // Tentukan model yang akan dipanggil berdasarkan nilai filter
         switch ($filter) {
             case 'department':
-                // Ambil data berdasarkan department
-                $data = Department::with(['manager', 'short','mid','long'])->find($id);
+                $relation = 'manager';
+                $subLeading = 'leadingSection';
+                $data = Department::with([$relation, 'short', 'mid', 'long'])->find($id);
                 break;
-
+        
             case 'section':
-                // Ambil data berdasarkan section
-                $data = Section::with(['supervisor', 'short','mid','long'])->find($id);
+                $relation = 'supervisor';
+                $subLeading = 'leadingSubSection';
+                $data = Section::with([$relation, 'short', 'mid', 'long'])->find($id);
                 break;
-
+        
             case 'sub_section':
-                // Ambil data berdasarkan sub_section
-                $data = SubSection::with(['leader', 'short','mid','long'])->find($id);
+                $relation = 'leader';
+                $subLeading = '';
+                $data = SubSection::with([$relation, 'short', 'mid', 'long'])->find($id);
                 break;
-
+        
             default:
-                // Jika filter tidak sesuai, beri pesan atau arahkan ke halaman lain
                 return redirect()->route('rtc.index')->with('error', 'Invalid filter');
         }
     
@@ -74,8 +96,17 @@ class RtcController extends Controller
             return redirect()->route('rtc.index')->with('error', ucfirst($filter) . ' not found');
         }
 
-        if ($request->ajax()) {
-            return view('website.modal.rtc.index', compact('data', 'filter'));
+        if ($request->ajax() && $subLeading) {
+            $subordinates = $data->$relation->getSubordinatesByLevel(1);
+            $subordinates->each(function ($subordinate) use ($subLeading) {
+                $subordinate->load([
+                    $subLeading => function ($query) {
+                        return $query->with(['short', 'mid', 'long']);
+                    }
+                ]);
+            });
+
+            return view('website.modal.rtc.index', compact('data', 'filter', 'subordinates'));
         }
 
         // Return view dengan data yang sesuai
@@ -84,86 +115,95 @@ class RtcController extends Controller
 
     public function summary(Request $request)
     {
-        $filter = $request->query('filter'); // e.g. 'division'
-        $id = (int) $request->query('id');   // Division ID
+        $filter = $request->query('filter');
+        $id = (int) $request->query('id');
 
-        $data = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
+        $data = null; // ✅ prevent undefined variable
+        $departmentIds = [$id];
+        $managerIds = collect();
+        
+        if ($filter === 'Division') {
+            $data = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
+            $departments = Department::where('division_id', $data->id)->get();
+            $departmentIds = $departments->pluck('id');
+            $managerIds = $departments->pluck('manager_id')->filter()->unique();
+        }else{
+            $data = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
+        }
 
-        // Ambil semua departments berdasarkan division_id
-        $departments = Department::where('division_id', $data->id)->get();
-
-        // Ambil semua sections berdasarkan department_id
-        $departmentIds = $departments->pluck('id');
         $sections = Section::whereIn('department_id', $departmentIds)->get();
-
-        // Ambil semua manager_id dari departments dan supervisor_id dari sections
-        $managerIds = $departments->pluck('manager_id')->filter()->unique();
         $supervisorIds = $sections->pluck('supervisor_id')->filter()->unique();
-
-        // Gabungkan dan ambil data karyawan dari ID tersebut
         $employeeIds = $managerIds->merge($supervisorIds)->unique();
         $bawahans = Employee::whereIn('id', $employeeIds)->get();
 
-        foreach ($bawahans as $manager) {
-            // Cari section yang berhubungan dengan manager
-            $sections = Section::where('supervisor_id', $manager->id)->get();
+        foreach ($bawahans as $employee) {
+            $relatedSections = Section::where('supervisor_id', $employee->id)->get();
 
-            if($manager->position == 'Section Head' || $manager->position == 'Supervisor'){
-                $related = Section::with(['short', 'mid', 'long'])
-                    ->where('supervisor_id', $manager->id)
-                    ->first();
-            }else{
+            if (in_array(strtolower($employee->position), ['supervisor', 'section head'])) {
+                $related = $relatedSections->first()?->load(['short', 'mid', 'long']);
+            } else {
                 $related = Department::with(['short', 'mid', 'long'])
-                    ->where('manager_id', $manager->id)
+                    ->where('manager_id', $employee->id)
                     ->first();
             }
 
+            $employee->supervisors = $relatedSections->map(fn($sec) => $sec->supervisor)->unique('id')->filter();
+            $employee->planning = $related;
 
-            // Ambil supervisor dari setiap section yang berhubungan dengan manager
-            $supervisors = $sections->map(function ($section) {
-                return $section->supervisor; // Mengambil relasi supervisor di section
-            });
-        
-            // Simpan supervisor (section head) pada manager
-            $manager->supervisors = $supervisors->unique('id')->filter();
-            $manager->planning = $related;
-        }               
+            $approvalLevel = $employee->getFirstApproval();
+            $employee->superiors = $employee->getSuperiorsByLevel($approvalLevel);
+        }
+
+        $filter = strtolower($filter);
         
         return view('website.rtc.detail', compact('data', 'filter', 'bawahans'));
     }
 
+
     public function update(Request $request)
     {
-        $request->validate([
-            'short_term' => 'nullable|exists:employees,id',
-            'mid_term' => 'nullable|exists:employees,id',
-            'long_term' => 'nullable|exists:employees,id',
-        ]);
+        try {
+            $request->validate([
+                'short_term' => 'nullable|exists:employees,id',
+                'mid_term' => 'nullable|exists:employees,id',
+                'long_term' => 'nullable|exists:employees,id',
+            ]);
 
-        $filter = $request->input('filter');
-        $id = $request->input('id');
+            $filter = $request->input('filter');
+            $id = $request->input('id');
 
-        $modelClass = match ($filter) {
-            'division' => \App\Models\Division::class,
-            'department' => \App\Models\Department::class,
-            'section' => \App\Models\Section::class,
-            'sub_section' => \App\Models\SubSection::class,
-        };
+            $filter = strtolower($filter);
 
-        $record = $modelClass::findOrFail($id);
+            $modelClass = match ($filter) {
+                'division' => \App\Models\Division::class,
+                'department' => \App\Models\Department::class,
+                'section' => \App\Models\Section::class,
+                'sub_section' => \App\Models\SubSection::class,
+                default => throw new \Exception("Invalid filter value: $filter")
+            };
 
-        $updateData = collect(['short_term', 'mid_term', 'long_term'])
-            ->filter(fn($field) => $request->filled($field))
-            ->mapWithKeys(fn($field) => [$field => $request->input($field)])
-            ->toArray();
+            $record = $modelClass::findOrFail($id);
 
-        $record->update($updateData);
+            $updateData = collect(['short_term', 'mid_term', 'long_term'])
+                ->filter(fn($field) => $request->filled($field))
+                ->mapWithKeys(fn($field) => [$field => $request->input($field)])
+                ->toArray();
 
-        session()->flash('success', 'Plan updated successfully');
+            $record->update($updateData);
 
-        return response()->json([
-            'status' => 'success',
-            'message' => 'Plan updated successfully',
-        ]);
+            session()->flash('success', 'Plan updated successfully');
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Plan updated successfully',
+            ]);
+
+        } catch (\Throwable $th) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat memperbarui data: ' . $th->getMessage(),
+            ], 500);
+        }
     }
+
 }

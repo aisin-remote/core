@@ -2,22 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use DataTables;
+use App\Http\Controllers\Controller;
 use App\Models\Alc;
-use App\Models\Section;
-use App\Models\Division;
-use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
+use App\Models\DetailAssessment;
+use App\Models\Division;
+use App\Models\Employee;
+use App\Models\Section;
 
 use App\Models\SubSection;
-use App\Models\DetailAssessment;
-use Illuminate\Support\Facades\DB;
-use App\Http\Controllers\Controller;
+use DataTables;
 use Illuminate\Support\Facades\Auth;
+
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
+
+use Illuminate\Support\Str;
+
 use Symfony\Component\HttpFoundation\Request;
+
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class AssessmentController extends Controller
 {
@@ -81,7 +88,7 @@ class AssessmentController extends Controller
             return Employee::whereRaw('1=0'); // tidak ada bawahan
         }
 
-        return Employee::whereIn('id', $subordinateIds);
+        return Employee::whereIn('id', $subordinateIds)->get();
     }
 
     private function collectSubordinates($models, $field, $subordinateIds)
@@ -101,15 +108,63 @@ class AssessmentController extends Controller
     {
         $user = auth()->user();
         $title = 'Assessment';
+        $allPositions = [
+            'President',
+            'VPD',
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $rawPosition = $user->employee->position;
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        // Cari index posisi saat ini
+        $positionIndex = array_search($currentPosition, $allPositions);
+
+        // Fallback jika tidak ditemukan
+        if ($positionIndex === false) {
+            $positionIndex = array_search('Operator', $allPositions);
+        }
+
+        // Ambil posisi di bawahnya (tanpa posisi user)
+        $visiblePositions = $positionIndex !== false
+            ? array_slice($allPositions, $positionIndex)
+            : [];
 
         $filter = $request->input('filter'); // Filter by position
         $search = $request->input('search'); // Search by name
 
-        if ($user->role === 'HRD') {
+        if ($user->role === 'HRD' || $user->employee->position == 'President' ||  $user->employee->position == 'VPD') {
             $employees = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
                 ->when($company, fn($query) => $query->where('company_name', $company))
-                ->when($filter && $filter !== 'all', fn($query) => $query->where('position', $filter))
-                ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
+                ->where(function ($q) use ($visiblePositions) {
+                    foreach ($visiblePositions as $pos) {
+                        $q->orWhere('position', $pos)
+                            ->orWhere('position', 'like', "Act %{$pos}");
+                    }
+                })
+                ->when($filter && $filter != 'all', function ($query) use ($filter) {
+                    $query->where(function ($q) use ($filter) {
+                        $q->where('position', $filter)
+                            ->orWhere('position', 'like', "Act %{$filter}");
+                    });
+                })
+
+                ->when($search, function ($query) use ($search) {
+                    $query->where(function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('npk', 'like', '%' . $search . '%');
+                    });
+                })
                 ->get();
         } else {
             $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
@@ -119,10 +174,26 @@ class AssessmentController extends Controller
             if (!$employee) {
                 $employees = collect();
             } else {
-                $employees = $this->getSubordinatesFromStructure($employee)
-                    ->when($filter && $filter !== 'all', fn($query) => $query->where('position', $filter))
-                    ->when($search, fn($query) => $query->where('name', 'like', '%' . $search . '%'))
-                    ->get();
+                $subordinates = $this->getSubordinatesFromStructure($employee);
+
+                $employees = collect([$employee])->merge($subordinates)->unique('id');
+
+                // Filter posisi
+                if ($filter && $filter !== 'all') {
+                    $employees = $employees->filter(function ($emp) use ($filter) {
+                        return $emp->position === $filter || str_starts_with($emp->position, "Act {$filter}");
+                    });
+                }
+
+                // Search by name / npk
+                if ($search) {
+                    $employees = $employees->filter(function ($emp) use ($search) {
+                        return stripos($emp->name, $search) !== false || stripos($emp->npk, $search) !== false;
+                    });
+                }
+
+                // Hydrate ulang jadi Eloquent Collection agar bisa pakai relasi seperti ->assessments()
+                $employees = Employee::hydrate($employees->toArray());
             }
         }
 
@@ -130,6 +201,7 @@ class AssessmentController extends Controller
         $assessments = $this->getAssessmentsForSubordinates($employees, $request);
         $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());
         $alcs = Alc::all();
+
 
         return view('website.assessment.index', compact(
             'assessments',
@@ -140,7 +212,8 @@ class AssessmentController extends Controller
             'company',
             'departments',
             'filter',
-            'search'
+            'search',
+            'visiblePositions'
         ));
     }
 
@@ -218,7 +291,7 @@ class AssessmentController extends Controller
             ->select('id', 'date',  'description', 'employee_id', 'upload')
             ->orderBy('date', 'desc')
             ->with(['details' => function ($query) {
-                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness')
+                $query->select('assessment_id', 'alc_id', 'score', 'strength', 'weakness', 'suggestion_development')
                     ->with(['alc:id,name']);
             }])
             ->get();
@@ -267,6 +340,7 @@ class AssessmentController extends Controller
             )
             ->get();
 
+
         return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details'));
     }
 
@@ -291,6 +365,7 @@ class AssessmentController extends Controller
             'scores.*' => 'nullable|string|max:2',
             'strenght' => 'nullable|array',
             'weakness' => 'nullable|array',
+            'suggestion_development' => 'nullable|array',
         ]);
 
         // Simpan file jika ada
@@ -321,39 +396,140 @@ class AssessmentController extends Controller
                         'score' => $request->scores[$alc_id] ?? "0",  // Ambil nilai score berdasarkan ALC ID
                         'strength' => $request->strength[$alc_id] ?? "", // Ambil nilai strength berdasarkan ALC ID
                         'weakness' => $request->weakness[$alc_id] ?? "",
+                        'suggestion_development' => $request->suggestion_development[$alc_id] ?? "",
                         'updated_at' => now()
                     ]
                 );
         }
-        $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
+        // Simpan ke tabel hav
+        $latestHav = DB::table('havs')
+            ->where('employee_id', $request->employee_id)
+            ->latest('created_at')
+            ->first();
 
-        $user = Auth::user();
-        $employee = $user->employee; // ambil employee yang login
-        $rawNumber = $employee->phone_number ?? null;
-        $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
+        $havId = DB::table('havs')->insertGetId([
+            'employee_id' => $request->employee_id,
+            'year' => now()->year,
+            'quadrant' => $latestHav->quadrant ?? null,
+            'status' => '0',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        if (!$formattedNumber) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Nomor HP Anda tidak tersedia.',
+        // Load Excel template
+        $templatePath = public_path('assets/file/Import-HAV.xls');
+        $spreadsheet = IOFactory::load($templatePath);
+        $sheet = $spreadsheet->getActiveSheet();
+
+        $employee = Employee::with('departments')->findOrFail($request->employee_id);
+        $sheet->setCellValue("C6", $employee->name);
+        $sheet->setCellValue("C7", $employee->npk);
+        $sheet->setCellValue("C8", $employee->grade);
+        $sheet->setCellValue("C9", $employee->company_name);
+        $sheet->setCellValue("C10", $employee->department->name ?? '');
+        $sheet->setCellValue("C11", $employee->position);
+        $sheet->setCellValue("C13", date('Y'));
+
+        // ALC mapping ke kolom & baris
+        $alcMapping = [
+            1 => ['D', [17, 18, 19]],                          // Vision & Business Sense
+            2 => ['I', [17, 18, 19, 20, 21, 22, 23]],           // Customer Focus
+            3 => ['O', [17, 18, 19, 20]],                      // Interpersonal Skill
+            4 => ['T', [17, 18, 19, 20]],                      // Analysis & Judgment
+            5 => ['D', [27, 28, 29, 30, 31]],                  // Planning & Driving Action
+            6 => ['I', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]], // Leading & Motivating
+            7 => ['O', [27, 28, 29, 30, 31, 32, 33]],          // Teamwork
+            8 => ['T', [27, 28, 29, 30, 31, 32, 33]],          // Drive & Courage
+        ];
+
+        $suggestionMapping = [
+            1 => ['F', [17, 18, 19]],                             // Vision & Business Sense
+            2 => ['K', [17, 18, 19, 20, 21, 22, 23]],              // Customer Focus
+            3 => ['Q', [17, 18, 19, 20]],                          // Interpersonal Skill
+            4 => ['V', [17, 18, 19, 20]],                          // Analysis & Judgment
+            5 => ['F', [27, 28, 29, 30, 31]],                      // Planning & Driving Action
+            6 => ['K', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]],  // Leading & Motivating
+            7 => ['Q', [27, 28, 29, 30, 31, 32, 33]],              // Teamwork
+            8 => ['V', [27, 28, 29, 30, 31, 32, 33]],              // Drive & Courage
+        ];
+        // Simpan ke hav_details + isi Excel
+        foreach ($request->alc_ids as $alc_id) {
+            $score = $request->scores[$alc_id] ?? "0";
+            $suggestion = $request->suggestion_development[$alc_id] ?? "";
+
+            DB::table('hav_details')->insert([
+                'hav_id' => $havId,
+                'alc_id' => $alc_id,
+                'score' => $score,
+                'is_assessment' => 1,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
+
+            if (isset($alcMapping[$alc_id])) {
+                [$col, $rows] = $alcMapping[$alc_id];
+                foreach ($rows as $row) {
+                    $sheet->setCellValue("{$col}{$row}", $score);
+                }
+            }
+            if (isset($suggestionMapping[$alc_id])) {
+                [$sugCol, $sugRows] = $suggestionMapping[$alc_id];
+
+                // Gabungkan rows menjadi satu teks panjang dengan line break antar baris
+                $mergedSuggestionRow = $sugRows[0]; // Tulis di baris awal saja
+                $sheet->mergeCells("{$sugCol}{$sugRows[0]}:{$sugCol}" . end($sugRows)); // Merge kolom
+                $sheet->setCellValue("{$sugCol}{$mergedSuggestionRow}", $suggestion);
+                $sheet->getStyle("{$sugCol}{$mergedSuggestionRow}")
+                    ->getAlignment()->setWrapText(true); // agar teks suggestion bisa panjang & terpotong otomatis
+                $style = $sheet->getStyle("{$sugCol}{$mergedSuggestionRow}");
+                $style->getFont()->setItalic(false);
+            }
         }
 
-        $message = sprintf(
-            "Hallo Apakah Benar ini Nomor?"
-            // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
-            // $assessment->id,
-            // $assessment->date,
-            // $assessment->name ?? 'Anda'
-        );
+        // Simpan file Excel ke storage
+        $excelFileName = 'hav_uploads/hav_' . now()->timestamp . '.xlsx';
+        $fullPath = storage_path("app/{$excelFileName}");
+        (new Xlsx($spreadsheet))->save($fullPath);
 
-        $whatsappResponse = Http::asForm()
-            ->withOptions(['verify' => false])
-            ->post('https://app.ruangwa.id/api/send_message', [
-                'token' => $token,
-                'number' => $formattedNumber,
-                'message' => $message
-            ]);
+        // Simpan ke hav_comment_histories
+        DB::table('hav_comment_histories')->insert([
+            'hav_id' => $havId,
+            'employee_id' => $request->employee_id,
+            'upload' => $excelFileName,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+
+        // $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
+
+        // $user = Auth::user();
+        // $employee = $user->employee; // ambil employee yang login
+        // $rawNumber = $employee->phone_number ?? null;
+        // $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
+
+        // if (!$formattedNumber) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Nomor HP Anda tidak tersedia.',
+        //     ]);
+        // }
+
+        // $message = sprintf(
+        //     "Hallo Apakah Benar ini Nomor?"
+        // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
+        // $assessment->id,
+        // $assessment->date,
+        // $assessment->name ?? 'Anda'
+        // );
+
+        // $whatsappResponse = Http::asForm()
+        //     ->withOptions(['verify' => false])
+        //     ->post('https://app.ruangwa.id/api/send_message', [
+        //         'token' => $token,
+        //         'number' => $formattedNumber,
+        //         'message' => $message
+        //     ]);
 
 
 
@@ -402,25 +578,22 @@ class AssessmentController extends Controller
     public function edit($id)
     {
         $assessment = Assessment::with('details.alc')->findOrFail($id);
-
+        \Log::info("DETAILS: ", $assessment->details->toArray()); // Tambah ini
         return response()->json([
             'id' => $assessment->id,
             'employee_id' => $assessment->employee_id,
             'date' => $assessment->date,
             'description' => $assessment->description,
             'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
-            'scores' => $assessment->details->map(fn($d) => [
+            'details' => $assessment->details->map(fn($d) => [
                 'alc_id' => $d->alc_id,
-                'score' => $d->score
+                'score' => $d->score,
+                'strength' => $d->strength,
+                'weakness' => $d->weakness,
+                'suggestion_development' => $d->suggestion_development,
+                'alc' => $d->alc
             ]),
-            'strengths' => $assessment->details->whereNotNull('strength')->map(fn($d) => [
-                'alc_id' => $d->alc_id,
-                'descriptions' => $d->strength
-            ])->values(),
-            'weaknesses' => $assessment->details->whereNotNull('weakness')->map(fn($d) => [
-                'alc_id' => $d->alc_id,
-                'descriptions' => $d->weakness
-            ])->values(),
+
             'alc_options' => Alc::select('id', 'name')->get()
         ]);
     }
@@ -431,18 +604,17 @@ class AssessmentController extends Controller
 
         $validated = $request->validate([
             'assessment_id' => 'required|exists:assessments,id',
-            'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
             'description' => 'required|string|max:255',
             'scores' => 'required|array',
             'strength' => 'nullable|array',
             'weakness' => 'nullable|array',
+            'suggestion_development' => 'nullable|array',
             'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
         ]);
 
         // **Update tabel `assessments`**
         $assessment = Assessment::findOrFail($request->assessment_id);
-        $assessment->employee_id = $request->employee_id;
         $assessment->date = $request->date;
         $assessment->description = $request->description;
 
@@ -464,7 +636,8 @@ class AssessmentController extends Controller
                 'alc_id' => $alc_id,
                 'score' => $score,
                 'strength' => $request->strength[$alc_id] ?? null,
-                'weakness' => $request->weakness[$alc_id] ?? null
+                'weakness' => $request->weakness[$alc_id] ?? null,
+                'suggestion_development' => $request->suggestion_development[$alc_id] ?? null
             ]);
         }
 

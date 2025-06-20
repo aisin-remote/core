@@ -9,6 +9,8 @@
 @endsection
 
 @section('main')
+
+
     @if (session()->has('success'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
@@ -37,7 +39,7 @@
         <div class="container mt-4">
             <div class="row">
                 <div class="col-4">
-                    <div class="card mb-5 mb-xl-10" style="height: 1370px !important">
+                    <div class="card mb-5 mb-xl-10" style="height: 1110px !important">
                         <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
                             data-bs-toggle="collapse" data-bs-target="#kt_account_profile_details" aria-expanded="true"
                             aria-controls="kt_account_profile_details">
@@ -122,19 +124,30 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-                                                <div class="col-12 mb-8">
-                                                    <label class="form-label fw-bold fs-6">Email</label>
-                                                    <input type="text" name=""
+                                                @php
+                                                    $age = $employee->birthday_date
+                                                        ? Carbon\Carbon::parse($employee->birthday_date)->age
+                                                        : null;
+                                                @endphp
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Age</label>
+                                                    <input readonly type="text" name="age"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Email" value="arief.widodo@aisin-indonesia.co.id">
+                                                        placeholder="Age" value="{{ $age }}">
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Email</label>
+                                                    <input type="text" name="email"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Email" value="{{ $employee->user->email }}">
+                                                </div>
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Phone Number</label>
                                                     <input type="text" name="email"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Phone Number" value="-">
+                                                        placeholder="Phone Number" value="{{ $employee->phone_number }}">
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Name</label>
                                                     <select name="company_name" class="form-select form-select-sm"
                                                         data-control="select2">
@@ -150,7 +163,7 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Group</label>
                                                     <input type="text" name="company_group"
                                                         class="form-control form-control-sm form-control-solid"
@@ -160,7 +173,7 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Join Date</label>
                                                     <input type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
@@ -170,7 +183,7 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Working Period</label>
                                                     <input type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
@@ -180,7 +193,7 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-                                                <div class="col-12 mb-8">
+                                                <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Position</label>
                                                     <select name="position" id="position-select"
                                                         class="form-select form-select-sm fw-semibold"
@@ -189,14 +202,19 @@
                                                         @php
                                                             $positions = [
                                                                 'GM' => 'General Manager',
+                                                                'Act GM' => 'Act General Manager',
                                                                 'Manager' => 'Manager',
+                                                                'Act Manager' => 'Act Manager',
                                                                 'Coordinator' => 'Coordinator',
+                                                                'Act Coordinator' => 'Act Coordinator',
                                                                 'Section Head' => 'Section Head',
+                                                                'Act Section Head' => 'Act Section Head',
                                                                 'Supervisor' => 'Supervisor',
+                                                                'Act Supervisor' => 'Act Supervisor',
                                                                 'Act Leader' => 'Act Leader',
                                                                 'Act JP' => 'Act JP',
                                                                 'Operator' => 'Operator',
-                                                                'Director' => 'Director',
+                                                                'Direktur' => 'Direktur',
                                                             ];
                                                         @endphp
                                                         @foreach ($positions as $value => $label)
@@ -305,14 +323,20 @@
                                                     @enderror
                                                 </div>
 
-                                                <div class="col-12 mb-8">
-                                                    <label class="form-label fw-bold fs-6">Grade</label>
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Aisin Grade</label>
                                                     <input type="text" name="grade"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Grade" value="{{ old('grade', $employee->grade) }}">
                                                     @error('grade')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
+                                                </div>
+                                                <div class="col-6 mb-8">
+                                                    <label class="form-label fw-bold fs-6">Astra Grade</label>
+                                                    <input readonly type="text"
+                                                        class="form-control form-control-sm form-control-solid"
+                                                        placeholder="Grade" value="{{ $employee->astra_grade }}">
                                                 </div>
                                             </div>
                                         </div>
@@ -334,13 +358,10 @@
                                     <h3 class="fw-bolder m-0">Educational Background</h3>
 
                                     <div class="d-flex gap-2">
-                                        @if ($educations->count() >= 3)
-                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addEducationModal">
-                                                <i class="fas fa-plus"></i> Add
-                                            </button>
-                                        @endif
-
+                                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#addEducationModal">
+                                            <i class="fas fa-plus"></i> Add
+                                        </button>
                                         <button class="btn btn-sm btn-info" data-bs-toggle="modal"
                                             data-bs-target="#detailEducationModal">
                                             <i class="fas fa-info"></i> Detail
@@ -352,12 +373,10 @@
                                     <div class="card-body border-top p-10">
                                         @php
                                             $totalEducation = $educations->count();
-                                            $maxSlots = 3;
                                         @endphp
 
-                                        @for ($i = 0; $i < $maxSlots; $i++)
-                                            @if (isset($educations[$i]))
-                                                @php $education = $educations[$i]; @endphp
+                                        @if ($totalEducation > 0)
+                                            @foreach ($educations->take(3) as $education)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
                                                         <div class="fs-6 fw-bold mb-2">
@@ -367,9 +386,7 @@
                                                             class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
                                                             <span>{{ $education->institute }}</span>
                                                             <span class="text-muted fs-7">
-                                                                [{{ \Carbon\Carbon::parse($education->start_date)->format('Y') }}
-                                                                -
-                                                                {{ \Carbon\Carbon::parse($education->end_date)->format('Y') }}]
+                                                                [{{ $education->start_date ? \Carbon\Carbon::parse($education->start_date)->format('Y') . ' - ' : '' }}{{ $education->end_date ? \Carbon\Carbon::parse($education->end_date)->format('Y') : 'Present' }}]
                                                             </span>
                                                         </div>
                                                     </div>
@@ -380,6 +397,7 @@
                                                             data-education-id="{{ $education->id }}">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
+                                                        </button>
                                                         <button class="btn btn-sm btn-light-danger delete-education-btn"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#deleteEducationModal{{ $education->id }}">
@@ -389,44 +407,33 @@
                                                 </div>
 
 
-                                                @include('website.modal.education.detail')
-                                                @include('website.modal.education.update', [
-                                                    'education' => $education,
-                                                ])
-                                                @include('website.modal.education.delete', [
-                                                    'education' => $education,
-                                                ])
-                                            @else
-                                                <!-- Slot kosong -->
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <div class="fw-semibold text-gray-600">Click to add education</div>
-                                                    </div>
-                                                    <div>
-                                                        <button class="btn btn-sm btn-light-primary"
-                                                            data-bs-toggle="modal" data-bs-target="#addEducationModal">
-                                                            <i class="fas fa-plus"></i> Add
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            @endif
-
-                                            @unless ($i == $maxSlots - 1)
-                                                <div class="separator separator-dashed my-3"></div>
-                                            @endunless
-                                        @endfor
+                                                @if (!$loop->last)
+                                                    <div class="separator separator-dashed my-3"></div>
+                                                @endif
+                                            @endforeach
+                                        @else
+                                            <div class="text-center text-muted">
+                                                No education data available.
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
 
                         </div>
 
-                        {{-- modal education --}}
-                        @include('website.modal.education.create', [
-                            'employee_id' => $employee->id,
-                        ])
+                        {{-- === Modal Detail Education (hanya 1 modal statis, bukan per-id) === --}}
+                        @include('website.modal.education.detail')
+
+                        {{-- === Modal Create Education === --}}
+                        @include('website.modal.education.create', ['employee_id' => $employee->id])
+
+                        {{-- === Loop untuk modal update dan delete agar tidak ikut terbatas 3 data === --}}
+                        @foreach ($educations as $education)
+                            @include('website.modal.education.update', ['education' => $education])
+                            @include('website.modal.education.delete', ['education' => $education])
+                        @endforeach
+
                         {{-- end of modal education --}}
                     </div>
                     <div class="row">
@@ -438,13 +445,10 @@
                                     <h3 class="fw-bolder m-0">Work Experience</h3>
 
                                     <div class="d-flex gap-2">
-                                        @if ($workExperiences->count() >= 3)
-                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addExperienceModal">
-                                                <i class="fas fa-plus"></i> Add
-                                            </button>
-                                        @endif
-
+                                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#addExperienceModal">
+                                            <i class="fas fa-plus"></i> Add
+                                        </button>
                                         <button class="btn btn-sm btn-info" data-bs-toggle="modal"
                                             data-bs-target="#allExperienceDetailModal">
                                             <i class="fas fa-info"></i> Detail
@@ -455,19 +459,17 @@
                                 <div id="kt_activity_year" class="collapse show">
                                     <div class="card-body border-top p-10">
                                         @php
-                                            $maxSlots = 3;
                                             $experienceCount = $workExperiences->count();
                                         @endphp
 
-                                        @for ($i = 0; $i < $maxSlots; $i++)
-                                            @if (isset($workExperiences[$i]))
-                                                @php $experience = $workExperiences[$i]; @endphp
+                                        @if ($experienceCount > 0)
+                                            @foreach ($workExperiences->take(3) as $experience)
                                                 <div class="d-flex justify-content-between align-items-center gap-3">
                                                     <div>
-                                                        <div class="fs-6 fw-bold mb-2">{{ $experience->position }}</div>
+                                                        <div class="fs-6 fw-bold mb-2">{{ $experience->department }}</div>
                                                         <div
                                                             class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
-                                                            <span>{{ $experience->company }}</span>
+                                                            {{-- <span>{{ $experience->position }}</span> --}}
                                                             <span class="text-muted fs-7">
                                                                 [{{ \Carbon\Carbon::parse($experience->start_date)->format('Y') }}
                                                                 -
@@ -492,41 +494,22 @@
                                                             data-bs-target="#deleteExperienceModal{{ $experience->id }}">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </button>
+
                                                     </div>
                                                 </div>
 
-                                                @include('website.modal.work.all_detail')
-                                                @include('website.modal.work.detail', [
-                                                    'experience' => $experience,
-                                                ])
-                                                @include('website.modal.work.update', [
-                                                    'experience' => $experience,
-                                                ])
-                                                @include('website.modal.work.delete', [
-                                                    'experience' => $experience,
-                                                ])
-                                            @else
-                                                <!-- Slot kosong -->
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <div class="fw-semibold text-gray-600">Click to add experience
-                                                        </div>
-                                                    </div>
-                                                    <div>
-                                                        <button class="btn btn-sm btn-light-primary"
-                                                            data-bs-toggle="modal" data-bs-target="#addExperienceModal">
-                                                            <i class="fas fa-plus"></i> Add
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            @endif
 
-                                            @unless ($i == $maxSlots - 1)
-                                                <div class="separator separator-dashed my-3"></div>
-                                            @endunless
-                                        @endfor
+
+
+                                                @if (!$loop->last)
+                                                    <div class="separator separator-dashed my-3"></div>
+                                                @endif
+                                            @endforeach
+                                        @else
+                                            <div class="text-center text-muted">
+                                                No work experience data available.
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -536,6 +519,14 @@
                         @include('website.modal.work.create', [
                             'employee_id' => $employee->id,
                         ])
+                        @include('website.modal.work.all_detail')
+                        {{-- Modal update, delete, dan detail untuk setiap experience --}}
+                        @foreach ($workExperiences as $experience)
+                            @include('website.modal.work.detail', ['experience' => $experience])
+                            @include('website.modal.work.update', ['experience' => $experience])
+                            @include('website.modal.work.delete', ['experience' => $experience])
+                        @endforeach
+
                         {{-- end of work experience modal input --}}
                     </div>
                     <div class="row">
@@ -547,13 +538,10 @@
                                     <h3 class="fw-bolder m-0">Historical Performance Appraisal</h3>
 
                                     <div class="d-flex gap-3">
-                                        @if ($performanceAppraisals->count() >= 3)
-                                            <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
-                                                data-bs-target="#addAppraisalModal">
-                                                <i class="fas fa-plus"></i> Add
-                                            </button>
-                                        @endif
-
+                                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                                            data-bs-target="#addAppraisalModal">
+                                            <i class="fas fa-plus"></i> Add
+                                        </button>
                                         <button class="btn btn-sm btn-info" data-bs-toggle="modal"
                                             data-bs-target="#alldetailAppraisalModal">
                                             <i class="fas fa-info"></i> Detail
@@ -564,13 +552,11 @@
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
                                         @php
-                                            $maxSlots = 3;
                                             $appraisalCount = $performanceAppraisals->count();
                                         @endphp
 
-                                        @for ($i = 0; $i < $maxSlots; $i++)
-                                            @if (isset($performanceAppraisals[$i]))
-                                                @php $appraisal = $performanceAppraisals[$i]; @endphp
+                                        @if ($appraisalCount > 0)
+                                            @foreach ($performanceAppraisals->take(3) as $appraisal)
                                                 <div class="mb-3 d-flex justify-content-between align-items-center">
                                                     <div>
                                                         <div class="fs-6 fw-bold">Score - {{ $appraisal->score }}</div>
@@ -596,109 +582,110 @@
                                                     </div>
                                                 </div>
 
-                                                @include('website.modal.appraisal.all_detail')
 
-                                                @include('website.modal.appraisal.detail', [
-                                                    'appraisal' => $appraisal,
-                                                ])
-
-                                                @include('website.modal.appraisal.update', [
-                                                    'appraisal' => $appraisal,
-                                                ])
-
-                                                @include('website.modal.appraisal.delete', [
-                                                    'appraisal' => $appraisal,
-                                                ])
-                                            @else
-                                                <!-- Slot kosong -->
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <div class="fw-semibold text-gray-600">Click to add appraisal</div>
-                                                    </div>
-                                                    <div>
-                                                        <button class="btn btn-sm btn-light-primary"
-                                                            data-bs-toggle="modal" data-bs-target="#addAppraisalModal">
-                                                            <i class="fas fa-plus"></i> Add
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            @endif
-
-                                            @unless ($i == $maxSlots - 1)
-                                                <div class="separator separator-dashed my-3"></div>
-                                            @endunless
-                                        @endfor
+                                                @if (!$loop->last)
+                                                    <div class="separator separator-dashed my-3"></div>
+                                                @endif
+                                            @endforeach
+                                        @else
+                                            <div class="text-center text-muted">
+                                                No appraisal data available.
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
-
                         </div>
 
                         {{-- appraisal modal --}}
                         @include('website.modal.appraisal.create', [
                             'employee_id' => $employee->id,
                         ])
+                        @include('website.modal.appraisal.all_detail')
+
+                        @foreach ($performanceAppraisals as $appraisal)
+                            @include('website.modal.appraisal.detail', ['appraisal' => $appraisal])
+                            @include('website.modal.appraisal.update', ['appraisal' => $appraisal])
+                            @include('website.modal.appraisal.delete', ['appraisal' => $appraisal])
+                        @endforeach
                         {{-- end of appraisal modal --}}
                     </div>
-                    <div class="row">
-                        <!-- Card 2: Historical Human Assets Value -->
-                        <div class="col-md-12">
-                            <div class="card mb-5 mb-xl-10">
-                                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                                    data-bs-toggle="collapse" data-bs-target="#kt_account_human_assets"
-                                    aria-expanded="true" aria-controls="kt_account_human_assets">
-                                    <div class="card-title m-0">
-                                        <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
+
+                    @if (auth()->user()->role == 'HRD')
+                        <div class="row">
+                            <!-- Card 2: Historical Human Assets Value -->
+                            <div class="col-md-12">
+                                <div class="card mb-5 mb-xl-10">
+                                    <div
+                                        class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
+                                        <div class="card-title m-0">
+                                            <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
+                                        </div>
+                                        <div class="d-flex gap-3">
+                                            <a class="btn btn-sm btn-info"
+                                                onclick="window.location.href='{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}'">
+                                                <i class="fas fa-info"></i> Detail
+                                            </a>
+                                        </div>
                                     </div>
-                                </div>
 
-                                <div id="kt_account_human_assets" class="collapse show">
-                                    <div class="card-body border-top p-10">
-                                        <!-- Mengurangi padding agar card lebih kecil -->
-                                        @php
-                                            $humanAssets = [];
-                                            $maxSlots = 3; // Set jumlah maksimum slot
-                                            $humanAssetsCount = count($humanAssets);
-                                        @endphp
 
-                                        @if ($humanAssetsCount === 0)
-                                            <!-- If there are fewer than $maxSlots, show "Empty slot" -->
-                                            @for ($i = $humanAssetsCount; $i < $maxSlots; $i++)
-                                                <div
-                                                    class="d-flex justify-content-between align-items-center gap-3 border border-dashed p-3">
-                                                    <div>
-                                                        <div class="fs-6 fw-bold text-muted">[Empty Slot]</div>
-                                                        <a class="fw-semibold"
-                                                            href="{{ route('hav.index', $employee->npk) }}">
-                                                            Go to hav page
-                                                        </a>
-                                                    </div>
-                                                </div>
-                                                <div class="separator separator-dashed mt-4"></div>
-                                            @endfor
-                                        @else
-                                            @foreach ($humanAssets as $asset)
-                                                <div class="d-flex flex-wrap align-items-center">
-                                                    <div id="kt_signin_email">
-                                                        <div class="fs-6 fw-bold mb-1">{{ $asset['title'] }}
-                                                            [{{ $asset['count'] }}]
-                                                            <div class="text-muted fs-7">
-                                                                {{ $asset['year'] }}
+                                    <div id="kt_account_human_assets" class="collapse show">
+                                        <div class="card-body border-top p-10">
+                                            @php
+                                                $humanAssetsCount = isset($humanAssets) ? count($humanAssets) : 0;
+                                                $titles = [
+                                                    1 => 'Star',
+                                                    2 => 'Future Star',
+                                                    3 => 'Future Star',
+                                                    4 => 'Potential Candidate',
+                                                    5 => 'Raw Diamond',
+                                                    6 => 'Candidate',
+                                                    7 => 'Top Performer',
+                                                    8 => 'Strong Performer',
+                                                    9 => 'Career Person',
+                                                    10 => 'Most Unfit Employee',
+                                                    11 => 'Unfit Employee',
+                                                    12 => 'Problem Employee',
+                                                    13 => 'Maximal Contributor',
+                                                    14 => 'Contributor',
+                                                    15 => 'Minimal Contributor',
+                                                    16 => 'Dead Wood',
+                                                ];
+                                            @endphp
+
+
+                                            @if ($humanAssetsCount > 0)
+                                                @foreach ($humanAssets->take(3) as $asset)
+                                                    <div class="d-flex flex-wrap align-items-center">
+                                                        <div id="kt_signin_email">
+                                                            <div class="fs-6 fw-bold mb-1">
+                                                                {{ $titles[(int) $asset['quadrant']] ?? 'Unknown' }}
+                                                                [{{ $asset['count'] }}]
+                                                                <div class="text-muted fs-7">
+                                                                    {{ $asset['year'] }}
+                                                                </div>
                                                             </div>
+
                                                         </div>
                                                     </div>
-                                                </div>
 
-                                                <div class="separator separator-dashed my-4"></div>
-                                            @endforeach
-                                        @endif
+                                                    @if (!$loop->last)
+                                                        <div class="separator separator-dashed my-4"></div>
+                                                    @endif
+                                                @endforeach
+                                            @else
+                                                <div class="text-center text-muted mb-3">
+                                                    No human asset data available.
+                                                </div>
+                                            @endif
+
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    @endif
                 </div>
             </div>
 
@@ -802,6 +789,12 @@
                 @include('website.modal.astra_training.create', [
                     'employee_id' => $employee->id,
                 ])
+                {{-- Include Modals Update & Delete (outside of foreach) --}}
+                @foreach ($astraTrainings as $astraTraining)
+                    @include('website.modal.astra_training.update', ['astraTraining' => $astraTraining])
+                    @include('website.modal.astra_training.delete', ['astraTraining' => $astraTraining])
+                @endforeach
+
                 {{-- end of astra_training modal --}}
 
                 <div class="col-md-6">
@@ -870,13 +863,7 @@
                                                     </td>
                                                 </tr>
 
-                                                @include('website.modal.external_training.update', [
-                                                    'externalTraining' => $externalTraining,
-                                                ])
 
-                                                @include('website.modal.external_training.delete', [
-                                                    'externalTraining' => $externalTraining,
-                                                ])
                                             @empty
                                                 <tr>
                                                     <td colspan="7" class="text-center">No data available</td>
@@ -894,12 +881,19 @@
                 </div>
             </div>
 
-            {{-- external_training modal --}}
-            @include('website.modal.external_training.detail')
 
-            @include('website.modal.external_training.create', [
-                'employee_id' => $employee->id,
-            ])
+            {{-- external_training modal --}}
+            @foreach ($externalTrainings as $externalTraining)
+                @include('website.modal.external_training.update', [
+                    'externalTraining' => $externalTraining,
+                ])
+                @include('website.modal.external_training.delete', [
+                    'externalTraining' => $externalTraining,
+                ])
+            @endforeach
+
+            @include('website.modal.external_training.detail')
+            @include('website.modal.external_training.create', ['employee_id' => $employee->id])
             {{-- end of external_training modal --}}
 
 
@@ -950,6 +944,10 @@
                                             {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y, g:i A') }}
                                         </td>
                                         <td class="text-center">
+                                            <button class="btn btn-sm btn-light-warning me-1" data-bs-toggle="modal"
+                                                data-bs-target="#editPromotionModal{{ $promotionHistory->id }}">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
                                             <button class="btn btn-sm btn-light-danger delete-experience-btn"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#deletePromotionModal{{ $promotionHistory->id }}">
@@ -957,11 +955,6 @@
                                             </button>
                                         </td>
                                     </tr>
-
-                                    {{-- delete modal --}}
-                                    @include('website.modal.promotion_history.delete', [
-                                        'promotionHistory' => $promotionHistory,
-                                    ])
                                     {{-- end of modal --}}
                                 @empty
                                     <tr>
@@ -978,16 +971,38 @@
             </div>
 
             @include('website.modal.promotion_history.detail')
+            {{-- Promotion History Modals --}}
+            @foreach ($promotionHistories as $promotionHistory)
+                @include('website.modal.promotion_history.update', [
+                    'experience' => $promotionHistory, // Pastikan file update expect key ini
+                ])
+                @include('website.modal.promotion_history.delete', [
+                    'promotionHistory' => $promotionHistory,
+                ])
+            @endforeach
+
 
             <div class="row">
                 <!-- Strength -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                            data-bs-toggle="collapse" data-bs-target="#strength_section">
+                        <div class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center cursor-pointer"
+                            role="button">
+
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
                             </div>
+
+                            @if ($assessment && $assessment->date)
+                                <a class="btn btn-sm btn-info"
+                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    <i class="fas fa-info"></i> Detail
+                                </a>
+                            @else
+                                <button class="btn btn-sm btn-info" onclick="showAssessmentAlert()">
+                                    Detail
+                                </button>
+                            @endif
                         </div>
                         <div id="strength_section" class="collapse show">
                             <div class="card-body border-top p-10">
@@ -1023,11 +1038,7 @@
                                     @endforeach
                                 @endif
                             </div>
-                            <div class="card-footer">
-                                <a class="fw-semibold" href="{{ route('assessments.index', $employee->company_name) }}">
-                                    Go to assesment page
-                                </a>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -1075,11 +1086,7 @@
                                     @endforeach
                                 @endif
                             </div>
-                            <div class="card-footer">
-                                <a class="fw-semibold" href="{{ route('assessments.index', $employee->company_name) }}">
-                                    Go to assesment page
-                                </a>
-                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -1087,12 +1094,18 @@
 
             <!-- Table 2: Individual Development Plan -->
             <div class="card mb-5 mb-xl-10">
-                <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                    data-bs-toggle="collapse" data-bs-target="#kt_account_signin_method">
+                <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                     <div class="card-title m-0">
                         <h3 class="fw-bold m-0">Individual Development Plan</h3>
                     </div>
+                    <div class="d-flex gap-2">
+                        <a class="btn btn-sm btn-info"
+                            href="{{ route('idp.index', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}">
+                            <i class="fas fa-info"></i> Detail
+                        </a>
+                    </div>
                 </div>
+
 
                 <div class="card-body">
                     <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
@@ -1116,6 +1129,7 @@
                         </tbody>
                     </table>
                 </div>
+
             </div>
 
             <!-- Tombol Back di bagian bawah card -->
@@ -1130,6 +1144,15 @@
 @endsection
 
 @push('scripts')
+    <style>
+        .modal-backdrop.modal-stack {
+            z-index: 1060 !important;
+        }
+
+        .modal.modal-stack {
+            z-index: 1070 !important;
+        }
+    </style>
     <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
@@ -1176,15 +1199,18 @@
                 $('#subsection-group, #section-group, #department-group, #division-group, #plant-group').addClass(
                     'd-none');
 
+                console.log(position);
+
                 if (['Operator', 'Act JP', 'Act Leader'].includes(position)) {
                     $('#subsection-group').removeClass('d-none');
-                } else if (['Supervisor', 'Section Head'].includes(position)) {
+                } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(
+                        position)) {
                     $('#section-group').removeClass('d-none');
-                } else if (['Manager', 'Coordinator'].includes(position)) {
+                } else if (['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'].includes(position)) {
                     $('#department-group').removeClass('d-none');
-                } else if (position === 'GM') {
+                } else if (['GM', 'Act GM']) {
                     $('#division-group').removeClass('d-none');
-                } else if (position === 'Director') {
+                } else if (['Direktur']) {
                     $('#plant-group').removeClass('d-none');
                 }
             }
@@ -1197,6 +1223,26 @@
                 const selectedPosition = $(this).val();
                 toggleHierarchySelects(selectedPosition);
             });
+            let modalLevel = 0;
+
+            $(document).on('show.bs.modal', '.modal', function() {
+                let zIndex = 1050 + (10 * modalLevel);
+                $(this).css('z-index', zIndex);
+                setTimeout(() => {
+                    $('.modal-backdrop').not('.modal-stack')
+                        .css('z-index', zIndex - 1)
+                        .addClass('modal-stack');
+                }, 0);
+                modalLevel++;
+            });
+
+            $(document).on('hidden.bs.modal', '.modal', function() {
+                modalLevel = Math.max(0, modalLevel - 1);
+                if ($('.modal.show').length > 0) {
+                    $('body').addClass('modal-open');
+                }
+            });
+
         });
     </script>
 @endpush

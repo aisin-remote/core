@@ -131,17 +131,28 @@
                                         class="form-select form-select-lg fw-semibold">
                                         <option value="">Select Position</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="GM">General
-                                            Manager
+                                        <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="Act GM">Act General Manager
                                         </option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Manager">Manager</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="Act Manager">Act Manager
+                                        </option>
                                         <option data-kt-flag="flags/aland-islands.svg" value="Coordinator">Coordinator
+                                        </option>
+                                        <option data-kt-flag="flags/aland-islands.svg" value="Act Coordinator">Act
+                                            Coordinator
                                         </option>
                                         <option data-kt-flag="flags/albania.svg" value="Section Head">Section Head
                                         </option>
+                                        <option data-kt-flag="flags/albania.svg" value="Act Section Head">Act Section Head
+                                        </option>
                                         <option data-kt-flag="flags/algeria.svg" value="Supervisor">Supervisor</option>
-                                        <option data-kt-flag="flags/algeria.svg" value="Leader">Leader/Act Leader</option>
-                                        <option data-kt-flag="flags/algeria.svg" value="JP">JP/Act JP</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Act Supervisor">Act Supervisor
+                                        </option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Leader">Leader</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Act Leader">Act Leader</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="JP">JP</option>
+                                        <option data-kt-flag="flags/algeria.svg" value="Act JP">Act JP</option>
                                         <option data-kt-flag="flags/algeria.svg" value="Operator">Operator</option>
                                     </select>
                                 </div>
@@ -227,38 +238,45 @@
                 let options = [];
 
                 switch (selectedPosition) {
+                    case 'Act Leader':
                     case 'Leader':
                         label = 'Sub Section (as Leader)';
                         name = 'sub_section_id';
                         options = subSections;
                         break;
                     case 'JP':
+                    case 'Act JP':
                     case 'Operator':
                         label = 'Sub Section';
                         name = 'sub_section_id';
                         options = subSections;
                         break;
                     case 'Section Head':
+                    case 'Act Section Head':
                         label = 'Section';
                         name = 'section_id';
                         options = sections;
                         break;
                     case 'Supervisor':
+                    case 'Act Supervisor':
                         label = 'Section';
                         name = 'section_id';
                         options = sections;
                         break;
                     case 'Manager':
+                    case 'Act Manager':
                         label = 'Department';
                         name = 'department_id';
                         options = departments;
                         break;
                     case 'Coordinator':
+                    case 'Act Coordinator':
                         label = 'Department';
                         name = 'department_id';
                         options = departments;
                         break;
                     case 'GM':
+                    case 'Act GM':
                         label = 'Division';
                         name = 'division_id';
                         options = divisions;

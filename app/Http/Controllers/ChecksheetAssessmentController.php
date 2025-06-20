@@ -11,12 +11,37 @@ class ChecksheetAssessmentController extends Controller
 {
     public function index($employeeId, $competencyId)
     {
-        $employeeCompetency = EmployeeCompetency::where('employee_id', $employeeId)
-            ->where('competency_id', $competencyId)
-            ->first();
+        $employeeCompetency = EmployeeCompetency::with('employee')
+        ->where('employee_id', $employeeId)
+        ->where('competency_id', $competencyId)
+        ->first();
 
+        // Jika sudah ada penilaian, periksa otorisasi untuk perbaikan
         if ($employeeCompetency && $employeeCompetency->checksheetAssessments()->exists()) {
-            return redirect()->route('checksheet-assessment.view', $employeeCompetency->id);
+            $hierarchy = [
+                'Direktur',
+                'GM',
+                'Manager',
+                'Coordinator',
+                'Section Head',
+                'Supervisor',
+                'Leader',
+                'JP',
+                'Operator',
+            ];
+            
+            $employeePosition = $employeeCompetency->employee->position ?? 'Operator';
+            $userPosition = auth()->user()->employee->position ?? 'Operator';
+            
+            $employeeIndex = array_search($employeePosition, $hierarchy);
+            $userIndex = array_search($userPosition, $hierarchy);
+
+            $allowImprove = ($employeeCompetency->act != 2) && 
+                        ($userIndex !== false && $employeeIndex !== false && $userIndex < $employeeIndex);
+            
+            if (!$allowImprove) {
+                return redirect()->route('checksheet-assessment.view', $employeeCompetency->id);
+            }
         }
 
         if (!$employeeCompetency) {
@@ -37,20 +62,64 @@ class ChecksheetAssessmentController extends Controller
 
     public function show($employeeCompetencyId)
     {
-        $employeeCompetency = EmployeeCompetency::with(['competency.checkSheets'])
+        $employeeCompetency = EmployeeCompetency::with(['competency.checkSheets', 'employee'])
             ->findOrFail($employeeCompetencyId);
 
+        // Ambil percobaan terakhir
+        $lastAttempt = ChecksheetAssessment::where('employee_competency_id', $employeeCompetencyId)
+            ->max('attempt') ?? 1;
+            
         $existingAssessments = ChecksheetAssessment::where('employee_competency_id', $employeeCompetencyId)
+            ->where('attempt', $lastAttempt)
             ->get()
             ->keyBy('checksheet_id');
 
+        // Hitung status kelulusan
+        $totalChecksheets = $employeeCompetency->competency->checkSheets->count();
+        $score3Count = $existingAssessments->where('score', 3)->count();
+        $percentage = $totalChecksheets > 0 ? ($score3Count / $totalChecksheets) * 100 : 0;
+        $isPassed = $percentage >= 70;
+
+        // Dapatkan hierarki posisi
+        $hierarchy = [
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        // Dapatkan posisi karyawan yang dinilai
+        $employeePosition = $employeeCompetency->employee->position ?? 'Operator';
+        
+        // Dapatkan posisi user saat ini
+        $userPosition = auth()->user()->employee->position ?? 'Operator';
+        
+        // Cek apakah user adalah atasan yang berwenang
+        $isAuthorizedSuperior = false;
+        $employeeIndex = array_search($employeePosition, $hierarchy);
+        $userIndex = array_search($userPosition, $hierarchy);
+        
+        if ($userIndex !== false && $employeeIndex !== false && $userIndex < $employeeIndex) {
+            $isAuthorizedSuperior = true;
+        }
+
         return view('website.checksheet_assessment.view', [
+            'employeeCompetency' => $employeeCompetency,
             'competency' => $employeeCompetency->competency,
             'checksheets' => $employeeCompetency->competency->checkSheets,
-            'existingAssessments' => $existingAssessments
+            'existingAssessments' => $existingAssessments,
+            'isPassed' => $isPassed,
+            'percentage' => $percentage,
+            'isAuthorizedSuperior' => $isAuthorizedSuperior,
+            'attempt' => $lastAttempt // Kirim percobaan terakhir
         ]);
     }
-
+    
     public function getChecksheets($employeeId)
     {
         $competencies = Competency::with(['checkSheets', 'employeeCompetencies' => function($q) use ($employeeId) {
@@ -74,6 +143,7 @@ class ChecksheetAssessmentController extends Controller
             })
         ]);
     }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -81,25 +151,71 @@ class ChecksheetAssessmentController extends Controller
             'score' => 'required|array|min:1'
         ]);
 
-        // Cek apakah sudah ada penilaian
-        $existing = ChecksheetAssessment::where('employee_competency_id', $request->employee_competency_id)
-            ->exists();
+        $ec = EmployeeCompetency::findOrFail($request->employee_competency_id);
+        
+        // Hitung attempt terbaru
+        $lastAttempt = ChecksheetAssessment::where('employee_competency_id', $ec->id)
+            ->max('attempt') ?? 0;
+        $currentAttempt = $lastAttempt + 1;
 
-        if ($existing) {
-            return redirect()->back()->with('error', 'Penilaian sudah pernah disimpan!');
-        }
+        $totalChecksheets = count($request->score);
+        $score3Count = 0;
 
-        // Simpan data baru
-        foreach ($request->score as $checksheetId => $score) {
+        foreach ($request->score as $csId => $score) {
+            if ($score == 3) $score3Count++;
+
             ChecksheetAssessment::create([
-                'checksheet_id' => $checksheetId,
-                'employee_competency_id' => $request->employee_competency_id,
+                'employee_competency_id' => $ec->id,
+                'checksheet_id' => $csId,
                 'score' => $score,
-                'description' => $request->description[$checksheetId] ?? null
+                'attempt' => $currentAttempt // Simpan attempt
             ]);
         }
 
-        return redirect()->route('employeeCompetencies.index')
-            ->with('success', 'Penilaian berhasil disimpan!');
+        $percentage = ($score3Count / $totalChecksheets) * 100;
+        $isPassed = $percentage >= 70;
+
+        // Update status kompetensi
+        $ec->update(['act' => $isPassed ? 2 : 1]);
+
+        // Pesan
+        if ($isPassed) {
+            $message = 'Penilaian berhasil disimpan. Selamat, Anda lolos!';
+        } else {
+            // Gunakan link baru ke history spesifik kompetensi
+            $historyLink = route('checksheet-assessment.competency-history', [
+                'employeeId' => $ec->employee_id,
+                'competencyId' => $ec->competency_id
+            ]);
+            
+            $message = 'Penilaian berhasil disimpan. Maaf, Anda belum lolos. ';
+            $message .= "<a href='$historyLink' class='alert-link'>Lihat detail checksheet yang perlu diperbaiki</a>";
+        }
+    
+        return redirect()->route('checksheet-assessment.view', $ec->id)
+            ->with('success', $message);
+    }
+    
+    public function competencyHistory($employeeId, $competencyId)
+    {
+        $failedAttempts = ChecksheetAssessment::with([
+                'employeeCompetency.competency', 
+                'checksheet'
+            ])
+            ->whereHas('employeeCompetency', function($query) use ($employeeId, $competencyId) {
+                $query->where('employee_id', $employeeId)
+                    ->where('competency_id', $competencyId);
+            })
+            ->where('score', '<', 3)
+            ->get()
+            ->groupBy('attempt');
+
+        $competency = Competency::findOrFail($competencyId);
+
+        return view('website.checksheet_assessment.history', [
+            'failedAttempts' => $failedAttempts,
+            'employeeId' => $employeeId,
+            'competency' => $competency
+        ]);
     }
 }

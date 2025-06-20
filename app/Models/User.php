@@ -114,4 +114,9 @@ class User extends Authenticatable
         $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
     }
+    
+    public function isHRDorDireksi()
+    {
+        return $this->role === 'HRD' || ($this->employee && $this->employee->isDireksi());
+    }
 }

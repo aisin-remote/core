@@ -58,10 +58,12 @@
                 @if (auth()->user()->role == 'HRD')
                 <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                     role="tablist" style="cursor:pointer">
+                    <li class="nav-item" role="presentation">
                     <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
                         href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                         Show All
                     </a>
+                    </li>
                     <li class="nav-item" role="presentation">
                         <a class="nav-link text-active-primary pb-4 {{ $filter == 'Direktur' ? 'active' : '' }}"
                             href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'Direktur']) }}">
@@ -76,14 +78,15 @@
                             href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Manager']) }}">Manager</a>
                     </li>
                     <li class="nav-item" role="presentation">
+                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
+                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
+                    </li>
+                    <li class="nav-item" role="presentation">
                         <a class="nav-link text-active-primary pb-4 {{ $filter == 'Section Head' ? 'active' : '' }}"
                             href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Section Head']) }}">Section
                             Head</a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'Coordinator' ? 'active' : '' }}"
-                            href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Coordinator']) }}">Coordinator</a>
-                    </li>
+
                     <li class="nav-item" role="presentation">
                         <a class="nav-link text-active-primary pb-4 {{ $filter == 'Supervisor' ? 'active' : '' }}"
                             href="{{ route('employee.master.index', ['company' => $company,'search' => request('search'), 'filter' => 'Supervisor']) }}">Supervisor</a>
@@ -158,7 +161,6 @@
                         @endforelse
                     </tbody>
                 </table>
-
 
             </div>
         </div>

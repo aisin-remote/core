@@ -75,7 +75,6 @@
                             <th class="text-center">Weight</th>
                             <th class="text-center">Plan</th>
                             <th class="text-center">Act</th>
-                            <th class="text-center">Status</th>
                             <th class="text-center">Due Date</th>
                             <th class="text-center">Action</th>
                         </tr>
@@ -87,11 +86,6 @@
                                 <td class="text-center">{{ $ec->competency->weight }}</td>
                                 <td class="text-center">{{ $ec->competency->plan }}</td>
                                 <td class="text-center">{{ $ec->act }}</td>
-                                <td class="text-center">
-                                    <span class="badge {{ $ec->status ? 'bg-success' : 'bg-warning' }}">
-                                        {{ $ec->status ? 'Approve' : 'Waiting' }}
-                                    </span>
-                                </td>
                                 <td class="text-center">
                                     {{ \Carbon\Carbon::parse($ec->due_date)->format('M Y') }}
                                 </td>
@@ -119,11 +113,11 @@
             </div>
         </div>
         
-        <div class="text-end mt-4">
-            <a href="{{ route('employeeCompetencies.index') }}" class="btn btn-secondary">
-                <i class="bi bi-arrow-left-circle"></i> Back
+        <div class="mt-4">
+            <a href="{{ route('employeeCompetencies.index', ['company' => request()->route('company', 'aii')]) }}" class="btn btn-secondary px-4 ms-2">
+              <i class="bi bi-arrow-left-circle me-2"></i>Back
             </a>
-        </div>
+          </div>  
     </div>
 </div>
 @endsection

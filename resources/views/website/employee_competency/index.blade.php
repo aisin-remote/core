@@ -28,7 +28,6 @@
   }
   .col-no  { left: 0; }
   .col-emp { left: 60px; }
-  /* Action */
   .col-act { width: 120px; min-width: 120px; }
   .sticky-action {
     position: sticky; right: 0; z-index: 10; background: white;
@@ -51,11 +50,13 @@
   .comp-cell {
     display: inline-flex;
     flex-direction: column;
+    justify-content: space-between;
     align-items: center;
     margin: 0.5rem;
     width: 100px;
+    height: 120px;
   }
-  .comp-icon { width: 90px; height: 90px; margin: 4px 0; }
+  .comp-icon { width: 90px; height: 90px; margin: 0; }
   .comp-name {
     font-size: 0.85rem;
     text-align: center;
@@ -63,7 +64,8 @@
     word-break: break-word;
     line-height: 1.2;
     margin-top: 0.25rem;
-    max-height: 3.6em;
+    max-height: 2.4em;
+    overflow: hidden;
   }
 
   /* 4) Center “–” jika tidak ada competency */
@@ -77,7 +79,6 @@
   }
 </style>
 @endpush
-
 
 @section('main')
   <div class="app-container container-fluid">
@@ -95,8 +96,10 @@
       <div class="card-body">
         {{-- Position Tabs --}}
         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-6 fw-semibold mb-8" id="positionTabs">
-          <li class="nav-item"><a class="nav-link active" href="#" data-position="all">All</a></li>
-          @foreach(['Direktur','GM','Manager','Coordinator','Section Head','Supervisor','Leader','Act Leader','JP','Act JP','Operator'] as $pos)
+          <li class="nav-item">
+            <a class="nav-link active" href="#" data-position="all">All</a>
+          </li>
+          @foreach($positionsAllowed as $pos)
             <li class="nav-item">
               <a class="nav-link" href="#" data-position="{{ $pos }}">{{ $pos }}</a>
             </li>
@@ -162,9 +165,10 @@ function render() {
   tbody.innerHTML = '';
 
   // filter posisi + search
-  let data = employees.filter(e =>
-    currentPosition==='all' || e.position===currentPosition
-  );
+  let data = employees.filter(e => {
+    if (currentPosition === 'all') return true;
+    return e.position === currentPosition || e.position === `Act ${currentPosition}`;
+  });
   const term = document.getElementById('searchInputEmployee').value.trim().toLowerCase();
   if (term) data = data.filter(e => e.name.toLowerCase().includes(term));
 

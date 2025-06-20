@@ -32,5 +32,20 @@ class EmployeeCompetency extends Model
     {
         return $this->hasMany(ChecksheetAssessment::class);
     }
+    
+    public function passedAssessments()
+    {
+        return $this->hasMany(ChecksheetAssessment::class)->where('score', 3);
+    }
 
+    public function evidenceHistories()
+    {
+        return $this->hasMany(EvidenceHistory::class);
+    }
+
+    public function evaluations()
+    {
+        return $this->hasMany(Evaluation::class);
+    }
 }
+

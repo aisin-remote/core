@@ -34,7 +34,6 @@
   
   <script>
   document.addEventListener('DOMContentLoaded', () => {
-    // Handler untuk tombol checksheet
     document.body.addEventListener('click', async e => {
       if (!e.target.closest('.checksheet-btn')) return;
       const btn = e.target.closest('.checksheet-btn');

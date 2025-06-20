@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Hav extends Model
 {
@@ -12,7 +12,7 @@ class Hav extends Model
 
     protected $guarded = ['id'];
 
-    protected $fillable = ['employee_id', 'quadrant'];
+    protected $fillable = ['employee_id', 'quadrant', 'status'];
 
     // One-to-Many: Hav -> HavDetails
     public function details()
@@ -20,11 +20,14 @@ class Hav extends Model
         return $this->hasMany(HavDetail::class, 'hav_id', 'id');
     }
 
-
     // Many-to-One: Hav -> Employee
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
+    }
+    public function commentHistory()
+    {
+        return $this->hasMany(HavCommentHistory::class, 'hav_id');
     }
 
     // Many-to-One: Hav -> Employee
@@ -33,7 +36,7 @@ class Hav extends Model
         return $this->belongsTo(QuadranMaster::class, 'quadrant', 'code');
     }
     // Get the status of the employee
-    public function getStatusAttribute()
+    public function getStatusQuadrantAttribute()
     {
         $statusList = [
             1 => 'Star',

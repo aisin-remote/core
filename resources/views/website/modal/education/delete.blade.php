@@ -11,10 +11,7 @@
                 @csrf
                 @method('DELETE')
                 <div class="modal-body">
-                    <p>Apakah Anda yakin ingin menghapus
-                        <strong>{{ $education->educational_level }} -
-                            {{ $education->major }}</strong> dari riwayat
-                        pendidikan?
+                    <p>Apakah Anda yakin ingin menghapus data ini?
                     </p>
                 </div>
                 <div class="modal-footer">

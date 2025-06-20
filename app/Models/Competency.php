@@ -19,6 +19,16 @@ class Competency extends Model
         return $this->hasMany(CheckSheet::class, 'competency_id', 'id');
     }
 
+    public function employeeCompetencies()
+    {
+        return $this->hasMany(EmployeeCompetency::class, 'competency_id', 'id');
+    }
+    
+    public function checksheetUsers()
+    {
+        return $this->hasMany(ChecksheetUser::class, 'competency_id', 'id');
+    }
+
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');

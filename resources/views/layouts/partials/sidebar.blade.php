@@ -99,6 +99,38 @@
 
                     <div class="menu-sub menu-sub-accordion menu-active-bg">
 
+                        <style>
+                            .blinking-dot {
+                                animation: blink 1s infinite;
+                            }
+
+                            @keyframes blink {
+
+                                0%,
+                                100% {
+                                    opacity: 1;
+                                }
+
+                                50% {
+                                    opacity: 0;
+                                }
+                            }
+                        </style>
+
+                        <div class="menu-item">
+                            <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
+                                <span class="menu-title ps-1 position-relative d-inline-block"
+                                    style="padding-right: 16px;">
+                                    To Do List
+                                    @if ($allIdpTasks->count() > 0 || $allHavTasks->count() > 0)
+                                        <span
+                                            class="blinking-dot position-absolute top-50 end-0 translate-middle-y bg-danger rounded-circle"
+                                            style="width: 8px; height: 8px;"></span>
+                                    @endif
+                                </span>
+                            </a>
+                        </div>
+
                         {{-- Dashboard --}}
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
@@ -108,31 +140,38 @@
                         </div>
 
                         {{-- EMPLOYEE --}}
-                        @if (auth()->user()->role == 'User')
+                        @php
+                            $user = auth()->user();
+                            $employee = $user->employee;
+                            $position = $employee->position ?? null;
+                            $isUser = $user->role === 'User' && !in_array($position, ['President', 'VPD']);
+                            $isHRDorTop = $user->role === 'HRD' || in_array($position, ['President', 'VPD']);
+                        @endphp
+                        @if ($isUser)
+                            {{-- Employee Profile menu for regular User --}}
                             <div class="menu-item">
-                                <a class="menu-link {{ $currentPath === 'employee' ? 'active' : '' }}" href="/employee">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
+                                <a class="menu-link {{ request()->is('employee') ? 'active' : '' }}" href="/employee">
                                     <span class="menu-title ps-1">Employee Profile</span>
                                 </a>
                             </div>
-                        @else
-                            <div class="menu-item menu-accordion {{ $isEmployee ? 'show' : '' }}"
+                        @elseif ($isHRDorTop)
+                            {{-- Employee Profile menu for HRD / President / VPD --}}
+                            <div class="menu-item menu-accordion {{ request()->is('employee*') ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-employee-profile">
-                                <span class="menu-link {{ $isEmployee ? 'active' : '' }}">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
+                                <span class="menu-link {{ request()->is('employee*') ? 'active' : '' }}">
                                     <span class="menu-title ps-1">Employee Profile</span>
                                     <span class="menu-arrow"></span>
                                 </span>
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'employee/aii' ? 'active' : '' }}"
+                                        <a class="menu-link {{ request()->is('employee/aii') ? 'active' : '' }}"
                                             href="/employee/aii">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">AII</span>
                                         </a>
                                     </div>
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'employee/aiia' ? 'active' : '' }}"
+                                        <a class="menu-link {{ request()->is('employee/aiia') ? 'active' : '' }}"
                                             href="/employee/aiia">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">AIIA</span>
@@ -142,33 +181,34 @@
                             </div>
                         @endif
 
+
                         {{-- ASSESSMENT --}}
-                        @if (auth()->user()->role == 'User')
+                        @if ($isUser)
+                            {{-- Assessment menu for regular User --}}
                             <div class="menu-item">
-                                <a class="menu-link {{ $currentPath === 'assessment' ? 'active' : '' }}"
+                                <a class="menu-link {{ request()->is('assessment') ? 'active' : '' }}"
                                     href="/assessment">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">Assessment</span>
                                 </a>
                             </div>
-                        @else
-                            <div class="menu-item menu-accordion {{ $isAssessment ? 'show' : '' }}"
+                        @elseif ($isHRDorTop)
+                            {{-- Assessment menu for HRD / President / VPD --}}
+                            <div class="menu-item menu-accordion {{ request()->is('assessment*') ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-assessment">
-                                <span class="menu-link {{ $isAssessment ? 'active' : '' }}">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
+                                <span class="menu-link {{ request()->is('assessment*') ? 'active' : '' }}">
                                     <span class="menu-title ps-1">Assessment</span>
                                     <span class="menu-arrow"></span>
                                 </span>
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'assessment/aii' ? 'active' : '' }}"
+                                        <a class="menu-link {{ request()->is('assessment/aii') ? 'active' : '' }}"
                                             href="/assessment/aii">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">AII</span>
                                         </a>
                                     </div>
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'assessment/aiia' ? 'active' : '' }}"
+                                        <a class="menu-link {{ request()->is('assessment/aiia') ? 'active' : '' }}"
                                             href="/assessment/aiia">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">AIIA</span>
@@ -178,11 +218,11 @@
                             </div>
                         @endif
 
-                        @if (auth()->user()->role == 'User')
+                        @if ($isUser)
+                            {{-- HAV menu for regular User --}}
                             <div class="menu-item menu-accordion {{ $isHav ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-hav">
                                 <span class="menu-link {{ $isHav ? 'active' : '' }}">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -194,8 +234,13 @@
                                             <span class="menu-title">HAV Quadran</span>
                                         </a>
                                     </div>
-                                </div>
-                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'hav/assign' ? 'active' : '' }}"
+                                            href="/hav/assign">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">HAV Assign</span>
+                                        </a>
+                                    </div>
                                     <div class="menu-item">
                                         <a class="menu-link {{ $currentPath === 'hav/list' ? 'active' : '' }}"
                                             href="/hav/list">
@@ -205,11 +250,11 @@
                                     </div>
                                 </div>
                             </div>
-                        @else
+                        @elseif ($isHRDorTop)
+                            {{-- HAV menu for HRD / President / VPD --}}
                             <div class="menu-item menu-accordion {{ request()->is('hav*') ? 'show' : '' }}"
                                 data-kt-menu-trigger="click" data-kt-menu-expand="true">
                                 <span class="menu-link">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">HAV</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -275,55 +320,122 @@
                         @endif
 
                         {{-- IDP --}}
-                        @if (auth()->user()->role == 'User')
-                            <div class="menu-item">
-                                <a class="menu-link {{ $currentPath === 'idp' ? 'active' : '' }}" href="/idp">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
-                                    <span class="menu-title ps-1">IDP</span>
-                                </a>
-                            </div>
-                        @else
+                        @if ($isUser)
+                            {{-- IDP menu for regular User --}}
                             <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
                                 <span class="menu-link {{ $isIdp ? 'active' : '' }}">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">IDP</span>
                                     <span class="menu-arrow"></span>
                                 </span>
                                 <div class="menu-sub menu-sub-accordion menu-active-bg">
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'idp/aii' ? 'active' : '' }}"
-                                            href="/idp/aii">
+                                        <a class="menu-link {{ $currentPath === 'idp' ? 'active' : '' }}"
+                                            href="/idp">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">AII</span>
+                                            <span class="menu-title">IDP Assign</span>
                                         </a>
                                     </div>
                                     <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'idp/aiia' ? 'active' : '' }}"
-                                            href="/idp/aiia">
+                                        <a class="menu-link {{ $currentPath === 'idp/list' ? 'active' : '' }}"
+                                            href="{{ route('idp.list', ['company' => null]) }}">
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">AIIA</span>
+                                            <span class="menu-title">IDP List</span>
                                         </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @elseif ($isHRDorTop)
+                            <div class="menu-item menu-accordion {{ $isIdp ? 'show' : '' }}"
+                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-idp">
+                                <span class="menu-link {{ $isIdp ? 'active' : '' }}">
+                                    <span class="menu-title ps-1">IDP</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    {{-- IDP Assign --}}
+                                    <div class="menu-item menu-accordion {{ request()->is('idp/*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">IDP Assign</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/aii') ? 'active' : '' }}"
+                                                    href="/idp/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/aiia') ? 'active' : '' }}"
+                                                    href="/idp/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {{-- IDP List --}}
+                                    <div class="menu-item menu-accordion {{ request()->is('idp/list/*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">IDP List</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/list/aii') ? 'active' : '' }}"
+                                                    href="/idp/list/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('idp/list/aiia') ? 'active' : '' }}"
+                                                    href="/idp/list/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         @endif
 
                         {{-- RTC --}}
-                        @if (auth()->user()->role == 'User')
-                            @if (auth()->user()->employee->position == 'GM' || auth()->user()->employee->position == 'Director')
-                                <div class="menu-item">
-                                    <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
-                                        {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
-                                        <span class="menu-title ps-1">RTC</span>
-                                    </a>
-                                </div>
-                            @endif
-                        @else
+                        @php
+                            $user = auth()->user();
+                            $employee = $user->employee;
+                            $position = $employee->position;
+                            $normalized = strtolower($employee->getNormalizedPosition());
+                            $allowedPositions = ['gm', 'direktur'];
+                            $isUser = $user->role === 'User';
+                            $isHRDorTop = $user->role === 'HRD' || in_array($position, ['President', 'VPD']);
+                        @endphp
+
+                        @if ($isUser && !in_array($position, ['President', 'VPD']) && in_array($normalized, $allowedPositions))
+                            {{-- RTC menu for allowed User roles --}}
+                            <div class="menu-item">
+                                <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
+                                    <span class="menu-title ps-1">RTC</span>
+                                </a>
+                            </div>
+                        @elseif ($isHRDorTop)
+                            {{-- RTC menu for HRD, President, VPD --}}
                             <div class="menu-item menu-accordion {{ $isRtc ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-rtc">
                                 <span class="menu-link {{ $isRtc ? 'active' : '' }}">
-                                    {{-- <span class="menu-bullet"><span class="bullet bullet-dot"></span></span> --}}
                                     <span class="menu-title ps-1">RTC</span>
                                     <span class="menu-arrow"></span>
                                 </span>
@@ -439,6 +551,15 @@
                             </a>
                         </div>
 
+                        <!-- checksheet user -->
+                        <div class="menu-item">
+                            <a class="menu-link {{ request()->is('/checksheet_user') ? 'active' : '' }}"
+                                href="/checksheet_user">
+                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-title ps-1">Checksheet User</span>
+                            </a>
+                        </div>
+
                         <!-- Group Competency -->
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
@@ -505,225 +626,134 @@
                 </div>
             @endif
 
-            @if ($jobPositions === 'Operator')
-                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                    id="menu-approval">
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="fas fa-chalkboard-teacher"></i>
-                        </span>
-                        <span class="menu-title ps-1">Training</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('skill-matrix*') ? 'active' : '' }}"
-                               href="{{ route('skillMatrix.index') }}">
-                                <span class="menu-title ps-1">Skill Matrix</span>
-                            </a>
-                        </div>  
-                    </div>
-                </div>
-            @endif
+            @php
+                $user     = auth()->user();
+                $role     = $user->role;
+                $position = $user->employee->position ?? null;
 
-            {{-- Training --}}
-            @if (auth()->user()->role == 'HRD')
-                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                    id="menu-approval">
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="fas fa-chalkboard-teacher"></i>
-                        </span>
-                        <span class="menu-title ps-1">Training</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                        <div class="menu-item menu-accordion {{ $isEmployeeCompetencies ? 'show' : '' }}" data-kt-menu-expand="true" data-kt-menu-trigger="click">
-                            <span class="menu-link {{ $isEmployeeCompetencies ? 'active' : '' }}">
-                                <span class="menu-title ps-1">Employee Competency</span>
-                                <span class="menu-arrow"></span>
-                            </span>
-                            <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                <div class="menu-item">
-                                    <a class="menu-link {{ $currentPath === 'employeeCompetencies/aii' ? 'active' : '' }}"
-                                        href="/employeeCompetencies/aii">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                        <span class="menu-title">AII</span>
-                                    </a>
-                                </div>
-                                <div class="menu-item">
-                                    <a class="menu-link {{ $currentPath === 'employeeCompetencies/aiia' ? 'active' : '' }}"
-                                        href="/employeeCompetencies/aiia">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                        <span class="menu-title">AIIA</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>    
-                    </div>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('skill-matrix*') ? 'active' : '' }}"
-                               href="{{ route('skillMatrix.index') }}">
-                                <span class="menu-title ps-1">Skill Matrix</span>
-                            </a>
-                        </div>  
-                    </div>
-                </div>
-            @elseif ($jobPositions == 'JP' || 'Leader' || 'Supervisor' || 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
-                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                    id="menu-approval">
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="fas fa-chalkboard-teacher"></i>
-                        </span>
-                        <span class="menu-title ps-1">Training</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                        <div class="menu-item menu-accordion {{ $isEmployeeCompetencies ? 'show' : '' }}" data-kt-menu-expand="true" data-kt-menu-trigger="click">
-                            <span class="menu-link {{ $isEmployeeCompetencies ? 'active' : '' }}">
-                                <span class="menu-title ps-1">Employee Competency</span>
-                                <span class="menu-arrow"></span>
-                            </span>
-                            <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                <div class="menu-item">
-                                    <a class="menu-link {{ $currentPath === 'employeeCompetencies/aii' ? 'active' : '' }}"
-                                        href="/employeeCompetencies/aii">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                        <span class="menu-title">AII</span>
-                                    </a>
-                                </div>
-                                <div class="menu-item">
-                                    <a class="menu-link {{ $currentPath === 'employeeCompetencies/aiia' ? 'active' : '' }}"
-                                        href="/employeeCompetencies/aiia">
-                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                        <span class="menu-title">AIIA</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>    
-                    </div>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('skill-matrix*') ? 'active' : '' }}"
-                               href="{{ route('skillMatrix.index') }}">
-                                <span class="menu-title ps-1">Skill Matrix</span>
-                            </a>
-                        </div>  
-                    </div>
-                </div>
-            @endif
+                $allowedManagerPositions = [
+                    'Leader', 'Supervisor', 'Section Head', 'Manager', 'Group Manager'
+                ];
+                $canTrainingSkillMatrix = 
+                    $role === 'HRD'
+                    || ($role === 'User' && ($position === 'Operator' 
+                        || in_array($position, $allowedManagerPositions)));
+                $canEmployeeCompetency = 
+                    $role === 'HRD'
+                    || ($role === 'User' && in_array($position, $allowedManagerPositions));
+                $canApproval = $canEmployeeCompetency;
+            @endphp
 
-            {{-- approve --}}
-            @if ($jobPositions == 'Manager' || 'GM' || 'Act Group Manager' || 'Direktur')
+            {{-- TRAINING --}}
+            @if($canEmployeeCompetency || $canTrainingSkillMatrix)
             <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                id="menu-approval">
+                id="menu-training">
                 <span class="menu-link">
                     <span class="menu-icon">
-                        <i class="fas fa-check  "></i>
+                        <i class="fas fa-chalkboard-teacher"></i>
                     </span>
-                    <span class="menu-title ps-1">Approval</span>
+                    <span class="menu-title ps-1">Training</span>
                     <span class="menu-arrow"></span>
                 </span>
                 <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
-
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('approval/list-approval-IDP') ? 'active' : '' }}"
-                            href="{{ route('idp.approvalidp') }}">
-                            {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                            <span class="menu-title ps-1">IDP</span>
-                        </a>
+                    {{-- Employee Competency --}}
+                    @if($canEmployeeCompetency)
+                    <!-- PERBAIKAN: Hapus div tambahan di sini -->
+                    <div class="menu-item menu-accordion {{ $isEmployeeCompetencies ? 'show' : '' }}"
+                        data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                        <span class="menu-link {{ $isEmployeeCompetencies ? 'active' : '' }}">
+                            <span class="menu-title ps-1">Employee Competency</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+                        <div class="menu-sub menu-sub-accordion menu-active-bg">
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->is('employeeCompetencies/aii') ? 'active' : '' }}"
+                                    href="{{ route('employeeCompetencies.index', ['company' => 'aii']) }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">AII</span>
+                                </a>
+                            </div>
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->is('employeeCompetencies/aiia') ? 'active' : '' }}"
+                                    href="{{ route('employeeCompetencies.index', ['company' => 'aiia']) }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">AIIA</span>
+                                </a>
+                            </div>
+                        </div>
                     </div>
-
-                    <!-- plant -->
-                    <a class="menu-link {{ request()->is('approval/list-approval-HAV') ? 'active' : '' }}"
-                        href="{{ route('hav.approval') }}">
-                        {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                        <span class="menu-title ps-1">HAV</span>
-                    </a>
-
-                    <!-- Division -->
-                    <div class="menu-item">
-                        <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
-                            href="#">
-                            {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                            <span class="menu-title ps-1">RTC</span>
-                        </a>
-                    </div>
+                    @endif
                     
-                    {{-- Skill Matrix Approval --}}
+                    {{-- Skill Matrix --}}
+                    @if($canTrainingSkillMatrix)
                     <div class="menu-item">
-                        <a href="{{ route('skillMatrix.approval') }}"
-                        class="menu-link {{ request()->is('approval/skill-matrix*') ? 'active' : '' }}">
+                        <a class="menu-link {{ request()->is('skill-matrix*') ? 'active' : '' }}"
+                        href="{{ route('skillMatrix.index') }}">
                         <span class="menu-title ps-1">Skill Matrix</span>
                         </a>
                     </div>
+                    @endif
                 </div>
             </div>
-            @elseif (auth()->user()->role == 'HRD')
-                <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
-                    id="menu-approval">
-                    <span class="menu-link">
-                        <span class="menu-icon">
-                            <i class="fas fa-check"></i>
-                        </span>
-                        <span class="menu-title ps-1">Approval</span>
-                        <span class="menu-arrow"></span>
-                    </span>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg" style="overflow: hidden;">
+            @endif
 
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}" href="#">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">IDP</span>
-                            </a>
-                        </div>
-
-                        <!-- plant -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}" href="#">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">HAV</span>
-                            </a>
-                        </div>
-
-                        <!-- Division -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
-                                href="#">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">RTC</span>
-                            </a>
-                        </div>
-                        <!-- Department -->
-                    </div>
+            {{-- APPROVAL --}}
+            @if($canApproval)
+            <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
+                id="menu-approval">
+                <span class="menu-link">
+                <span class="menu-icon"><i class="fas fa-check"></i></span>
+                <span class="menu-title ps-1">Approval</span>
+                <span class="menu-arrow"></span>
+                </span>
+                <div class="menu-sub menu-sub-accordion">
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->is('approval/idp') ? 'active' : '' }}"
+                    href="{{ route('idp.approval') }}">
+                    <span class="menu-title ps-1">IDP</span>
+                    </a>
                 </div>
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
+                    href="{{ route('hav.approval') }}">
+                    <span class="menu-title ps-1">HAV</span>
+                    </a>
+                </div>
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
+                    href="#">
+                    <span class="menu-title ps-1">RTC</span>
+                    </a>
+                </div>
+                <div class="menu-item">
+                    <a class="menu-link {{ request()->is('approval/skill-matrix*') ? 'active' : '' }}"
+                    href="{{ route('skillMatrix.approval') }}">
+                    <span class="menu-title ps-1">Skill Matrix</span>
+                    </a>
+                </div>
+                </div>
+            </div>
             @endif
         </div>
-        <!-- Sidebar User Panel -->
-        <!--begin::User info sidebar bottom-->
-
-        <!--end::User info sidebar bottom-->
-        <!--end::sidebar menu-->
     </div>
-    <div class="app-sidebar-user mt-auto px-3 pt-5 pb-5 border-top border-white border-opacity-25"
-        style="position: sticky; bottom: 0; background-color: #1e1e2d;">
-        <div class="d-flex align-items-center">
-            <div class="symbol symbol-40px">
-                <img src="{{ auth()->user()->employee && auth()->user()->employee->photo
-                    ? asset('storage/' . auth()->user()->employee->photo)
-                    : asset('assets/media/avatars/user.jpg') }}"
-                    class="rounded-3" alt="user" style="width: 40px; height: 40px; object-fit: cover;" />
-            </div>
-            <div class="ms-3">
-                <div class="fw-bold text-white">{{ auth()->user()->name }}</div>
-                <div class="text-muted fs-8">{{ auth()->user()->employee->position ?? '-' }}</div>
+        <div class="app-sidebar-user mt-auto px-3 pt-5 pb-5 border-top border-white border-opacity-25"
+            style="position: sticky; bottom: 0; background-color: #1e1e2d;">
+            <div class="d-flex align-items-center">
+                <div class="symbol symbol-40px">
+                    <img src="{{ auth()->user()->employee && auth()->user()->employee->photo
+                        ? asset('storage/' . auth()->user()->employee->photo)
+                        : asset('assets/media/avatars/user.jpg') }}"
+                        class="rounded-3" alt="user" style="width: 40px; height: 40px; object-fit: cover;" />
+                </div>
+                <div class="ms-3">
+                    <div class="fw-bold text-white">{{ auth()->user()->name }}</div>
+                    <div class="text-muted fs-8">{{ auth()->user()->employee->position ?? '-' }}</div>
+                </div>
             </div>
         </div>
     </div>
 
-</div>
+
 <!--end::Sidebar-->
 <script>
     document.addEventListener("DOMContentLoaded", function() {

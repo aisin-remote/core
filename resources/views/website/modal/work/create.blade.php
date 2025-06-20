@@ -12,11 +12,24 @@
                     <input type="hidden" name="employee_id" value="{{ $employee_id }}">
                     <div class="mb-3">
                         <label class="form-label">Position</label>
-                        <input type="text" class="form-control" name="position" required>
+                        <select name="position" class="form-control" required>
+                            <option value="">-- Pilih Position --</option>
+                            @foreach ($positions as $position)
+                                <option value="{{ $position }}"
+                                    {{ old('position', $experience->position ?? '') === $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
+
                     <div class="mb-3">
                         <label class="form-label">Company</label>
                         <input type="text" class="form-control" name="company" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department</label>
+                        <input type="text" class="form-control" name="department" required>
                     </div>
                     <div class="row mb-3">
                         <div class="col-6">
@@ -30,10 +43,6 @@
                             <input type="date" class="form-control" name="end_date">
                             <small class="text-muted">Leave blank if currently working here.</small>
                         </div>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Job Description</label>
-                        <textarea class="form-control" name="description" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
