@@ -40,14 +40,16 @@
                             <h4 class="fw-bold mb-4">Personal Information</h4>
                             <div class="mb-3">
                                 <label class="form-label">NPK</label>
-                                <input type="text" name="npk" class="form-control" value="{{ old('npk') }}" required>
+                                <input type="text" name="npk" class="form-control" value="{{ old('npk') }}"
+                                    required>
                                 @error('npk')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Name</label>
-                                <input type="text" name="name" class="form-control" value="{{ old('name') }}" required>
+                                <input type="text" name="name" class="form-control" value="{{ old('name') }}"
+                                    required>
                                 @error('name')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -60,20 +62,22 @@
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
-                               <div class="mb-3">
+                            <div class="mb-3">
                                 <label class="form-label">Phone Number</label>
-                                <input type="text" name="phone_number" class="form-control" value="{{ old('phone_number') }}" required>
+                                <input type="text" name="phone_number" class="form-control"
+                                    value="{{ old('phone_number') }}" required>
                                 @error('phone_number')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
-                                <label class="form-label">Photo</label>
-                                <input type="file" name="photo" class="form-control" required>
+                                <label class="form-label">Photo <small class="text-muted">(JPG, PNG, JPEG)</small></label>
+                                <input type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png" required>
                                 @error('photo')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
+
                             <div class="mb-3">
                                 <label class="form-label">Gender</label>
                                 <select name="gender" class="form-select" required>
@@ -114,7 +118,8 @@
                                         <label class="form-label">Company</label>
                                     </label>
                                     <select name="company_name" aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Company..." class="form-select form-select-lg fw-semibold" required>
+                                        data-placeholder="Select Company..." class="form-select form-select-lg fw-semibold"
+                                        required>
                                         <option value="">Select Company</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="AIIA">
                                             Aisin Indonesia Automotive
@@ -134,8 +139,8 @@
                                         <label class="form-label">Position</label>
                                     </label>
                                     <select name="position" aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Position..."
-                                        class="form-select form-select-lg fw-semibold" required>
+                                        data-placeholder="Select Position..." class="form-select form-select-lg fw-semibold"
+                                        required>
                                         <option value="">Select Position</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager</option>
