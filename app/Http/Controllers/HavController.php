@@ -711,11 +711,11 @@ class HavController extends Controller
 
 
             $sheet->setCellValue("U11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("V11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("W11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("V11", substr($appraisals[1]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("W11", substr($appraisals[2]->date, 0, 4) ?? '-');
             $sheet->setCellValue("X11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("Y11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("Z11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("Y11", substr($appraisals[1]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("Z11", substr($appraisals[2]->date, 0, 4) ?? '-');
 
             $sheet->setCellValue("U{$row}", $appraisals[0]->score ?? '-');
             $sheet->setCellValue("V{$row}", $appraisals[1]->score ?? '-');
