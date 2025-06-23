@@ -266,7 +266,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
 
         Route::prefix('plant')->group(function () {
-            Route::get('/', [PlantController::class, 'plant'])->name('plant.master.index');
+            Route::get('/{company?}', [PlantController::class, 'plant'])->name('plant.master.index');
             Route::post('/store', [PlantController::class, 'Store'])->name('plant.master.store');
             Route::put('/update/{id}', [PlantController::class, 'update'])->name('plant.master.update');
 
@@ -274,7 +274,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('department')->group(function () {
-            Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
+            Route::get('/{company?}', [MasterController::class, 'department'])->name('department.master.index');
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
             Route::get('/get-managers/{company}', [MasterController::class, 'getManagers']);
@@ -282,7 +282,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('division')->group(function () {
-            Route::get('/', [MasterController::class, 'division'])->name('division.master.index');
+            Route::get('/{company?}', [MasterController::class, 'division'])->name('division.master.index');
             Route::post('/store', [MasterController::class, 'divisionStore'])->name('division.master.store');
             Route::put('/master/update/{id}', [MasterController::class, 'updateDivision'])->name('division.master.update');
 
@@ -291,14 +291,14 @@ Route::middleware('auth')->group(function () {
 
 
         Route::prefix('section')->group(function () {
-            Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
+            Route::get('/{company?}', [MasterController::class, 'section'])->name('section.master.index');
             Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
             Route::put('/update/{id}', [MasterController::class, 'sectionUpdate'])->name('section.master.update');
         });
 
         Route::prefix('subSection')->group(function () {
-            Route::get('/', [MasterController::class, 'subSection'])->name('subSection.master.index');
+            Route::get('/{company?}', [MasterController::class, 'subSection'])->name('subSection.master.index');
             Route::post('/store', [MasterController::class, 'subSectionStore'])->name('subSection.master.store');
 
             Route::put('/update/{id}', [MasterController::class, 'subSectionUpdate'])->name('sub-section.master.update');
