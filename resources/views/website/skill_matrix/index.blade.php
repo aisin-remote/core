@@ -193,23 +193,32 @@
           </td>
           <td class="sticky-action col-act">
             <div class="d-flex justify-content-center align-items-center gap-1">
+              <!-- Button Eye (always visible) -->
               <a href="${showUrl}" class="btn btn-info btn-sm me-1">
                 <i class="fas fa-eye"></i>
               </a>
 
-              <a href="/skill-matrix/${item.employee_competency_id}/checksheet"
-                  class="btn btn-success btn-sm">
-                <i class="fas fa-file-alt"></i>
-              </a>
+              <!-- Button Checksheet (always visible when act >= 1) -->
+              ${item.act >= 1 
+                ? `<a href="/skill-matrix/${item.employee_competency_id}/checksheet"
+                      class="btn btn-success btn-sm">
+                    <i class="fas fa-file-alt"></i>
+                  </a>`
+                : ``
+              }
 
-              <a href="/evaluation/${item.employee_competency_id}"
-                  class="btn btn-primary btn-sm"
-                  title="Evaluasi Kompetensi">
-                <i class="fas fa-clipboard-check"></i>
-              </a>
+              <!-- Button Clipboard (only when act >= 2) -->
+              ${item.act >= 2 
+                ? `<a href="/evaluation/${item.employee_competency_id}"
+                      class="btn btn-primary btn-sm"
+                      title="Evaluasi Kompetensi">
+                    <i class="fas fa-clipboard-check"></i>
+                  </a>`
+                : ``
+              }
 
-              
-              ${item.act === 0
+              <!-- Button Upload (only when act === 0) -->
+              ${item.act === 0 
                 ? `<button
                     class="btn btn-warning btn-sm"
                     data-bs-toggle="modal"
@@ -217,7 +226,7 @@
                     <i class="fas fa-upload"></i>
                   </button>`
                 : ``
-              } 
+              }
             </div>
           </td>
         </tr>

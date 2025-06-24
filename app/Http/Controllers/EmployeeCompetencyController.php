@@ -72,6 +72,8 @@ class EmployeeCompetencyController extends Controller
                 'name'     => $e->name,
                 'position' => $e->position,
                 'comps'    => $e->employeeCompetencies->map(fn($ec) => [
+                    'id'   => $ec->id,
+                    'employee_competency_id'  => $ec->id,
                     'group' => $ec->competency->group_competency->name,
                     'name'  => $ec->competency->name,
                     'act'   => $ec->act,

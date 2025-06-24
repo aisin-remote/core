@@ -2,7 +2,67 @@
 
 @push('custom-css')
 <style>
-  /* 1) Hilangkan semua border default */
+  #evaluationModal .modal-content {
+  border-radius: 15px; /* Rounded corners for a modern look */
+}
+
+#evaluationModal .modal-header {
+  background-color: #f8f9fa; /* Light background for header */
+  padding: 1rem 1.5rem; /* Add padding for better spacing */
+}
+
+#evaluationModal .modal-title {
+  font-size: 1.25rem; /* Larger font size for title */
+  font-weight: 600; /* Bold title */
+}
+
+#evaluationModal .list-group-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #ddd; /* Add border for separation */
+  border-radius: 8px; /* Round corners for list items */
+  margin-bottom: 1rem;
+  background-color: #ffffff;
+}
+
+#evaluationModal .list-group-item:hover {
+  background-color: #f1f1f1; /* Hover effect for better interaction */
+}
+
+#evaluationModal .badge {
+  font-size: 0.875rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 12px; /* Rounded badges */
+}
+
+#evaluationModal .badge.bg-success {
+  background-color: #d1e7dd;
+  color: #0f5132;
+}
+
+#evaluationModal .badge.bg-warning {
+  background-color: #fff3cd;
+  color: #664d03;
+}
+
+#evaluationModal #emptyCompetencies {
+  text-align: center;
+  font-size: 1.1rem;
+  color: #888; /* Softer color for "no competencies found" */
+}
+
+#evaluationModal .modal-footer {
+  border-top: 1px solid #ddd;
+  padding: 0.75rem 1.5rem;
+}
+
+#evaluationModal .modal-footer .btn-outline-secondary {
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
   #empCompTable,
   #empCompTable th,
   #empCompTable td {
@@ -132,10 +192,72 @@
     </div>
   </div>
   @include('website.employee_competency.modal')
+  <div class="modal fade" id="evaluationModal" tabindex="-1" aria-labelledby="evaluationModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
+      <div class="modal-content border-0 shadow-sm">
+        <div class="modal-header bg-light py-2">
+          <h5 class="modal-title" id="evaluationModalLabel">
+            Evaluation for <strong id="modalEmployeeName"></strong>
+          </h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body px-4 py-3">
+          <ul class="list-group list-group-flush">
+            <!-- JS akan inject <li> di sini -->
+            <li class="list-group-item text-center text-muted" id="emptyCompetencies" style="display: none;">
+              – No competencies found –
+            </li>
+          </ul>
+        </div>
+        <div class="modal-footer border-0 pt-0">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            Close
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>  
 @endsection
 
 @push('scripts')
 <script>
+  let currentEmployeeId, currentEmployeeName;
+  document.addEventListener('click', e => {
+  if (!e.target.closest('.evaluation-btn')) return;
+  const btn = e.target.closest('.evaluation-btn');
+  const empId = btn.dataset.employeeId;
+  const emp = employees.find(x => x.id == empId);
+  const ul  = document.querySelector('#evaluationModal .list-group');
+  ul.querySelectorAll('li.list-group-item:not(#emptyCompetencies)').forEach(n => n.remove());
+
+  document.getElementById('modalEmployeeName').textContent = emp.name;
+  
+  if (!emp.comps.length) {
+    document.getElementById('emptyCompetencies').style.display = '';
+  } else {
+    document.getElementById('emptyCompetencies').style.display = 'none';
+    emp.comps.forEach(c => {
+      const li = document.createElement('li');
+      li.className = 'list-group-item';
+      li.innerHTML = `
+        <div>
+          <div class="fw-medium">${c.name}</div>
+          <small class="text-muted">${c.group}</small>
+        </div>
+        <div class="text-end">
+          <span class="badge ${c.act===2?'bg-success':'bg-warning'} me-2">
+            ${c.act===2?'Passes':'not pass'}
+          </span>
+          <a href="/evaluation/view/${c.employee_competency_id}" class="text-decoration-none">
+              View
+          </a>
+        </div>`;
+      ul.append(li);
+    });
+  }
+  
+  new bootstrap.Modal(document.getElementById('evaluationModal')).show();
+});
 const employees    = @json($matrixData);
 const baseShowUrl  = "{{ route('employeeCompetencies.show', ':id') }}";
 let currentPosition='all', currentGroup='Basic';
@@ -204,6 +326,11 @@ function render() {
                   data-npk="${e.npk||''}"
                   data-position="${e.position}">
             <i class="fas fa-file-alt"></i>
+          </button>
+          <button type="button"
+                  class="btn btn-primary btn-sm evaluation-btn"
+                  data-employee-id="${e.id}">
+            <i class="fas fa-clipboard-check"></i>
           </button>
         </td>
       </tr>

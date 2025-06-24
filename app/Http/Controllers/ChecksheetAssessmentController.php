@@ -176,7 +176,7 @@ class ChecksheetAssessmentController extends Controller
         $isPassed = $percentage >= 70;
 
         // Update status kompetensi
-        $ec->update(['act' => $isPassed ? 2 : 1]);
+        $ec->update(['act' => $isPassed ? 3 : 2]);
 
         // Pesan
         if ($isPassed) {

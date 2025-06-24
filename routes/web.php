@@ -90,6 +90,10 @@ Route::get('/evaluation/{employee_competency_id}', [EvaluationController::class,
     ->name('evaluation.index');
 Route::post('/evaluation', [EvaluationController::class,'store'])
     ->name('evaluation.store');
+Route::get('/evaluation/view/{employeeCompetencyId}', [EvaluationController::class,'view'])
+    ->name('evaluation.view');
+Route::post('/evaluation/update-scores/{employee_competency_id}', [EvaluationController::class, 'updateScores'])
+    ->name('evaluation.updateScores');
 
 /* Skill Matrix */
 Route::middleware(['auth'])->group(function () {

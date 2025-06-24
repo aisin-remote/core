@@ -70,8 +70,8 @@
           <button type="submit" class="btn btn-primary px-4">
             <i class="bi bi-save me-2"></i>Simpan Penilaian
           </button>
-          <a href="javascript:window.history.back()" class="btn btn-secondary px-4 ms-2">
-            <i class="bi bi-arrow-left-circle me-2"></i>Kembali
+          <a href="{{ route('employeeCompetencies.index', ['company' => request()->route('company', 'aii')]) }}" class="btn btn-secondary px-4 ms-2">
+            <i class="bi bi-arrow-left-circle me-2"></i>Back
           </a>        
         </div>
       </form>

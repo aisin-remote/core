@@ -556,7 +556,7 @@
                             <a class="menu-link {{ request()->is('/checksheet_user') ? 'active' : '' }}"
                                 href="/checksheet_user">
                                 {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
-                                <span class="menu-title ps-1">Checksheet User</span>
+                                <span class="menu-title ps-1">Evaluation</span>
                             </a>
                         </div>
 
