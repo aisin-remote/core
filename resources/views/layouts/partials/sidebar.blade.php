@@ -565,15 +565,13 @@
                                 </a>
                             </div>
                         </div>
-                    </div> --}}
-
                         <!-- Grade -->
 
                         <!-- Grade -->
-                        <div class="menu-item">
+                        {{-- <div class="menu-item">
                             <a class="menu-link {{ request()->is('master/grade') ? 'active' : '' }}"
                                 href="/master/grade">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                                 <span class="menu-title ps-1">Grade</span>
                             </a>
                         </div>
@@ -582,7 +580,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('/checksheet') ? 'active' : '' }}"
                                 href="/checksheet">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                                 <span class="menu-title ps-1">Checksheet</span>
                             </a>
                         </div>
@@ -591,7 +589,7 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('/group_competency') ? 'active' : '' }}"
                                 href="/group_competency">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                                 <span class="menu-title ps-1">Group Competency</span>
                             </a>
                         </div>
@@ -600,56 +598,142 @@
                         <div class="menu-item">
                             <a class="menu-link {{ request()->is('/competency') ? 'active' : '' }}"
                                 href="/competency">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                                <span class="menu-bullet"><i class="bullet bullet-dot"></i></span>
                                 <span class="menu-title ps-1">Competency</span>
                             </a>
-                        </div>
+                        </div> --}}
 
                         <!-- plant -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/plant') ? 'active' : '' }}"
-                                href="/master/plant">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                        {{-- Plant --}}
+                        <div class="menu-item menu-accordion {{ request()->is('master/plant/aii') || request()->is('master/plant/aiia') ? 'show' : '' }}"
+                            data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                            <span
+                                class="menu-link {{ request()->is('master/plant/aii') || request()->is('master/plant/aiia') ? 'active' : '' }}">
                                 <span class="menu-title ps-1">Plant</span>
-                            </a>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/plant/aii') ? 'active' : '' }}"
+                                        href="{{ url('master/plant/aii') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AII</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/plant/aiia') ? 'active' : '' }}"
+                                        href="{{ url('master/plant/aiia') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AIIA</span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
 
-
-                        <!-- Division -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/division') ? 'active' : '' }}"
-                                href="/master/division">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                        {{-- Division --}}
+                        <div class="menu-item menu-accordion {{ request()->is('master/division/aii') || request()->is('master/division/aiia') ? 'show' : '' }}"
+                            data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                            <span
+                                class="menu-link {{ request()->is('master/division/aii') || request()->is('master/division/aiia') ? 'active' : '' }}">
                                 <span class="menu-title ps-1">Division</span>
-                            </a>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/division/aii') ? 'active' : '' }}"
+                                        href="{{ url('master/division/aii') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AII</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/division/aiia') ? 'active' : '' }}"
+                                        href="{{ url('master/division/aiia') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AIIA</span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Department -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/department') ? 'active' : '' }}"
-                                href="/master/department">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                        {{-- Department --}}
+                        <div class="menu-item menu-accordion {{ request()->is('master/department/aii') || request()->is('master/department/aiia') ? 'show' : '' }}"
+                            data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                            <span
+                                class="menu-link {{ request()->is('master/department/aii') || request()->is('master/department/aiia') ? 'active' : '' }}">
                                 <span class="menu-title ps-1">Department</span>
-                            </a>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/department/aii') ? 'active' : '' }}"
+                                        href="{{ url('master/department/aii') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AII</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/department/aiia') ? 'active' : '' }}"
+                                        href="{{ url('master/department/aiia') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AIIA</span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Section -->
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/section') ? 'active' : '' }}"
-                                href="/master/section">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                        {{-- Section --}}
+                        <div class="menu-item menu-accordion {{ request()->is('master/section/aii') || request()->is('master/section/aiia') ? 'show' : '' }}"
+                            data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                            <span
+                                class="menu-link {{ request()->is('master/section/aii') || request()->is('master/section/aiia') ? 'active' : '' }}">
                                 <span class="menu-title ps-1">Section</span>
-                            </a>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/section/aii') ? 'active' : '' }}"
+                                        href="{{ url('master/section/aii') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AII</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/section/aiia') ? 'active' : '' }}"
+                                        href="{{ url('master/section/aiia') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AIIA</span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
 
-                        {{-- sub section --}}
-                        <div class="menu-item">
-                            <a class="menu-link {{ request()->is('master/subSection') ? 'active' : '' }}"
-                                href="/master/subSection">
-                                {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                        {{-- Sub Section --}}
+                        <div class="menu-item menu-accordion {{ request()->is('master/subSection/aii') || request()->is('master/subSection/aiia') ? 'show' : '' }}"
+                            data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                            <span
+                                class="menu-link {{ request()->is('master/subSection/aii') || request()->is('master/subSection/aiia') ? 'active' : '' }}">
                                 <span class="menu-title ps-1">Sub Section</span>
-                            </a>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/subSection/aii') ? 'active' : '' }}"
+                                        href="{{ url('master/subSection/aii') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AII</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/subSection/aiia') ? 'active' : '' }}"
+                                        href="{{ url('master/subSection/aiia') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AIIA</span>
+                                    </a>
+                                </div>
+                            </div>
                         </div>
+
 
                     </div>
                 </div>

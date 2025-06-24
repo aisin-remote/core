@@ -88,15 +88,15 @@
                             <th>Department</th>
                             <th>Grade</th>
                             <th>Age</th>
-                            <th class="text-center">Actions</th>
-                            <th class="text-center">Status</th> {{-- Kolom Status --}}
+                            <th class="text-center nowrap" style="min-width: 120px;">Actions</th>
+                            <th class="text-center nowrap" style="min-width: 120px;">Status</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         @forelse ($employee as $index => $employees)
                             <tr>
                                 <td>{{ $employee->firstItem() + $index }}</td>
-
                                 <td class="text-center">
                                     <img src="{{ $employees->photo ? asset('storage/' . $employees->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
@@ -109,23 +109,31 @@
                                 <td>{{ $employees->bagian }}</td>
                                 <td>{{ $employees->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employees->birthday_date)->age }}</td>
-                                <td class="text-center">
+
+                                {{-- ✅ Modified Action buttons --}}
+                                <td class="text-center nowrap" style="min-width: 120px;">
                                     <a href="{{ route('employee.edit', $employees->npk) }}"
-                                        class="btn btn-warning btn-sm"><i class="fa fa-edit"></i>
+                                        class="btn btn-warning btn-sm me-1">
+                                        <i class="fa fa-edit"></i>
                                     </a>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $employees->id }}"><i class="fa fa-trash"></i>
+                                        data-id="{{ $employees->id }}">
+                                        <i class="fa fa-trash"></i>
                                     </button>
                                 </td>
-                                <td class="text-center">
+
+
+                                {{-- ✅ Modified Status Button --}}
+                                <td class="text-center nowrap" style="min-width: 120px;">
                                     <button type="button"
-                                        class="btn {{ $employees->is_active ? 'btn-light-success' : 'btn-light-danger' }} btn-sm status-btn"
+                                        class="btn {{ $employees->is_active ? 'btn-light-success' : 'btn-light-danger' }} btn-sm btn-xs status-btn"
                                         data-id="{{ $employees->id }}" data-name="{{ $employees->name }}"
                                         data-status="{{ $employees->is_active ? 'Non Active' : 'Active' }}">
                                         {{ $employees->is_active ? 'Active' : 'Non Active' }}
                                     </button>
                                 </td>
                             </tr>
+
                         @empty
                             <tr>
                                 <td colspan="11" class="text-center text-muted">No employees found</td>
@@ -165,6 +173,18 @@
             </div>
         </div>
     </div>
+
+    <style>
+        <style>.nowrap {
+            white-space: nowrap;
+        }
+
+        .btn-xs {
+            padding: 2px 6px;
+            font-size: 12px;
+        }
+    </style>
+
 
 
     <!-- Tambahkan SweetAlert -->

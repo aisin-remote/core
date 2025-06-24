@@ -95,7 +95,7 @@ class MasterController extends Controller
             : [];
 
 
-        return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company', 'search','visiblePositions'));
+        return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company', 'search', 'visiblePositions'));
     }
 
 
@@ -343,40 +343,105 @@ class MasterController extends Controller
             return redirect()->back()->with('error', 'Gagal menghapus Sub Section: ' . $e->getMessage());
         }
     }
-    public function department()
+    public function department($company = null)
     {
-        $divisions = Division::all();
+        $divisions = Division::when($company, function ($q) use ($company) {
+            $q->whereHas('gm', function ($sub) use ($company) {
+                $sub->where('company_name', $company); // via GM relasi
+            });
+        })->get();
 
-        // Ambil departments dengan relasi division dan manager, paging 10 per halaman
-        $departments = Department::with(['division', 'manager'])->paginate(10);
-        $managers = Employee::all();
+        $departments = Department::with(['division', 'manager'])
+            ->when($company, function ($q) use ($company) {
+                $q->whereHas('manager', function ($sub) use ($company) {
+                    $sub->where('company_name', $company);
+                });
+            })->paginate(10);
 
+        $managers = Employee::when($company, function ($q) use ($company) {
+            $q->where('company_name', $company);
+        })->get();
 
-
-        return view('website.master.department.index', compact('departments', 'divisions', 'managers'));
-    }
-    public function division()
-    {
-        $gms = Employee::whereIn('position', ['GM', 'Act GM', 'Manager'])->get();
-        $plants = Plant::all();
-        $divisions = Division::with(['plant', 'gm'])->get(); // <-- ini penting
-        return view('website.master.division.index', compact('divisions', 'plants', 'gms'));
-    }
-    public function section()
-    {
-        $supervisors = Employee::whereIn('position', ['Section Head', 'Act Section Head', 'Supervisor', 'Act Supervisor', 'Act Manager', 'Manager'])->get();
-        $departments  = Department::all();
-        $sections = Section::with(['department', 'supervisor'])->paginate(10);
-        return view('website.master.section.index', compact('sections', 'departments', 'supervisors'));
+        return view('website.master.department.index', compact('departments', 'divisions', 'managers', 'company'));
     }
 
-    public function subSection()
+
+    public function division($company = null)
     {
-        $leaders = Employee::whereIn('position', ['Leader', 'Act Leader'])->get();
-        $sections = Section::all();
-        $subSections = SubSection::with('leader', 'section')->paginate(10);
-        return view('website.master.subSection.index', compact('subSections', 'leaders', 'sections'));
+        $gms = Employee::whereIn('position', ['GM', 'Act GM', 'Manager'])
+            ->when($company, fn($q) => $q->where('company_name', $company))
+            ->get();
+
+        $plants = Plant::when($company, function ($q) use ($company) {
+            $q->whereHas('director', function ($sub) use ($company) {
+                $sub->where('company_name', $company);
+            });
+        })->get();
+
+        $divisions = Division::with(['plant', 'gm'])
+            ->when($company, function ($q) use ($company) {
+                $q->whereHas('gm', function ($sub) use ($company) {
+                    $sub->where('company_name', $company);
+                });
+            })->get();
+
+        return view('website.master.division.index', compact('divisions', 'plants', 'gms', 'company'));
     }
+
+
+    public function section($company = null)
+    {
+        $supervisors = Employee::whereIn('position', [
+            'Section Head',
+            'Act Section Head',
+            'Supervisor',
+            'Act Supervisor',
+            'Act Manager',
+            'Manager'
+        ])
+            ->when($company, fn($q) => $q->where('company_name', $company))
+            ->get();
+
+        $departments = Department::when($company, function ($q) use ($company) {
+            $q->whereHas('manager', function ($sub) use ($company) {
+                $sub->where('company_name', $company);
+            });
+        })->get();
+
+        $sections = Section::with(['department', 'supervisor'])
+            ->when($company, function ($q) use ($company) {
+                $q->whereHas('supervisor', function ($sub) use ($company) {
+                    $sub->where('company_name', $company);
+                });
+            })->paginate(10);
+
+        return view('website.master.section.index', compact('sections', 'departments', 'supervisors', 'company'));
+    }
+
+
+    public function subSection($company = null)
+    {
+        $leaders = Employee::whereIn('position', ['Leader', 'Act Leader'])
+            ->when($company, fn($q) => $q->where('company_name', $company))
+            ->get();
+
+        $sections = Section::when($company, function ($q) use ($company) {
+            $q->whereHas('supervisor', function ($sub) use ($company) {
+                $sub->where('company_name', $company);
+            });
+        })->get();
+
+        $subSections = SubSection::with(['leader', 'section'])
+            ->when($company, function ($q) use ($company) {
+                $q->whereHas('leader', function ($sub) use ($company) {
+                    $sub->where('company_name', $company);
+                });
+            })->paginate(10);
+
+        return view('website.master.subSection.index', compact('subSections', 'leaders', 'sections', 'company'));
+    }
+
+
 
 
     public function grade()

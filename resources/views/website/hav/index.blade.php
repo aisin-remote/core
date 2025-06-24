@@ -79,7 +79,7 @@
                                 ];
                             });
                     @endphp
-                
+
                     <div class="col-3">
                         <a href="#"
                             class="open-modal"
@@ -122,7 +122,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    
+
                 </div>
             </div>
         </div>
@@ -137,7 +137,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-
                 <div class="mb-3">
                     <label for="position" class="form-label">Pilih Position</label>
                     <select name="position" id="position" class="form-select">
@@ -166,19 +165,19 @@
         $(document).ready(function () {
             $('.open-modal').on('click', function (e) {
                 e.preventDefault();
-        
+
                 let title = $(this).data('title');
                 let data = $(this).data('hav'); // sudah array of objects
                 $('#addAssessmentModalLabel').text(title);
 
                 console.log(data);
-        
+
                 // Build HTML table
                 if (data.length === 0) {
                     $('#tes .modal-body').html('<p class="text-center">Belum ada data untuk quadrant ini.</p>');
                     return;
                 }
-        
+
                 let html = `
                     <table class="table table-bordered">
                         <thead>
@@ -191,7 +190,7 @@
                         </thead>
                         <tbody>
                 `;
-        
+
                 data.forEach(function (item) {
                     html += `
                         <tr>
@@ -202,14 +201,14 @@
                         </tr>
                     `;
                 });
-        
+
                 html += `</tbody></table>`;
                 $('#tes .modal-body').html(html);
-        
+
                 $('#tes').modal('show');
             });
         });
         </script>
-        
-        
+
+
 @endpush
