@@ -15,7 +15,7 @@
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
-                    title: "Sukses!",
+                    title: "Success!",
                     text: "{{ session('success') }}",
                     icon: "success",
                     confirmButtonText: "OK"
@@ -143,7 +143,7 @@
                                                 </div>
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Phone Number</label>
-                                                    <input type="text" name="phone_number"
+                                                    <input type="number" id="phone_number" name="phone_number"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Phone Number" value="{{ $employee->phone_number }}">
                                                 </div>
@@ -212,6 +212,7 @@
                                                                 'Supervisor' => 'Supervisor',
                                                                 'Act Supervisor' => 'Act Supervisor',
                                                                 'Act Leader' => 'Act Leader',
+                                                                'Leader' => 'Leader',
                                                                 'Act JP' => 'Act JP',
                                                                 'Operator' => 'Operator',
                                                                 'Direktur' => 'Direktur',
@@ -1210,7 +1211,7 @@
 
                 console.log(position);
 
-                if (['Operator', 'Act JP', 'Act Leader'].includes(position)) {
+                if (['Operator', 'Act JP', 'Act Leader', 'Leader'].includes(position)) {
                     $('#subsection-group').removeClass('d-none');
                 } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(
                         position)) {
@@ -1252,6 +1253,21 @@
                 }
             });
 
+        });
+        document.addEventListener("DOMContentLoaded", function() {
+            const phoneInput = document.getElementById('phone_number');
+
+            if (phoneInput) {
+                phoneInput.addEventListener('input', function() {
+                    // Hilangkan karakter non-digit, jika user pakai copy-paste
+                    this.value = this.value.replace(/\D/g, '');
+
+                    // Batasi maksimal 14 digit
+                    if (this.value.length > 14) {
+                        this.value = this.value.slice(0, 14);
+                    }
+                });
+            }
         });
     </script>
 @endpush

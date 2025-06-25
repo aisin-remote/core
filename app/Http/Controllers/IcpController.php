@@ -14,6 +14,7 @@ use App\Models\Section;
 use App\Models\SubSection;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -214,7 +215,7 @@ class IcpController extends Controller
             ->when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))
             ->with(['icp' => function ($q) {
                 $q->orderByDesc('created_at') // urutkan biar first() dapat yang terbaru
-                    ->with('details');
+                    > with(['latestIcp.details']);
             }])
             ->get();
 
@@ -270,7 +271,7 @@ class IcpController extends Controller
                 'job_function' => $request->job_function,
                 'position' => $request->position,
                 'level' => $request->level,
-                'status' => '0',
+                'status' => '1',
             ]);
 
             // Loop semua detail dan simpan satu per satu
@@ -422,5 +423,191 @@ class IcpController extends Controller
         $writer->save($tempPath);
 
         return response()->download($tempPath)->deleteFileAfterSend(true);
+    }
+    public function approval()
+    {
+        $user = auth()->user();
+        $employee = $user->employee;
+
+        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
+        $checkLevel = $employee->getFirstApproval();
+        $approveLevel = $employee->getFinalApproval();
+
+
+        $normalized = $employee->getNormalizedPosition();
+
+        if ($normalized === 'vpd') {
+            // Jika VPD, filter GM untuk check dan Manager untuk approve
+            $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+        } else {
+            // Default (tidak filter posisi bawahannya)
+            $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+        }
+
+        $checkIdps = Icp::with('employee')
+            ->where('status', 1)
+            ->whereHas('employee', function ($q) use ($subCheck) {
+                $q->whereIn('employee_id', $subCheck);
+            })
+            ->get();
+
+        $checkIdpIds = $checkIdps->pluck('id')->toArray();
+
+        $approveIdps = Icp::with('employee')
+            ->where('status', 2)
+            ->whereHas('employee', function ($q) use ($subApprove) {
+                $q->whereIn('employee_id', $subApprove);
+            })
+            ->whereNotIn('id', $checkIdpIds) // ← filter agar tidak muncul dua kali
+            ->get();
+
+        $idps = $checkIdps->merge($approveIdps);
+
+
+        return view('website.approval.icp.index', compact('idps'));
+    }
+    public function approve($id)
+    {
+        $idp = Icp::findOrFail($id);
+
+        if ($idp->status == 1) {
+            $idp->status = 2;
+            $idp->save();
+
+            return response()->json([
+                'message' => 'ICP has been approved!'
+            ]);
+        }
+
+        if ($idp->status == 2) {
+            $idp->status = 3;
+            $idp->save();
+
+            return response()->json([
+                'message' => 'IDP has been approved!'
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'Something went wrong!'
+        ], 400);
+    }
+
+
+    public function revise(Request $request)
+    {
+        $idp = Icp::findOrFail($request->id);
+
+        // Menyimpan status HAV sebagai disetujui
+        $idp->status = 0; // Status disetujui
+
+
+        $comment = $request->input('comment');
+        $employee = auth()->user()->employee;
+        // Menyimpan komentar ke dalam tabel hav_comment_history
+        if ($employee) {
+            $idp->commentHistory()->create([
+                'comment' => $comment,
+                'employee_id' =>  $employee->id  // Menyimpan siapa yang memberikan komentar
+            ]);
+        }
+        // Simpan perubahan status HAV
+        $idp->save();
+
+        // Kembalikan respons JSON
+        return response()->json(['message' => 'ICP has been revise.']);
+    }
+    public function update(Request $request,$id)
+    {
+        $request->validate([
+            'employee_id' => 'required|exists:employees,id',
+            'aspiration' => 'required|string',
+            'career_target' => 'required|string',
+            'date' => 'required|date',
+            'job_function' => 'required|string',
+            'position' => 'required|string',
+            'level' => 'required|string',
+
+            'details.*.current_technical' => 'required',
+            'details.*.current_nontechnical' => 'required',
+            'details.*.required_technical' => 'required',
+            'details.*.required_nontechnical' => 'required',
+            'details.*.development_technical' => 'required',
+            'details.*.development_nontechnical' => 'required',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            // Update data utama ICP
+            $icp = Icp::findOrFail($id);
+            $icp->update([
+                'employee_id' => $request->employee_id,
+                'aspiration' => $request->aspiration,
+                'career_target' => $request->career_target,
+                'date' => $request->date,
+                'job_function' => $request->job_function,
+                'position' => $request->position,
+                'level' => $request->level,
+                'status' => "1",
+            ]);
+
+            // Hapus semua detail lama (bisa diubah kalau ingin granular update)
+            $icp->details()->delete();
+
+            // Simpan ulang detail baru
+            foreach ($request->details as $detail) {
+                IcpDetail::create([
+                    'icp_id' => $icp->id,
+                    'current_technical' => $detail['current_technical'],
+                    'current_nontechnical' => $detail['current_nontechnical'],
+                    'required_technical' => $detail['required_technical'],
+                    'required_nontechnical' => $detail['required_nontechnical'],
+                    'development_technical' => $detail['development_technical'],
+                    'development_nontechnical' => $detail['development_nontechnical'],
+                ]);
+            }
+
+            DB::commit();
+
+            return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil diperbarui.');
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal memperbarui ICP: ' . $e->getMessage());
+        }
+    }
+    public function edit($id)
+    {
+        $title = 'Update ICP';
+        $departments = Department::all();
+        $employees = Employee::all();
+        $grades = GradeConversion::all();
+        $technicalCompetencies = MatrixCompetency::all();
+        $icp = Icp::with('details', 'employee')->findOrFail($id);
+
+        // Tambahkan array posisi secara manual atau ambil dari konfigurasi/tabel
+        $positions = [
+            'Direktur' => 'Direktur',
+            'GM' => 'GM',
+            'Manager' => 'Manager',
+            'Coordinator' => 'Coordinator',
+            'Section Head' => 'Section Head',
+            'Supervisor' => 'Supervisor',
+            'Leader' => 'Leader',
+            'JP' => 'JP',
+            'Operator' => 'Operator',
+        ];
+
+        return view('website.icp.update', compact(
+            'title',
+            'grades',
+            'departments',
+            'employees',
+            'technicalCompetencies',
+            'icp',
+            'positions' // tambahkan ini
+        ));
     }
 }

@@ -21,4 +21,9 @@ class Icp extends Model
     {
         return $this->hasMany(IcpDetail::class, 'icp_id', 'id');
     }
+     public function latestIcp()
+    {
+        return $this->hasOne(Icp::class)->latestOfMany();
+    }
+
 }

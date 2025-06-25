@@ -824,6 +824,11 @@
                             <span class="menu-title ps-1">RTC</span>
                         </a>
                     </div>
+                     <a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
+                        href="{{ route('icp.approval') }}">
+                        {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
+                        <span class="menu-title ps-1">ICP</span>
+                    </a>
 
                     <!-- Department -->
 

@@ -118,6 +118,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/history/{id}', [IcpController::class, 'show'])->name('icp.show');
         Route::get('/export/{employee_id}', [IcpController::class, 'export'])->name('icp.export');
 
+        Route::get('/edit/{id}', [IcpController::class, 'edit'])->name('icp.edit');
+       Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
+
+
     });
 
     Route::prefix('hav')->group(function () {
@@ -150,6 +154,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
         Route::get('/idp/{id}', [IdpController::class, 'approve'])->name('idp.approve');
         Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
+        Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
+        Route::get('/icp/{id}', [IcpController::class, 'approve'])->name('icp.approve');
+        Route::post('icp/revise', [IcpController::class, 'revise'])->name('icp.revise');
     });
 
     Route::prefix('employee')->group(function () {

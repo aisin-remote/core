@@ -9,7 +9,7 @@
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
-                    title: "Sukses!",
+                    title: "success!",
                     text: "{{ session('success') }}",
                     icon: "success",
                     confirmButtonText: "OK"
@@ -64,7 +64,7 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Phone Number</label>
-                                <input type="text" name="phone_number" class="form-control"
+                                <input type="number" name="phone_number" id="phone_number" class="form-control"
                                     value="{{ old('phone_number') }}" required>
                                 @error('phone_number')
                                     <div class="text-danger">{{ $message }}</div>
@@ -235,6 +235,14 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
+            document.getElementById('phone_number').addEventListener('input', function(e) {
+                let val = this.value;
+
+                // Cegah angka lebih dari 14 digit
+                if (val.length > 14) {
+                    this.value = val.slice(0, 14);
+                }
+            });
             // Inisialisasi Select2
             $('[name="position"]').select2({
                 placeholder: "Select Position...",

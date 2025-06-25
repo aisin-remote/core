@@ -300,7 +300,7 @@ class EmployeeController extends Controller
                 'birthday_date' => 'required|date',
                 'gender' => 'required|in:Male,Female',
                 'company_name' => 'required|string',
-                'phone_number' => 'nullable|string',
+                'phone_number' => 'nullable|string|max:14',
                 'aisin_entry_date' => 'required|date',
                 'company_group' => 'required|string',
                 'position' => 'required|string',
@@ -350,6 +350,7 @@ class EmployeeController extends Controller
             }
 
             $validatedData['supervisor_id'] = $supervisorId;
+
 
             // Buat karyawan
             $employee = Employee::create($validatedData);
@@ -456,11 +457,11 @@ class EmployeeController extends Controller
 
             DB::commit();
             return redirect()->route('employee.master.index', ['company' => $employee->company_name])
-                ->with('success', 'Karyawan berhasil ditambahkan!');
+                ->with('success', 'Employee added successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->route('employee.master.index', ['company' => $request->input('company_name')])
-                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+                ->with('error', 'Error Message: ' . $e->getMessage());
         }
     }
 
@@ -840,13 +841,13 @@ class EmployeeController extends Controller
             });
 
             return redirect()->route('employee.master.index', ['company' => $employee->company_name])
-                ->with('success', 'Data karyawan berhasil diperbarui!');
+                ->with('success', 'Employee data updated successfully!');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Karyawan tidak ditemukan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Error Message: ' . $e->getMessage());
         }
     }
 
@@ -932,18 +933,21 @@ class EmployeeController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx,csv',
+            'file' => 'required|mimes:xlsx', // hanya menerima .xlsx saja
+        ], [
+            'file.mimes' => 'File harus berformat .xlsx sesuai template yang disediakan.',
         ]);
 
         try {
             Excel::import(new MasterImports, $request->file('file'));
             session()->flash('success', 'Semua data berhasil diimport!');
         } catch (\Exception $e) {
-            session()->flash('error', 'File Tidak Sesuai, Gunakan Template Yang Sudah Di Sediakan');
+            session()->flash('error', 'Terjadi kesalahan saat mengimport. Pastikan file sesuai template!');
         }
 
         return redirect()->back();
     }
+
 
     public function workExperienceStore(Request $request)
     {

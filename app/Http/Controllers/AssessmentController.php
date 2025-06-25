@@ -359,7 +359,7 @@ class AssessmentController extends Controller
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
             'description' => 'required|string',
-            'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
+            'upload' => 'nullable|file|mimes:pdf|max:2048',
             'alc_ids' => 'required|array',
             'alc_ids.*' => 'exists:alc,id',
             'scores' => 'nullable|array',
