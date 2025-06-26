@@ -78,14 +78,14 @@
                                                 $status = $rtcForTerm?->status;
                                             @endphp
                                             <td class="text-center">
-                                                {{-- Display term name only if it's set or if status is not Submitted --}}
-                                                @if ($termName || $status !== 0)
-                                                    <span class="{{ $termName ? '' : 'text-danger' }}">
-                                                        {{ $termName ?? 'not set' }}
-                                                    </span>
+                                                {{-- Hanya tampilkan "not set" jika termName kosong dan tidak ada status --}}
+                                                @if ($termName || $status !== null)
+                                                    <span>{{ $termName }}</span>
+                                                @elseif (!$termName && is_null($status))
+                                                    <span class="text-danger">not set</span>
                                                 @endif
 
-                                                {{-- Show badge only if status is 0 or 1 --}}
+                                                {{-- Show badge hanya jika status 0 atau 1 --}}
                                                 @if ($status === 1)
                                                     <span class="text-center badge badge-info">Checked</span>
                                                 @elseif ($status === 0)
@@ -109,8 +109,8 @@
                                                 <i class="fas fa-plus-circle"></i>
                                             </a>
                                             {{-- <a href="{{ asset('assets/file/' . $file) }}" class="btn btn-sm btn-warning" title="Export" download>
-                                                <i class="fas fa-upload"></i>
-                                            </a> --}}
+                                            <i class="fas fa-upload"></i>
+                                        </a> --}}
                                         </td>
                                     </tr>
                                 @empty
