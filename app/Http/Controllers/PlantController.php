@@ -8,12 +8,25 @@ use Illuminate\Http\Request;
 
 class PlantController extends Controller
 {
-    public function plant()
+    public function plant($company = null)
     {
-        $plants = Plant::with('director')->get();
-        $directors = Employee::where('position', 'Direktur')->get();
-        return view('website.master.plant.index', compact('plants','directors'));
+        $plants = Plant::with('director')
+            ->when($company, function ($query) use ($company) {
+                $query->whereHas('director', function ($q) use ($company) {
+                    $q->where('company_name', $company);
+                });
+            })->get();
+
+        $directors = Employee::where('position', 'Direktur')
+            ->when($company, function ($query) use ($company) {
+                $query->where('company_name', $company);
+            })->get();
+
+        return view('website.master.plant.index', compact('plants', 'directors', 'company'));
     }
+
+
+
     public function Store(Request $request)
     {
         $request->validate([
@@ -22,9 +35,10 @@ class PlantController extends Controller
         ]);
 
         try {
-            Plant::create(['name' => $request->name,
-            'director_id' => $request->director_id
-        ]);
+            Plant::create([
+                'name' => $request->name,
+                'director_id' => $request->director_id
+            ]);
 
             return redirect()->back()->with('success', 'Plant berhasil ditambahkan.');
         } catch (\Exception $e) {
@@ -32,24 +46,24 @@ class PlantController extends Controller
         }
     }
     public function update(Request $request, $id)
-{
-    $request->validate([
-        'name' => 'required|string' . $id,
-        'director_id' => 'required|exists:employees,id',
-    ]);
-
-    try {
-        $plant = Plant::findOrFail($id);
-        $plant->update([
-            'name' => $request->name,
-            'director_id' => $request->director_id,
+    {
+        $request->validate([
+            'name' => 'required|string' . $id,
+            'director_id' => 'required|exists:employees,id',
         ]);
 
-        return redirect()->back()->with('success', 'Plant berhasil diperbarui.');
-    } catch (\Exception $e) {
-        return redirect()->back()->with('error', 'Gagal memperbarui Plant: ' . $e->getMessage());
+        try {
+            $plant = Plant::findOrFail($id);
+            $plant->update([
+                'name' => $request->name,
+                'director_id' => $request->director_id,
+            ]);
+
+            return redirect()->back()->with('success', 'Plant berhasil diperbarui.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Gagal memperbarui Plant: ' . $e->getMessage());
+        }
     }
-}
 
 
     public function plantDestroy($id)

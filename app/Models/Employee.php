@@ -35,10 +35,17 @@ class Employee extends Model
     {
         return $this->hasMany(Assessment::class, 'employee_id', 'id');
     }
-     public function icp()
+    public function icp()
     {
         return $this->hasMany(Icp::class, 'employee_id', 'id');
     }
+
+    public function latestIcp()
+    {
+        return $this->hasOne(Icp::class)->latestOfMany();
+    }
+
+
 
     public function employeeCompetencies()
     {
@@ -456,7 +463,7 @@ class Employee extends Model
     {
         return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader' => 4,
-            'supervisor', 'manager', 'gm','direktur' => 3,
+            'supervisor', 'manager', 'gm', 'direktur' => 3,
             'vpd', 'president' => 1,
             default => 0,
         };

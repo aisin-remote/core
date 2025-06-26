@@ -713,7 +713,7 @@ class IdpController extends Controller
             foreach ($detailAssessments as $assessment) {
                 foreach ($assessment->details as $detail) {
                     if ($detail->score < 3 && empty($detail->idp)) {
-                        return response()->json(['message' => 'Ada nilai ALC < 3 yang belum dibuat!'], 400);
+                        return response()->json(['message' => 'Ada data yang belum dibuat!'], 400);
                     }
                 }
             }

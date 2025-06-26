@@ -103,19 +103,6 @@
             <div class="modal-content">
                 <div class="modal-header d-flex justify-content-between align-items-center">
                     <h5 class="modal-title" id="commentHistoryModalLabel">Comment History</h5>
-
-                    <div class="d-flex align-items-center gap-3">
-                        <div id="lastUploadInfo" style="font-size: 0.875rem; color: #666;">
-                            <!-- Last upload info akan diisi via JS -->
-                        </div>
-
-                        <a href="#" id="btnExportExcel" class="btn btn-success btn-sm"
-                            style="padding: 0.80rem 0.5rem; font-size: 0.75rem;">
-                            Export HAV
-                        </a>
-
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
-                    </div>
                 </div>
 
                 <div class="modal-body">

@@ -43,10 +43,6 @@
                     <button type="button" class="btn btn-primary me-3" id="searchButton">
                         <i class="fas fa-search"></i> Search
                     </button>
-                    <button type="button" class="btn btn-light-primary me-3" data-kt-menu-trigger="click"
-                        data-kt-menu-placement="bottom-end">
-                        <i class="fas fa-filter"></i> Filter
-                    </button>
                     <button type="button" class="btn btn-primary me-3" data-bs-toggle="modal"
                         data-bs-target="#addDepartmentModal">
                         <i class="fas fa-plus"></i> Add
@@ -77,7 +73,7 @@
                                 <td>{{ $department->name }}</td>
                                 <td>{{ $department->division->name ?? '-' }}</td>
                                 <td>{{ $department->company }}</td>
-                                <td>{{ $department->manager->name }}</td>
+                                <td>{{ $department->manager->name ?? '-'}}</td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#editDepartmentModal{{ $department->id }}">

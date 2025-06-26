@@ -4,6 +4,7 @@ use App\Models\Employee;
 use Illuminate\Auth\Events\Login;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\HavController;
+use App\Http\Controllers\IcpController;
 use App\Http\Controllers\IdpController;
 use App\Http\Controllers\RtcController;
 use App\Http\Controllers\LoginController;
@@ -18,7 +19,6 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
-use App\Http\Controllers\IcpController;
 
 /*
 |--------------------------------------------------------------------------
@@ -118,6 +118,10 @@ Route::middleware('auth')->group(function () {
         Route::get('/history/{id}', [IcpController::class, 'show'])->name('icp.show');
         Route::get('/export/{employee_id}', [IcpController::class, 'export'])->name('icp.export');
 
+        Route::get('/edit/{id}', [IcpController::class, 'edit'])->name('icp.edit');
+       Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
+
+
     });
 
     Route::prefix('hav')->group(function () {
@@ -154,6 +158,9 @@ Route::middleware('auth')->group(function () {
         
         Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
         Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
+        Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
+        Route::get('/icp/{id}', [IcpController::class, 'approve'])->name('icp.approve');
+        Route::post('icp/revise', [IcpController::class, 'revise'])->name('icp.revise');
     });
 
     Route::prefix('employee')->group(function () {
@@ -270,7 +277,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/assesment', [MasterController::class, 'assesment'])->name('assesment.master.index');
 
         Route::prefix('plant')->group(function () {
-            Route::get('/', [PlantController::class, 'plant'])->name('plant.master.index');
+            Route::get('/{company?}', [PlantController::class, 'plant'])->name('plant.master.index');
             Route::post('/store', [PlantController::class, 'Store'])->name('plant.master.store');
             Route::put('/update/{id}', [PlantController::class, 'update'])->name('plant.master.update');
 
@@ -278,7 +285,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('department')->group(function () {
-            Route::get('/', [MasterController::class, 'department'])->name('department.master.index');
+            Route::get('/{company?}', [MasterController::class, 'department'])->name('department.master.index');
             Route::post('/store', [MasterController::class, 'departmentStore'])->name('department.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'departmentDestroy'])->name('department.master.destroy');
             Route::get('/get-managers/{company}', [MasterController::class, 'getManagers']);
@@ -286,7 +293,7 @@ Route::middleware('auth')->group(function () {
         });
 
         Route::prefix('division')->group(function () {
-            Route::get('/', [MasterController::class, 'division'])->name('division.master.index');
+            Route::get('/{company?}', [MasterController::class, 'division'])->name('division.master.index');
             Route::post('/store', [MasterController::class, 'divisionStore'])->name('division.master.store');
             Route::put('/master/update/{id}', [MasterController::class, 'updateDivision'])->name('division.master.update');
 
@@ -295,14 +302,14 @@ Route::middleware('auth')->group(function () {
 
 
         Route::prefix('section')->group(function () {
-            Route::get('/', [MasterController::class, 'section'])->name('section.master.index');
+            Route::get('/{company?}', [MasterController::class, 'section'])->name('section.master.index');
             Route::post('/store', [MasterController::class, 'sectionStore'])->name('section.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'sectionDestroy'])->name('section.master.destroy');
             Route::put('/update/{id}', [MasterController::class, 'sectionUpdate'])->name('section.master.update');
         });
 
         Route::prefix('subSection')->group(function () {
-            Route::get('/', [MasterController::class, 'subSection'])->name('subSection.master.index');
+            Route::get('/{company?}', [MasterController::class, 'subSection'])->name('subSection.master.index');
             Route::post('/store', [MasterController::class, 'subSectionStore'])->name('subSection.master.store');
 
             Route::put('/update/{id}', [MasterController::class, 'subSectionUpdate'])->name('sub-section.master.update');

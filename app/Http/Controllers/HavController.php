@@ -618,11 +618,17 @@ class HavController extends Controller
 
         $user = auth()->user();
         $role = strtolower($user->employee->position); // pastikan lowercase atau sesuai penulisan
+        $hrd = strtolower($user->role);
 
-        if (in_array($role, ['president', 'vpd'])) {
-            $subordinates = Employee::pluck('id'); // semua employee
+        if ($hrd === 'hrd') {
+            // HRD bisa akses semua data
+            $subordinates = Employee::pluck('id');
+        } elseif (in_array($role, ['president', 'vpd'])) {
+            // Role VPD atau President (berdasarkan jabatan di employee)
+            $subordinates = Employee::pluck('id');
         } else {
-            $subordinates =  $this->getSubordinatesFromStructure($user->employee)->pluck('id'); // bawahan langsung
+            // Role biasa hanya lihat bawahannya
+            $subordinates = $this->getSubordinatesFromStructure($user->employee)->pluck('id');
         }
         $employees = Employee::with([
             'departments',
@@ -631,7 +637,12 @@ class HavController extends Controller
             'performanceAppraisalHistories' => fn($q) => $q->orderBy('date')->with('masterPerformance')
         ])
             ->whereHas('havQuadrants')
-            ->when($position, fn($q) => $q->where('position', $position)) // filter posisi
+            ->when($position, function ($q) use ($position) {
+                $q->where(function ($subQuery) use ($position) {
+                    $subQuery->where('position', $position)
+                        ->orWhere('position', 'like', "Act %{$position}");
+                });
+            })
             ->whereIn('id', $subordinates)->get();
 
         $startRow = 13;
@@ -700,11 +711,11 @@ class HavController extends Controller
 
 
             $sheet->setCellValue("U11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("V11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("W11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("V11", substr($appraisals[1]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("W11", substr($appraisals[2]->date, 0, 4) ?? '-');
             $sheet->setCellValue("X11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("Y11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("Z11", substr($appraisals[0]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("Y11", substr($appraisals[1]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("Z11", substr($appraisals[2]->date, 0, 4) ?? '-');
 
             $sheet->setCellValue("U{$row}", $appraisals[0]->score ?? '-');
             $sheet->setCellValue("V{$row}", $appraisals[1]->score ?? '-');
@@ -928,7 +939,7 @@ class HavController extends Controller
 
         $comment = $request->input('comment');
         $employee = auth()->user()->employee;
-
+        
         $filePath = null;
         $latestComment = $hav->commentHistory()->latest()->first();
 

@@ -23,7 +23,7 @@
     <div id="kt_app_content_container" class="app-container  container-fluid ">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title">HAV Assign</h3>
+                <h3 class="card-title">ICP Assign</h3>
                 <div class="d-flex align-items-center">
                     <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                         style="width: 200px;" value="{{ request('search') }}">
@@ -93,37 +93,55 @@
                                 <td>
                                     <span class="badge badge-light-warning fs-7 fw-bold">
                                         @if ($status === 0)
-                                            Submited
-                                        @elseif ($status === 2 && \Carbon\Carbon::parse($latestIcp?->created_at)->addYear()->isPast())
+                                            Revise
+                                        @elseif ($status === 3 && \Carbon\Carbon::parse($latestIcp?->created_at)->addYear()->isPast())
                                             -
                                         @else
                                             {{ match ($status) {
-                                                1 => 'Revised',
-                                                2 => 'Approved',
+                                                1 => 'Submited',
+                                                2 => 'Checked',
+                                                3 => 'Approved',
                                                 default => '-',
                                             } }}
                                         @endif
                                     </span>
                                 </td>
 
+
                                 <td class="text-center">
-                                    {{-- Tombol Add --}}
-                                    <a href="{{ route('icp.create', ['employee_id' => $item->id]) }}"
-                                        class="btn btn-primary me-2">
-                                        <i class="fas fa-plus"></i>
-                                        Add
-                                    </a>
+                                    @php
+                                        $latestIcp = $item->latestIcp;
+                                        // gunakan $item, bukan $employee
+                                        $status = $latestIcp?->status;
+                                        $createdAt = $latestIcp?->created_at;
+                                        $icpExpired =
+                                            $status === 3 && \Carbon\Carbon::parse($createdAt)->addYear()->isPast();
+                                        $noIcp = is_null($latestIcp);
+                                    @endphp
 
-                                    {{-- Tombol Export --}}
-                                    <a href="{{ route('icp.export', ['employee_id' => $item->id]) }}"
-                                        class="btn btn-success">
-                                        <i class="fas fa-file-excel"></i>
-                                        Export
-                                    </a>
+                                    @if ($status === 3 || $noIcp)
+                                        {{-- Tombol Add jika belum ada data atau sudah Approved lebih dari 1 tahun --}}
+                                        <a href="{{ route('icp.create', ['employee_id' => $item->id]) }}"
+                                            class="btn btn-sm btn-primary">
+                                            <i class="fas fa-plus"></i> Add
+                                        </a>
+                                    @elseif ($status === 0)
+                                        {{-- Revise + Export jika status 0 --}}
+                                        <a href="{{ route('icp.edit', $latestIcp->id) }}" class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Revise
+                                        </a>
+                                        <a href="{{ route('icp.export', ['employee_id' => $item->id]) }}"
+                                            class="btn btn-sm btn-success">
+                                            <i class="fas fa-file-excel"></i> Export
+                                        </a>
+                                    @elseif ($status === 1)
+                                        {{-- Export saja jika status Submitted --}}
+                                        <a href="{{ route('icp.export', ['employee_id' => $item->id]) }}"
+                                            class="btn btn-sm btn-success">
+                                            <i class="fas fa-file-excel"></i> Export
+                                        </a>
+                                    @endif
                                 </td>
-
-
-
 
                             </tr>
                         @endforeach

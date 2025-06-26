@@ -94,8 +94,6 @@
                                         @endif
                                     </span>
                                 </td>
-
-
                                 <td class="text-center">
                                     @if (!$item->hav || $item->allowAdd)
                                         {{-- Tidak ada HAV atau status 2 sudah lebih dari 1 tahun --}}
@@ -133,9 +131,6 @@
                                         </a>
                                     @endif
                                 </td>
-
-
-
                             </tr>
                         @endforeach
                     </tbody>
