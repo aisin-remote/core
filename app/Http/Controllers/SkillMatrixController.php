@@ -113,10 +113,10 @@ class SkillMatrixController extends Controller
         $path = $request->file('evidence_file')
                 ->storeAs('evidence', $originalName, 'public');
 
-        $ec->file = $path;            // akan jadi "evidence/namafile.pdf"
+        $ec->file = $path;
         $ec->save();
 
-        return back()->with('success', 'Evidence berhasil di-upload');
+        return redirect()->back()->with('success', 'Upload Evidence successfully!');
     }
 
 

@@ -97,7 +97,7 @@
                    id="evidence_file" 
                    class="form-control" 
                    required
-                   accept="*"> {{-- Terima semua jenis file --}}
+                   accept="*">
             <div class="form-text">
               Max. File Size 10MB.
             </div>
@@ -113,6 +113,30 @@
           <button type="submit" class="btn btn-primary">Upload</button>
         </div>
       </form>
+      <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Cek jika ada flash message sukses
+            const successMessage = "{{ session('success') }}";
+            
+            if(successMessage) {
+                // Tutup modal yang masih terbuka
+                const openModal = document.querySelector('.modal.show');
+                if(openModal) {
+                    const modal = bootstrap.Modal.getInstance(openModal);
+                    modal.hide();
+                }
+        
+                // Tampilkan Sweet Alert
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Berhasil!',
+                    text: successMessage,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            }
+        });
+        </script>
       @endif
 
     </div>

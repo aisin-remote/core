@@ -76,7 +76,6 @@
                             <th class="text-center">Plan</th>
                             <th class="text-center">Act</th>
                             <th class="text-center">Due Date</th>
-                            <th class="text-center">Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -88,16 +87,6 @@
                                 <td class="text-center">{{ $ec->act }}</td>
                                 <td class="text-center">
                                     {{ \Carbon\Carbon::parse($ec->due_date)->format('M Y') }}
-                                </td>
-                                <td class="text-center">
-                                    <div class="d-flex gap-1 justify-content-center">
-                                        <form method="POST" action="{{ route('employeeCompetencies.destroy', $ec->id) }}">
-                                            @csrf @method('DELETE')
-                                            <button type="submit" class="btn btn-sm btn-danger delete-btn">
-                                                <i class="bi bi-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
                                 </td>
                             </tr>
                         @empty

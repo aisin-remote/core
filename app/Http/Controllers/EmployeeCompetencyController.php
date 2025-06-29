@@ -332,28 +332,4 @@ class EmployeeCompetencyController extends Controller
             ], 500);
         }
     }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(EmployeeCompetency $employeeCompetency)
-    {
-        try {
-            $employeeCompetency->delete();
-            
-            return response()->json([
-                'success' => true,
-                'message' => 'Competency berhasil dihapus!'
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'error' => 'Gagal menghapus: ' . $e->getMessage()
-            ], 500);
-        }
-    }
 }

@@ -50,75 +50,63 @@ class EvaluationController extends Controller
 
     public function index(int $employeeCompetencyId)
     {
-        $empComp = EmployeeCompetency::with(['employee','competency', 'evaluations'])
-            ->findOrFail($employeeCompetencyId);
+        $empComp = EmployeeCompetency::with(['evaluations'])
+                    ->findOrFail($employeeCompetencyId);
 
-        if (! $empComp->competency) {
-            abort(404, 'Competency not found');
-        }
+        // ambil checksheet user terkait kompetensi
+        $competencyId = $empComp->competency_id;
+        $employeeId   = $empComp->employee_id;
 
-        $payload = $this->fetchChecksheetUsersData(
-            $empComp->employee_id,
-            $empComp->competency_id
-        );
+        $competencies = Competency::with(['checksheetUsers'])       
+                         ->where('id', $competencyId)
+                         ->first();
 
-        $checksheetUsers = $payload['competencies'][0]['checksheet_users'] ?? [];
+        $checksheetUsers = $competencies->checksheetUsers ?? [];
 
-        $existing = Evaluation::where('employee_competency_id', $empComp->id)
+        // existing evaluations
+        $existing = Evaluation::where('employee_competency_id', $employeeCompetencyId)
                               ->get()
                               ->keyBy('checksheet_user_id');
 
+        // siapkan collection evaluasi
         $evaluations = collect($checksheetUsers)
-            ->map(function($q) use ($empComp, $existing) {
-                $checksheetId = $q['id'];
-                $eval = $existing->get($checksheetId);
-
-                if (! $eval) {
-                    $eval = new Evaluation([
-                        'employee_competency_id' => $empComp->id,
-                        'checksheet_user_id'     => $checksheetId,
-                        'answer'                 => null,
-                        'score'                  => null,
-                        'file'                   => null,
-                    ]);
-                }
-                                    
-                $eval->id = $checksheetId;
-                $eval->question_text = $q['question'];
+            ->map(function($cs) use ($employeeCompetencyId, $existing) {
+                $eval = $existing->get($cs->id)
+                      ?? new Evaluation([
+                          'employee_competency_id' => $employeeCompetencyId,
+                          'checksheet_user_id'     => $cs->id,
+                          'answer'                 => null,
+                          'score'                  => null,
+                          'file'                   => null,
+                      ]);
+                // ubah ID untuk input name
+                $eval->id = $cs->id;
+                $eval->question_text = $cs->question;
                 return $eval;
             });
 
-        // Hitung persentase jika sudah ada nilai
-        $percentage = null;
-        $isPassed = false;
-        $hasScores = $empComp->evaluations->contains('score', '!==', null);
-        
-        if ($hasScores) {
-            $totalScore = $empComp->evaluations->sum('score');
-            $maxScore = $empComp->evaluations->count() * 5;
-            $percentage = $maxScore > 0 ? round(($totalScore / $maxScore) * 100, 2) : 0;
-            $isPassed = $percentage >= 70;
-        }
+        // status dan persentase
+        $hasScores  = $empComp->evaluations->pluck('score')->filter()->count() > 0;
+        $totalScore = $empComp->evaluations->sum('score');
+        $maxScore   = $empComp->evaluations->count() * 5;
+        $percentage = $maxScore ? round(($totalScore / $maxScore) * 100, 2) : 0;
+        $isPassed   = $percentage >= 70;
 
-        // Tentukan apakah user boleh mengedit
+        // logika allowEdit & showScores
         $allowEdit = false;
         $showScores = false;
-        
-        if ($empComp->act == 0) {
-            // Belum mulai: boleh edit
+
+        if ($empComp->act === 0) {
             $allowEdit = true;
-        } elseif ($empComp->act == 1) {
-            // Sudah submit
+        } elseif ($empComp->act === 1) {
+            $allowEdit = true;
             if ($hasScores) {
-                // Sudah dinilai
                 $showScores = true;
-                if (!$isPassed) {
-                    // Belum lulus: boleh edit
-                    $allowEdit = true;
+                if ($isPassed) {
+                    $allowEdit = false;
                 }
             }
-        } elseif ($empComp->act == 2) {
-            // Lulus: tampilkan nilai
+        } elseif ($empComp->act === 2) {
             $showScores = true;
         }
 
@@ -144,61 +132,40 @@ class EvaluationController extends Controller
             'file.*'                 => 'file|mimes:pdf,doc,docx,jpg,png|max:2048',
         ]);
 
-        $employeeCompetencyId = $request->employee_competency_id;
-        $answers = $request->answer;
-        $files = $request->file('file', []);
+        $empCompId = $request->employee_competency_id;
+        $answers   = $request->answer;
+        $files     = $request->file('file', []);
 
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
-
-            $empComp = EmployeeCompetency::findOrFail($employeeCompetencyId);
-
-            // Hanya izinkan penyimpanan jika belum lulus
-            if ($empComp->act == 2) {
-                throw new \Exception('Anda sudah lulus, tidak dapat mengubah jawaban');
-            }
-
             foreach ($answers as $csId => $answer) {
-                $eval = Evaluation::firstOrCreate(
-                    [
-                        'employee_competency_id' => $employeeCompetencyId,
-                        'checksheet_user_id'     => $csId,
-                    ],
-                    [
-                        'answer' => null,
-                        'score'  => null,
-                        'file'   => null,
-                    ]
-                );
-
+                $eval = Evaluation::firstOrNew([
+                    'employee_competency_id' => $empCompId,
+                    'checksheet_user_id'     => $csId,
+                ]);
                 $eval->answer = $answer;
-                
-                if (array_key_exists($csId, $files) && $file = $files[$csId]) {
+                if (isset($files[$csId])) {
                     if ($eval->file) {
-                        Storage::delete('public/'.$eval->file);
+                        Storage::disk('public')->delete($eval->file);
                     }
-                    $path = $file->store('evaluation_files', 'public');
+                    $path = $files[$csId]->store('evaluation_files', 'public');
                     $eval->file = $path;
                 }
-
-                // Reset nilai jika ada perubahan
                 $eval->score = null;
                 $eval->save();
             }
 
-            $empComp->act = 1; // Set status menunggu penilaian
+            $empComp = EmployeeCompetency::findOrFail($empCompId);
+            $empComp->act = 1;
             $empComp->save();
 
             DB::commit();
-
-            return redirect()
-                ->route('evaluation.index', $employeeCompetencyId)
-                ->with('success', 'Evaluasi berhasil disimpan! Menunggu penilaian.');
-
+            return redirect()->route('evaluation.index', $empCompId)
+                             ->with('success', 'Evaluasi berhasil disimpan!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Error saving evaluation: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Gagal: ' . $e->getMessage());
+            Log::error($e->getMessage());
+            return back()->with('error', 'Gagal menyimpan evaluasi.');
         }
     }
 

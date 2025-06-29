@@ -69,7 +69,7 @@ class ChecksheetUserController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Checksheet User created successfully'
+            'message' => 'Evaluation created successfully'
         ]);
     }
 
@@ -79,7 +79,7 @@ class ChecksheetUserController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Checksheet User deleted successfully'
+            'message' => 'Evaluation deleted successfully'
         ]);
     }
 

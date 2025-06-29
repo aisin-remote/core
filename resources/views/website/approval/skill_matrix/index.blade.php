@@ -77,21 +77,19 @@
                                 </td>
                                 <td class="text-center">
                                     <div class="d-flex justify-content-center gap-2">
-                                        <form action="{{ route('skillMatrix.approve', $ec->id) }}" method="POST">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-icon btn-success"
-                                                data-bs-toggle="tooltip" title="Approve Evidence">
-                                                <i class="fas fa-check fs-4"></i>
-                                            </button>
-                                        </form>
-                                        <form action="{{ route('skillMatrix.unapprove', $ec->id) }}" method="POST"
-                                            onsubmit="return confirm('Unapprove dan hapus evidence?')">
-                                            @csrf
-                                            <button type="submit" class="btn btn-sm btn-icon btn-danger"
-                                                data-bs-toggle="tooltip" title="Unapprove Evidence">
-                                                <i class="fas fa-times fs-4"></i>
-                                            </button>
-                                        </form>
+                                        <!-- Tombol Approve -->
+                                        <button type="button" class="btn btn-sm btn-icon btn-success btn-approve"
+                                                data-id="{{ $ec->id }}" 
+                                                data-url="{{ route('skillMatrix.approve', $ec->id) }}">
+                                            <i class="fas fa-check fs-4"></i>
+                                        </button>
+                                        
+                                        <!-- Tombol Unapprove -->
+                                        <button type="button" class="btn btn-sm btn-icon btn-danger btn-unapprove"
+                                                data-id="{{ $ec->id }}"
+                                                data-url="{{ route('skillMatrix.unapprove', $ec->id) }}">
+                                            <i class="fas fa-times fs-4"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -159,19 +157,11 @@
                                 </td>
                                 <td>
                                     @php
-                                        // Ambil file dari employee_competency jika ada
-                                        $evidenceFile = $record->employeeCompetency->file ?? null;
+                                        // Gunakan file langsung dari history record
+                                        $evidenceFile = $record->file_name ?? ($record->employeeCompetency->file ?? null);
                                     @endphp
-                                
-                                    @if($record->action == 'approve' && $evidenceFile)
-                                        <a href="{{ asset('storage/'.$evidenceFile) }}"
-                                          class="btn btn-sm btn-icon btn-light-primary"
-                                          download="{{ basename($evidenceFile) }}"
-                                          data-bs-toggle="tooltip" title="Download File">
-                                            <i class="fas fa-download fs-4"></i>
-                                        </a>
-                                        <span class="ms-2">{{ basename($evidenceFile) }}</span>
-                                    @elseif($record->action == 'unapprove' && $record->file_name)
+                                    
+                                    @if($evidenceFile)
                                         <a href="{{ asset('storage/'.$evidenceFile) }}"
                                           class="btn btn-sm btn-icon btn-light-primary"
                                           download="{{ basename($evidenceFile) }}"
@@ -250,6 +240,78 @@
             }
         });
     });
+
+    document.addEventListener('DOMContentLoaded', function() {
+    // Handle Approve Button
+    document.querySelectorAll('.btn-approve').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const url = this.dataset.url;
+            
+            Swal.fire({
+                title: 'Approve Evidence?',
+                text: "Are you sure you want to approve this evidence?",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#3085d6',
+                cancelButtonColor: '#d33',
+                confirmButtonText: 'Yes, Approve!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Kirim form approve
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = url;
+                    
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    
+                    form.appendChild(csrfToken);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    });
+
+    // Handle Unapprove Button
+    document.querySelectorAll('.btn-unapprove').forEach(button => {
+        button.addEventListener('click', function() {
+            const id = this.dataset.id;
+            const url = this.dataset.url;
+            
+            Swal.fire({
+                title: 'Unapprove Evidence?',
+                text: "Are you sure you want to unapprove this evidence?",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, Unapprove!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Kirim form unapprove
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = url;
+                    
+                    const csrfToken = document.createElement('input');
+                    csrfToken.type = 'hidden';
+                    csrfToken.name = '_token';
+                    csrfToken.value = '{{ csrf_token() }}';
+                    
+                    form.appendChild(csrfToken);
+                    document.body.appendChild(form);
+                    form.submit();
+                }
+            });
+        });
+    });
+});
 </script>
 @endpush
 

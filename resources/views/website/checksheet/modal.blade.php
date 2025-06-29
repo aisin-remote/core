@@ -46,27 +46,27 @@
                     </div>
 
                     <!-- 2. Tampilkan informasi relasi berdasarkan pilihan (dengan nama, bukan ID) -->
-                    <div class="mb-3">
+                    <div class="mb-3" hidden>
                         <label>Group Competency</label>
                         <input type="text" id="info_group" class="form-control" readonly>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" hidden>
                         <label>Department</label>
                         <input type="text" id="info_department" class="form-control" readonly>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" hidden>
                         <label>Sub Section</label>
                         <input type="text" id="info_subsection" class="form-control" readonly>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" hidden>
                         <label>Section</label>
                         <input type="text" id="info_section" class="form-control" readonly>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" hidden>
                         <label>Division</label>
                         <input type="text" id="info_division" class="form-control" readonly>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-3" hidden>
                         <label>Plant</label>
                         <input type="text" id="info_plant" class="form-control" readonly>
                     </div>

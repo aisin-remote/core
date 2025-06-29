@@ -199,7 +199,7 @@
               </a>
 
               <!-- Button Checksheet (always visible when act >= 1) -->
-              ${item.act >= 1 
+              ${item.act >= 2 
                 ? `<a href="/skill-matrix/${item.employee_competency_id}/checksheet"
                       class="btn btn-success btn-sm">
                     <i class="fas fa-file-alt"></i>
@@ -208,7 +208,7 @@
               }
 
               <!-- Button Clipboard (only when act >= 2) -->
-              ${item.act >= 2 
+              ${item.act >= 1
                 ? `<a href="/evaluation/${item.employee_competency_id}"
                       class="btn btn-primary btn-sm"
                       title="Evaluasi Kompetensi">
@@ -218,7 +218,7 @@
               }
 
               <!-- Button Upload (only when act === 0) -->
-              ${item.act === 0 
+              ${item.act === 0
                 ? `<button
                     class="btn btn-warning btn-sm"
                     data-bs-toggle="modal"

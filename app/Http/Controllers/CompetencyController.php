@@ -313,22 +313,38 @@ class CompetencyController extends Controller
             case 'Operator':
             case 'JP':
             case 'Leader':
-                $query->where('sub_section_id', $competency->sub_section_id);
+            case 'Act Leader':
+                $query->whereHas('subSection', fn($q) =>
+                    $q->where('id', $competency->sub_section_id)
+                );
                 break;
+        
             case 'Supervisor':
             case 'Section Head':
-                $query->where('section_id', $competency->section_id);
+                $query->whereHas('subSection.section', fn($q) =>
+                    $q->where('id', $competency->section_id)
+                );
                 break;
+        
             case 'Manager':
             case 'Coordinator':
-                $query->where('department_id', $competency->department_id);
+                $query->whereHas('subSection.section.department', fn($q) =>
+                    $q->where('id', $competency->department_id)
+                );
                 break;
+        
             case 'GM':
-                $query->where('division_id', $competency->division_id);
+                $query->whereHas('subSection.section.department.division', fn($q) =>
+                    $q->where('id', $competency->division_id)
+                );
                 break;
+        
             case 'Director':
-                $query->where('plant_id', $competency->plant_id);
+                $query->whereHas('subSection.section.department.division.plant', fn($q) =>
+                    $q->where('id', $competency->plant_id)
+                );
                 break;
+        
             default:
                 $query->whereRaw('0 = 1');
         }

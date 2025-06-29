@@ -10,6 +10,7 @@
       <h3 class="card-title">Competency List</h3>
       <div class="d-flex align-items-center">
         {{-- Form Search --}}
+        
         <form method="GET" action="{{ route('competencies.index') }}" class="d-flex align-items-center me-3">
           <input type="text" name="search" value="{{ request('search') }}" class="form-control me-2" style="width:200px;" placeholder="Search…">
           <input type="hidden" name="position" value="{{ request('position', 'Show All') }}">
@@ -219,69 +220,47 @@
       });
     });
 
-    document.querySelectorAll('.delete-btn').forEach(function(btn) {
-        const deleteBtn   = e.target.closest('.delete-btn');
-        if (!deleteBtn) return;
+    document.getElementById('competencyTable').addEventListener('click', function(e) {
+    const btn = e.target.closest('.delete-btn');
+    if (!btn) return;  // kalau bukan tombol delete, abaikan
 
-        const competencyId = deleteBtn.getAttribute('data-id');
-        const deleteUrl    = deleteBtn.getAttribute('data-url');
-        const rowSelector  = '#row-competency-' + competencyId;
+    const competencyId = btn.dataset.id;
+    const deleteUrl    = btn.dataset.url;
+    const rowSelector  = '#row-competency-' + competencyId;
 
-        Swal.fire({
-          title: "Are you sure?",
-          text: "You won't be able to revert this!",
-          icon: "warning",
-          showCancelButton: true,
-          confirmButtonColor: "#d33",
-          cancelButtonColor: "#3085d6",
-          confirmButtonText: "Yes, delete it!",
-          cancelButtonText: "Cancel"
-        }).then((result) => {
-          if (!result.isConfirmed) return;
+    Swal.fire({
+      title: "Are you sure?",
+      text: "You won't be able to revert this!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Yes, delete it!",
+      cancelButtonText: "Cancel"
+    }).then(result => {
+      if (!result.isConfirmed) return;
 
-          fetch(deleteUrl, {
-            method: 'DELETE',
-            headers: {
-              'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-              'X-Requested-With': 'XMLHttpRequest',
-              'Accept': 'application/json'
-            }
-          })
-          .then(response => {
-            if (response.status === 404) {
-              return Promise.reject(new Error('Data not found'));
-            }
-            if (response.status === 403) {
-              return Promise.reject(new Error('No permission to delete.'));
-            }
-            if (!response.ok) {
-              return response.json().then(errJson => {
-                let msg = errJson.message || 'Failed to delete.';
-                return Promise.reject(new Error(msg));
-              });
-            }
-            return response.json();
-          })
-          .then(data => {
-            // Hapus baris tabel di DOM
-            document.querySelector(rowSelector)?.remove();
-            Swal.fire({
-              icon: 'success',
-              title: 'Deleted!',
-              text: data.message || 'Competency has been deleted',
-              timer: 1500,
-              showConfirmButton: false
-            });
-          })
-          .catch(err => {
-            Swal.fire({
-              icon: 'error',
-              title: 'Oops...',
-              text: err.message
-            });
-          });
-        });
+      fetch(deleteUrl, {
+        method: 'DELETE',
+        headers: {
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        }
+      })
+      .then(res => {
+        if (!res.ok) return res.json().then(j => { throw new Error(j.message || 'Failed to delete'); });
+        return res.json();
+      })
+      .then(json => {
+        document.querySelector(rowSelector)?.remove();
+        Swal.fire({ icon: 'success', title: 'Deleted!', text: json.message, timer:1500, showConfirmButton:false });
+      })
+      .catch(err => {
+        Swal.fire('Error', err.message, 'error');
       });
     });
+  });
+});
   </script>
 @endpush
