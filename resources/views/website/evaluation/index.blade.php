@@ -5,7 +5,7 @@
   <div class="card">
     <div class="card-header">
       <h3 class="mb-0">
-        Evaluasi Kompetensi: {{ $employeeCompetency->competency->name }}
+        Evaluation : {{ $employeeCompetency->competency->name }}
         <span class="badge bg-light text-dark fs-6 ms-2">
           {{ $employeeCompetency->position }}
         </span>
@@ -86,12 +86,12 @@
 
               <div class="row mb-3">
                 <div class="col">
-                  <label class="form-label fw-bold">Jawaban Anda:</label>
+                  <label class="form-label fw-bold">Your answer:</label>
                   <textarea 
                     class="form-control" 
                     name="answer[{{ $eval->id }}]" 
                     rows="3" 
-                    placeholder="Tulis jawaban Anda di sini..."
+                    placeholder="Write your answer here..."
                     {{ $allowEdit ? '' : 'readonly' }}
                     style="{{ $allowEdit ? '' : 'background-color: #f8f9fa;' }}"
                   >{{ $eval->answer ?? '' }}</textarea>
@@ -100,7 +100,7 @@
 
               <div class="row mb-3">
                 <div class="col-md-6">
-                  <label class="form-label fw-bold">Upload Bukti:</label>
+                  <label class="form-label fw-bold">Upload Evidence:</label>
                   @if($eval->file)
                     <div class="mb-2">
                       <a href="{{ asset('storage/'.$eval->file) }}" target="_blank" class="btn btn-sm btn-outline-primary">
@@ -122,12 +122,12 @@
 
         <div class="mt-4 d-flex justify-content-between border-top pt-3">
           <a href="{{ route('skillMatrix.index') }}" class="btn btn-secondary px-4">
-            <i class="fas fa-arrow-left me-2"></i>Kembali
+            <i class="fas fa-arrow-left me-2"></i>Back
           </a>
           
           @if($allowEdit)
             <button type="submit" class="btn btn-success px-4">
-              <i class="fas fa-save me-2"></i>Simpan Evaluasi
+              <i class="fas fa-save me-2"></i>Save
             </button>
           @else
             @if($employeeCompetency->act == 1)
@@ -153,7 +153,7 @@
 <script>
   Swal.fire({
     icon: 'success',
-    title: 'Berhasil!',
+    title: 'Succeed!',
     text: '{{ session('success') }}',
     confirmButtonText: 'OK'
   });
@@ -187,20 +187,20 @@
     if (unanswered.length) {
       Swal.fire({
         icon: 'warning',
-        title: 'Pertanyaan Belum Terjawab',
-        html: `Pertanyaan berikut belum dijawab: <strong>${unanswered.join(', ')}</strong>`,
+        title: 'complete the answers to all questions',
+        html: `The following questions have not been answered yet : <strong>${unanswered.join(', ')}</strong>`,
         confirmButtonText: 'OK'
       });
       return;
     }
 
     Swal.fire({
-      title: 'Konfirmasi Penyimpanan',
-      text: 'Apakah Anda yakin ingin menyimpan evaluasi ini?',
+      title: 'Confirm your answer',
+      text: 'Are you sure you want to save this evaluation?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Ya, Simpan',
-      cancelButtonText: 'Batal'
+      confirmButtonText: 'Yes',
+      cancelButtonText: 'Cancel'
     }).then(result => {
       if (result.isConfirmed) this.submit();
     });

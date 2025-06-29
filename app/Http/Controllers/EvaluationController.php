@@ -161,7 +161,7 @@ class EvaluationController extends Controller
 
             DB::commit();
             return redirect()->route('evaluation.index', $empCompId)
-                             ->with('success', 'Evaluasi berhasil disimpan!');
+                             ->with('success', 'Evaluation successfully saved!');
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error($e->getMessage());

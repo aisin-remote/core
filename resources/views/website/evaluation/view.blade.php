@@ -126,13 +126,8 @@
             <button type="submit" class="btn btn-success px-4">
               <i class="fas fa-save me-2"></i>Simpan Penilaian
             </button>
-          @else
-            <a href="{{ route('employeeCompetencies.index') }}" class="btn btn-primary px-4">
-              <i class="fas fa-check me-2"></i>Selesai
-            </a>
           @endif
         </div>
-      
       @if(!$isPassed)
       </form>
       @endif

@@ -13,7 +13,7 @@
       <div class="mb-4">
         <a href="{{ route('checksheet-assessment.competency-history', ['employeeId' => $employeeCompetency->employee_id, 'competencyId' => $competency->id]) }}" 
            class="btn btn-info">
-          <i class="bi bi-clock-history me-2"></i>Lihat Histori Tidak Lulus
+          <i class="bi bi-clock-history me-2"></i>History Not Pass
         </a>
       </div>
       <form id="assessment-form" method="POST" action="{{ route('checksheet-assessment.store') }}">
@@ -29,9 +29,6 @@
           @endphp
           <div class="checksheet-item mb-4 p-4 border rounded {{ $isFailed ? 'border-danger border-2' : '' }}" style="position: relative;">
             @if($isFailed)
-              <div class="badge bg-danger position-absolute top-0 start-0 mt-2 ms-2">
-                Perlu Perbaikan
-              </div>
             @endif
 
             <div class="row mb-3">
@@ -42,7 +39,7 @@
 
             <div class="row mb-3">
               <div class="col">
-                <label class="form-label">Penilaian:</label>
+                <label class="form-label">Assessment :</label>
                 <div class="d-flex gap-4">
                   @for($score = 1; $score <= 3; $score++)
                     @php
@@ -54,7 +51,7 @@
                              value="{{ $score }}"
                              id="score-{{ $cs->id }}-{{ $score }}"
                              {{ $existingScore == $score ? 'checked' : '' }}>
-                      <label class="form-check-label" for="score-{{ $cs->id }}-{{ $score }}">
+                      <label class="form-check-label fw-bold text-dark" for="score-{{ $cs->id }}-{{ $score }}">
                         {{ $label }}
                       </label>
                     </div>
@@ -68,7 +65,7 @@
 
         <div class="mt-4">
           <button type="submit" class="btn btn-primary px-4">
-            <i class="bi bi-save me-2"></i>Simpan Penilaian
+            <i class="bi bi-save me-2"></i>Save
           </button>
           <a href="{{ route('employeeCompetencies.index', ['company' => request()->route('company', 'aii')]) }}" class="btn btn-secondary px-4 ms-2">
             <i class="bi bi-arrow-left-circle me-2"></i>Back
@@ -131,18 +128,18 @@
       Swal.fire({
         icon: 'warning',
         title: 'Oops...',
-        text: 'Harap isi semua penilaian checksheet sebelum menyimpan!',
+        text: 'Please complete all assessment checksheets before saving!',
         confirmButtonText: 'OK'
       });
     } else {
       // Semua terisi → tanya konfirmasi dulu
       Swal.fire({
-        title: 'Konfirmasi',
-        text: 'Apakah kamu yakin ingin menyimpan?',
+        title: 'Confirm your answer',
+        text: 'Are you sure you want to save this evaluation?',
         icon: 'question',
         showCancelButton: true,
-        confirmButtonText: 'Ya, Simpan',
-        cancelButtonText: 'Batal'
+        confirmButtonText: 'Yes',
+        cancelButtonText: 'Cancel'
       }).then((result) => {
         if (result.isConfirmed) {
           // Jika user klik "Ya, Simpan", baru submit
@@ -155,6 +152,10 @@
 
 {{-- Optional: style hover & checked --}}
 <style>
+  .checksheet-container .form-check-label {
+    color: #000 !important;
+    font-weight: 600;
+  }
   .checksheet-item {
     background-color: #f8f9fa;
     transition: background-color 0.2s;

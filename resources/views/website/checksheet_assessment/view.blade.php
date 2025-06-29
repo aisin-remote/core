@@ -53,7 +53,6 @@
               </a>
             @endif
 
-            {{-- Link ke history spesifik kompetensi --}}
             <a href="{{ route('checksheet-assessment.competency-history', [
               'employeeId' => $employeeCompetency->employee_id,
               'competencyId' => $competency->id
@@ -92,7 +91,7 @@
                   <input class="form-check-input" type="radio" 
                     disabled
                     {{ $assessment && $assessment->score == $value ? 'checked' : '' }}>
-                  <label class="form-check-label {{ $value == 3 ? 'fw-bold' : '' }}">
+                  <label class="form-check-label fw-bold text-dark {{ $value == 3 ? 'fw-bold' : '' }}">
                     {{ $label }}
                   </label>
                 </div>
@@ -113,6 +112,10 @@
   </div>
 </div>
 <style>
+    .checksheet-container .form-check-label {
+      color: #000 !important;
+      font-weight: 600;
+    }
     .checksheet-item {
       background-color: #f8f9fa;
       transition: background-color 0.2s;

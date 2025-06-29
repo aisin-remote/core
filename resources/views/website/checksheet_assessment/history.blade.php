@@ -48,7 +48,7 @@
               'competencyId' => $competency->id
             ]) }}" class="btn btn-secondary px-4 ms-2">
             <i class="bi bi-arrow-left-circle me-2"></i>
-              Kembali
+              Back
             </a>
           </div>
       @endif

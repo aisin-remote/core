@@ -12,38 +12,11 @@ class ChecksheetAssessmentController extends Controller
     public function index($employeeId, $competencyId)
     {
         $employeeCompetency = EmployeeCompetency::with('employee')
-        ->where('employee_id', $employeeId)
-        ->where('competency_id', $competencyId)
-        ->first();
+            ->where('employee_id', $employeeId)
+            ->where('competency_id', $competencyId)
+            ->first();
 
-        // Jika sudah ada penilaian, periksa otorisasi untuk perbaikan
-        if ($employeeCompetency && $employeeCompetency->checksheetAssessments()->exists()) {
-            $hierarchy = [
-                'Direktur',
-                'GM',
-                'Manager',
-                'Coordinator',
-                'Section Head',
-                'Supervisor',
-                'Leader',
-                'JP',
-                'Operator',
-            ];
-            
-            $employeePosition = $employeeCompetency->employee->position ?? 'Operator';
-            $userPosition = auth()->user()->employee->position ?? 'Operator';
-            
-            $employeeIndex = array_search($employeePosition, $hierarchy);
-            $userIndex = array_search($userPosition, $hierarchy);
-
-            $allowImprove = ($employeeCompetency->act != 2) && 
-                        ($userIndex !== false && $employeeIndex !== false && $userIndex < $employeeIndex);
-            
-            if (!$allowImprove) {
-                return redirect()->route('checksheet-assessment.view', $employeeCompetency->id);
-            }
-        }
-
+        // Jika belum ada penilaian, buat record baru
         if (!$employeeCompetency) {
             $employeeCompetency = EmployeeCompetency::create([
                 'employee_id' => $employeeId,
@@ -53,9 +26,46 @@ class ChecksheetAssessmentController extends Controller
 
         $competency = Competency::with('checkSheets')->findOrFail($competencyId);
 
+        // Ambil percobaan terakhir
+        $lastAttempt = ChecksheetAssessment::where('employee_competency_id', $employeeCompetency->id)
+            ->max('attempt') ?? 0;
+
+        $existingAssessments = ChecksheetAssessment::where('employee_competency_id', $employeeCompetency->id)
+            ->where('attempt', $lastAttempt)
+            ->get()
+            ->keyBy('checksheet_id');
+
         return view('website.checksheet_assessment.index', [
             'competency' => $competency,
             'checksheets' => $competency->checkSheets,
+            'employeeCompetency' => $employeeCompetency,
+            'existingAssessments' => $existingAssessments
+        ]);
+    }
+
+    public function improve($employeeId, $competencyId)
+    {
+        $employeeCompetency = EmployeeCompetency::with('employee')
+            ->where('employee_id', $employeeId)
+            ->where('competency_id', $competencyId)
+            ->firstOrFail();
+
+        $competency = Competency::with('checkSheets')->findOrFail($competencyId);
+
+        // Ambil percobaan terakhir
+        $lastAttempt = ChecksheetAssessment::where('employee_competency_id', $employeeCompetency->id)
+            ->max('attempt') ?? 0;
+
+        // Ambil item yang belum mencapai skor 3
+        $failedItems = ChecksheetAssessment::where('employee_competency_id', $employeeCompetency->id)
+            ->where('attempt', $lastAttempt)
+            ->where('score', '<', 3)
+            ->pluck('checksheet_id')
+            ->toArray();
+
+        return view('website.checksheet_assessment.improve', [
+            'competency' => $competency,
+            'checksheets' => $competency->checkSheets->whereIn('id', $failedItems),
             'employeeCompetency' => $employeeCompetency
         ]);
     }
@@ -116,7 +126,7 @@ class ChecksheetAssessmentController extends Controller
             'isPassed' => $isPassed,
             'percentage' => $percentage,
             'isAuthorizedSuperior' => $isAuthorizedSuperior,
-            'attempt' => $lastAttempt // Kirim percobaan terakhir
+            'attempt' => $lastAttempt
         ]);
     }
     
@@ -168,7 +178,7 @@ class ChecksheetAssessmentController extends Controller
                 'employee_competency_id' => $ec->id,
                 'checksheet_id' => $csId,
                 'score' => $score,
-                'attempt' => $currentAttempt // Simpan attempt
+                'attempt' => $currentAttempt
             ]);
         }
 
@@ -178,22 +188,10 @@ class ChecksheetAssessmentController extends Controller
         // Update status kompetensi
         $ec->update(['act' => $isPassed ? 3 : 2]);
 
-        // Pesan
-        if ($isPassed) {
-            $message = 'Penilaian berhasil disimpan. Selamat, Anda lolos!';
-        } else {
-            // Gunakan link baru ke history spesifik kompetensi
-            $historyLink = route('checksheet-assessment.competency-history', [
-                'employeeId' => $ec->employee_id,
-                'competencyId' => $ec->competency_id
-            ]);
-            
-            $message = 'Penilaian berhasil disimpan. Maaf, Anda belum lolos. ';
-            $message .= "<a href='$historyLink' class='alert-link'>Lihat detail checksheet yang perlu diperbaiki</a>";
-        }
-    
         return redirect()->route('checksheet-assessment.view', $ec->id)
-            ->with('success', $message);
+            ->with('success', $isPassed 
+                ? 'Penilaian berhasil disimpan. Selamat, Anda lolos!' 
+                : 'Penilaian berhasil disimpan. Silakan perbaiki nilai yang belum mencapai skor "Selalu"');
     }
     
     public function competencyHistory($employeeId, $competencyId)
