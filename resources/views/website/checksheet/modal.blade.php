@@ -14,6 +14,15 @@
                         <input type="text" class="form-control" id="name" name="name" required>
                     </div>
 
+                    <!-- Position dipindahkan ke atas -->
+                    <div class="mb-3">
+                        <label for="position">Position</label>
+                        <select id="position_select" name="position" class="form-select" required>
+                            <option value="" disabled selected>Select Position</option>
+                            <!-- Opsi position akan diisi oleh JavaScript -->
+                        </select>
+                    </div>
+
                     <div class="mb-3">
                         <label for="competency_id">Category (Competency)</label>
                         <select
@@ -21,13 +30,12 @@
                             name="competency_id"
                             class="form-select"
                             required
+                            disabled
                         >
                             <option value="" disabled selected>-- Select Competency --</option>
-
                             @foreach($competencies as $comp)
                                 <option
                                     value="{{ $comp->id }}"
-                                    {{-- data untuk menampilkan nama relasi, bukan ID --}}
                                     data-group-name="{{ optional($comp->group_competency)->name }}"
                                     data-department-name="{{ optional($comp->department)->name }}"
                                     data-subsection-name="{{ optional($comp->sub_section)->name }}"
@@ -36,9 +44,9 @@
                                     data-plant-name="{{ optional($comp->plant)->name }}"
                                     data-position="{{ $comp->position }}"
                                 >
-                                    {{ $comp->name }}
+                                    {{ $comp->name }} 
                                     @if($comp->position)
-                                    – {{ $comp->position }}
+                                        – {{ $comp->position }}
                                     @endif
                                 </option>
                             @endforeach
@@ -71,13 +79,6 @@
                         <input type="text" id="info_plant" class="form-control" readonly>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="position">Position</label>
-                        <select id="position_select" name="position" class="form-select" required>
-                          <option value="" disabled selected>Select Position</option>
-                        </select>
-                    </div>
-
                     <!-- Footer Modal -->
                     <div class="modal-footer">
                         <button type="submit" class="btn btn-primary">Save</button>
@@ -91,58 +92,112 @@
 
 <script>
     document.addEventListener("DOMContentLoaded", function() {
-      const addModal         = document.getElementById("addModal");
-      const addForm          = document.getElementById("addForm");
-      const selectCompetency = document.getElementById("competency_id");
-      const selectPosition   = document.getElementById("position_select");
-  
-      // Elemen‐elemen read‐only (jika mau menampilkan info‐info lain)
-      const infoGroup      = document.getElementById("info_group");
-      const infoDepartment = document.getElementById("info_department");
-      const infoSubsection = document.getElementById("info_subsection");
-      const infoSection    = document.getElementById("info_section");
-      const infoDivision   = document.getElementById("info_division");
-      const infoPlant      = document.getElementById("info_plant");
-  
-      selectCompetency.addEventListener("change", function() {
-        // <option> yang terpilih
-        const opt = selectCompetency.options[selectCompetency.selectedIndex];
-  
-        // 1) Isi info‐info relasi (jika memang ingin menampilkan nama relasi)
-        infoGroup.value      = opt.getAttribute("data-group-name")      || "";
-        infoDepartment.value = opt.getAttribute("data-department-name") || "";
-        infoSubsection.value = opt.getAttribute("data-subsection-name") || "";
-        infoSection.value    = opt.getAttribute("data-section-name")    || "";
-        infoDivision.value   = opt.getAttribute("data-division-name")   || "";
-        infoPlant.value      = opt.getAttribute("data-plant-name")      || "";
-  
-        // 2) Ambil nilai enum position dari data‐attribute
-        const positionText = opt.getAttribute("data-position") || "";
-  
-        // Reset dulu dropdown Position (hanya placeholder)
-        selectPosition.innerHTML = '<option value="" disabled selected>Select Position</option>';
-  
-        // Jika ada string position (enum) → buat satu <option> dan pilih langsung
-        if (positionText !== "") {
-          const newOpt = document.createElement("option");
-          newOpt.value    = positionText;
-          newOpt.text     = positionText;
-          newOpt.selected = true;
-          selectPosition.appendChild(newOpt);
-        }
-        // Jika positionText kosong → biarkan dropdown hanya berisi placeholder
-      });
-  
-      // Reset semua ketika modal ditutup
-      addModal.addEventListener("hidden.bs.modal", function() {
-        addForm.reset();
-        infoGroup.value      = "";
-        infoDepartment.value = "";
-        infoSubsection.value = "";
-        infoSection.value    = "";
-        infoDivision.value   = "";
-        infoPlant.value      = "";
-        selectPosition.innerHTML = '<option value="" disabled selected>Select Position</option>';
-      });
+        const addModal = document.getElementById("addModal");
+        const addForm = document.getElementById("addForm");
+        const selectCompetency = document.getElementById("competency_id");
+        const selectPosition = document.getElementById("position_select");
+        
+        // Elemen info relasi
+        const infoGroup = document.getElementById("info_group");
+        const infoDepartment = document.getElementById("info_department");
+        const infoSubsection = document.getElementById("info_subsection");
+        const infoSection = document.getElementById("info_section");
+        const infoDivision = document.getElementById("info_division");
+        const infoPlant = document.getElementById("info_plant");
+        
+        // Kumpulkan semua position unik dari competency
+        const positionSet = new Set();
+        
+        // Loop melalui semua option competency
+        document.querySelectorAll('#competency_id option').forEach(option => {
+            if (option.value !== "") { // Skip placeholder
+                const position = option.getAttribute('data-position');
+                if (position) {
+                    positionSet.add(position);
+                }
+            }
+        });
+        
+        // Isi dropdown position dengan nilai unik
+        positionSet.forEach(position => {
+            const option = document.createElement('option');
+            option.value = position;
+            option.textContent = position;
+            selectPosition.appendChild(option);
+        });
+        
+        // Handler saat position berubah
+        selectPosition.addEventListener('change', function() {
+            const selectedPosition = this.value;
+            
+            // Aktifkan dropdown competency
+            selectCompetency.disabled = false;
+            
+            // Reset pilihan competency
+            selectCompetency.selectedIndex = 0;
+            
+            // Loop melalui semua option competency
+            document.querySelectorAll('#competency_id option').forEach(option => {
+                if (option.value === "") { // Placeholder
+                    option.style.display = 'block';
+                } else {
+                    const position = option.getAttribute('data-position');
+                    
+                    // Tampilkan hanya competency dengan position yang sesuai
+                    if (position === selectedPosition) {
+                        option.style.display = 'block';
+                    } else {
+                        option.style.display = 'none';
+                    }
+                }
+            });
+        });
+        
+        // Handler saat competency berubah
+        selectCompetency.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            
+            // Update info relasi
+            infoGroup.value = selectedOption.getAttribute('data-group-name') || '';
+            infoDepartment.value = selectedOption.getAttribute('data-department-name') || '';
+            infoSubsection.value = selectedOption.getAttribute('data-subsection-name') || '';
+            infoSection.value = selectedOption.getAttribute('data-section-name') || '';
+            infoDivision.value = selectedOption.getAttribute('data-division-name') || '';
+            infoPlant.value = selectedOption.getAttribute('data-plant-name') || '';
+        });
+        
+        // Handler saat modal ditutup
+        addModal.addEventListener('hidden.bs.modal', function() {
+            // Reset form
+            addForm.reset();
+            
+            // Reset info relasi
+            infoGroup.value = '';
+            infoDepartment.value = '';
+            infoSubsection.value = '';
+            infoSection.value = '';
+            infoDivision.value = '';
+            infoPlant.value = '';
+            
+            // Reset dropdown position
+            selectPosition.innerHTML = '<option value="" disabled selected>Select Position</option>';
+            
+            // Isi ulang position (karena direset)
+            positionSet.forEach(position => {
+                const option = document.createElement('option');
+                option.value = position;
+                option.textContent = position;
+                selectPosition.appendChild(option);
+            });
+            
+            // Reset dan nonaktifkan dropdown competency
+            selectCompetency.selectedIndex = 0;
+            selectCompetency.disabled = true;
+            
+            // Tampilkan semua option competency
+            document.querySelectorAll('#competency_id option').forEach(option => {
+                option.style.display = 'block';
+            });
+        });
     });
-  </script>
+</script>

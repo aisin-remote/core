@@ -245,8 +245,8 @@
           <small class="text-muted">${c.group}</small>
         </div>
         <div class="text-end">
-          <span class="badge ${c.act===2?'bg-success':'bg-warning'} me-2">
-            ${c.act===2?'Passes':'not pass'}
+          <span class="badge ${ (c.act === 2 || c.act === 3) ? 'bg-success' : 'bg-warning' } me-2">
+            ${ (c.act === 2 || c.act === 3) ? 'Passes' : 'Not Pass' }
           </span>
           <a href="/evaluation/view/${c.employee_competency_id}" class="text-decoration-none">
               View

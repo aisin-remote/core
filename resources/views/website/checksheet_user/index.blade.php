@@ -44,7 +44,7 @@
                                 <td>{{ $user->competency->name }}</td>
                                 <td class="text-center">
                                     <button class="btn btn-danger btn-sm delete-btn" data-id="{{ $user->id }}">
-                                        <i class="bi bi-trash"></i> Delete
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </td>
                             </tr>

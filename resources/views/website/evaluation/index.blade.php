@@ -24,6 +24,16 @@
     </div>
     
     <div class="card-body">
+      @if($errors->any())
+        <div class="alert alert-danger">
+          <ul>
+            @foreach($errors->all() as $error)
+              <li>{{ $error }}</li>
+            @endforeach
+          </ul>
+        </div>
+      @endif
+      
       @if($employeeCompetency->act == 2)
         <div class="alert alert-success">
           <h4 class="alert-heading">Evaluasi Selesai!</h4>
@@ -55,7 +65,7 @@
                 <div class="col">
                   <h5 class="mb-0">
                     <span class="badge bg-primary me-2">{{ $key + 1 }}</span>
-                    {{ $eval->checksheet->question }}
+                    {{ $eval->question_text }}
                   </h5>
                 </div>
               </div>
@@ -89,7 +99,7 @@
                   <label class="form-label fw-bold">Your answer:</label>
                   <textarea 
                     class="form-control" 
-                    name="answer[{{ $eval->id }}]" 
+                    name="answer[{{ $eval->checksheet_user_id }}]" 
                     rows="3" 
                     placeholder="Write your answer here..."
                     {{ $allowEdit ? '' : 'readonly' }}
@@ -111,7 +121,7 @@
                   <input 
                     type="file" 
                     class="form-control" 
-                    name="file[{{ $eval->id }}]"
+                    name="file[{{ $eval->checksheet_user_id }}]"
                     {{ $allowEdit ? '' : 'disabled' }}
                   >
                 </div>
@@ -177,32 +187,43 @@
     e.preventDefault();
     
     let unanswered = [];
+    let hasEmpty = false;
+    
     document.querySelectorAll('textarea[name^="answer"]').forEach(textarea => {
       if (!textarea.value.trim()) {
-        const num = textarea.closest('.evaluation-item').querySelector('.badge').textContent;
-        unanswered.push(num);
+        hasEmpty = true;
+        const item = textarea.closest('.evaluation-item');
+        if (item) {
+          const badge = item.querySelector('.badge.bg-primary');
+          if (badge) {
+            unanswered.push(badge.textContent.trim());
+          }
+        }
       }
     });
 
-    if (unanswered.length) {
+    if (hasEmpty) {
       Swal.fire({
         icon: 'warning',
-        title: 'complete the answers to all questions',
-        html: `The following questions have not been answered yet : <strong>${unanswered.join(', ')}</strong>`,
+        title: 'Complete All Answers',
+        html: `Please answer these questions: <strong>${unanswered.join(', ')}</strong>`,
         confirmButtonText: 'OK'
       });
       return;
     }
 
     Swal.fire({
-      title: 'Confirm your answer',
-      text: 'Are you sure you want to save this evaluation?',
+      title: 'Confirm Submission',
+      text: 'Are you sure you want to submit this evaluation?',
       icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Yes',
-      cancelButtonText: 'Cancel'
-    }).then(result => {
-      if (result.isConfirmed) this.submit();
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Yes, submit it!'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.submit();
+      }
     });
   });
 </script>

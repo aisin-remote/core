@@ -50,7 +50,7 @@ class EvaluationController extends Controller
 
     public function index(int $employeeCompetencyId)
     {
-        $empComp = EmployeeCompetency::with(['evaluations'])
+        $empComp = EmployeeCompetency::with(['evaluations.checksheetUser'])
                     ->findOrFail($employeeCompetencyId);
 
         // ambil checksheet user terkait kompetensi
@@ -79,8 +79,9 @@ class EvaluationController extends Controller
                           'score'                  => null,
                           'file'                   => null,
                       ]);
-                // ubah ID untuk input name
-                $eval->id = $cs->id;
+                
+                // Tambahkan data yang diperlukan untuk view
+                $eval->checksheet_user_id = $cs->id;
                 $eval->question_text = $cs->question;
                 return $eval;
             });
@@ -125,9 +126,13 @@ class EvaluationController extends Controller
 
     public function store(Request $request)
     {
+        Log::info('Evaluation store request:', $request->all());
+        Log::info('Files:', array_keys($request->file('file', [])));
+        
         $request->validate([
             'employee_competency_id' => 'required|exists:employee_competency,id',
             'answer'                 => 'required|array',
+            'answer.*'               => 'required|string',
             'file'                   => 'nullable|array',
             'file.*'                 => 'file|mimes:pdf,doc,docx,jpg,png|max:2048',
         ]);
@@ -139,33 +144,48 @@ class EvaluationController extends Controller
         DB::beginTransaction();
         try {
             foreach ($answers as $csId => $answer) {
+                Log::info("Processing checksheet user ID: $csId");
+                
                 $eval = Evaluation::firstOrNew([
                     'employee_competency_id' => $empCompId,
-                    'checksheet_user_id'     => $csId,
+                    'checksheet_user_id'     => $csId
                 ]);
+                
                 $eval->answer = $answer;
-                if (isset($files[$csId])) {
+                
+                if (isset($files[$csId]) && $files[$csId]->isValid()) {
+                    Log::info("File found for $csId");
+                    
+                    // Hapus file lama jika ada
                     if ($eval->file) {
                         Storage::disk('public')->delete($eval->file);
                     }
+                    
+                    // Simpan file baru
                     $path = $files[$csId]->store('evaluation_files', 'public');
                     $eval->file = $path;
                 }
-                $eval->score = null;
+                
+                $eval->score = null; // Reset score karena jawaban berubah
                 $eval->save();
             }
 
             $empComp = EmployeeCompetency::findOrFail($empCompId);
-            $empComp->act = 1;
+            $empComp->act = 1; // Status: menunggu penilaian
             $empComp->save();
 
             DB::commit();
+            
             return redirect()->route('evaluation.index', $empCompId)
-                             ->with('success', 'Evaluation successfully saved!');
+                             ->with('success', 'Evaluasi berhasil disimpan!');
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error($e->getMessage());
-            return back()->with('error', 'Gagal menyimpan evaluasi.');
+            Log::error('Error saving evaluation: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            
+            return back()
+                ->withInput()
+                ->with('error', 'Gagal menyimpan evaluasi: ' . $e->getMessage());
         }
     }
 
@@ -215,7 +235,7 @@ class EvaluationController extends Controller
         $employeeCompetency = EmployeeCompetency::with([
             'employee',
             'competency',
-            'evaluations.checksheet'
+            'evaluations.checksheetUser'
         ])->findOrFail($employee_competency_id);
 
         if (!$employeeCompetency->competency) {

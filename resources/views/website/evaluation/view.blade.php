@@ -135,6 +135,9 @@
   </div>
 </div>
 
+{{-- SweetAlert2 --}}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 @if(!$isPassed)
 <script>
   document.getElementById('scoring-form').addEventListener('submit', function(e) {
@@ -158,7 +161,21 @@
       return;
     }
     
-    this.submit();
+    // Tampilkan konfirmasi penyimpanan
+    Swal.fire({
+      title: 'Konfirmasi Penyimpanan',
+      text: 'Apakah kamu yakin ingin menyimpan penilaian?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3085d6',
+      cancelButtonColor: '#d33',
+      confirmButtonText: 'Ya, Simpan!',
+      cancelButtonText: 'Batal'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        this.submit();
+      }
+    });
   });
 </script>
 @endif

@@ -24,4 +24,8 @@ class Evaluation extends Model
     {
         return $this->belongsTo(ChecksheetUser::class, 'checksheet_user_id', 'id');
     }
+    public function checksheetUser()
+    {
+        return $this->belongsTo(ChecksheetUser::class);
+    }
 }
