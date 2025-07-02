@@ -281,11 +281,25 @@ class IdpController extends Controller
                     $q->where('name', 'like', "%$search%")
                         ->orWhere('npk', 'like', "%$search%");
                 }))
+                ->when(
+                    $filter !== 'all',
+                    fn($q) =>
+                    $q->whereHas(
+                        'hav.hav.employee',
+                        fn($q) =>
+                        $q->where(function ($q) use ($filter) {
+                            $q->where('position', $filter)
+                                ->orWhere('position', 'like', "Act%$filter");
+                        })
+                    )
+                )
+
                 ->orderByDesc('created_at')
                 ->get()
                 ->groupBy(fn($item) => optional($item->hav?->hav?->employee)->id)
                 ->map(fn($group) => $group->first())
                 ->values();
+
 
             $assessments = new \Illuminate\Pagination\LengthAwarePaginator(
                 $assessments,
@@ -304,6 +318,19 @@ class IdpController extends Controller
                     ->whereHas('hav.hav.employee', fn($q) => $q->whereIn('id', $subordinates))
                     ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
                     ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
+                    ->when(
+                        $filter !== 'all',
+                        fn($q) =>
+                        $q->whereHas(
+                            'hav.hav.employee',
+                            fn($q) =>
+                            $q->where(function ($q) use ($filter) {
+                                $q->where('position', $filter)
+                                    ->orWhere('position', 'like', "Act%$filter");
+                            })
+                        )
+                    )
+
                     ->when($search, function ($q) use ($search) {
                         $q->whereHas('hav.hav.employee', function ($q) use ($search) {
                             $q->where('name', 'like', "%$search%")
@@ -344,8 +371,13 @@ class IdpController extends Controller
 
         $rawPosition = $user->employee->position ?? 'Operator';
         $currentPosition = Str::contains($rawPosition, 'Act ') ? trim(str_replace('Act', '', $rawPosition)) : $rawPosition;
-        $positionIndex = array_search($currentPosition, $allPositions) ?: array_search('Operator', $allPositions);
+        $positionIndex = array_search($currentPosition, $allPositions);
+        $positionIndex = $positionIndex !== false ? $positionIndex : array_search('Operator', $allPositions);
+
         $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
+
+
+
 
         return view('website.idp.list', compact(
             'employees',
@@ -384,6 +416,7 @@ class IdpController extends Controller
 
     public function store(Request $request)
     {
+
         $assessment = Assessment::where('id', $request->assessment_id)->first();
         try {
             DB::beginTransaction();
@@ -398,6 +431,7 @@ class IdpController extends Controller
                     'development_target' => $request->development_target ?? $idp->development_target,
                     'date' => $request->date ?? $idp->date,
                 ]);
+
 
                 DB::commit();
 

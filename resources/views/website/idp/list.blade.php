@@ -56,7 +56,7 @@
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
+                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 text-sm font-medium mb-6"
                     role="tablist" style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
@@ -387,6 +387,7 @@
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
 
+
                 let employeeId = $(this).data("employee-id");
                 console.log("Fetching history for Employee ID:", employeeId); // Debug
 
@@ -413,11 +414,19 @@
 
                         // Kosongkan tabel sebelum menambahkan data baru
                         $("#kt_table_assessments tbody").empty();
+                        const currentUserRole = "{{ auth()->user()->role }}";
 
                         if (response.assessments.length > 0) {
                             response.assessments.forEach((assessment, index) => {
                                 console.log(assessment);
+                                let deleteButton = '';
+                                if (currentUserRole === 'HRD') {
+                                    deleteButton =
+                                        `<button type="button" class="btn btn-danger btn-sm delete-btn" data-id="${assessment.id}">Delete</button>`;
+                                }
+
                                 let row = `
+
             <tr>
                 <td class="text-center">${index + 1}</td>
                 <td class="text-center">${assessment.date}</td>
@@ -429,16 +438,14 @@
                     >
                         Detail
                     </a>
-                     <button class="btn btn-danger btn-sm btn-delete" data-id="${assessment.id}">
-                                        Delete
-                                    </button>
+                      ${deleteButton}
                 </td>
             </tr>
         `;
                                 $("#kt_table_assessments tbody").append(row);
                             });
                         } else {
-                            $("#kt_table_assessments tbody").append(`
+                            $("#kt_table_assessments tbody").appen(`
         <tr>
             <td colspan="3" class="text-center text-muted">No IDP found</td>
         </tr>

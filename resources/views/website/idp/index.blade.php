@@ -541,7 +541,8 @@
                                                         class="required">Category</span></label>
                                                 <select id="category_select_{{ $assessmentId?->id }}_{{ $id }}"
                                                     name="category" class="form-select form-select-lg fw-semibold"
-                                                    data-control="select2" data-placeholder="Select categories...">
+                                                    data-control="select2" data-placeholder="Select categories..."
+                                                    required>
                                                     <option value="">Select Category</option>
                                                     @foreach (['Feedback', 'Self Development', 'Shadowing', 'On Job Development', 'Mentoring', 'Training'] as $category)
                                                         <option value="{{ $category }}"
@@ -558,7 +559,7 @@
                                                 <select id="program_select_{{ $assessmentId?->id }}_{{ $id }}"
                                                     name="development_program"
                                                     class="form-select form-select-lg fw-semibold" data-control="select2"
-                                                    data-placeholder="Select Programs...">
+                                                    data-placeholder="Select Programs..." required>
                                                     <option value="">Select Development Program</option>
                                                     @foreach (['Superior (DGM & GM)', 'Book Reading', 'FIGURE LEADER', 'Team Leader', 'SR PROJECT', 'People Development Program', 'Leadership', 'Developing Sub Ordinate'] as $program)
                                                         <option value="{{ $program }}"
@@ -573,7 +574,8 @@
                                                 <label for="target_{{ $assessmentId?->id }}_{{ $id }}"
                                                     class="fs-5 fw-bold form-label mb-2 required">Development
                                                     Target</label>
-                                                <textarea id="target_{{ $assessmentId?->id }}_{{ $id }}" name="development_target" class="form-control">{{ isset($idp) ? $idp->development_target : '' }}</textarea>
+                                                <textarea id="target_{{ $assessmentId?->id }}_{{ $id }}" name="development_target" class="form-control"
+                                                    required>{{ isset($idp) ? $idp->development_target : '' }}</textarea>
                                             </div>
 
                                             <div class="col-lg-12 fv-row mb-5">
@@ -582,7 +584,7 @@
                                                 <input type="date"
                                                     id="due_date_{{ $assessmentId?->id }}_{{ $id }}"
                                                     name="date" class="form-control"
-                                                    value="{{ isset($idp) ? $idp->date : '' }}" />
+                                                    value="{{ isset($idp) ? $idp->date : '' }}" required />
                                             </div>
 
                                             <div class="col-lg-12 fv-row mb-5">
@@ -762,17 +764,16 @@
                                                                     value="{{ $program->recommendedProgramsOneYear[0]['program'] }}"
                                                                     readonly>
                                                             </div>
-                                                               <div class="mb-3">
+                                                            <div class="mb-3">
                                                                 <label class="form-label fw-bold">
                                                                     Date</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="date[]"
+                                                                <input type="text" class="form-control" name="date[]"
                                                                     value="{{ $program->recommendedProgramsOneYear[0]['date'] }}"
                                                                     readonly>
                                                             </div>
-                                                           <div class="mb-3">
+                                                            <div class="mb-3">
                                                                 <input type="hidden" name="idp_id[]"
-                                                                    value="{{ $program->idp[0]->id?? '-' }}">
+                                                                    value="{{ $program->idp[0]->id ?? '-' }}">
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Evaluation Result</label>
@@ -782,7 +783,6 @@
                                                             </div>
                                                             <hr>
                                                         </div>
-
                                                     @endforeach
 
                                                     @if (!$hasData)
@@ -1335,7 +1335,15 @@
                     const target = document.getElementById(`target_${assessmentId}_${alcId}`).value;
                     const date = document.getElementById(`due_date_${assessmentId}_${alcId}`).value;
 
-
+                    // ✅ Validasi manual
+                    if (!category || !program || !target || !date) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Peringatan',
+                            text: 'Mohon lengkapi semua field sebelum submit!',
+                        });
+                        return;
+                    }
 
                     const key = `idp_modal_${assessmentId}_${alcId}`;
 
@@ -1382,6 +1390,7 @@
                     });
                 });
             });
+
         });
         // document.addEventListener("DOMContentLoaded", function() {
         //     document.querySelectorAll("form").forEach(form => {
@@ -1548,7 +1557,7 @@
                             body: JSON.stringify({
                                 employee_id: employeeId
                             })
-                        })  
+                        })
                         .then(async res => {
                             const data = await res.json();
                             if (!res.ok) {

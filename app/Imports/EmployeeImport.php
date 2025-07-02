@@ -56,7 +56,7 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                         'grade'            => $row['grade'],
                         'grade_astra'            => $row['grade_astra'],
                         'working_period'   => $workingPeriod,
-                    ]);
+                    ]);         
 
                     Log::info("Employee ID: {$employee->id} berhasil dibuat.");
 
