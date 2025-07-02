@@ -75,7 +75,7 @@ class HavQuadrans implements WithEvents
                             $fields[8]['score'],
                         );
                     });
-                }
+                }   
             }
         ];
     }

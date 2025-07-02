@@ -17,13 +17,13 @@ class MasterImports implements WithMultipleSheets
         return [
 
             'Employee' => new EmployeeImport(),
-            'Education Background' => new EducationBackground(),
-            'Working Experience' => new WorkingExperience(),
-            'Performance Appraisal History' => new PerformanceAppraisal(),
-            'Astra Training' => new AstraTrainings(),
-            'Assessment' => new HavQuadrans(),
-            'External Training' => new ExternalTrainings(),
-            'Promotion History' => new PromotionHistorys(),
+            // 'Education Background' => new EducationBackground(),
+            // 'Working Experience' => new WorkingExperience(),
+            // 'Performance Appraisal History' => new PerformanceAppraisal(),
+            // 'Astra Training' => new AstraTrainings(),
+            // 'Assessment' => new HavQuadrans(),
+            // 'External Training' => new ExternalTrainings(),
+            // 'Promotion History' => new PromotionHistorys(),
 
         ];
     }
