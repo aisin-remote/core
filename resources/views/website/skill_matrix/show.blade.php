@@ -37,31 +37,42 @@
         <!-- Profile Section Horizontal (User Info) -->
         <div class="card mb-5">
             <div class="card-body p-0">
-                <div class="profile-horizontal">
-                    <div class="profile-image" 
-                        style="background-image: {{ Auth::user()->photo ? "url('".asset('storage/'.Auth::user()->photo)."')" : 'none' }};
-                              background-color: {{ Auth::user()->photo ? 'transparent' : '#f5f5f5' }};">
-                    </div>
-                    <div class="profile-info">
-                        <h3 class="fw-bolder mb-2">{{ Auth::user()->name }}</h3>
-                        <div class="compact-details">
-                            <div>
-                                <div class="text-muted small">Email</div>
-                                <div class="fw-bold">{{ Auth::user()->email }}</div>
-                            </div>
-                            <div>
-                                <div class="text-muted small">Position</div>
-                                <div class="fw-bold">{{ Auth::user()->employee?->position ?? '-' }}</div>
-                            </div>
-                            <div>
-                                <div class="text-muted small">Department</div>
-                                <div class="fw-bold">{{ Auth::user()->employee?->department?->name ?? '-' }}</div>
-                            </div>
-                        </div>
-                    </div>
+              <div class="profile-horizontal">
+                <div 
+                  class="profile-image d-flex justify-content-center align-items-center"
+                  @if(Auth::user()->photo)
+                    style="
+                      background-image: url('{{ asset('storage/' . Auth::user()->photo) }}');
+                      background-color: transparent;
+                    "
+                  @endif
+                >
+                  @unless(Auth::user()->photo)
+                    <!-- pakai ikon 'person' tanpa lingkaran -->
+                    <i class="bi bi-person text-muted" style="font-size: 4rem;"></i>
+                  @endunless
                 </div>
-            </div>
+          
+                <div class="profile-info">
+                  <h3 class="fw-bolder mb-2">{{ Auth::user()->name }}</h3>
+                  <div class="compact-details">
+                    <div>
+                      <div class="text-muted small">Email</div>
+                      <div class="fw-bold">{{ Auth::user()->email }}</div>
+                    </div>
+                    <div>
+                      <div class="text-muted small">Position</div>
+                      <div class="fw-bold">{{ Auth::user()->employee?->position ?? '-' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-muted small">Department</div>
+                      <div class="fw-bold">{{ Auth::user()->employee?->department?->name ?? '-' }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
         </div>
+          
 
         <!-- Detail One Skill (EmployeeCompetency) -->
         <div class="card">
