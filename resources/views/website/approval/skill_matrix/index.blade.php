@@ -31,9 +31,9 @@
             <div class="mb-5">
                 <h4 class="mb-3 text-primary">Pending Approvals</h4>
                 @if($pending->isEmpty())
-                    <div class="alert alert-info">
+                    <div class="alert" style="background-color: #f0f0f0; color: #333; border: 1px solid #ccc;">
                         <i class="fas fa-info-circle me-2"></i> Tidak ada evidence untuk di-approve.
-                    </div>
+                    </div>                
                 @else
                 <div class="table-responsive">
                     <table class="table align-middle table-row-dashed fs-6 gy-5">

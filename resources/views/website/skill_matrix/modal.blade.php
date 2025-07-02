@@ -10,21 +10,24 @@
       <div class="modal-body">
         @if($file)
           @php
-            // ambil nama & extension
             $filename    = \Illuminate\Support\Str::afterLast($file, '/');
             $extension   = pathinfo($filename, PATHINFO_EXTENSION);
             $url         = asset('storage/' . $file);
-            $sizeInBytes = Storage::disk('public')->size($file);
-            $sizeReadable = number_format($sizeInBytes / 1024, 2) . ' KB';
-            $uploadedAt   = date('d M Y H:i', Storage::disk('public')->lastModified($file));
-            
-            // Tambahkan icon untuk zip
+            $exists = Storage::disk('public')->exists($file);
+            if ($exists) {
+                $sizeInBytes = Storage::disk('public')->size($file);
+                $sizeReadable = number_format($sizeInBytes / 1024, 2) . ' KB';
+                $uploadedAt = date('d M Y H:i', Storage::disk('public')->lastModified($file));
+            } else {
+                $sizeReadable = 'Unknown';
+                $uploadedAt = 'Unknown';
+            }
             $iconClass = match(strtolower($extension)) {
-              'pdf'  => 'far fa-file-pdf text-danger',
-              'doc','docx' => 'far fa-file-word text-primary',
-              'png','jpg','jpeg','gif' => 'far fa-file-image text-success',
-              'zip' => 'far fa-file-archive text-warning', 
-              default => 'far fa-file-alt text-secondary'
+                'pdf'  => 'far fa-file-pdf text-danger',
+                'doc','docx' => 'far fa-file-word text-primary',
+                'png','jpg','jpeg','gif' => 'far fa-file-image text-success',
+                'zip' => 'far fa-file-archive text-warning',
+                default => 'far fa-file-alt text-secondary'
             };
           @endphp
       

@@ -122,8 +122,14 @@
                     type="file" 
                     class="form-control" 
                     name="file[{{ $eval->checksheet_user_id }}]"
+                    accept=".pdf,.jpg,.jpeg,.png,.zip"
                     {{ $allowEdit ? '' : 'disabled' }}
                   >
+                  @if($allowEdit)
+                    <div class="form-text text-muted">
+                      Max. file size: <strong>2MB</strong>. Allowed types: <strong>.pdf, .jpg, .png, .zip</strong>.
+                    </div>
+                  @endif
                 </div>
               </div>
             </div>

@@ -29,14 +29,14 @@
                             <div class="mb-3">
                                 <label class="form-label">Name</label>
                                 <input type="text" name="name" class="form-control" value="{{ old('name') }}">
-                                @error('npk')
+                                @error('name')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Description</label>
                                 <input type="text" name="description" class="form-control" value="{{ old('description') }}">
-                                @error('name')
+                                @error('description')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
