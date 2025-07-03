@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -29,12 +30,24 @@ class DatabaseSeeder extends Seeder
         // ];
 
         // DB::table('alc')->insert($data);
-        $this->call([
-            PlantSeeder::class,
-            DivisionSeeder::class,
-            DepartmentSeeder::class,
-            SectionSeeder::class,
-            SubSectionSeeder::class,
-        ]);
+        // $this->call([
+        //     PlantSeeder::class,
+        //     DivisionSeeder::class,
+        //     DepartmentSeeder::class,
+        //     SectionSeeder::class,
+        //     SubSectionSeeder::class,
+        // ]);
+
+        $users = User::with('employee')->get();
+
+        foreach ($users as $user) {
+            // Buat password baru
+            $newPassword = 'P@55w0rd' . substr($user->employee->npk, -4);
+
+            // Update password
+            $user->update([
+                'password' => bcrypt($newPassword),
+            ]);
+        }
     }
 }
