@@ -2,29 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Controllers\Controller;
+use DataTables;
 use App\Models\Alc;
-use App\Models\Assessment;
-use App\Models\Department;
-use App\Models\DetailAssessment;
+use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
-use App\Models\Section;
-
+use App\Models\Assessment;
+use App\Models\Department;
 use App\Models\SubSection;
-use DataTables;
+
+use Illuminate\Support\Str;
+use App\Models\DetailAssessment;
+use Illuminate\Support\Facades\DB;
+
+use App\Http\Controllers\Controller;
+
 use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Support\Facades\Http;
 
-use Illuminate\Support\Str;
-
-use Symfony\Component\HttpFoundation\Request;
-
+use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\Request;
 
 class AssessmentController extends Controller
 {
@@ -358,7 +358,7 @@ class AssessmentController extends Controller
         $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
-            'description' => 'required|string',
+            // 'description' => 'required|string',
             'upload' => 'nullable|file|mimes:pdf|max:2048',
             'alc_ids' => 'required|array',
             'alc_ids.*' => 'exists:alc,id',
