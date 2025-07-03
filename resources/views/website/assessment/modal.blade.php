@@ -51,6 +51,38 @@
                     </div>
 
                     <div class="mb-4">
+                        <label for="target" class="form-label">Target Position</label>
+                        <select id="target" name="target" data-placeholder="Select Position..."
+                            class="form-select form-select-lg fw-semibold" required>
+                            <option value="">Select Position</option>
+                            <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
+                            <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager</option>
+                            <option data-kt-flag="flags/afghanistan.svg" value="Act GM">Act General Manager
+                            </option>
+                            <option data-kt-flag="flags/afghanistan.svg" value="Manager">Manager</option>
+                            <option data-kt-flag="flags/afghanistan.svg" value="Act Manager">Act Manager
+                            </option>
+                            <option data-kt-flag="flags/aland-islands.svg" value="Coordinator">Coordinator
+                            </option>
+                            <option data-kt-flag="flags/aland-islands.svg" value="Act Coordinator">Act
+                                Coordinator
+                            </option>
+                            <option data-kt-flag="flags/albania.svg" value="Section Head">Section Head
+                            </option>
+                            <option data-kt-flag="flags/albania.svg" value="Act Section Head">Act Section Head
+                            </option>
+                            <option data-kt-flag="flags/algeria.svg" value="Supervisor">Supervisor</option>
+                            <option data-kt-flag="flags/algeria.svg" value="Act Supervisor">Act Supervisor
+                            </option>
+                            <option data-kt-flag="flags/algeria.svg" value="Leader">Leader</option>
+                            <option data-kt-flag="flags/algeria.svg" value="Act Leader">Act Leader</option>
+                            <option data-kt-flag="flags/algeria.svg" value="JP">JP</option>
+                            <option data-kt-flag="flags/algeria.svg" value="Act JP">Act JP</option>
+                            <option data-kt-flag="flags/algeria.svg" value="Operator">Operator</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
 
                         <input type="hidden" id="description" name="description" required>
 
@@ -290,6 +322,13 @@
             const selectedOption = $(this).find('option:selected');
             const position = selectedOption.data('position') || '';
             $('#description').val(position);
+        });
+
+        $('#target').select2({
+            dropdownParent: $('#addAssessmentModal'),
+            placeholder: "Pilih Employee",
+            allowClear: false,
+            width: '100%'
         });
     });
 </script>

@@ -21,13 +21,6 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Approval ICP List</h3>
-                {{-- <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                </div> --}}
             </div>
 
             <div class="card-body">
@@ -75,7 +68,7 @@
 
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted">Tidak ada IDP yang menunggu approval.
+                                <td colspan="7" class="text-center text-muted">Tidak ada ICP yang menunggu approval.
                                 </td>
                             </tr>
                         @endforelse

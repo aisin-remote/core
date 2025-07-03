@@ -270,7 +270,8 @@
                             <tr>
                                 <td class="text-center">${index + 1}</td>
                                 <td class="text-center">${assessment.date}</td>
-                                <td class="text-center">${assessment.description || '-'}</td>
+                                <td class="text-center">${response.employee.position || '-'}</td>
+                                <td class="text-center">${assessment.target_position || '-'}</td>
                                 <td class="text-center">
                                     <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
                                         Detail

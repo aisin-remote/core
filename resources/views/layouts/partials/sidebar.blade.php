@@ -431,7 +431,7 @@
                             </div>
                         @endif
 
-                        {{-- @if ($isUser)
+                        @if ($isUser)
                             <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
                                 data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
                                 <span class="menu-link {{ $isIcp ? 'active' : '' }}">
@@ -474,7 +474,7 @@
                                         <div class="menu-sub menu-sub-accordion">
                                             <div class="menu-item">
                                                 <a class="menu-link {{ request()->is('icp/list/aii') ? 'active' : '' }}"
-                                                    href="/idp/list/aii">
+                                                    href="/icp/list/aii">
                                                     <span class="menu-bullet"><span
                                                             class="bullet bullet-dot"></span></span>
                                                     <span class="menu-title">AII</span>
@@ -482,7 +482,7 @@
                                             </div>
                                             <div class="menu-item">
                                                 <a class="menu-link {{ request()->is('icp/list/aiia') ? 'active' : '' }}"
-                                                    href="/idp/list/aiia">
+                                                    href="/icp/list/aiia">
                                                     <span class="menu-bullet"><span
                                                             class="bullet bullet-dot"></span></span>
                                                     <span class="menu-title">AIIA</span>
@@ -492,7 +492,7 @@
                                     </div>
                                 </div>
                             </div>
-                        @endif --}}
+                        @endif
                     </div>
                 </div>
             </div>
@@ -824,7 +824,7 @@
                             <span class="menu-title ps-1">RTC</span>
                         </a>
                     </div>
-                     <a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
+                    <a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
                         href="{{ route('icp.approval') }}">
                         {{-- <span class="menu-bullet"><i class="bullet bullet-dot"></i></span> --}}
                         <span class="menu-title ps-1">ICP</span>
