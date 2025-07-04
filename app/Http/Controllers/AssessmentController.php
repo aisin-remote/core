@@ -357,7 +357,7 @@ class AssessmentController extends Controller
         $request->validate([
             'employee_id' => 'required|exists:employees,id',
             'date' => 'required|date',
-            // 'description' => 'required|string',
+            'target' => 'required|string',
             'upload' => 'nullable|file|mimes:pdf|max:2048',
             'alc_ids' => 'required|array',
             'alc_ids.*' => 'exists:alc,id',
@@ -380,6 +380,7 @@ class AssessmentController extends Controller
             'employee_id' => $request->employee_id,
             'date' => $request->date,
             'description' => $request->description,
+            'target' => $request->target,
             'upload' => $filePath,
         ]);
 

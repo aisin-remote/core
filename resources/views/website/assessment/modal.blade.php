@@ -96,7 +96,7 @@
                                 <input type="hidden" name="alc_ids[]" value="{{ $alc->id }}">
                                 <div class="mb-2">
                                     <div class="d-flex gap-10">
-                                        @for ($i = 1; $i <= 5; $i++)
+                                        @for ($i = 0; $i <= 5; $i++)
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio"
                                                     name="scores[{{ $alc->id }}]"
