@@ -380,7 +380,7 @@ class AssessmentController extends Controller
             'employee_id' => $request->employee_id,
             'date' => $request->date,
             'description' => $request->description,
-            'target' => $request->target,
+            'target_position' => $request->target,
             'upload' => $filePath,
         ]);
 
