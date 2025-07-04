@@ -289,14 +289,12 @@ class MasterController extends Controller
 
     public function subSectionStore(Request $request)
     {
-        $request->validate([
-            'name' => 'required|string',
-            'section_id' => 'required|string|max:255',
-            'leader_id' => 'required|string|max:255',
-        ]);
-        
-        dd($request);
-
+        // $request->validate([
+        //     'name' => 'required|string',
+        //     'section_id' => 'required|string|max:255',
+        //     'leader_id' => 'required|string|max:255',
+        // ]);
+    
         try {
             SubSection::create([
                 'name' => $request->name,
