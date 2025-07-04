@@ -8,8 +8,8 @@ use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\SubSection;
-use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 
 class MasterController extends Controller
 {
@@ -294,6 +294,8 @@ class MasterController extends Controller
             'section_id' => 'required|string|max:255',
             'leader_id' => 'required|string|max:255',
         ]);
+        
+        dd($request);
 
         try {
             SubSection::create([
