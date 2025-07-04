@@ -703,7 +703,7 @@
                                                     <div class="fw-semibold text-gray-600">
                                                         <span class="text-content"
                                                             data-fulltext="{!! htmlentities($detail->strength) !!}">
-                                                            {!! Str::limit($detail->strength, 200) !!}
+                                                            {!! strlen($detail->strength) > 200 ? substr($detail->strength, 0, 200) . '...' : $detail->strength !!}
                                                         </span>
                                                         <br>
                                                         @if (strlen(strip_tags($detail->strength)) > 200)
@@ -765,7 +765,7 @@
                                                     <div class="fw-semibold text-gray-600">
                                                         <span class="text-content"
                                                             data-fulltext="{!! htmlentities($detail->weakness) !!}">
-                                                            {!! Str::limit($detail->weakness, 200) !!}
+                                                            {!! strlen($detail->weakness) > 200 ? substr($detail->weakness, 0, 200) . '...' : $detail->weakness !!}
                                                         </span>
                                                         <br>
                                                         @if (strlen(strip_tags($detail->weakness)) > 200)
