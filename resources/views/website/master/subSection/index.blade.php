@@ -59,8 +59,9 @@
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
-                            <th>Name</th>
+                            <th>Sub Secion Name</th>
                             <th>Section</th>
+                            <th>Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -70,6 +71,7 @@
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $subSection->name }}</td>
                                 <td>{{ $subSection->section->name }}</td>
+                                <td>{{ $subSection->leader->name }}</td>
                                 <td class="text-center">
                                     <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#editSubSectionModal{{ $subSection->id }}">
