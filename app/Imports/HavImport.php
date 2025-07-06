@@ -143,9 +143,9 @@ class HavImport implements WithMultipleSheets, WithEvents
                             'suggestion_development' => $sheet->getCell($developmentMap[$index])->getCalculatedValue(),
                             'is_assessment' => 0,
                         ]);
-                    }
 
-                    dd($quadrant);
+                        DB::commit();
+                    }
 
                     // Step 4: Save Comment History (new functionality)
 
