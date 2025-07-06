@@ -55,14 +55,14 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
                     // === Step 1: HAV update or create ===
                     if ($this->havId) {
                         $hav = Hav::findOrFail($this->havId);
-                        $hav->status = 0;
+                        $hav->status = 2;
                         $hav->year = $year;
 
                         HavDetail::where('hav_id', $hav->id)->delete();
                     } else {
                         $hav = new Hav();
                         $hav->employee_id = $employee->id;
-                        $hav->status = 0;
+                        $hav->status = 2;
                         $hav->year = $year;
                     }
 
@@ -109,26 +109,10 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
                             'score' => floatval($sheet->getCell($cell)->getCalculatedValue()),
                             'evidence' => $sheet->getCell($evidenceMap[$index])->getCalculatedValue(),
                             'suggestion_development' => $sheet->getCell($developmentMap[$index])->getCalculatedValue(),
-                            'is_assessment' => 0,
+                            'is_assessment' => 1,
                         ]);
                     }
-
-                    // === Step 4: Comment history ===
-                    if ($this->filePath) {
-                        $user = auth()->user();
-                        if (!$user || !$user->employee) {
-                            throw new \Exception('User tidak ditemukan atau belum terkait ke employee.');
-                        }
-
-                        HavCommentHistory::create([
-                            'hav_id' => $hav->id,
-                            'employee_id' => $user->employee->id,
-                            'comment' => $comment,
-                            'upload' => $this->filePath,
-                        ]);
-                    }
-
-                    // === COMMIT transaksi ===
+                    
                     DB::commit();
                 } catch (\Throwable $e) {
                     DB::rollBack();
