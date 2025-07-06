@@ -127,8 +127,6 @@ class HavImport implements WithMultipleSheets, WithEvents
                         $sheet->getCell($scoreMap[7])->getCalculatedValue(),
                         $sheet->getCell($scoreMap[8])->getCalculatedValue(),
                     );
-
-                    dd($quadrant);
                     
                     $hav->quadrant = $quadrant;
                     $hav->save();
