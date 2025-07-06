@@ -783,51 +783,69 @@ class IdpController extends Controller
         }
     }
 
-
-
     public function approval()
     {
         $user = auth()->user();
         $employee = $user->employee;
 
-        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
         $checkLevel = $employee->getFirstApproval();
         $approveLevel = $employee->getFinalApproval();
-
-
         $normalized = $employee->getNormalizedPosition();
 
         if ($normalized === 'vpd') {
-            // Jika VPD, filter GM untuk check dan Manager untuk approve
             $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
             $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
         } else {
-            // Default (tidak filter posisi bawahannya)
             $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
             $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
         }
 
+        // === Tahap 1: CHECK ===
         $checkIdps = Idp::with('hav.hav.employee', 'hav')
             ->where('status', 1)
             ->whereHas('hav.hav.employee', function ($q) use ($subCheck) {
                 $q->whereIn('employee_id', $subCheck);
             })
-            ->get();
+            ->get()
+            ->filter(function ($idp) {
+                $havId = $idp->hav->hav_id ?? null;
+                if (!$havId) return false;
+
+                // Tidak ada yang status = -1
+                return !Idp::whereHas('hav', function ($q) use ($havId) {
+                    $q->where('hav_id', $havId);
+                })->where('status', -1)->exists();
+            });
 
         $checkIdpIds = $checkIdps->pluck('id')->toArray();
 
+        // === Tahap 2: APPROVE ===
         $approveIdps = Idp::with('hav.hav.employee', 'hav')
             ->where('status', 2)
             ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
                 $q->whereIn('employee_id', $subApprove);
             })
-            ->whereNotIn('id', $checkIdpIds) // ← filter agar tidak muncul dua kali
-            ->get();
+            ->whereNotIn('id', $checkIdpIds)
+            ->get()
+            ->filter(function ($idp) {
+                $havId = $idp->hav->hav_id ?? null;
+                if (!$havId) return false;
+
+                $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
+                        $q->where('hav_id', $havId);
+                    })
+                    ->pluck('status')
+                    ->toArray();
+
+                // Semua status harus 2, dan tidak boleh ada -1
+                return count(array_unique($relatedStatuses)) === 1 && $relatedStatuses[0] === 2;
+            });
 
         $idps = $checkIdps->merge($approveIdps);
 
         return view('website.approval.idp.index', compact('idps'));
     }
+
     public function approve($id)
     {
         $idp = Idp::findOrFail($id);

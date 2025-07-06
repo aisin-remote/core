@@ -105,7 +105,8 @@
                                                                         <td>{{ $idp->development_target }}</td>
                                                                         <td>{{ $idp->date }}</td>
                                                                         <td class="text-center">
-                                                                            <span class="badge badge-danger">2</span>
+                                                                            <span
+                                                                                class="badge badge-danger">{{ $idp->hav->score }}</span>
                                                                         </td>
                                                                         <td class="text-center">
                                                                             <button class="btn btn-sm btn-danger btn-revise"

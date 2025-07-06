@@ -194,11 +194,21 @@
                                                                 }
                                                             }
 
-                                                            $status = 'not_created'; // Default sekarang jadi not_created
+                                                            $status = 'not_created'; // Default jika tidak ada satupun IDP
+
+                                                            $statusPriority = [
+                                                                'draft' => 1,
+                                                                'waiting' => 2,
+                                                                'checked' => 3,
+                                                                'approved' => 4,
+                                                                'revise' => 0, // revisi paling prioritas
+                                                            ];
+
+                                                            $collectedStatuses = [];
 
                                                             foreach ($assessment->details as $detail) {
                                                                 if (
-                                                                    $detail->score <= 3 || // <= 3 agar score 3 juga bisa input IDP
+                                                                    $detail->score <= 3 ||
                                                                     $detail->suggestion_development !== null
                                                                 ) {
                                                                     $idp = \App\Models\Idp::where(
@@ -208,38 +218,37 @@
                                                                         ->where('alc_id', $detail->alc_id)
                                                                         ->first();
 
-                                                                    if (!$idp) {
-                                                                        $status = 'not_created';
-                                                                        break;
-                                                                    } elseif ($idp->status === 0) {
-                                                                        $status = 'draft';
-                                                                        break;
-                                                                    } elseif (
-                                                                        $idp->status === 1 &&
-                                                                        $status !== 'draft'
-                                                                    ) {
-                                                                        $status = 'waiting';
-                                                                    } elseif (
-                                                                        $idp->status === 2 &&
-                                                                        !in_array($status, [
-                                                                            'not_created',
-                                                                            'draft',
-                                                                            'waiting',
-                                                                        ])
-                                                                    ) {
-                                                                        $status = 'checked';
-                                                                    } elseif (
-                                                                        $idp->status === 3 &&
-                                                                        !in_array($status, [
-                                                                            'not_created',
-                                                                            'draft',
-                                                                            'waiting',
-                                                                            'checked',
-                                                                        ])
-                                                                    ) {
-                                                                        $status = 'approved';
+                                                                    if ($idp) {
+                                                                        switch ($idp->status) {
+                                                                            case 0:
+                                                                                $collectedStatuses[] = 'draft';
+                                                                                break;
+                                                                            case 1:
+                                                                                $collectedStatuses[] = 'waiting';
+                                                                                break;
+                                                                            case 2:
+                                                                                $collectedStatuses[] = 'checked';
+                                                                                break;
+                                                                            case 3:
+                                                                                $collectedStatuses[] = 'approved';
+                                                                                break;
+                                                                            case -1:
+                                                                                $collectedStatuses[] = 'revise';
+                                                                                break;
+                                                                        }
                                                                     }
                                                                 }
+                                                            }
+
+                                                            if (count($collectedStatuses) > 0) {
+                                                                // Ambil status dengan prioritas paling rendah angkanya
+                                                                usort($collectedStatuses, function ($a, $b) use (
+                                                                    $statusPriority,
+                                                                ) {
+                                                                    return $statusPriority[$a] <=> $statusPriority[$b];
+                                                                });
+
+                                                                $status = $collectedStatuses[0]; // status prioritas tertinggi
                                                             }
 
                                                             $badges = [
@@ -268,7 +277,7 @@
                                                                     'class' => 'light-success',
                                                                 ],
                                                                 'revise' => [
-                                                                    'text' => 'Revise',
+                                                                    'text' => 'Need Revise',
                                                                     'class' => 'light-danger',
                                                                 ],
                                                             ];
@@ -302,7 +311,7 @@
                                                                 'not_created',
                                                                 'draft',
                                                             ])
-                                                                ? 'disabled'
+                                                                ? 'none'
                                                                 : '';
 
                                                         @endphp
@@ -382,7 +391,7 @@
                                                             @if (!$isHRDorDireksi)
                                                                 <button type="button" class="btn btn-sm btn-warning"
                                                                     onclick="sendDataConfirmation({{ $assessment->employee->id }})"
-                                                                    {{ $disableButton }}>
+                                                                    style="display: {{ $disableButton }}">
                                                                     <i class="fas fa-paper-plane"></i>
                                                                 </button>
                                                             @endif

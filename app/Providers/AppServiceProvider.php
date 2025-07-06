@@ -194,10 +194,41 @@ class AppServiceProvider extends ServiceProvider
             ->unique('employee_npk')
             ->values(); // Reset index
             
+            $reviseIdps = Employee::with(['hav.details.idp' => function ($query) {
+                $query->where('status', -1)->orderBy('created_at');
+            }])
+            ->whereIn('id', $subCreate)
+            ->whereHas('hav.details.idp', function ($query) {
+                $query->where('status', -1);
+            })
+            ->get();
+    
+            $reviseIdpCollection = $reviseIdps->flatMap(function ($employee) {
+                return $employee->hav->flatMap(function ($hav) use ($employee) {
+                    return collect($hav->details)->flatMap(function ($detail) use ($employee) {
+                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+            
+                        return $idps->filter(fn($idp) => $idp->status === -1)->map(function ($idp) use ($employee) {
+                            return [
+                                'type' => 'revise',
+                                'employee_name' => $employee->name,
+                                'employee_npk' => $employee->npk,
+                                'employee_company' => $employee->company_name,
+                                'category' => $idp->category ?? '-',
+                                'program' => $idp->development_program ?? '-',
+                                'target' => $idp->development_target ?? '-',
+                                'created_at' => $idp->created_at,
+                            ];
+                        });
+                    });
+                });
+            });
+            
             // Gabungkan semua ke satu koleksi
             $allIdpTasks = $unassignedIdps
-                ->merge($draftIdpCollection)
-                ->merge($pendingIdpCollection);
+            ->merge($draftIdpCollection)
+            ->merge($pendingIdpCollection)
+            ->merge($reviseIdpCollection);
 
 
             // HAV //

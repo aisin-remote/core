@@ -53,8 +53,17 @@ class ToDoListController extends Controller
         $emp = [];
         foreach ($assessments as $assessment) {
             foreach ($assessment->details as $detail) {
-                // Jika score < 3 atau ada saran pengembangan, dan IDP-nya tidak kosong
-                if (($detail->score < 3 || $detail->suggestion_development !== null) && !empty($detail->idp)) {
+                $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+        
+                // Ambil IDP yang bukan status -1
+                $validIdp = $idps->first(function ($idp) {
+                    return $idp && $idp->status !== -1;
+                });
+        
+                if (
+                    ($detail->score < 3 || $detail->suggestion_development !== null) &&
+                    $validIdp
+                ) {
                     $emp[$assessment->employee_id][] = [
                         'hav_detail_id' => $detail->id,
                         'alc_id' => $detail->alc_id,
@@ -63,14 +72,12 @@ class ToDoListController extends Controller
                 }
             }
         }        
-            
-        // lalu crosscek di tabel idp, sudah ada atau belum
-        $employeeNames = $assessments->pluck('employee.name','employee_id')->toArray();
-        $employeeNpk = $assessments->pluck('employee.npk','employee_id')->toArray();
-        $employeeCompany = $assessments->pluck('employee.company_name','employee_id')->toArray();
-        $notExistInIdp = [];
         
-        // idp yang belum di create
+        $employeeNames = $assessments->pluck('employee.name', 'employee_id')->toArray();
+        $employeeNpk = $assessments->pluck('employee.npk', 'employee_id')->toArray();
+        $employeeCompany = $assessments->pluck('employee.company_name', 'employee_id')->toArray();
+        
+        $notExistInIdp = [];
         foreach ($emp as $employeeId => $items) {
             foreach ($items as $item) {
                 $exists = Idp::where('hav_detail_id', $item['hav_detail_id'])
@@ -86,54 +93,22 @@ class ToDoListController extends Controller
                         'alc_id' => $item['alc_id'],
                         'alc_name' => $item['alc_name'] ?? 'Unknown',
                     ];
-                    break; // ✅ Langsung lanjut ke karyawan berikutnya
+                    break;
                 }
             }
-        }  
-                
-        // Ambil IDP yang statusnya 0 (draft)
+        }
+        
+        // === Draft ===
         $draftIdps = Employee::with(['hav.details' => function ($query) {
-            $query->whereHas('idp', function ($q) {
-                $q->where('status', 0);
-            })->with(['idp' => function ($q) {
-                $q->where('status', 0);
-            }])->orderBy('created_at')->take(1);
+            $query->whereHas('idp', fn($q) => $q->where('status', 0))
+                  ->with(['idp' => fn($q) => $q->where('status', 0)])
+                  ->orderBy('created_at')
+                  ->take(1);
         }])
         ->whereIn('id', $subCreate)
-        ->whereHas('hav.details.idp', function ($query) {
-            $query->where('status', 0);
-        })
+        ->whereHas('hav.details.idp', fn($q) => $q->where('status', 0))
         ->get();
-
-        // Ambil IDP yang statusnya 1 (perlu dicek)
-        $checkIdps = Employee::with(['hav.details.idp' => function ($query) {
-                $query->where('status', 1)->orderBy('created_at');
-            }])
-            ->whereIn('id', $subCheck)
-            ->whereHas('hav.details.idp', function ($query) {
-                $query->where('status', 1);
-            })
-            ->get();
-            
-        $approveIdps = Employee::with(['hav.details.idp' => function ($query) {
-                $query->where('status', 2)->orderBy('created_at');
-            }])
-            ->whereIn('id', $subApprove)
-            ->whereHas('hav.details.idp', function ($query) {
-                $query->where('status', 2);
-            })
-            ->get();
-
-        // Gabungkan IDP yang perlu dicek dan approve
-        $pendingIdps = $checkIdps->merge($approveIdps);
-
-        // Koleksi: unassigned
-        $unassignedIdps = collect($notExistInIdp)->map(function ($item) {
-        $item['type'] = 'unassigned';
-        return $item;
-        });
-
-        // Koleksi: draft
+        
         $draftIdpCollection = $draftIdps->map(function ($employee) {
             $hav = $employee->hav->first();
             $detail = optional($hav?->details->first());
@@ -149,14 +124,62 @@ class ToDoListController extends Controller
                 'target' => $idp?->development_target ?? '-',
             ];
         });
-
-        // Koleksi: pending (need_check / need_approval)
+        
+        // === Revisi ===
+        $reviseIdps = Employee::with(['hav.details.idp' => fn($q) => $q->where('status', -1)->orderBy('created_at')])
+            ->whereIn('id', $subCreate)
+            ->whereHas('hav.details.idp', fn($q) => $q->where('status', -1))
+            ->get();
+        
+        $reviseIdpCollection = $reviseIdps->flatMap(function ($employee) {
+            return $employee->hav->flatMap(function ($hav) use ($employee) {
+                return collect($hav->details)->flatMap(function ($detail) use ($employee) {
+                    $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+                    return $idps->filter(fn($idp) => $idp->status === -1)->map(function ($idp) use ($employee) {
+                        return [
+                            'type' => 'revise',
+                            'employee_name' => $employee->name,
+                            'employee_npk' => $employee->npk,
+                            'employee_company' => $employee->company_name,
+                            'category' => $idp->category ?? '-',
+                            'program' => $idp->development_program ?? '-',
+                            'target' => $idp->development_target ?? '-',
+                            'created_at' => $idp->created_at,
+                        ];
+                    });
+                });
+            });
+        });
+        
+        // === Pending (status 1 dan 2)
+        $checkIdps = Employee::with(['hav.details.idp' => fn($q) => $q->where('status', 1)->orderBy('created_at')])
+            ->whereIn('id', $subCheck)
+            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 1))
+            ->get();
+        
+            $approveIdps = Employee::with(['hav.details.idp' => fn($q) => $q->orderBy('created_at')])
+            ->whereIn('id', $subApprove)
+            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 2))
+            ->get()
+            ->filter(function ($employee) {
+                return $employee->hav->every(function ($hav) {
+                    $statuses = collect($hav->details)->flatMap(function ($detail) {
+                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+                        return $idps->pluck('status');
+                    })->unique();
+        
+                    // Harus semua status 2 dan tidak ada -1
+                    return $statuses->count() === 1 && $statuses->first() === 2;
+                });
+            });
+        
+        $pendingIdps = $checkIdps->merge($approveIdps);
+        
         $pendingIdpCollection = $pendingIdps->flatMap(function ($employee) {
             return $employee->hav->flatMap(function ($hav) use ($employee) {
                 return collect($hav->details)->flatMap(function ($detail) use ($employee) {
                     $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-        
-                    return $idps->map(function ($idp) use ($employee) {
+                    return $idps->filter(fn($idp) => in_array($idp->status, [1, 2]))->map(function ($idp) use ($employee) {
                         return [
                             'type' => $idp->status === 1 ? 'need_check' : 'need_approval',
                             'employee_name' => $employee->name,
@@ -171,17 +194,21 @@ class ToDoListController extends Controller
                 });
             });
         })
-        // Sort by IDP creation time if needed
         ->sortBy('created_at')
-        // Hapus duplikat berdasarkan employee_npk
         ->unique('employee_npk')
-        ->values(); // Reset index               
+        ->values();
         
-        // Gabungkan semua ke satu koleksi
+        // === Unassigned
+        $unassignedIdps = collect($notExistInIdp)->map(function ($item) {
+            $item['type'] = 'unassigned';
+            return $item;
+        });
+        
+        // === Gabung semua
         $allIdpTasks = $unassignedIdps
-        ->merge($draftIdpCollection)
-        ->merge($pendingIdpCollection);
-
+            ->merge($draftIdpCollection)
+            ->merge($reviseIdpCollection)
+            ->merge($pendingIdpCollection);        
 
         // HAV //
         $allHavTasks = Hav::with('employee')

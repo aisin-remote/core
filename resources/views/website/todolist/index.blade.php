@@ -59,6 +59,7 @@
                                             @elseif($item['type'] === 'need_check') bg-warning-subtle
                                             @elseif($item['type'] === 'draft') bg-warning-subtle
                                             @elseif($item['type'] === 'need_approval') bg-info-subtle
+                                            @elseif($item['type'] === 'revise') bg-danger-subtle
                                             @else bg-light @endif
                                             hover-shadow">
                                             <div class="card-body d-flex justify-content-between align-items-center">
@@ -71,6 +72,7 @@
                                                     @elseif($item['type'] === 'need_check') badge-warning
                                                     @elseif($item['type'] === 'draft') badge-warning
                                                     @elseif($item['type'] === 'need_approval') badge-info
+                                                    @elseif($item['type'] === 'revise') badge-danger
                                                     @else badge-secondary @endif
                                                     rounded-pill px-3 py-2">
                                                     @if ($item['type'] === 'unassigned')
@@ -81,6 +83,8 @@
                                                         <i class="fas fa-hourglass-half me-2"></i> Need Approve
                                                     @elseif($item['type'] === 'draft')
                                                         <i class="fas fa-exclamation-circle me-2"></i> Need Submit
+                                                    @elseif($item['type'] === 'revise')
+                                                        <i class="fas fa-undo me-2"></i> Need Revise
                                                     @else
                                                         Unknown
                                                     @endif
