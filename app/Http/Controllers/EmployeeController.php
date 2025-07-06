@@ -2,33 +2,33 @@
 
 namespace App\Http\Controllers;
 
-use App\Imports\EmployeeImport;
-use App\Imports\MasterImports;
-use App\Models\Assessment;
-use App\Models\AstraTraining;
-use App\Models\Department;
-use App\Models\Division;
-use App\Models\EducationalBackground;
-use App\Models\Employee;
-use App\Models\ExternalTraining;
-use App\Models\GradeConversion;
+use Carbon\Carbon;
 use App\Models\Hav;
 use App\Models\Idp;
-use App\Models\MutationHistory;
-use App\Models\PerformanceAppraisalHistory;
-use App\Models\Plant;
-use App\Models\PromotionHistory;
-use App\Models\Section;
-use App\Models\SubSection;
 use App\Models\User;
-use App\Models\WorkingExperience;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Storage;
+use App\Models\Plant;
+use App\Models\Section;
+use App\Models\Division;
+use App\Models\Employee;
+use App\Models\Assessment;
+use App\Models\Department;
+use App\Models\SubSection;
 use Illuminate\Support\Str;
+use Illuminate\Http\Request;
+use App\Models\AstraTraining;
+use App\Imports\MasterImports;
+use App\Imports\EmployeeImport;
+use App\Models\GradeConversion;
+use App\Models\MutationHistory;
+use App\Models\ExternalTraining;
+use App\Models\PromotionHistory;
+use App\Models\WorkingExperience;
+use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\EducationalBackground;
+use Illuminate\Support\Facades\Storage;
+use App\Models\PerformanceAppraisalHistory;
+use Illuminate\Pagination\LengthAwarePaginator;
 
 
 class EmployeeController extends Controller
@@ -1141,7 +1141,7 @@ class EmployeeController extends Controller
 
             $validatedData = $request->validate([
                 'score' => 'required',
-                'description' => 'required',
+                // 'description' => 'required',
                 'date' => 'required|date',
             ]);
 
@@ -1177,7 +1177,7 @@ class EmployeeController extends Controller
 
         $validatedData = $request->validate([
             'score' => 'required',
-            'description' => 'required',
+            // 'description' => 'required',
             'date' => 'required|date',
         ]);
 
