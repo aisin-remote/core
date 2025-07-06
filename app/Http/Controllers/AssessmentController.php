@@ -368,14 +368,14 @@ class AssessmentController extends Controller
             'suggestion_development' => 'nullable|array',
         ]);
 
-        // Simpan file jika ada
+        // Simpan file upload jika ada
         $filePath = null;
         if ($request->hasFile('upload')) {
             $filePath = 'uploads/assessments/' . $request->file('upload')->hashName();
             $request->file('upload')->storeAs('public', $filePath);
         }
 
-        // Simpan data utama ke tabel assessments
+        // Simpan assessment utama
         $assessment = Assessment::create([
             'employee_id' => $request->employee_id,
             'date' => $request->date,
@@ -384,25 +384,25 @@ class AssessmentController extends Controller
             'upload' => $filePath,
         ]);
 
-        // Simpan data detail ke tabel assessment_details
+        // Simpan detail assessment
         $assessmentDetails = [];
         foreach ($request->alc_ids as $index => $alc_id) {
-            DB::table('detail_assessments')
-                ->updateOrInsert(
-                    [
-                        'assessment_id' => $assessment->id,
-                        'alc_id' => $alc_id
-                    ],
-                    [
-                        'score' => $request->scores[$alc_id] ?? "0",  // Ambil nilai score berdasarkan ALC ID
-                        'strength' => $request->strength[$alc_id] ?? "", // Ambil nilai strength berdasarkan ALC ID
-                        'weakness' => $request->weakness[$alc_id] ?? "",
-                        'suggestion_development' => $request->suggestion_development[$alc_id] ?? "",
-                        'updated_at' => now()
-                    ]
-                );
+            DB::table('detail_assessments')->updateOrInsert(
+                [
+                    'assessment_id' => $assessment->id,
+                    'alc_id' => $alc_id
+                ],
+                [
+                    'score' => $request->scores[$alc_id] ?? "0",
+                    'strength' => $request->strength[$alc_id] ?? "",
+                    'weakness' => $request->weakness[$alc_id] ?? "",
+                    'suggestion_development' => $request->suggestion_development[$alc_id] ?? "",
+                    'updated_at' => now()
+                ]
+            );
         }
-        // Simpan ke tabel hav
+
+        // Simpan ke HAV (sementara, akan di-update oleh import)
         $latestHav = DB::table('havs')
             ->where('employee_id', $request->employee_id)
             ->latest('created_at')
@@ -422,6 +422,7 @@ class AssessmentController extends Controller
         $spreadsheet = IOFactory::load($templatePath);
         $sheet = $spreadsheet->getActiveSheet();
 
+        // Isi identitas pegawai
         $employee = Employee::with('departments')->findOrFail($request->employee_id);
         $sheet->setCellValue("C6", $employee->name);
         $sheet->setCellValue("C7", $employee->npk);
@@ -431,68 +432,57 @@ class AssessmentController extends Controller
         $sheet->setCellValue("C11", $employee->position);
         $sheet->setCellValue("C13", date('Y'));
 
-        // ALC mapping ke kolom & baris
+        // Mapping skor dan saran
         $alcMapping = [
-            1 => ['D', [17, 18, 19]],                          // Vision & Business Sense
-            2 => ['I', [17, 18, 19, 20, 21, 22, 23]],           // Customer Focus
-            3 => ['O', [17, 18, 19, 20]],                      // Interpersonal Skill
-            4 => ['T', [17, 18, 19, 20]],                      // Analysis & Judgment
-            5 => ['D', [27, 28, 29, 30, 31]],                  // Planning & Driving Action
-            6 => ['I', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]], // Leading & Motivating
-            7 => ['O', [27, 28, 29, 30, 31, 32, 33]],          // Teamwork
-            8 => ['T', [27, 28, 29, 30, 31, 32, 33]],          // Drive & Courage
+            1 => ['D', [17, 18, 19]],
+            2 => ['I', [17, 18, 19, 20, 21, 22, 23]],
+            3 => ['O', [17, 18, 19, 20]],
+            4 => ['T', [17, 18, 19, 20]],
+            5 => ['D', [27, 28, 29, 30, 31]],
+            6 => ['I', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]],
+            7 => ['O', [27, 28, 29, 30, 31, 32, 33]],
+            8 => ['T', [27, 28, 29, 30, 31, 32, 33]],
         ];
 
         $suggestionMapping = [
-            1 => ['F', [17, 18, 19]],                             // Vision & Business Sense
-            2 => ['K', [17, 18, 19, 20, 21, 22, 23]],              // Customer Focus
-            3 => ['Q', [17, 18, 19, 20]],                          // Interpersonal Skill
-            4 => ['V', [17, 18, 19, 20]],                          // Analysis & Judgment
-            5 => ['F', [27, 28, 29, 30, 31]],                      // Planning & Driving Action
-            6 => ['K', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]],  // Leading & Motivating
-            7 => ['Q', [27, 28, 29, 30, 31, 32, 33]],              // Teamwork
-            8 => ['V', [27, 28, 29, 30, 31, 32, 33]],              // Drive & Courage
+            1 => ['F', [17, 18, 19]],
+            2 => ['K', [17, 18, 19, 20, 21, 22, 23]],
+            3 => ['Q', [17, 18, 19, 20]],
+            4 => ['V', [17, 18, 19, 20]],
+            5 => ['F', [27, 28, 29, 30, 31]],
+            6 => ['K', [27, 28, 29, 30, 31, 32, 33, 34, 35, 36]],
+            7 => ['Q', [27, 28, 29, 30, 31, 32, 33]],
+            8 => ['V', [27, 28, 29, 30, 31, 32, 33]],
         ];
-        // Simpan ke hav_details + isi Excel
+
         foreach ($request->alc_ids as $alc_id) {
             $score = $request->scores[$alc_id] ?? "0";
             $suggestion = $request->suggestion_development[$alc_id] ?? "";
 
-            DB::table('hav_details')->insert([
-                'hav_id' => $havId,
-                'alc_id' => $alc_id,
-                'score' => $score,
-                'is_assessment' => 1,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-
+            // isi skor di cell
             if (isset($alcMapping[$alc_id])) {
                 [$col, $rows] = $alcMapping[$alc_id];
                 foreach ($rows as $row) {
                     $sheet->setCellValue("{$col}{$row}", $score);
                 }
             }
+
+            // isi suggestion di cell terformat merge
             if (isset($suggestionMapping[$alc_id])) {
                 [$sugCol, $sugRows] = $suggestionMapping[$alc_id];
-
-                // Gabungkan rows menjadi satu teks panjang dengan line break antar baris
-                $mergedSuggestionRow = $sugRows[0]; // Tulis di baris awal saja
-                $sheet->mergeCells("{$sugCol}{$sugRows[0]}:{$sugCol}" . end($sugRows)); // Merge kolom
-                $sheet->setCellValue("{$sugCol}{$mergedSuggestionRow}", $suggestion);
-                $sheet->getStyle("{$sugCol}{$mergedSuggestionRow}")
-                    ->getAlignment()->setWrapText(true); // agar teks suggestion bisa panjang & terpotong otomatis
-                $style = $sheet->getStyle("{$sugCol}{$mergedSuggestionRow}");
-                $style->getFont()->setItalic(false);
+                $mergedRow = $sugRows[0];
+                $sheet->mergeCells("{$sugCol}{$sugRows[0]}:{$sugCol}" . end($sugRows));
+                $sheet->setCellValue("{$sugCol}{$mergedRow}", $suggestion);
+                $sheet->getStyle("{$sugCol}{$mergedRow}")->getAlignment()->setWrapText(true);
             }
         }
 
-        // Simpan file Excel ke storage
+        // Simpan file Excel
         $excelFileName = 'hav_uploads/hav_' . now()->timestamp . '.xlsx';
         $fullPath = storage_path("app/{$excelFileName}");
         (new Xlsx($spreadsheet))->save($fullPath);
 
-        // Simpan ke hav_comment_histories
+        // Simpan ke comment history (sementara, sebelum import)
         DB::table('hav_comment_histories')->insert([
             'hav_id' => $havId,
             'employee_id' => $request->employee_id,
@@ -501,49 +491,23 @@ class AssessmentController extends Controller
             'updated_at' => now(),
         ]);
 
-
-        // $token = "v2n49drKeWNoRDN4jgqcdsR8a6bcochcmk6YphL6vLcCpRZdV1";
-
-        // $user = Auth::user();
-        // $employee = $user->employee; // ambil employee yang login
-        // $rawNumber = $employee->phone_number ?? null;
-        // $formattedNumber = preg_replace('/^0/', '62', $rawNumber);
-
-        // if (!$formattedNumber) {
-        //     return response()->json([
-        //         'success' => false,
-        //         'message' => 'Nomor HP Anda tidak tersedia.',
-        //     ]);
-        // }
-
-        // $message = sprintf(
-        //     "Hallo Apakah Benar ini Nomor?"
-        // "✅ Assessment berhasil dikirim!\nID Assessment: %s\nTanggal: %s\nNama Pegawai: %s",
-        // $assessment->id,
-        // $assessment->date,
-        // $assessment->name ?? 'Anda'
-        // );
-
-        // $whatsappResponse = Http::asForm()
-        //     ->withOptions(['verify' => false])
-        //     ->post('https://app.ruangwa.id/api/send_message', [
-        //         'token' => $token,
-        //         'number' => $formattedNumber,
-        //         'message' => $message
-        //     ]);
-
-
-
-        // Jika mau debug response dari API
+        // ⬇⬇⬇ Jalankan Import HAV ⬇⬇⬇
+        try {
+            Excel::import(new MasterImports($excelFileName, $havId), $fullPath);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal import HAV: ' . $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Data assessment berhasil disimpan.',
+            'message' => 'Data assessment dan HAV berhasil disimpan.',
             'assessment' => $assessment,
-            'assessment_details' => $assessmentDetails,
-            // 'whatsapp_response' => $whatsappResponse->body()
         ]);
     }
+    
     public function getAssessmentDetail($employee_id)
     {
         // 🔹 Cari assessment terbaru dari employee
