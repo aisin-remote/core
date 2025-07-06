@@ -49,12 +49,6 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
                     throw new \Exception("Kolom Tahun tidak boleh kosong");
                 }
 
-                $cekpk = (new HavQuadrant())->getValidatedPerformanceScores($employee->id, $sheet->getCell('C13')->getCalculatedValue() - 1);
-
-                if (is_string($cekpk)) {
-                    throw new \Exception($cekpk);
-                }
-
                 DB::beginTransaction();
 
                 try {
