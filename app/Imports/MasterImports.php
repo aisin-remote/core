@@ -30,7 +30,7 @@ class MasterImports implements WithMultipleSheets
             // 'Performance Appraisal History' => new PerformanceAppraisal(),
             // 'Astra Training' => new AstraTrainings(),
             // 'Assessment' => new HavQuadrans(),
-            'Assessment' => new HavImport($this->filePath, $this->havId),
+            'Assessment' => new HavQuadrans($this->filePath, $this->havId)
             // 'External Training' => new ExternalTrainings(),
             // 'Promotion History' => new PromotionHistorys(),
 
