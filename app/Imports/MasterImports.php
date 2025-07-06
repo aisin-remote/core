@@ -11,6 +11,14 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class MasterImports implements WithMultipleSheets
 {
+    protected $filePath, $havId;
+
+    public function __construct($filePath, $havId = null)
+    {
+        $this->filePath = $filePath;
+        $this->havId = $havId;
+    }
+
     public function sheets(): array
     {
 
