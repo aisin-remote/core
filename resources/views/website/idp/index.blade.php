@@ -184,11 +184,11 @@
                                                                 }
                                                             }
 
-                                                            $status = 'no_approval_needed'; // default jika semua skor >= 3
+                                                            $status = 'not_created'; // Default sekarang jadi not_created
 
                                                             foreach ($assessment->details as $detail) {
                                                                 if (
-                                                                    $detail->score < 3 ||
+                                                                    $detail->score <= 3 || // <= 3 agar score 3 juga bisa input IDP
                                                                     $detail->suggestion_development !== null
                                                                 ) {
                                                                     $idp = \App\Models\Idp::where(
@@ -218,7 +218,6 @@
                                                                         ])
                                                                     ) {
                                                                         $status = 'checked';
-                                                                        break;
                                                                     } elseif (
                                                                         $idp->status === 3 &&
                                                                         !in_array($status, [
@@ -284,6 +283,13 @@
                                                             ) {
                                                                 $showIcon = true;
                                                             }
+
+                                                            $disableButton = !in_array($status, [
+                                                                'not_created',
+                                                                'draft',
+                                                            ])
+                                                                ? 'disabled'
+                                                                : '';
 
                                                         @endphp
                                                         <td class="text-center">
@@ -361,7 +367,8 @@
 
                                                             @if (!$isHRDorDireksi)
                                                                 <button type="button" class="btn btn-sm btn-warning"
-                                                                    onclick="sendDataConfirmation({{ $assessment->employee->id }})">
+                                                                    onclick="sendDataConfirmation({{ $assessment->employee->id }})"
+                                                                    {{ $disableButton }}>
                                                                     <i class="fas fa-paper-plane"></i>
                                                                 </button>
                                                             @endif
@@ -762,17 +769,16 @@
                                                                     value="{{ $program->recommendedProgramsOneYear[0]['program'] }}"
                                                                     readonly>
                                                             </div>
-                                                               <div class="mb-3">
+                                                            <div class="mb-3">
                                                                 <label class="form-label fw-bold">
                                                                     Date</label>
-                                                                <input type="text" class="form-control"
-                                                                    name="date[]"
+                                                                <input type="text" class="form-control" name="date[]"
                                                                     value="{{ $program->recommendedProgramsOneYear[0]['date'] }}"
                                                                     readonly>
                                                             </div>
-                                                           <div class="mb-3">
+                                                            <div class="mb-3">
                                                                 <input type="hidden" name="idp_id[]"
-                                                                    value="{{ $program->idp[0]->id?? '-' }}">
+                                                                    value="{{ $program->idp[0]->id ?? '-' }}">
                                                             </div>
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Evaluation Result</label>
@@ -782,7 +788,6 @@
                                                             </div>
                                                             <hr>
                                                         </div>
-
                                                     @endforeach
 
                                                     @if (!$hasData)
