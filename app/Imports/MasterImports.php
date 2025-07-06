@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\HavQuadrant;
 use App\Imports\HavQuadrans;
 use App\Imports\EmployeeImport;
 use App\Imports\WorkingExperience;
@@ -29,8 +30,8 @@ class MasterImports implements WithMultipleSheets
             // 'Working Experience' => new WorkingExperience(),
             // 'Performance Appraisal History' => new PerformanceAppraisal(),
             // 'Astra Training' => new AstraTrainings(),
-            // 'Assessment' => new HavQuadrans(),
-            'Assessment' => new HavQuadrans($this->filePath, $this->havId)
+            'Assessment' => new HavQuadrant(),
+            // 'Assessment' => new HavQuadrans($this->filePath, $this->havId)
             // 'External Training' => new ExternalTrainings(),
             // 'Promotion History' => new PromotionHistorys(),
 
