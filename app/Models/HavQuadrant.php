@@ -98,7 +98,6 @@ class HavQuadrant extends Model
             + ($alc6 * 0.15) + ($alc7 * 0.10) + ($alc8 * 0.15);
 
             $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
-            dd($employee_id, $average, $pkScore);
         $this->generateHavQuadrant($employee_id, $average, $pkScore);
         // Mengembalikan nilai rata-rata
         return $this->generateHavQuadrant($employee_id, $average, $pkScore);;

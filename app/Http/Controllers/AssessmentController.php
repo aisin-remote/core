@@ -15,12 +15,13 @@ use Illuminate\Support\Str;
 use App\Imports\MasterImports;
 use App\Models\DetailAssessment;
 
+use App\Imports\AssessmentImport;
+
 use Illuminate\Support\Facades\DB;
 
 use App\Http\Controllers\Controller;
 
 use Illuminate\Support\Facades\Auth;
-
 use Illuminate\Support\Facades\Http;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
@@ -495,9 +496,8 @@ class AssessmentController extends Controller
 
         // ⬇⬇⬇ Jalankan Import HAV ⬇⬇⬇
         try {
-            // Excel::import(new MasterImports($excelFileName, $havId), $fullPath);
+            Excel::import(new \App\Imports\AssessmentImport($excelFileName, $havId), $fullPath);
         } catch (\Throwable $e) {
-            dd($e);
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal import HAV: ' . $e->getMessage(),
