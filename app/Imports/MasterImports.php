@@ -2,12 +2,12 @@
 
 namespace App\Imports;
 
-use Maatwebsite\Excel\Concerns\WithMultipleSheets;
-use App\Imports\EmployeeImport;
-use App\Imports\EducationBackground;
-use App\Imports\WorkingExperience;
-use App\Imports\PerformanceAppraisal;
 use App\Imports\HavQuadrans;
+use App\Imports\EmployeeImport;
+use App\Imports\WorkingExperience;
+use App\Imports\EducationBackground;
+use App\Imports\PerformanceAppraisal;
+use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class MasterImports implements WithMultipleSheets
 {
@@ -21,7 +21,7 @@ class MasterImports implements WithMultipleSheets
             // 'Working Experience' => new WorkingExperience(),
             // 'Performance Appraisal History' => new PerformanceAppraisal(),
             // 'Astra Training' => new AstraTrainings(),
-            // 'Assessment' => new HavQuadrans(),
+            'Assessment' => new HavQuadrans(),
             // 'External Training' => new ExternalTrainings(),
             // 'Promotion History' => new PromotionHistorys(),
 
