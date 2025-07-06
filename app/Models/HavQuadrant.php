@@ -113,7 +113,7 @@ class HavQuadrant extends Model
 
     public function getValidatedPerformanceScores($employee_id, $year)
     {
-        $years = [$year - 3, $year - 1, $year - 2];
+        $years = [$year, $year - 1, $year - 2];
         $missingYears = [];
 
         // Ambil semua data appraisal 3 tahun
