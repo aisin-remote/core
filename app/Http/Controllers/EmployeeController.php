@@ -1158,7 +1158,7 @@ class EmployeeController extends Controller
             PerformanceAppraisalHistory::create([
                 'employee_id' => $request->employee_id,
                 'score'       => $validatedData['score'],
-                'description' => $validatedData['description'],
+                'description' => $validatedData['description'] ?? null,
                 'date'        => Carbon::parse($validatedData['date']),
             ]);
 
@@ -1187,7 +1187,7 @@ class EmployeeController extends Controller
             // Update dengan field yang benar
             $appraisal->update([
                 'score'       => $validatedData['score'],
-                'description' => $validatedData['description'],
+                'description' => $validatedData['description'] ?? null,
                 'date'        => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
             ]);
 
