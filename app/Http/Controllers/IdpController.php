@@ -860,7 +860,7 @@ class IdpController extends Controller
         $idp = Idp::findOrFail($request->id);
 
         // Menyimpan status HAV sebagai disetujui
-        $idp->status = 0;
+        $idp->status = -1;
 
         // Ambil komentar dari input request
         $comment = $request->input('comment');

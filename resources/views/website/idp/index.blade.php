@@ -158,6 +158,16 @@
                                                                 ->latest()
                                                                 ->first();
 
+                                                            $isRevise = false;
+
+                                                            $idp = \App\Models\Idp::where('hav_detail_id', $title->id)
+                                                                ->where('alc_id', $title->alc_id)
+                                                                ->first();
+
+                                                            if ($idp && $idp->status === -1) {
+                                                                $isRevise = true;
+                                                            }
+
                                                             // Ambil level approval dari employee yang sedang di-assess
                                                             $approvalLevel = $assessment->employee->getCreateAuth();
 
@@ -266,7 +276,9 @@
                                                             $badge = $badges[$status] ?? $badges['approved'];
 
                                                             $badgeClass = 'badge-lg d-block w-100 ';
-                                                            if ($score < 3) {
+                                                            if ($isRevise) {
+                                                                $badgeClass .= 'badge-light-danger';
+                                                            } elseif ($score < 3) {
                                                                 $badgeClass .= 'badge-danger';
                                                             } elseif ($title->suggestion_development !== null) {
                                                                 $badgeClass .= 'badge-warning';
@@ -281,6 +293,8 @@
                                                                 $title->suggestion_development !== null &&
                                                                 !$idpExists
                                                             ) {
+                                                                $showIcon = true;
+                                                            } elseif ($idpExists) {
                                                                 $showIcon = true;
                                                             }
 
@@ -412,6 +426,14 @@
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
                         <span class="ms-2 text-muted">Below Standard</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="legend-circle bg-light-danger"></span>
+                        <span class="ms-2 text-muted">Need Revise</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <span class="legend-circle bg-warning"></span>
+                        <span class="ms-2 text-muted">Need Submit</span>
                     </div>
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-success"></span>
