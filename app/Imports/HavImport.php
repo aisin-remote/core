@@ -59,60 +59,37 @@ class HavImport implements WithMultipleSheets, WithEvents
                     throw new \Exception($cekpk);
                 }
 
-                DB::transaction(function () use ($employee, $year, $comment, $sheet) {
+                DB::beginTransaction();
 
+                try {
+                    // === Step 1: HAV update or create ===
                     if ($this->havId) {
-                        // Update HAV existing
                         $hav = Hav::findOrFail($this->havId);
-                        $hav->status = 0; // reset status ke 'created' saat revisi
+                        $hav->status = 0;
                         $hav->year = $year;
 
-                        // Hapus detail lama
                         HavDetail::where('hav_id', $hav->id)->delete();
-
-                        // Optional: hapus comment history sebelumnya kalau ingin bersih
-                        // HavCommentHistory::where('hav_id', $hav->id)->delete();
                     } else {
-                        // Insert baru
                         $hav = new Hav();
                         $hav->employee_id = $employee->id;
                         $hav->status = 0;
                         $hav->year = $year;
                     }
 
-
-
+                    // === Step 2: Quadrant & save ===
                     $scoreMap = [
-                        1 => 'D15',
-                        2 => 'I15',
-                        3 => 'O15',
-                        4 => 'T15',
-                        5 => 'D25',
-                        6 => 'I25',
-                        7 => 'O25',
-                        8 => 'T25',
+                        1 => 'D15', 2 => 'I15', 3 => 'O15', 4 => 'T15',
+                        5 => 'D25', 6 => 'I25', 7 => 'O25', 8 => 'T25',
                     ];
-
+                
                     $evidenceMap = [
-                        1 => 'E17',
-                        2 => 'J17',
-                        3 => 'P17',
-                        4 => 'U17',
-                        5 => 'E27',
-                        6 => 'J27',
-                        7 => 'P27',
-                        8 => 'U27',
+                        1 => 'E17', 2 => 'J17', 3 => 'P17', 4 => 'U17',
+                        5 => 'E27', 6 => 'J27', 7 => 'P27', 8 => 'U27',
                     ];
-
+                
                     $developmentMap = [
-                        1 => 'F17',
-                        2 => 'K17',
-                        3 => 'Q17',
-                        4 => 'V17',
-                        5 => 'F27',
-                        6 => 'K27',
-                        7 => 'Q27',
-                        8 => 'V27',
+                        1 => 'F17', 2 => 'K17', 3 => 'Q17', 4 => 'V17',
+                        5 => 'F27', 6 => 'K27', 7 => 'Q27', 8 => 'V27',
                     ];
 
                     $quadrant = (new HavQuadrant())->updateHavFromAssessment(
@@ -127,10 +104,11 @@ class HavImport implements WithMultipleSheets, WithEvents
                         $sheet->getCell($scoreMap[7])->getCalculatedValue(),
                         $sheet->getCell($scoreMap[8])->getCalculatedValue(),
                     );
-                    
+
                     $hav->quadrant = $quadrant;
                     $hav->save();
 
+                    // === Step 3: HavDetail ===
                     foreach ($scoreMap as $index => $cell) {
                         $alc = Alc::find($index);
                         if (!$alc) continue;
@@ -143,26 +121,29 @@ class HavImport implements WithMultipleSheets, WithEvents
                             'suggestion_development' => $sheet->getCell($developmentMap[$index])->getCalculatedValue(),
                             'is_assessment' => 0,
                         ]);
-
-                        DB::commit();
                     }
 
-                    // Step 4: Save Comment History (new functionality)
-
-                    // Step 5: Handle File Upload with Renamed File
+                    // === Step 4: Comment history ===
                     if ($this->filePath) {
-                        // Using the filePath passed from controller
-                        $filePath = $this->filePath;
+                        $user = auth()->user();
+                        if (!$user || !$user->employee) {
+                            throw new \Exception('User tidak ditemukan atau belum terkait ke employee.');
+                        }
 
-                        // Store the file path and comment in hav_comment_histories table
                         HavCommentHistory::create([
                             'hav_id' => $hav->id,
-                            'employee_id' => auth()->user()->employee->id,
+                            'employee_id' => $user->employee->id,
                             'comment' => $comment,
-                            'upload' => $filePath,  // Save file path in the database
+                            'upload' => $this->filePath,
                         ]);
                     }
-                });
+
+                    // === COMMIT transaksi ===
+                    DB::commit();
+                } catch (\Throwable $e) {
+                    DB::rollBack();
+                }
+            
             }
         ];
     }
