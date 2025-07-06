@@ -428,6 +428,7 @@ class IdpController extends Controller
                     'development_program' => $request->development_program ?? $idp->development_program,
                     'category' => $request->category ?? $idp->category,
                     'development_target' => $request->development_target ?? $idp->development_target,
+                    'status' => 0,
                     'date' => $request->date ?? $idp->date,
                 ]);
 
