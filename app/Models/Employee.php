@@ -474,7 +474,7 @@ class Employee extends Model
     public static function getLast3Performance($employee_id, $year)
     {
         $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
-            ->whereIn(DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
+            ->whereIn(DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2, $year - 3])
             ->get();
 
         return $performance;
