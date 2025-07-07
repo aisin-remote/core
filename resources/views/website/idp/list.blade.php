@@ -181,7 +181,6 @@
     </div>
 
     @foreach ($assessments as $assessment)
-        {{-- @dd($assessments) --}}
         <div class="modal fade" id="notes_{{ $assessment->id }}" tabindex="-1" aria-modal="true" role="dialog">
             <div class="modal-dialog modal-dialog-centered mw-1000px">
                 <div class="modal-content">
@@ -194,7 +193,7 @@
                             <div class="row mt-8">
                                 <div class="card">
                                     <div class="card-header bg-light-primary">
-                                        <h3 class="card-title">I. Strength & Weakness</h3>
+                                        <h3 class="card-title">I.A Strength</h3>
                                     </div>
                                     <div class="card-body table-responsive">
                                         <table class="table align-middle">
@@ -226,10 +225,10 @@
                                 </div>
                             </div>
 
-
                             <div class="row mt-8">
                                 <div class="card">
                                     <div class="card-header bg-light-primary">
+                                        <h3 class="card-title">I.B Weakness</h3>
                                     </div>
                                     <div class="card-body table-responsive">
                                         <table class="table align-middle">
@@ -288,7 +287,7 @@
                                                     <td class="text-center fs-7  px-3">
                                                         {{ $assessment->development_program }}
                                                     </td>
-                                                    <td class="text-justify fs-7 px-3" style="width: 50%;">
+                                                    <td class="text-center fs-7 px-3" style="width: 50%;">
                                                         {{ $assessment->development_target }}</td>
                                                     <td class="text-center fs-7 px-3" style="width: 20%;">
                                                         {{ \Carbon\Carbon::parse($assessment->date)->format('d-m-Y') }}
@@ -418,11 +417,11 @@
 
                         if (response.assessments.length > 0) {
                             response.assessments.forEach((assessment, index) => {
-                                console.log(assessment);
+                                console.log(assessment.id);
                                 let deleteButton = '';
                                 if (currentUserRole === 'HRD') {
                                     deleteButton =
-                                        `<button type="button" class="btn btn-danger btn-sm delete-btn" data-id="${assessment.id}">Delete</button>`;
+                                        `<button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessment.id}">Delete</button>`;
                                 }
 
                                 let row = `

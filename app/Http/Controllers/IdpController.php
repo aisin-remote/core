@@ -293,13 +293,8 @@ class IdpController extends Controller
                         })
                     )
                 )
-
                 ->orderByDesc('created_at')
-                ->get()
-                ->groupBy(fn($item) => optional($item->hav?->hav?->employee)->id)
-                ->map(fn($group) => $group->first())
-                ->values();
-
+                ->get();
 
             $assessments = new \Illuminate\Pagination\LengthAwarePaginator(
                 $assessments,
