@@ -389,6 +389,7 @@ class AssessmentController extends Controller
 
         // Simpan detail assessment
         $assessmentDetails = [];
+        $detailData = [];
         foreach ($request->alc_ids as $index => $alc_id) {
             DB::table('detail_assessments')->updateOrInsert(
                 [
@@ -403,6 +404,13 @@ class AssessmentController extends Controller
                     'updated_at' => now()
                 ]
             );
+
+            $detailData[$alc_id] = [
+                'score' => $request->scores[$alc_id] ?? "0",
+                'strength' => $request->strength[$alc_id] ?? "",
+                'weakness' => $request->weakness[$alc_id] ?? "",
+                'suggestion_development' => $request->suggestion_development[$alc_id] ?? "",
+            ];
         }
 
         // Simpan ke HAV (sementara, akan di-update oleh import)
@@ -496,7 +504,10 @@ class AssessmentController extends Controller
 
         // ⬇⬇⬇ Jalankan Import HAV ⬇⬇⬇
         try {
-            Excel::import(new \App\Imports\AssessmentImport($excelFileName, $havId), $fullPath);
+            Excel::import(
+                new AssessmentImport($excelFileName, $havId, $detailData),
+                $fullPath
+            );
         } catch (\Throwable $e) {
             return response()->json([
                 'success' => false,

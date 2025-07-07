@@ -17,11 +17,13 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
 {
     protected $filePath;
     protected $havId;
+    protected $detailData;
 
-    public function __construct($filePath, $havId = null)
+    public function __construct($filePath, $havId = null, array $detailData = [])
     {
         $this->filePath = $filePath;
         $this->havId = $havId;
+        $this->detailData = $detailData; // ← per alc_id
     }
 
     public function sheets(): array
@@ -103,12 +105,19 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
                         $alc = Alc::find($index);
                         if (!$alc) continue;
 
+                        $detail = $this->detailData[$alc->id] ?? [
+                            'score' => 0,
+                            'strength' => '',
+                            'weakness' => '',
+                            'suggestion_development' => '',
+                        ];
+
                         HavDetail::create([
                             'hav_id' => $hav->id,
                             'alc_id' => $alc->id,
                             'score' => floatval($sheet->getCell($cell)->getCalculatedValue()),
                             'evidence' => $sheet->getCell($evidenceMap[$index])->getCalculatedValue(),
-                            'suggestion_development' => $sheet->getCell($developmentMap[$index])->getCalculatedValue(),
+                            'suggestion_development' => $detail['suggestion_development'] == '' ? null : $detail['suggestion_development'],
                             'is_assessment' => 1,
                         ]);
                     }
