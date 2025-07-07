@@ -87,7 +87,7 @@
                                                         <table class="table table-bordered table-sm">
                                                             <thead class="table-light">
                                                                 <tr>
-                                                                    <th class="text-center">ALC</th>
+                                                                    <th class="text-left">ALC</th>
                                                                     <th class="text-center">Category</th>
                                                                     <th>Program</th>
                                                                     <th>Target</th>
@@ -99,14 +99,14 @@
                                                             <tbody>
                                                                 @foreach ($employeeIdps as $idp)
                                                                     <tr>
-                                                                        <td class="text-center">{{ $idp->alc->name }}</td>
+                                                                        <td class="text-left">{{ $idp->alc->name }}</td>
                                                                         <td class="text-center">{{ $idp->category }}</td>
                                                                         <td>{{ $idp->development_program }}</td>
                                                                         <td>{{ $idp->development_target }}</td>
                                                                         <td>{{ $idp->date }}</td>
                                                                         <td class="text-center">
                                                                             <span
-                                                                                class="badge badge-danger">{{ $idp->hav->score }}</span>
+                                                                                class="badge badge-secondary">{{ $idp->hav->score }}</span>
                                                                         </td>
                                                                         <td class="text-center">
                                                                             <button class="btn btn-sm btn-danger btn-revise"

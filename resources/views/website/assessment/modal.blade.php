@@ -29,7 +29,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="assessmentForm" enctype="multipart/form-data">
+                <form id="assessmentForm" class="interlock-form" enctype="multipart/form-data">
                     @csrf
                     <input type="hidden" id="assessment_id" name="assessment_id">
 
@@ -125,7 +125,11 @@
                             accept=".pdf,.jpg,.png">
                     </div>
 
-                    <button type="submit" class="btn btn-primary" id="btnSubmit">Simpan</button>
+                    <button type="submit" class="btn btn-primary interlock-submit" id="btnSubmit">
+                        <span class="spinner-border spinner-border-sm d-none" role="status"
+                            aria-hidden="true"></span>
+                        <span class="btn-text">Simpan</span>
+                    </button>
                 </form>
             </div>
         </div>
@@ -329,6 +333,14 @@
             placeholder: "Pilih Employee",
             allowClear: false,
             width: '100%'
+        });
+
+        $('.interlock-form').on('submit', function() {
+            const $btn = $(this).find('.interlock-submit');
+
+            $btn.prop('disabled', true); // Disable button
+            $btn.find('.spinner-border').removeClass('d-none'); // Show spinner
+            $btn.find('.btn-text').addClass('d-none'); // Hide text
         });
     });
 </script>

@@ -307,12 +307,9 @@
                                                                 $showIcon = true;
                                                             }
 
-                                                            $disableButton = !in_array($status, [
-                                                                'not_created',
-                                                                'draft',
-                                                            ])
-                                                                ? 'none'
-                                                                : '';
+                                                            $disableButton = $status == 'draft' ? '' : 'none';
+
+                                                            $disableButton2 = $status == 'approved' ? '' : 'none';
 
                                                         @endphp
                                                         <td class="text-center">
@@ -369,6 +366,7 @@
 
                                                             @if (!$isHRDorDireksi)
                                                                 <button type="button" class="btn btn-sm btn-primary"
+                                                                    style="display: {{ $disableButton2 }}"
                                                                     data-bs-toggle="modal"
                                                                     data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
                                                                     <i class="fas fa-pencil-alt"></i>
@@ -650,11 +648,13 @@
                                             <div class="text-center pt-15">
                                                 <button type="button"
                                                     id="confirm-button-{{ $assessment->id }}-{{ $id }}"
-                                                    class="btn btn-primary btn-create-idp"
+                                                    class="btn btn-primary btn-create-idp interlock-submit"
                                                     data-assessment="{{ $assessmentId?->id }}"
                                                     data-hav="{{ $weaknessDetail?->id }}" data-alc="{{ $id }}"
                                                     disabled>
-                                                    Submit
+                                                    <span class="spinner-border spinner-border-sm d-none" role="status"
+                                                        aria-hidden="true"></span>
+                                                    <span class="btn-text">Submit</span>
                                                 </button>
                                             </div>
                                         </div> <!-- end .additional-content -->
@@ -705,9 +705,6 @@
                                                 value="{{ $assessment->employee->id }}">
                                             <input type="hidden" name="assessment_id" value="{{ $assessment->id }}">
 
-
-                                            {{--  --}}
-
                                             <div id="programContainerMid_{{ $assessment->employee->id }}">
                                                 @if (!empty($assessment->details))
                                                     @php $hasMidYearData = false; @endphp
@@ -716,7 +713,6 @@
                                                         @if (empty($program->recommendedProgramsMidYear) || empty($program->recommendedProgramsMidYear[0]['program']))
                                                             @continue
                                                         @endif
-
 
                                                         @php $hasMidYearData = true; @endphp
 
@@ -739,8 +735,6 @@
                                                                 <input type="hidden" name="idp_id[]"
                                                                     value="{{ $program->idp[0]['id'] ?? '-' }}">
                                                             </div>
-
-
                                                             <div class="mb-3">
                                                                 <label class="form-label fw-bold">Development
                                                                     Achievement</label>
@@ -760,15 +754,15 @@
 
                                                     @if (!$hasMidYearData)
                                                         <p class="text-center text-muted">No data available</p>
+                                                    @else
+                                                        <button type="submit" class="btn btn-primary">Save</button>
                                                     @endif
                                                 @else
                                                     <p class="text-center text-muted">No data available</p>
                                                 @endif
                                             </div>
-                                            <button type="submit" class="btn btn-primary">Save</button>
                                         </form>
                                     </div>
-
 
                                     <div class="tab-pane fade" id="oneYear-{{ $assessment->employee->id }}"
                                         role="tabpanel">
@@ -801,8 +795,7 @@
                                                                     readonly>
                                                             </div>
                                                             <div class="mb-3">
-                                                                <label class="form-label fw-bold">
-                                                                    Date</label>
+                                                                <label class="form-label fw-bold">Date</label>
                                                                 <input type="text" class="form-control" name="date[]"
                                                                     value="{{ $program->recommendedProgramsOneYear[0]['date'] }}"
                                                                     readonly>
@@ -823,14 +816,15 @@
 
                                                     @if (!$hasData)
                                                         <p class="text-center text-muted">No data available</p>
+                                                    @else
+                                                        <div class="d-flex justify-content-between mt-2">
+                                                            <button type="submit"
+                                                                class="btn btn-primary btn-sm">Save</button>
+                                                        </div>
                                                     @endif
                                                 @else
                                                     <p class="text-center text-muted">No data available</p>
                                                 @endif
-                                            </div>
-
-                                            <div class="d-flex justify-content-between mt-2">
-                                                <button type="submit" class="btn btn-primary btn-sm">Save</button>
                                             </div>
                                         </form>
                                     </div>
@@ -895,6 +889,46 @@
 
                             <div class="modal-body scroll-y mx-2">
                                 <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
+                                    <style>
+                                        .section-title {
+                                            font-weight: 600;
+                                            font-size: 1.3rem;
+                                            /* 16px */
+                                            border-left: 4px solid #0d6efd;
+                                            padding-left: 10px;
+                                            margin-top: 2rem;
+                                            margin-bottom: 1rem;
+                                            display: flex;
+                                            align-items: center;
+                                            gap: 0.5rem;
+                                        }
+
+                                        .section-title i {
+                                            color: #0d6efd;
+                                            font-size: 1.2rem;
+                                        }
+
+                                        table.custom-table {
+                                            font-size: 0.9375rem;
+                                            /* 15px */
+                                        }
+
+                                        table.custom-table th,
+                                        table.custom-table td {
+                                            padding: 0.75rem 1rem;
+                                            vertical-align: top;
+                                        }
+
+                                        table.custom-table thead {
+                                            background-color: #f8f9fa;
+                                            font-weight: 600;
+                                            font-size: 1rem;
+                                        }
+
+                                        table.custom-table tbody tr:hover {
+                                            background-color: #f1faff;
+                                        }
+                                    </style>
                                     @php
                                         $strengthRows = [];
                                         $weaknessRows = [];
@@ -939,181 +973,151 @@
                                         }
                                     @endphp
 
-                                    @if (count($strengthRows) > 0 || count($weaknessRows) > 0)
-                                        <div class="row mt-8">
-                                            <div class="card">
-                                                <div class="card-header bg-light-primary">
-                                                    <h3 class="card-title">I. Strength & Weakness</h3>
-                                                </div>
-                                                <div class="card-body table-responsive">
+                                    @if (count($strengthRows) || count($weaknessRows))
+                                        <div class="section-title"><i class="bi bi-lightning-charge-fill"></i>Strength
+                                            & Weakness</div>
 
-                                                    @if (count($strengthRows) > 0)
-                                                        <table class="table align-middle mb-6">
-                                                            <thead>
-                                                                <tr class="text-start fw-bold fs-6 gs-0">
-                                                                    <th class="text-center">Strength</th>
-                                                                    <th class="text-center">Description</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach ($strengthRows as $row)
-                                                                    <tr>
-                                                                        <td class="text-center fs-7 fw-bold px-3">
-                                                                            {{ $row['title'] }}
-                                                                        </td>
-                                                                        <td class="text-justify fs-7 px-3">
-                                                                            {{ $row['value'] }}
-                                                                        </td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    @endif
-
-                                                    @if (count($weaknessRows) > 0)
-                                                        <table class="table align-middle">
-                                                            <thead>
-                                                                <tr class="text-start fw-bold fs-6 gs-0">
-                                                                    <th class="text-center">Weakness</th>
-                                                                    <th class="text-center">Description</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach ($weaknessRows as $row)
-                                                                    <tr>
-                                                                        <td class="text-center fs-7 fw-bold px-3">
-                                                                            {{ $row['title'] }}
-                                                                        </td>
-                                                                        <td class="text-justify fs-7 px-3">
-                                                                            {{ $row['value'] }}
-                                                                        </td>
-                                                                    </tr>
-                                                                @endforeach
-                                                            </tbody>
-                                                        </table>
-                                                    @endif
-
-                                                </div>
+                                        @if (count($strengthRows))
+                                            <div class="table-responsive mb-4">
+                                                <table class="table table-bordered table-hover custom-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 30%;">Strength</th>
+                                                            <th>Description</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @forelse ($strengthRows as $row)
+                                                            <tr>
+                                                                <td>{{ $row['title'] }}</td>
+                                                                <td>{{ $row['value'] }}</td>
+                                                            </tr>
+                                                        @empty
+                                                            <tr>
+                                                                <td colspan="2" class="text-center text-muted">No data
+                                                                    available</td>
+                                                            </tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                        </div>
+                                        @endif
+
+                                        @if (count($weaknessRows))
+                                            <div class="table-responsive mb-4">
+                                                <table class="table table-bordered table-hover custom-table">
+                                                    <thead>
+                                                        <tr>
+                                                            <th style="width: 30%;">Weakness</th>
+                                                            <th>Description</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @forelse ($weaknessRows as $row)
+                                                            <tr>
+                                                                <td>{{ $row['title'] }}</td>
+                                                                <td>{{ $row['value'] }}</td>
+                                                            </tr>
+                                                        @empty
+                                                            <tr>
+                                                                <td colspan="2" class="text-center text-muted">No data
+                                                                    available</td>
+                                                            </tr>
+                                                        @endforelse
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @endif
                                     @endif
 
-                                    <!-- Individual Development Program -->
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header bg-light-primary">
-                                                <h3 class="card-title">II. Individual Development Program</h3>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                                    <thead>
-                                                        <tr>
-                                                        <tr class="text-start fw-bold fs-6 gs-0">
-                                                            <th class="text-center">Development Area</th>
-                                                            <th class="text-center">Category</th>
-                                                            <th class="text-center">Development Program</th>
-                                                            <th class="text-center">Development Target</th>
-                                                            <th class="text-center">Due Date</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($assessment->details->filter(fn($item) => $item->idp->isNotEmpty()) as $idp)
-                                                            <tr>
-                                                                <td class="text-center fs-7 fw-bold px-3"
-                                                                    style="width: 10%;">
-                                                                    {{ $idp->alc->name ?? '-' }}
-                                                                </td>
-                                                                <td class="text-center fs-7 fw-bold px-3"
-                                                                    style="width: 10%;">
-                                                                    {{ $idp->idp->first()?->category }}
-                                                                </td>
-                                                                <td class="text-center fs-7 fw-bold px-3"
-                                                                    style="width: 10%;">
-                                                                    {{ $idp->idp->first()?->development_program }}
-                                                                </td>
-                                                                <td class="text-justify fs-7 px-3" style="width: 50%;">
-                                                                    {{ $idp->idp->first()?->development_target }}
-                                                                </td>
-                                                                <td class="text-center fs-7 px-3" style="width: 20%;">
-                                                                    {{ optional($idp->idp->first())->date ? \Carbon\Carbon::parse($idp->idp->first()->date)->format('d-m-Y') : '-' }}
-                                                                </td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
+                                    <div class="section-title"><i class="bi bi-person-workspace"></i>Individual
+                                        Development Program</div>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-bordered table-hover custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Area</th>
+                                                    <th>Category</th>
+                                                    <th>Program</th>
+                                                    <th>Target</th>
+                                                    <th>Due Date</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse ($assessment->details->filter(fn($item) => $item->idp->isNotEmpty()) as $idp)
+                                                    <tr>
+                                                        <td>{{ $idp->alc->name ?? '-' }}</td>
+                                                        <td>{{ $idp->idp->first()?->category }}</td>
+                                                        <td>{{ $idp->idp->first()?->development_program }}</td>
+                                                        <td>{{ $idp->idp->first()?->development_target }}</td>
+                                                        <td>
+                                                            {{ optional($idp->idp->first())->date ? \Carbon\Carbon::parse($idp->idp->first()->date)->format('d-m-Y') : '-' }}
+                                                        </td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="5" class="text-center text-muted">No data
+                                                            available</td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
                                     </div>
 
-                                    <!-- Mid Year Review -->
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div class="card-header bg-light-primary">
-                                                <h3 class="card-title">III. Mid Year Review</h3>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                                    <thead>
-                                                        <tr>
-                                                        <tr class="text-start fw-bold fs-6 gs-0">
-                                                            <th class="text-justify px-3">Development Program</th>
-                                                            <th class="text-justify px-3">Development Achievement</th>
-                                                            <th class="text-justify px-3">Next Action</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($mid->where('employee_id', $assessment->employee_id) as $items)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $items->development_program }}</td>
-                                                                <td class="text-justify fs-7 px-3">
-                                                                    {{ $items->development_achievement }}</td>
-                                                                <td class="text-justify fs-7 px-3">
-                                                                    {{ $items->next_action }}
-                                                                </td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
+                                    <div class="section-title"><i class="bi bi-bar-chart-line-fill"></i>Mid Year
+                                        Review</div>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-bordered table-hover custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Development Program</th>
+                                                    <th>Achievement</th>
+                                                    <th>Next Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse ($mid->where('employee_id', $assessment->employee_id) as $items)
+                                                    <tr>
+                                                        <td>{{ $items->development_program }}</td>
+                                                        <td>{{ $items->development_achievement }}</td>
+                                                        <td>{{ $items->next_action }}</td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="3" class="text-center text-muted">No data
+                                                            available</td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
                                     </div>
 
-                                    <div class="row mt-8">
-                                        <div class="card">
-                                            <div
-                                                class="card-header bg-light-primary d-flex justify-content-between align-items-center">
-                                                <h3 class="card-title">IV. One Year Review</h3>
-                                                <div class="d-flex align-items-center">
-                                                </div>
-                                            </div>
-                                            <div class="card-body table-responsive">
-                                                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                                    id="kt_table_users">
-                                                    <thead>
-                                                        <tr class="text-start fw-bold fs-6 gs-0">
-                                                            <th class="text-justify px-3" style="width: 50px">
-                                                                Development Program
-                                                            </th>
-                                                            <th class="text-justify px-3" style="width: 50px">
-                                                                Evaluation Result
-                                                            </th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach ($details->where('employee_id', $assessment->employee->id) as $item)
-                                                            <tr>
-                                                                <td class="text-justify px-3">
-                                                                    {{ $item->development_program }}</td>
-                                                                <td class="text-justify fs-7 px-3">
-                                                                    {{ $item->evaluation_result }}</td>
-                                                            </tr>
-                                                        @endforeach
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
+                                    <div class="section-title"><i class="bi bi-calendar-check-fill"></i>One Year
+                                        Review</div>
+                                    <div class="table-responsive mb-4">
+                                        <table class="table table-bordered table-hover custom-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Development Program</th>
+                                                    <th>Evaluation Result</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                @forelse ($details->where('employee_id', $assessment->employee->id) as $item)
+                                                    <tr>
+                                                        <td>{{ $item->development_program }}</td>
+                                                        <td>{{ $item->evaluation_result }}</td>
+                                                    </tr>
+                                                @empty
+                                                    <tr>
+                                                        <td colspan="2" class="text-center text-muted">No data
+                                                            available</td>
+                                                    </tr>
+                                                @endforelse
+                                            </tbody>
+                                        </table>
                                     </div>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -1567,7 +1571,7 @@
         function sendDataConfirmation(employeeId) {
             Swal.fire({
                 title: 'Kirim IDP ke atasan?',
-                text: 'Pastikan semua ALC bernilai < 3 sudah dibuat.',
+                text: 'Pastikan semua ALC bernilai < 3 IDP sudah dibuat.',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonText: 'Kirim',
