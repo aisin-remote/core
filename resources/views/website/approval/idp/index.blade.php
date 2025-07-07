@@ -86,8 +86,8 @@
                                                     <div class="table-responsive">
                                                         <table class="table table-bordered table-sm">
                                                             <thead class="table-light">
-                                                                <tr>
-                                                                    <th class="text-left p-2">ALC</th>
+                                                                <tr class="p-2">
+                                                                    <th class="text-left">ALC</th>
                                                                     <th class="text-center">Category</th>
                                                                     <th>Program</th>
                                                                     <th>Target</th>
