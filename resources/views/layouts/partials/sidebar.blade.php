@@ -123,7 +123,7 @@
                                 <span class="menu-title ps-1 position-relative d-inline-block"
                                     style="padding-right: 16px;">
                                     To Do List
-                                    @if ($allIdpTasks->count() > 0 || $allHavTasks->count() > 0)
+                                    @if ($allIdpTasks->count() > 0 || $allHavTasks->count() > 0 || $allRtcTasks->count() > 0)
                                         <span
                                             class="blinking-dot position-absolute top-50 end-0 translate-middle-y bg-danger rounded-circle"
                                             style="width: 8px; height: 8px;"></span>
