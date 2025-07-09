@@ -74,7 +74,7 @@ class HavQuadrant extends Model
     public function getLastPerformanceAppraisal($employee_id, $year)
     {
         $performance = PerformanceAppraisalHistory::where('employee_id', $employee_id)
-            ->whereIn(DB::raw('YEAR(date)'), [$year, $year - 1, $year - 2])
+            ->whereIn(DB::raw('YEAR(date)'), [$year - 1, $year - 2, $year - 3])
             ->get();
 
         if ($performance->isEmpty()) {

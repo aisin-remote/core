@@ -274,7 +274,7 @@ class IdpController extends Controller
         $assessments = collect();
 
         if ($user->isHRDorDireksi()) {
-            $assessments = Idp::with('hav.hav.employee')
+            $assessments = Idp::with('hav.hav.employee', 'assessment.details')
                 ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
                 ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
                 ->when($search, fn($q) => $q->whereHas('hav.hav.employee', function ($q) use ($search) {
@@ -309,7 +309,7 @@ class IdpController extends Controller
             if ($emp) {
                 $subordinates = $this->getSubordinatesFromStructure($emp)->pluck('id')->toArray();
 
-                $assessments = Idp::with(['hav.hav.employee', 'developments'])
+                $assessments = Idp::with(['hav.hav.employee', 'developments', 'assessment.details'])
                     ->whereHas('hav.hav.employee', fn($q) => $q->whereIn('id', $subordinates))
                     ->when($company, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('company_name', $company)))
                     ->when($npk, fn($q) => $q->whereHas('hav.hav.employee', fn($q) => $q->where('npk', $npk)))
@@ -371,9 +371,6 @@ class IdpController extends Controller
 
         $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
-
-
-
         return view('website.idp.list', compact(
             'employees',
             'assessments',
@@ -400,12 +397,15 @@ class IdpController extends Controller
             ->whereHas('hav.hav.employee', function ($q) use ($employee) {
                 $q->where('id', $employee->id);
             })
-            ->orderBy('date', 'desc')
-            ->get();
+            ->get()
+            ->groupBy('assessment_id') // Grouping berdasarkan assessment_id
+            ->map(function ($group) {
+                return $group->values(); // Reset key supaya array numerik
+            });
 
         return response()->json([
             'employee' => $employee,
-            'assessments' => $assessments
+            'grouped_assessments' => $assessments,
         ]);
     }
 

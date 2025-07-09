@@ -164,7 +164,7 @@
                             <thead class="table-dark">
                                 <tr>
                                     <th class="text-center" width="10%">No</th>
-                                    <th class="text-center">Date</th>
+                                    <th class="text-center">IDP Year</th>
                                     <th class="text-center" width="40%">Action</th>
                                 </tr>
                             </thead>
@@ -180,193 +180,210 @@
         </div>
     </div>
 
-    @foreach ($assessments as $assessment)
-        <div class="modal fade" id="notes_{{ $assessment->id }}" tabindex="-1" aria-modal="true" role="dialog">
-            <div class="modal-dialog modal-dialog-centered mw-1000px">
+    @foreach ($grouped as $employeeId => $group)
+        @php
+            $firstAssessment = $group->first();
+            $data = $firstAssessment->hav->hav;
+            $employee = optional($data)->employee;
+        @endphp
+
+        <div class="modal fade" id="notes_{{ $employee->id }}" tabindex="-1" aria-modal="true" role="dialog">
+            <div class="modal-dialog modal-dialog-centered" style="max-width: 1200px;">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h2 class="fw-bold">Summary {{ $assessment->hav->hav->employee->name }}</h2>
+                        <h2 class="fw-bold">Summary {{ $employee->name }}</h2>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+
                     <div class="modal-body scroll-y mx-2">
-                        <form id="kt_modal_update_role_form_{{ $assessment->id }}" class="form">
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header bg-light-primary">
-                                        <h3 class="card-title">I.A Strength</h3>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle">
-                                            <thead>
-                                                <tr class="text-start fw-bold fs-6 gs-0">
-                                                    <th class="text-center">Strength</th>
-                                                    <th class="text-center">Description</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @php
-                                                    $strengths =
-                                                        $assessment->assessment->details
-                                                            ?->filter(fn($item) => !empty($item->strength))
-                                                            ->values() ?? collect();
-                                                @endphp
+                        <form class="form">
+                            <style>
+                                .section-title {
+                                    font-weight: 600;
+                                    font-size: 1.3rem;
+                                    border-left: 4px solid #0d6efd;
+                                    padding-left: 10px;
+                                    margin-top: 2rem;
+                                    margin-bottom: 1rem;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 0.5rem;
+                                }
 
-                                                @foreach ($strengths as $detail)
-                                                    <tr>
-                                                        <td class="text-center fs-7 fw-bold px-3">
-                                                            {{ $detail->alc->name ?? '-' }}</td>
-                                                        <td class="text-justify fs-7 px-3">
-                                                            {{ $detail->strength ?? '-' }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                .section-title i {
+                                    color: #0d6efd;
+                                    font-size: 1.2rem;
+                                }
+
+                                table.custom-table {
+                                    font-size: 0.9375rem;
+                                }
+
+                                table.custom-table th,
+                                table.custom-table td {
+                                    padding: 0.75rem 1rem;
+                                    vertical-align: top;
+                                }
+
+                                table.custom-table thead {
+                                    background-color: #f8f9fa;
+                                    font-weight: 600;
+                                    font-size: 1rem;
+                                }
+
+                                table.custom-table tbody tr:hover {
+                                    background-color: #f1faff;
+                                }
+                            </style>
+
+                            @php
+                                // Ambil satu assessment dari group
+                                $assessment = $group->first()?->assessment;
+
+                                // Pastikan ada details
+                                $allDetails = $assessment?->details ?? collect();
+
+                                // Filter strength yang valid (tidak kosong dan bukan '-')
+                                $strengthRows = $allDetails->filter(
+                                    fn($d) => !empty(trim($d->strength)) && trim($d->strength) !== '-',
+                                );
+
+                                // Filter weakness yang valid (tidak kosong dan bukan '-')
+                                $weaknessRows = $allDetails->filter(
+                                    fn($d) => !empty(trim($d->weakness)) && trim($d->weakness) !== '-',
+                                );
+                            @endphp
+
+                            @if ($strengthRows->isNotEmpty() || $weaknessRows->isNotEmpty())
+                                <div class="section-title"><i class="bi bi-lightning-charge-fill"></i>Strength & Weakness
                                 </div>
-                            </div>
+                            @endif
 
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header bg-light-primary">
-                                        <h3 class="card-title">I.B Weakness</h3>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle">
-                                            <thead>
-                                                <tr class="text-start fw-bold fs-6 gs-0">
-                                                    <th class="text-center">Weakness</th>
-                                                    <th class="text-center">Description</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @php
-                                                    $weakness = collect($assessment->assessment->details)
-                                                        ->filter(fn($item) => !empty($item->weakness))
-                                                        ->values();
-                                                @endphp
-
-
-                                                @foreach ($weakness as $detail)
-                                                    <tr>
-                                                        <td class="text-center fs-7 fw-bold px-3">
-                                                            {{ $detail->alc->name ?? '-' }}</td>
-                                                        <td class="text-justify fs-7 px-3">
-                                                            {{ $detail->weakness ?? '-' }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Individual Development Program -->
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header bg-light-primary">
-                                        <h3 class="card-title">II. Individual Development Program</h3>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                            <thead>
+                            @if ($strengthRows->isNotEmpty())
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-bordered table-hover custom-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 30%;">Strength</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($strengthRows as $row)
                                                 <tr>
-                                                <tr class="text-start fw-bold fs-6 gs-0">
-                                                    <th class="text-center">Development Area</th>
-                                                    <th class="text-center">Category</th>
-                                                    <th class="text-center">Development Program</th>
-                                                    <th class="text-center">Development Target</th>
-                                                    <th class="text-center">Due Date</th>
+                                                    <td>{{ $row->alc->name ?? '-' }}</td>
+                                                    <td>{{ $row->strength }}</td>
                                                 </tr>
-                                            </thead>
-                                            <tbody>
-                                                <tr>
-                                                    <td class="text-center fs-7  px-3">
-                                                        {{ $assessment->alc->name }}</td>
-                                                    <td class="text-center fs-7 px-3">
-                                                        {{ $assessment->category }}</td>
-                                                    <td class="text-center fs-7  px-3">
-                                                        {{ $assessment->development_program }}
-                                                    </td>
-                                                    <td class="text-center fs-7 px-3" style="width: 50%;">
-                                                        {{ $assessment->development_target }}</td>
-                                                    <td class="text-center fs-7 px-3" style="width: 20%;">
-                                                        {{ \Carbon\Carbon::parse($assessment->date)->format('d-m-Y') }}
-                                                    </td>
-                                                </tr>
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
                                 </div>
+                            @endif
+
+                            @if ($weaknessRows->isNotEmpty())
+                                <div class="table-responsive mb-4">
+                                    <table class="table table-bordered table-hover custom-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width: 30%;">Weakness</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach ($weaknessRows as $row)
+                                                <tr>
+                                                    <td>{{ $row->alc->name ?? '-' }}</td>
+                                                    <td>{{ $row->weakness }}</td>
+                                                </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                            @endif
+
+                            <div class="section-title"><i class="bi bi-person-workspace"></i>Individual Development
+                                Program</div>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered table-hover custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ALC</th>
+                                            <th>Category</th>
+                                            <th>Development Program</th>
+                                            <th>Development Target</th>
+                                            <th>Due Date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse ($group as $idp)
+                                            <tr>
+                                                <td>{{ $idp->alc->name ?? '-' }}</td>
+                                                <td>{{ $idp->category }}</td>
+                                                <td>{{ $idp->development_program }}</td>
+                                                <td>{{ $idp->development_target }}</td>
+                                                <td>
+                                                    {{ optional($idp)->date ? \Carbon\Carbon::parse($idp->date)->format('d-m-Y') : '-' }}
+                                                </td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="5" class="text-center text-muted">No data available</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
                             </div>
 
-                            <!-- Mid Year Review -->
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div class="card-header bg-light-primary">
-                                        <h3 class="card-title">III. Mid Year Review</h3>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
-                                            <thead>
-                                                <tr>
-                                                <tr class="text-start fw-bold fs-6 gs-0">
-                                                    <th class="text-justify px-3">Development Program</th>
-                                                    <th class="text-justify px-3">Development Achievement</th>
-                                                    <th class="text-justify px-3">Next Action</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($assessment->developments as $items)
-                                                    <tr>
-                                                        <td class="text-justify px-3">
-                                                            {{ $items->development_program }}</td>
-                                                        <td class="text-justify fs-7 px-3">
-                                                            {{ $items->development_achievement }}</td>
-                                                        <td class="text-justify fs-7 px-3">{{ $items->next_action }}
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                            <div class="section-title"><i class="bi bi-bar-chart-line-fill"></i>Mid Year Review</div>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered table-hover custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Development Program</th>
+                                            <th>Achievement</th>
+                                            <th>Next Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse ($mid->where('employee_id', $employee->id) as $items)
+                                            <tr>
+                                                <td>{{ $items->development_program }}</td>
+                                                <td>{{ $items->development_achievement }}</td>
+                                                <td>{{ $items->next_action }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted">No data available</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
                             </div>
 
-                            <div class="row mt-8">
-                                <div class="card">
-                                    <div
-                                        class="card-header bg-light-primary d-flex justify-content-between align-items-center">
-                                        <h3 class="card-title">IV. One Year Review</h3>
-                                        <div class="d-flex align-items-center">
-                                        </div>
-                                    </div>
-                                    <div class="card-body table-responsive">
-                                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
-                                            id="kt_table_users">
-                                            <thead>
-                                                <tr class="text-start fw-bold fs-6 gs-0">
-                                                    <th class="text-justify px-3" style="width: 50px">
-                                                        Development Program
-                                                    </th>
-                                                    <th class="text-justify px-3" style="width: 50px">
-                                                        Evaluation Result
-                                                    </th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($assessment->developmentsones as $items)
-                                                    <tr>
-                                                        <td class="text-justify px-3">
-                                                            {{ $items->development_program }}</td>
-                                                        <td class="text-justify  fs-7 px-3">
-                                                            {{ $items->evaluation_result }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
+                            <div class="section-title"><i class="bi bi-calendar-check-fill"></i>One Year Review</div>
+                            <div class="table-responsive mb-4">
+                                <table class="table table-bordered table-hover custom-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Development Program</th>
+                                            <th>Evaluation Result</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @forelse ($details->where('employee_id', $employee->id) as $item)
+                                            <tr>
+                                                <td>{{ $item->development_program }}</td>
+                                                <td>{{ $item->evaluation_result }}</td>
+                                            </tr>
+                                        @empty
+                                            <tr>
+                                                <td colspan="2" class="text-center text-muted">No data available</td>
+                                            </tr>
+                                        @endforelse
+                                    </tbody>
+                                </table>
                             </div>
+                        </form>
                     </div>
                 </div>
             </div>
@@ -381,16 +398,12 @@
     <script>
         $(document).ready(function() {
 
-
-
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
 
-
                 let employeeId = $(this).data("employee-id");
-                console.log("Fetching history for Employee ID:", employeeId); // Debug
+                console.log("Fetching history for Employee ID:", employeeId);
 
-                // Reset data modal sebelum request baru dilakukan
                 $("#npkText").text("-");
                 $("#positionText").text("-");
                 $("#kt_table_assessments tbody").empty();
@@ -399,7 +412,7 @@
                     url: `/idp/history/${employeeId}`,
                     type: "GET",
                     success: function(response) {
-                        console.log("Response received:", response); // Debug respons
+                        console.log("Response received:", response);
 
                         if (!response.employee) {
                             console.error("Employee data not found in response!");
@@ -407,52 +420,55 @@
                             return;
                         }
 
-                        // Update informasi karyawan
                         $("#npkText").text(response.employee.npk);
                         $("#positionText").text(response.employee.position);
 
-                        // Kosongkan tabel sebelum menambahkan data baru
-                        $("#kt_table_assessments tbody").empty();
-                        const currentUserRole = "{{ auth()->user()->role }}";
+                        const tbody = $("#kt_table_assessments tbody");
+                        tbody.empty();
 
-                        if (response.assessments.length > 0) {
-                            response.assessments.forEach((assessment, index) => {
-                                console.log(assessment.id);
-                                let deleteButton = '';
-                                if (currentUserRole === 'HRD') {
-                                    deleteButton =
-                                        `<button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessment.id}">Delete</button>`;
+                        const grouped = response.grouped_assessments;
+                        const currentUserRole = "{{ auth()->user()->role }}";
+                        let index = 1;
+
+                        if (grouped && Object.keys(grouped).length > 0) {
+                            Object.entries(grouped).forEach(([assessmentId, assessments]) => {
+                                const first = assessments[0];
+                                const createdAt = new Date(first.created_at);
+                                const year = createdAt.getFullYear();
+
+                                let deleteButton = "";
+                                if (currentUserRole === "HRD") {
+                                    deleteButton = `
+                            <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}">
+                                Delete
+                            </button>
+                        `;
                                 }
 
-                                let row = `
-
-            <tr>
-                <td class="text-center">${index + 1}</td>
-                <td class="text-center">${assessment.date}</td>
-                <td class="text-center">
-                    <a
-                        class="btn btn-info btn-sm btn-idp-detail"
-                        data-bs-toggle="modal"
-                        data-bs-target="#notes_${assessment.id}"
-                    >
-                        Detail
-                    </a>
-                      ${deleteButton}
-                </td>
-            </tr>
-        `;
-                                $("#kt_table_assessments tbody").append(row);
+                                const row = `
+                        <tr>
+                            <td class="text-center">${index++}</td>
+                            <td class="text-center">${year}</td>
+                            <td class="text-center">
+                                <a class="btn btn-info btn-sm btn-idp-detail"
+                                   data-bs-toggle="modal"
+                                   data-bs-target="#notes_${first.hav.hav.employee.id}">
+                                    Detail
+                                </a>
+                                ${deleteButton}
+                            </td>
+                        </tr>
+                    `;
+                                tbody.append(row);
                             });
                         } else {
-                            $("#kt_table_assessments tbody").appen(`
-        <tr>
-            <td colspan="3" class="text-center text-muted">No IDP found</td>
-        </tr>
-    `);
+                            tbody.append(`
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">No IDP found</td>
+                    </tr>
+                `);
                         }
 
-
-                        // Tampilkan modal setelah data dimuat
                         $("#detailAssessmentModal").modal("show");
                     },
                     error: function(error) {
@@ -461,6 +477,7 @@
                     }
                 });
             });
+
             $(document).on('show.bs.modal', '.modal', function(event) {
                 const modalId = $(this).attr('id');
                 if (modalId.startsWith('notes_')) {
