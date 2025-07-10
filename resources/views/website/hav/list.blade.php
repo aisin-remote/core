@@ -347,8 +347,6 @@
             </div>
         </div>
     </div>
-
-
 @endsection
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -514,7 +512,7 @@
                 <a
                     data-id="${hav.id}"
                     class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                    History
+                    Comment
                 </a>
                 ${deleteButton}
             </td>
@@ -652,14 +650,14 @@
 
                                 let commentHtml = `
                                 <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
-                                    <div>
-                                        <strong>${comment.employee.name} :</strong><br>
-                                        ${comment.comment}
-                                    </div>
-                                   <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
-                                       <strong> ${formattedDate}</strong>
-                                    </div>
-                                </li>
+    <div>
+        <strong>${comment.employee.name} :</strong><br>
+        ${comment.comment ?? 'initial'}
+    </div>
+    <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
+        <strong> ${formattedDate}</strong>
+    </div>
+</li>
                             `;
                                 $("#commentList").append(commentHtml);
                             });
