@@ -1036,7 +1036,7 @@
                                         <table class="table table-bordered table-hover custom-table">
                                             <thead>
                                                 <tr>
-                                                    <th>Area</th>
+                                                    <th>ALC</th>
                                                     <th>Category</th>
                                                     <th>Program</th>
                                                     <th>Target</th>
