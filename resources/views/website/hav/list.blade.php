@@ -665,7 +665,7 @@
                         } else {
                             // Jika tidak ada komentar valid
                             $("#commentList").append(
-                                '<li class="list-group-item text-muted">No data available.</li>'
+                                '<li class="list-group-item text-muted">No comment available.</li>'
                             );
                         }
 
