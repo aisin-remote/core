@@ -915,10 +915,17 @@
                         <h3>Promotion History</h3>
                     </div>
 
-                    <button class="btn btn-sm btn-info" data-bs-toggle="modal"
-                        data-bs-target="#detailPromotionHistoryModal">
-                        <i class="fas fa-info"></i> Detail
-                    </button>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal"
+                            data-bs-target="#createPromotionModal">
+                            <i class="fas fa-plus"></i> Add
+                        </button>
+
+                        <button class="btn btn-sm btn-info" data-bs-toggle="modal"
+                            data-bs-target="#detailPromotionHistoryModal">
+                            <i class="fas fa-info"></i> Detail
+                        </button>
+                    </div>
                 </div>
                 <!--end::Card header-->
 
@@ -952,7 +959,7 @@
                                         <td class="text-center">{{ $promotionHistory->current_grade }}</td>
                                         <td class="text-center">{{ $promotionHistory->current_position }}</td>
                                         <td class="text-center">
-                                            {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y, g:i A') }}
+                                            {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y') }}
                                         </td>
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-light-warning me-1" data-bs-toggle="modal"
@@ -980,6 +987,10 @@
                 </div>
                 <!--end::Card body-->
             </div>
+
+            @include('website.modal.promotion_history.create', [
+                'employee_id' => $employee->id,
+            ])
 
             @include('website.modal.promotion_history.detail')
             {{-- Promotion History Modals --}}

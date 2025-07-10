@@ -643,7 +643,7 @@
                                         <td class="text-center">{{ $promotionHistory->current_grade }}</td>
                                         <td class="text-center">{{ $promotionHistory->current_position }}</td>
                                         <td class="text-center">
-                                            {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y, g:i A') }}
+                                            {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y') }}
                                         </td>
                                     </tr>
                                 @empty

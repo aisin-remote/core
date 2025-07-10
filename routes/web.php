@@ -177,8 +177,9 @@ Route::middleware('auth')->group(function () {
 
         // promotion
         Route::prefix('promotion')->group(function () {
-            Route::delete('/delete/{id}', [EmployeeController::class, 'promotionDestroy'])->name('promotion.destroy');
+            Route::post('/store', [EmployeeController::class, 'promotionStore'])->name('promotion.store');
             Route::put('/update/{id}', [EmployeeController::class, 'promotionUpdate'])->name('promotion.update');
+            Route::delete('/delete/{id}', [EmployeeController::class, 'promotionDestroy'])->name('promotion.destroy');
         });
 
         // work experience

@@ -639,6 +639,7 @@ class EmployeeController extends Controller
         ])
             ->where('npk', $npk)
             ->firstOrFail();
+
         $departments = Department::all();
         $positions = Employee::select('position')->distinct()->pluck('position');
         $divisions = Division::all();
@@ -1212,6 +1213,36 @@ class EmployeeController extends Controller
         } catch (\Throwable $th) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Performance appraisal gagal dihapus.');
+        }
+    }
+
+    public function promotionStore(Request $request)
+    {
+        $request->validate([
+            'previous_grade'      => 'required|string|max:255',
+            'previous_position'   => 'required|string|max:255',
+            'current_grade'       => 'required|string|max:255',
+            'current_position'    => 'required|string|max:255',
+            'last_promotion_date' => 'required|date',
+        ]);
+
+        try {
+            DB::beginTransaction();
+
+            PromotionHistory::create([
+                'employee_id'         => $request->employee_id,
+                'previous_grade'      => $request->previous_grade,
+                'previous_position'   => $request->previous_position,
+                'current_grade'       => $request->current_grade,
+                'current_position'    => $request->current_position,
+                'last_promotion_date' => $request->last_promotion_date,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Promotion berhasil ditambahkan.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Promotion gagal ditambahkan.');
         }
     }
 

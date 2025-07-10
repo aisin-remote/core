@@ -15,26 +15,54 @@
 
                     <div class="mb-3">
                         <label class="form-label">Previous Grade</label>
-                        <input type="text" class="form-control" name="previous_grade"
-                            value="{{ $experience->previous_grade }}" required>
+                        <select name="previous_grade" class="form-control" required>
+                            <option value="">-- Pilih Grade --</option>
+                            @foreach ($grade as $g)
+                                <option value="{{ $g->aisin_grade }}"
+                                    {{ $experience->previous_grade === $g->aisin_grade ? 'selected' : '' }}>
+                                    {{ $g->aisin_grade }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Previous Position</label>
-                        <input type="text" class="form-control" name="previous_position"
-                            value="{{ $experience->previous_position }}" required>
+                        <select name="previous_position" class="form-control" required>
+                            <option value="">-- Pilih Position --</option>
+                            @foreach ($positions as $position)
+                                <option value="{{ $position }}"
+                                    {{ $experience->previous_position === $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Current Grade</label>
-                        <input type="text" class="form-control" name="current_grade"
-                            value="{{ $experience->current_grade }}" required>
+                        <select name="current_grade" class="form-control" required>
+                            <option value="">-- Pilih Grade --</option>
+                            @foreach ($grade as $g)
+                                <option value="{{ $g->aisin_grade }}"
+                                    {{ $experience->current_grade === $g->aisin_grade ? 'selected' : '' }}>
+                                    {{ $g->aisin_grade }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="mb-3">
                         <label class="form-label">Current Position</label>
-                        <input type="text" class="form-control" name="current_position"
-                            value="{{ $experience->current_position }}" required>
+                        <select name="current_position" class="form-control" required>
+                            <option value="">-- Pilih Position --</option>
+                            @foreach ($positions as $position)
+                                <option value="{{ $position }}"
+                                    {{ $experience->current_position === $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
 
                     <div class="mb-3">
