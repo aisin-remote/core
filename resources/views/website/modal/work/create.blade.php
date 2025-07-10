@@ -29,7 +29,15 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Department</label>
-                        <input type="text" class="form-control" name="department" required>
+                        <select name="position" class="form-control" required>
+                            <option value="">-- Pilih Department --</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department->name }}"
+                                    {{ old('department', $experience->department ?? '') === $department->name ? 'selected' : '' }}>
+                                    {{ $department->name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="row mb-3">
                         <div class="col-6">

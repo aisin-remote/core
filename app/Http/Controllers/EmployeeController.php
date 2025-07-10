@@ -646,7 +646,6 @@ class EmployeeController extends Controller
         $sections = Section::all();
         $subSections = SubSection::all();
 
-
         return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'))->with('mode', 'edit');;
     }
 

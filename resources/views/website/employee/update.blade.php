@@ -213,6 +213,7 @@
                                                                 'Act Supervisor' => 'Act Supervisor',
                                                                 'Act Leader' => 'Act Leader',
                                                                 'Leader' => 'Leader',
+                                                                'Staff' => 'Staff',
                                                                 'Act JP' => 'Act JP',
                                                                 'Operator' => 'Operator',
                                                                 'Direktur' => 'Direktur',
