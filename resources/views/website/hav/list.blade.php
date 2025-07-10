@@ -636,9 +636,12 @@
                         // Clear existing comments
                         $("#commentList").empty();
 
-                        // Check if comment array exists and has content
-                        if (response.comment && response.comment.length > 0) {
-                            response.comment.forEach(function(comment) {
+                        // Filter hanya komentar yang punya isi
+                        const validComments = (response.comment || []).filter(c => c.comment &&
+                            c.comment.trim() !== '');
+
+                        if (validComments.length > 0) {
+                            validComments.forEach(function(comment) {
                                 const date = new Date(comment.created_at);
                                 const formattedDate = new Intl.DateTimeFormat('id-ID', {
                                     day: 'numeric',
@@ -650,7 +653,7 @@
                     <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
                         <div>
                             <strong>${comment.employee.name} :</strong><br>
-                            ${comment.comment ?? ''}
+                            ${comment.comment}
                         </div>
                         <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
                             <strong>${formattedDate}</strong>
@@ -660,7 +663,7 @@
                                 $("#commentList").append(commentHtml);
                             });
                         } else {
-                            // Jika tidak ada komentar sama sekali
+                            // Jika tidak ada komentar valid
                             $("#commentList").append(
                                 '<li class="list-group-item text-muted">No data available.</li>'
                             );
