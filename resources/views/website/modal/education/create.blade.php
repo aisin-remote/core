@@ -34,7 +34,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Start Year</label>
-                        <input type="date" name="start_date" class="form-control" required>
+                        <input type="date" name="start_date" class="form-control">
                     </div>
                     <div class="mb-3">
                         <label class="form-label">End Year (Optional)</label>

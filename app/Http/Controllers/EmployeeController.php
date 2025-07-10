@@ -970,12 +970,12 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             WorkingExperience::create([
-                'employee_id' => $request->employee_id, // Sesuaikan dengan sistem autentikasi
-                'position' => $request->position,
-                'company' => $request->company,
-                'department' => $request->department,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
+                'employee_id' => $request->employee_id,
+                'position'    => $request->position,
+                'company'     => $request->company,
+                'department'  => $request->department,
+                'start_date'  => $request->start_date,
+                'end_date'    => $request->end_date ?: null, // konversi kosong jadi null
                 'description' => $request->description,
             ]);
 
@@ -1008,8 +1008,8 @@ class EmployeeController extends Controller
             $experience->update([
                 'position'    => $request->position,
                 'company'     => $request->company,
-                'department'     => $request->department,
-                'start_date'  => Carbon::parse($request->start_date),
+                'department'  => $request->department,
+                'start_date'  => $request->start_date ? Carbon::parse($request->start_date) : null,
                 'end_date'    => $request->end_date ? Carbon::parse($request->end_date) : null,
                 'description' => $request->description,
             ]);
@@ -1052,7 +1052,7 @@ class EmployeeController extends Controller
                 'level' => 'required',
                 'major' => 'required',
                 'institute' => 'required',
-                'start_date' => 'required|date',
+                'start_date' => 'nullable|date',
                 'end_date' => 'nullable|date',
             ]);
 
@@ -1070,8 +1070,8 @@ class EmployeeController extends Controller
                 'educational_level' => $request->level,
                 'major' => $request->major,
                 'institute' => $request->institute,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date,
+                'start_date' => $request->start_date ?: null,
+                'end_date' => $request->end_date ?: null,
             ]);
 
             DB::commit();
@@ -1090,7 +1090,7 @@ class EmployeeController extends Controller
             'level' => 'required',
             'major' => 'required',
             'institute' => 'required',
-            'start_date' => 'required|date',
+            'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
         ]);
 
@@ -1098,12 +1098,12 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $education->update([
-                'educational_level'       => $validatedData['level'],
-                'major'       => $validatedData['major'],
-                'institute'   => $validatedData['institute'],
-                'start_date'  => Carbon::parse($validatedData['start_date']),
-                'end_date'    => $validatedData['end_date'] ? Carbon::parse($validatedData['end_date']) : null,
-            ]);
+                'educational_level' => $validatedData['level'],
+                'major'             => $validatedData['major'],
+                'institute'         => $validatedData['institute'],
+                'start_date'        => $validatedData['start_date'] ? Carbon::parse($validatedData['start_date']) : null,
+                'end_date'          => $validatedData['end_date'] ? Carbon::parse($validatedData['end_date']) : null,
+            ]);            
 
             DB::commit();
             return redirect()->back()->with('success', 'Riwayat pendidikan berhasil diupdate.');

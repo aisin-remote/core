@@ -183,71 +183,79 @@
     </div>
 @endsection
 @push('scripts')
-<script>
-    $(document).on("click", ".history-btn", function(event) {
-        event.preventDefault();
+    <script>
+        $(document).on("click", ".history-btn", function(event) {
+            event.preventDefault();
 
-        let employeeId = $(this).data("employee-id");
-        console.log("Fetching history for Employee ID:", employeeId); // Debug
+            let employeeId = $(this).data("employee-id");
+            console.log("Fetching history for Employee ID:", employeeId);
 
-        // Reset data modal sebelum request baru dilakukan
-        $("#npkText").text("-");
-        $("#positionText").text("-");
-        $("#kt_table_assessments tbody").empty();
+            // Reset data modal sebelum request baru dilakukan
+            $("#npkText").text("-");
+            $("#positionText").text("-");
+            $("#kt_table_assessments tbody").empty();
+            $("#exportBtn").remove(); // Pastikan tidak ada tombol export tertinggal
 
-        $.ajax({
-            url: `/icp/history/${employeeId}`,
-            type: "GET",
-            success: function(response) {
-                console.log("Response received:", response); // Debug respons
+            $.ajax({
+                url: `/icp/history/${employeeId}`,
+                type: "GET",
+                success: function(response) {
+                    console.log("Response received:", response);
 
-                if (!response.employee) {
-                    console.error("Employee data not found in response!");
-                    alert("Employee not found!");
-                    return;
+                    if (!response.employee) {
+                        alert("Employee not found!");
+                        return;
+                    }
+
+                    $("#npkText").text(response.employee.npk);
+                    $("#positionText").text(response.employee.position);
+
+                    const tableBody = $("#kt_table_assessments tbody");
+                    tableBody.empty();
+
+                    if (response.employee.icp.length > 0) {
+                        response.employee.icp.forEach((icp, index) => {
+                            let deleteButton = ''; // isi sesuai kebutuhan, contoh:
+                            deleteButton =
+                                `<button class="btn btn-danger btn-sm btn-delete" data-id="${icp.id}">Delete</button>`;
+
+                            let isLastRow = index === response.employee.icp.length - 1;
+
+                            let exportButton = isLastRow ?
+                                `<a href="/icp/export/${employeeId}" class="btn btn-success btn-sm ms-2" target="_blank">Export</a>` :
+                                '';
+
+                            let row = `
+                        <tr>
+                            <td class="text-center">${index + 1}</td>
+                            <td class="text-center">${icp.aspiration || '-'}</td>
+                            <td class="text-center">${icp.career_target}</td>
+                            <td class="text-center">${icp.date}</td>
+                            <td class="text-center">
+                                ${deleteButton}
+                                ${exportButton}
+                            </td>
+                        </tr>
+                    `;
+                            tableBody.append(row);
+                        });
+
+                    } else {
+                        tableBody.append(`
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">No assessment found</td>
+                    </tr>
+                `);
+                    }
+
+                    // Tampilkan modal
+                    $("#detailAssessmentModal").modal("show");
+                },
+                error: function(error) {
+                    console.error("Error fetching data:", error);
+                    alert("Failed to load ICP data!");
                 }
-                // Update informasi karyawan
-                $("#npkText").text(response.employee.npk);
-                $("#positionText").text(response.employee.position);
-                const currentUserRole = "{{ auth()->user()->role }}";
-
-                // Kosongkan tabel sebelum menambahkan data baru
-                $("#kt_table_assessments tbody").empty();
-
-                if (response.employee.icp.length > 0) {
-                    response.employee.icp.forEach((icp, index) => {
-                        let deleteButton = '';
-
-                        let row = `
-        <tr>
-            <td class="text-center">${index + 1}</td>
-            <td class="text-center">${icp.aspiration|| '-'}</td>
-            <td class="text-center">${icp.career_target}</td>
-             <td class="text-center">${icp.date}</td>
-            <td class="text-center">
-
-                ${deleteButton}
-            </td>
-        </tr>
-        `;
-                        $("#kt_table_assessments tbody").append(row);
-                    });
-                } else {
-                    $("#kt_table_assessments tbody").append(`
-                                    <tr>
-                                        <td colspan="3" class="text-center text-muted">No assessment found</td>
-                                    </tr>
-                                `);
-                }
-
-                // Tampilkan modal setelah data dimuat
-                $("#detailAssessmentModal").modal("show");
-            },
-            error: function(error) {
-                console.error("Error fetching data:", error);
-                alert("Failed to load icp data!");
-            }
+            });
         });
-    });
-</script>
+    </script>
 @endpush
