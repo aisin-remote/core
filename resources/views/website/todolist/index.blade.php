@@ -37,7 +37,7 @@
         <div class="row">
 
             {{-- IDP --}}
-            <div class="col-4">
+            <div class="col-4 mb-5">
                 <div class="card shadow-sm">
                     <div class="card-header bg-light text-white">
                         <h3 class="card-title mb-0">
@@ -111,7 +111,7 @@
             {{-- end of IDP --}}
 
             {{-- HAV --}}
-            <div class="col-4">
+            <div class="col-4 mb-5">
                 <div class="card shadow-sm">
                     <div class="card-header bg-light text-white">
                         <h3 class="card-title mb-0">
@@ -170,7 +170,7 @@
             {{-- end of HAV --}}
 
             {{-- RTC --}}
-            <div class="col-4">
+            <div class="col-4 mb-5">
                 <div class="card shadow-sm">
                     <div class="card-header bg-light text-white">
                         <h3 class="card-title mb-0">
@@ -231,7 +231,7 @@
 
             {{-- Assessment --}}
             @if (auth()->user()->role === 'HRD')
-                <div class="col-4">
+                <div class="col-4 mb-5">
                     <div class="card shadow-sm">
                         <div class="card-header bg-light text-white">
                             <h3 class="card-title mb-0">
