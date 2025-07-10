@@ -626,20 +626,18 @@
 
                 // Make an AJAX request to get the comment history
                 $.ajax({
-                    url: "{{ url('/hav/get-history') }}/" +
-                        hav_id, // Change this URL to your correct route
+                    url: "{{ url('/hav/get-history') }}/" + hav_id,
                     type: "GET",
                     success: function(response) {
-                        console.log("Response received:", response
-                            .comment); // Debugging the response
+                        console.log("Response received:", response.comment);
+
                         showCommentHistoryModal(response);
 
-                        // Check if we have comment history
-                        if (response.comment && response.comment.length > 0) {
-                            // Clear existing comments
-                            $("#commentList").empty();
+                        // Clear existing comments
+                        $("#commentList").empty();
 
-                            // Loop through the comments and append them to the modal
+                        // Check if comment array exists and has content
+                        if (response.comment && response.comment.length > 0) {
                             response.comment.forEach(function(comment) {
                                 const date = new Date(comment.created_at);
                                 const formattedDate = new Intl.DateTimeFormat('id-ID', {
@@ -649,28 +647,26 @@
                                 }).format(date);
 
                                 let commentHtml = `
-                                <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
-    <div>
-        <strong>${comment.employee.name} :</strong><br>
-        ${comment.comment ?? 'initial'}
-    </div>
-    <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
-        <strong> ${formattedDate}</strong>
-    </div>
-</li>
-                            `;
+                    <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
+                        <div>
+                            <strong>${comment.employee.name} :</strong><br>
+                            ${comment.comment ?? ''}
+                        </div>
+                        <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
+                            <strong>${formattedDate}</strong>
+                        </div>
+                    </li>
+                `;
                                 $("#commentList").append(commentHtml);
                             });
-
-
                         } else {
-                            // If no comments found, display a message
+                            // Jika tidak ada komentar sama sekali
                             $("#commentList").append(
-                                '<li class="list-group-item text-muted">No comments found.</li>'
+                                '<li class="list-group-item text-muted">No data available.</li>'
                             );
                         }
 
-                        // Show the modal
+                        // Tampilkan modal
                         $("#detailAssessmentModal").modal("hide");
                         $('#commentHistoryModal').modal('show');
                     },
