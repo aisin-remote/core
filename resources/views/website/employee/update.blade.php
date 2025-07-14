@@ -332,7 +332,7 @@
                                                         <option value="">-- Select Grade --</option>
                                                         @foreach ($grade as $g)
                                                             <option value="{{ $g->aisin_grade }}"
-                                                                {{ old('grade', $employee->grade) == $g->aisin_grade ? 'selected' : '' }}>
+                                                                {{ old('grade', $promotionHistories->first()->current_grade ?? '') == $g->aisin_grade ? 'selected' : '' }}>
                                                                 {{ $g->aisin_grade }}
                                                             </option>
                                                         @endforeach
