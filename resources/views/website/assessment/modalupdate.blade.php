@@ -66,12 +66,17 @@
                             accept=".pdf,.jpg,.png">
                         <small id="update-upload-info"></small>
                     </div>
-
-                    <button type="submit" class="btn btn-primary">Update</button>
-                </form>
+                    <div class="mb-4">
+                        <label for="update_note" class="form-label">Note</label>
+                        <textarea name="note" id="update_note" class="form-control" placeholder="Note..."></textarea>
+                    </div>
             </div>
+
+            <button type="submit" class="btn btn-primary">Update</button>
+            </form>
         </div>
     </div>
+</div>
 </div>
 
 <script>

@@ -362,6 +362,7 @@ class AssessmentController extends Controller
             'date' => 'required|date',
             'target' => 'required|string',
             'upload' => 'nullable|file|mimes:pdf|max:2048',
+            'note' => 'nullable|string',
             'alc_ids' => 'required|array',
             'alc_ids.*' => 'exists:alc,id',
             'scores' => 'nullable|array',
@@ -385,6 +386,7 @@ class AssessmentController extends Controller
             'description' => $request->description,
             'target_position' => $request->target,
             'upload' => $filePath,
+            'note' => $request->note,
         ]);
 
         // Simpan detail assessment
@@ -590,12 +592,14 @@ class AssessmentController extends Controller
             'weakness' => 'nullable|array',
             'suggestion_development' => 'nullable|array',
             'upload' => 'nullable|file|mimes:pdf,jpg,png|max:2048',
+            'note' => 'nullable|string',
         ]);
 
         // **Update tabel `assessments`**
         $assessment = Assessment::findOrFail($request->assessment_id);
         $assessment->date = $request->date;
         $assessment->description = $request->description;
+        $assessment->note = $request->note;
 
         // **Handle File Upload**
         if ($request->hasFile('upload')) {

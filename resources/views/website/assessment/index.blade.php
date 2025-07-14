@@ -251,6 +251,7 @@
                                     data-date="${assessment.date}"
                                     data-description="${safeEncode(assessment.description || '')}"
                                     data-upload="${assessment.upload || ''}"
+                                    data-note="${safeEncode(assessment.note || '')}"
                                     data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
                                     data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
                                     data-alc_name='${safeEncode(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
@@ -313,6 +314,7 @@
 
                     let description = safeDecode($(this).data("description"));
                     let upload = $(this).data("upload");
+                    let note = safeDecode($(this).data("note"));
 
                     let scores = JSON.parse(atob($(this).attr("data-scores")));
                     let alcs = JSON.parse(atob($(this).attr("data-alcs")));
@@ -327,6 +329,7 @@
                     $("#update_date").val(date);
                     $("#update_description").val(description);
                     $("#update_upload").attr("href", `/storage/${upload}`).text("Lihat File");
+                    $("#update_note").val(note);
 
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];

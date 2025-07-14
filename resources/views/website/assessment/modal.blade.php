@@ -125,6 +125,11 @@
                             accept=".pdf,.jpg,.png">
                     </div>
 
+                    <div class="mb-4">
+                        <label for="note" class="form-label">Note</label>
+                        <textarea name="note" id="note" class="form-control" placeholder="Note..."></textarea>
+                    </div>
+
                     <button type="submit" class="btn btn-primary interlock-submit" id="btnSubmit">
                         <span class="spinner-border spinner-border-sm d-none" role="status"
                             aria-hidden="true"></span>
