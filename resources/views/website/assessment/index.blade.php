@@ -130,6 +130,7 @@
         @include('website.assessment.modal')
         @include('website.assessment.modaldetail')
         @include('website.assessment.show')
+        @include('website.assessment.modalnote')
     @endsection
 
     @push('custom-css')
@@ -241,6 +242,7 @@
                                 response.assessments.forEach((assessment, index) => {
                                     let editBtn = '';
                                     let deleteBtn = '';
+                                    let noteBtn = '';
 
                                     if (isHRD) {
                                         editBtn = `
@@ -265,7 +267,10 @@
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${assessment.id}">Delete</button>
                             `;
-                                    }
+
+                                        noteBtn = `
+                                <button type="button" class="btn btn-dark btn-sm noteAssessment" data-bs-toggle="modal"           data-bs-target="#noteAssessmentModal" data-note="${safeEncode(assessment.note || '')}">Note</button>`
+                            }
 
                                     let row = `
                             <tr>
@@ -284,6 +289,7 @@
                                         View PDF
                                     </a>
                                     ${editBtn}
+                                    ${noteBtn}
                                     ${deleteBtn}
                                 </td>
                             </tr>
@@ -352,6 +358,23 @@
                         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
                     }, 10);
                 });
+
+                $(document).on("click", ".noteAssessment", function() {
+                    let note = safeDecode($(this).data("note"));
+                    $("#assessmentNote").val(note);
+
+                    // tutup modal sebelumnya
+                    const detailModalEl = document.getElementById("detailAssessmentModal");
+                    const detailModal = bootstrap.Modal.getInstance(detailModalEl);
+                    if(detailModal){
+                        detailModal.hide();
+                    }
+
+                    // tampilkan modal note
+                    const noteModalEld = document.getElementById("noteAssessmentModal");
+                    const noteModal = bootstrap.Modal.getOrCreateInstance(noteModalEld);
+                    noteModal.show();
+                })
 
                 function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses, suggestions) {
                     let strengthContainer = document.getElementById("update-strengths-wrapper");
@@ -570,7 +593,15 @@
                 //     }, 300);
                 // });
                 // Saat modal update ditutup
+
                 $("#updateAssessmentModal").on("hidden.bs.modal", function() {
+                    if ($(".modal.show").length === 0) {
+                        $("body").removeClass("modal-open");
+                        $(".modal-backdrop").remove();
+                    }
+                });
+
+                $("#noteAssessmentModal").on("hidden.bs.modal", function() {
                     if ($(".modal.show").length === 0) {
                         $("body").removeClass("modal-open");
                         $(".modal-backdrop").remove();
@@ -589,12 +620,6 @@
                 $(".modal").on("shown.bs.modal", function() {
                     $(".modal-backdrop").css("z-index", 1050);
                 });
-
-
-
-
-
-
 
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
 
