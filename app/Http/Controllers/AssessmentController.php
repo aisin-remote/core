@@ -491,15 +491,26 @@ class AssessmentController extends Controller
         }
 
         // Simpan file Excel
-        $excelFileName = 'hav_uploads/hav_' . now()->timestamp . '.xlsx';
-        $fullPath = storage_path("app/{$excelFileName}");
-        (new Xlsx($spreadsheet))->save($fullPath);
+        $directory = 'hav_uploads';
+        $fileName = 'hav_' . now()->timestamp . '.xlsx';
+        $relativePath = "{$directory}/{$fileName}";
+        Storage::disk('public')->makeDirectory($directory);
+
+        // simpan file excel ke lokasi sementara
+        $tempPath = storage_path("app/temp_{$fileName}");
+        (new Xlsx($spreadsheet))->save($tempPath);
+
+        // pindahkan isi file ke disk 'public'
+        Storage::disk('public')->put($relativePath, file_get_contents($tempPath));
+
+        // hapus file sementara
+        unlink($tempPath);
 
         // Simpan ke comment history (sementara, sebelum import)
         DB::table('hav_comment_histories')->insert([
             'hav_id' => $havId,
             'employee_id' => $request->employee_id,
-            'upload' => $excelFileName,
+            'upload' => $relativePath,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -523,7 +534,7 @@ class AssessmentController extends Controller
             'assessment' => $assessment,
         ]);
     }
-    
+
     public function getAssessmentDetail($employee_id)
     {
         // 🔹 Cari assessment terbaru dari employee
