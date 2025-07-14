@@ -26,7 +26,6 @@
                             <tr>
                                 <th class="text-center" width="10%">No</th>
                                 <th class="text-center">Date</th>
-                                <th class="text-center">Current Position</th>
                                 <th class="text-center">Target Position</th>
                                 <th class="text-center" width="40%">Action</th>
                             </tr>
@@ -36,7 +35,6 @@
                                 <tr>
                                     <td class="text-center">{{ $index + 1 }}</td>
                                     <td class="text-center">{{ $assessment->date }}</td>
-                                    <td class="text-center"><span id="positionText"></span></td>
                                     <td class="text-center">
                                         <a class="btn btn-info btn-sm"
                                             href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
