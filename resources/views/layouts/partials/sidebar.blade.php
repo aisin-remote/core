@@ -320,6 +320,69 @@
                             </div>
                         @endif
 
+                        @if ($isUser)
+                            <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
+                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
+                                <span class="menu-link {{ $isIcp ? 'active' : '' }}">
+                                    <span class="menu-title ps-1">ICP</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'icp' ? 'active' : '' }}"
+                                            href="{{ route('icp.assign') }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">ICP Assign</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ $currentPath === 'icp/list' ? 'active' : '' }}"
+                                            href="{{ route('icp.list', ['company' => null]) }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">ICP List</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        @elseif ($isHRDorTop)
+                            <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
+                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
+                                <span class="menu-link {{ $isIcp ? 'active' : '' }}">
+                                    <span class="menu-title ps-1">ICP</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+
+                                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                    <div class="menu-item menu-accordion {{ request()->is('icp/list/*') ? 'show' : '' }}"
+                                        data-kt-menu-trigger="click">
+                                        <span class="menu-link">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">ICP List</span>
+                                            <span class="menu-arrow"></span>
+                                        </span>
+                                        <div class="menu-sub menu-sub-accordion">
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('icp/list/aii') ? 'active' : '' }}"
+                                                    href="/icp/list/aii">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AII</span>
+                                                </a>
+                                            </div>
+                                            <div class="menu-item">
+                                                <a class="menu-link {{ request()->is('icp/list/aiia') ? 'active' : '' }}"
+                                                    href="/icp/list/aiia">
+                                                    <span class="menu-bullet"><span
+                                                            class="bullet bullet-dot"></span></span>
+                                                    <span class="menu-title">AIIA</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
+
                         {{-- IDP --}}
                         @if ($isUser)
                             {{-- IDP menu for regular User --}}
@@ -396,7 +459,6 @@
                             $isUser = $user->role === 'User';
                             $isHRDorTop = $user->role === 'HRD' || in_array($position, ['President', 'VPD']);
                         @endphp
-
                         @if ($isUser && !in_array($position, ['President', 'VPD']) && in_array($normalized, $allowedPositions))
                             {{-- RTC menu for allowed User roles --}}
                             <div class="menu-item">
@@ -426,69 +488,6 @@
                                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
                                             <span class="menu-title">AIIA</span>
                                         </a>
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if ($isUser)
-                            <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
-                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
-                                <span class="menu-link {{ $isIcp ? 'active' : '' }}">
-                                    <span class="menu-title ps-1">ICP</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-                                <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'icp' ? 'active' : '' }}"
-                                            href="{{ route('icp.assign') }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">ICP Assign</span>
-                                        </a>
-                                    </div>
-                                    <div class="menu-item">
-                                        <a class="menu-link {{ $currentPath === 'icp/list' ? 'active' : '' }}"
-                                            href="{{ route('icp.list', ['company' => null]) }}">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">ICP List</span>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        @elseif ($isHRDorTop)
-                            <div class="menu-item menu-accordion {{ $isIcp ? 'show' : '' }}"
-                                data-kt-menu-expand="true" data-kt-menu-trigger="click" id="menu-icp">
-                                <span class="menu-link {{ $isIcp ? 'active' : '' }}">
-                                    <span class="menu-title ps-1">ICP</span>
-                                    <span class="menu-arrow"></span>
-                                </span>
-
-                                <div class="menu-sub menu-sub-accordion menu-active-bg">
-                                    <div class="menu-item menu-accordion {{ request()->is('icp/list/*') ? 'show' : '' }}"
-                                        data-kt-menu-trigger="click">
-                                        <span class="menu-link">
-                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                            <span class="menu-title">ICP List</span>
-                                            <span class="menu-arrow"></span>
-                                        </span>
-                                        <div class="menu-sub menu-sub-accordion">
-                                            <div class="menu-item">
-                                                <a class="menu-link {{ request()->is('icp/list/aii') ? 'active' : '' }}"
-                                                    href="/icp/list/aii">
-                                                    <span class="menu-bullet"><span
-                                                            class="bullet bullet-dot"></span></span>
-                                                    <span class="menu-title">AII</span>
-                                                </a>
-                                            </div>
-                                            <div class="menu-item">
-                                                <a class="menu-link {{ request()->is('icp/list/aiia') ? 'active' : '' }}"
-                                                    href="/icp/list/aiia">
-                                                    <span class="menu-bullet"><span
-                                                            class="bullet bullet-dot"></span></span>
-                                                    <span class="menu-title">AIIA</span>
-                                                </a>
-                                            </div>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
