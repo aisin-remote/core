@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\RtcHelper;
 use App\Models\Rtc;
 use App\Models\Section;
 use App\Models\Division;
@@ -118,49 +119,101 @@ class RtcController extends Controller
 
     public function summary(Request $request)
     {
-        $filter = $request->query('filter');
+        $filter = strtolower($request->query('filter'));
         $id = (int) $request->query('id');
+        $data = null;
 
-        $data = null; // ✅ prevent undefined variable
         $departmentIds = [$id];
         $managerIds = collect();
-        
-        if ($filter === 'Division') {
+
+        if ($filter === 'division') {
             $data = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
             $departments = Department::where('division_id', $data->id)->get();
             $departmentIds = $departments->pluck('id');
             $managerIds = $departments->pluck('manager_id')->filter()->unique();
-        }else{
+        } else {
             $data = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
+            $managerIds = collect([$data->manager_id])->filter();
         }
 
         $sections = Section::whereIn('department_id', $departmentIds)->get();
         $supervisorIds = $sections->pluck('supervisor_id')->filter()->unique();
         $employeeIds = $managerIds->merge($supervisorIds)->unique();
+
         $bawahans = Employee::whereIn('id', $employeeIds)->get();
 
-        foreach ($bawahans as $employee) {
-            $relatedSections = Section::where('supervisor_id', $employee->id)->get();
+        // Generate color mapping
+        $colors = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5', 'color-6', 'color-7'];
+        $assignedColors = [];
+        $colorIndex = 0;
 
-            if (in_array(strtolower($employee->position), ['supervisor', 'section head'])) {
-                $related = $relatedSections->first()?->load(['short', 'mid', 'long']);
-            } else {
-                $related = Department::with(['short', 'mid', 'long'])
-                    ->where('manager_id', $employee->id)
-                    ->first();
+        $managers = [];
+
+        foreach ($departmentIds as $departmentId) {
+            $department = Department::with(['manager', 'short', 'mid', 'long'])
+                ->find($departmentId);
+
+            if (!$department)
+                continue;
+
+            if (!isset($assignedColors[$departmentId])) {
+                $assignedColors[$departmentId] = $colors[$colorIndex++ % count($colors)];
             }
 
-            $employee->supervisors = $relatedSections->map(fn($sec) => $sec->supervisor)->unique('id')->filter();
-            $employee->planning = $related;
+            $manager = $department->manager;
 
-            $approvalLevel = $employee->getFirstApproval();
-            $employee->superiors = $employee->getSuperiorsByLevel($approvalLevel);
+            $managers[$departmentId] = [
+                'title' => $department->name,
+                'person' => RtcHelper::formatPerson($manager),
+                'shortTerm' => RtcHelper::formatCandidate($department->short),
+                'midTerm' => RtcHelper::formatCandidate($department->mid),
+                'longTerm' => RtcHelper::formatCandidate($department->long),
+                'colorClass' => $assignedColors[$departmentId],
+                'supervisors' => [],
+            ];
+
+            // Add supervisors under this department
+            $relatedSections = Section::where('department_id', $departmentId)
+                ->with(['supervisor', 'short', 'mid', 'long'])
+                ->get();
+
+            foreach ($relatedSections as $section) {
+                if (!$section->supervisor)
+                    continue;
+
+                $managers[$departmentId]['supervisors'][] = [
+                    'title' => $section->name,
+                    'person' => RtcHelper::formatPerson($section->supervisor),
+                    'shortTerm' => RtcHelper::formatCandidate($section->short),
+                    'midTerm' => RtcHelper::formatCandidate($section->mid),
+                    'longTerm' => RtcHelper::formatCandidate($section->long),
+                    'colorClass' => $assignedColors[$departmentId],
+                ];
+            }
         }
 
-        $filter = strtolower($filter);
-        
-        return view('website.rtc.detail', compact('data', 'filter', 'bawahans'));
+        // Current main card
+        $field = match ($filter) {
+            'division' => 'gm',
+            'department' => 'manager',
+            default => null,
+        };
+
+        $main = [
+            'title' => $data->name ?? '-',
+            'person' => RtcHelper::formatPerson($data->{$field} ?? null),
+            'shortTerm' => RtcHelper::formatCandidate($data->short ?? null),
+            'midTerm' => RtcHelper::formatCandidate($data->mid ?? null),
+            'longTerm' => RtcHelper::formatCandidate($data->long ?? null),
+        ];
+
+        return view('website.rtc.detail', [
+            'main' => $main,
+            'managers' => array_values($managers),
+            'title' => $data->name,
+        ]);
     }
+
 
 
     public function update(Request $request)
