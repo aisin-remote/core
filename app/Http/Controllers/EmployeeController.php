@@ -680,10 +680,14 @@ class EmployeeController extends Controller
 
             DB::transaction(function () use ($request, $validatedData, $employee, $oldGrade, $oldPosition) {
                 if ($request->hasFile('photo')) {
-                    if ($employee->photo) {
-                        Storage::delete('public/' . $employee->photo);
+                    // hapus file lama jika ada
+                    if ($employee->photo && Storage::disk('public')->exists($employee->photo)) {
+                        Storage::disk('public')->delete($employee->photo);
                     }
-                    $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
+
+                    // simpan file baru
+                    $photoPath = $request->file('photo')->store('employee_photos', 'public');
+                    $validatedData['photo'] = $photoPath;
                 }
 
                 $validatedData['working_period'] = Carbon::parse($validatedData['aisin_entry_date'])->diffInYears(Carbon::now());

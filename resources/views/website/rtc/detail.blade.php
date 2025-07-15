@@ -4,9 +4,29 @@
 @section('breadcrumbs', $title ?? 'RTC')
 
 @section('main')
-    <div id = "orgchart-container" style = "width:100%; height: 700px;"></div>
-    {{-- Styles tetap di sini seperti sebelumnya --}}
-    @include('website.rtc.style.index')
+    <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html,
+        body {
+            height: 100%;
+            background-color: #111;
+            /* Sesuai mode dark chart */
+        }
+
+        #orgchart-container {
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+    </style>
+
 @endsection
 
 @push('scripts')
@@ -32,7 +52,7 @@
     <image preserveAspectRatio="xMidYMid slice" clip-path="url(#ulaImg)" xlink:href="{val}" x="115" y="12" width="70" height="70"></image>`;
 
             OrgChart.templates.myTemplate.field_0 =
-            `
+                `
 <text style="font-size: 15px; font-weight: bold;" fill="#000" x="150" y="95" text-anchor="middle">{val}</text>`; // department
 
             OrgChart.templates.myTemplate.field_1 = `
@@ -96,7 +116,7 @@
                     cand_mt: `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
                     cand_lt: `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
                     color: colorMap[main.colorClass] || '#007bff',
-                    img: "https://cdn.balkan.app/shared/1.jpg"
+                    img: main.person?.photo ? `/storage/${main.person.photo}` : null
                 });
 
                 managers.forEach((manager, i) => {
@@ -114,7 +134,8 @@
                         cand_st: `${manager.shortTerm?.name ?? '-'} (${manager.shortTerm?.grade ?? '-'}, ${manager.shortTerm?.age ?? '-'})`,
                         cand_mt: `${manager.midTerm?.name ?? '-'} (${manager.midTerm?.grade ?? '-'}, ${manager.midTerm?.age ?? '-'})`,
                         cand_lt: `${manager.longTerm?.name ?? '-'} (${manager.longTerm?.grade ?? '-'}, ${manager.longTerm?.age ?? '-'})`,
-                        color: colorMap[manager.colorClass] || '#28a745'
+                        color: colorMap[manager.colorClass] || '#28a745',
+                        img: manager.person?.photo ? `/storage/${manager.person.photo}` : null
                     });
 
                     (manager.supervisors ?? []).forEach((spv, j) => {
@@ -131,7 +152,8 @@
                             cand_st: `${spv.shortTerm?.name ?? '-'} (${spv.shortTerm?.grade ?? '-'}, ${spv.shortTerm?.age ?? '-'})`,
                             cand_mt: `${spv.midTerm?.name ?? '-'} (${spv.midTerm?.grade ?? '-'}, ${spv.midTerm?.age ?? '-'})`,
                             cand_lt: `${spv.longTerm?.name ?? '-'} (${spv.longTerm?.grade ?? '-'}, ${spv.longTerm?.age ?? '-'})`,
-                            color: colorMap[spv.colorClass] || '#dc3545'
+                            color: colorMap[spv.colorClass] || '#dc3545',
+                            img: spv.person?.photo ? `/storage/${spv.person.photo}` : null
                         });
                     });
                 });
@@ -147,7 +169,18 @@
             // ✅ 3. Buat chart
             const chart = new OrgChart(document.getElementById("orgchart-container"), {
                 template: "myTemplate",
+                mode: "dark",
+
                 enableSearch: false,
+                enableDragDrop: true,
+
+                enableZoom: true,
+                enablePan: true,
+
+                scaleInitial: OrgChart.match.boundary,
+                scaleMin: 0.3,
+                scaleMax: 2,
+
                 nodeBinding: {
                     node: "color",
                     img_0: "img",
@@ -162,8 +195,23 @@
                     field_8: "cand_lt",
                     field_9: "field_9",
                 },
+                menu: {
+                    pdf: {
+                        text: "Export PDF"
+                    },
+                    png: {
+                        text: "Export PNG"
+                    },
+                    svg: {
+                        text: "Export SVG"
+                    },
+                    csv: {
+                        text: "Export CSV"
+                    }
+                },
                 nodes: buildChartData(main, managers),
             });
+            chart.fit();
         });
     </script>
 @endpush

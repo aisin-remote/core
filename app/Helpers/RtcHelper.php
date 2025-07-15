@@ -10,6 +10,7 @@ class RtcHelper
     {
         return [
             'name'  => $person->name ?? '-',
+            'photo' => $person->photo ?? null,
             'grade' => $person->grade ?? '-',
             'age'   => $person && $person->birthday_date ? Carbon::parse($person->birthday_date)->age : '-',
             'los'   => $person ? '13' : '-',
