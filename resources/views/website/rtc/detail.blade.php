@@ -28,7 +28,7 @@
         #orgchart-container {
             width: 100%;
             height: 100vh;
-            overflow: hidden;
+            overflow: auto;
         }
     </style>
 
@@ -121,7 +121,7 @@
                     cand_mt: `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
                     cand_lt: `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
                     color: colorMap[main.colorClass] || '#007bff',
-                    img: main.person?.photo ? `/storage/${main.person.photo}` : null
+                    img: main.person?.photo ? main.person.photo : null
                 });
 
                 managers.forEach((manager, i) => {
@@ -140,7 +140,7 @@
                         cand_mt: `${manager.midTerm?.name ?? '-'} (${manager.midTerm?.grade ?? '-'}, ${manager.midTerm?.age ?? '-'})`,
                         cand_lt: `${manager.longTerm?.name ?? '-'} (${manager.longTerm?.grade ?? '-'}, ${manager.longTerm?.age ?? '-'})`,
                         color: colorMap[manager.colorClass] || '#28a745',
-                        img: manager.person?.photo ? `/storage/${manager.person.photo}` : null
+                        img: manager.person?.photo ? manager.person.photo : null
                     });
 
                     (manager.supervisors ?? []).forEach((spv, j) => {
@@ -158,7 +158,7 @@
                             cand_mt: `${spv.midTerm?.name ?? '-'} (${spv.midTerm?.grade ?? '-'}, ${spv.midTerm?.age ?? '-'})`,
                             cand_lt: `${spv.longTerm?.name ?? '-'} (${spv.longTerm?.grade ?? '-'}, ${spv.longTerm?.age ?? '-'})`,
                             color: colorMap[spv.colorClass] || '#dc3545',
-                            img: spv.person?.photo ? `/storage/${spv.person.photo}` : null
+                            img: spv.person?.photo ? spv.person.photo : null
                         });
                     });
                 });
@@ -171,61 +171,169 @@
             console.log('Chart nodes:', buildChartData(main, managers));
             console.log(buildChartData(main, managers)[0])
 
+            async function safeConvertToBase64(url) {
+                try {
+                    if (!url) return null;
+
+                    // Fix protocol-relative URLs
+                    if (url.startsWith('//')) url = window.location.protocol + url;
+                    if (url.startsWith('/')) url = window.location.origin + url;
+
+                    // Tambahkan cache buster untuk menghindari cached response
+                    const cacheBusterUrl = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+
+                    const response = await fetch(cacheBusterUrl, {
+                        mode: 'cors',
+                        credentials: 'same-origin'
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const blob = await response.blob();
+                    return new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result);
+                        reader.onerror = () => reject(new Error('Failed to read blob'));
+                        reader.readAsDataURL(blob);
+                    });
+                } catch (error) {
+                    console.warn('Failed to convert image to base64:', url, error);
+                    return null;
+                }
+            }
+
+            async function prepareChartData(main, managers) {
+                // Clone objects to avoid mutation
+                const processedMain = {
+                    ...main
+                };
+                const processedManagers = JSON.parse(JSON.stringify(managers));
+
+                // Convert main image
+                if (processedMain.person?.photo) {
+                    processedMain.person.photo = await safeConvertToBase64(processedMain.person.photo);
+                }
+
+                // Process managers
+                await Promise.all(processedManagers.map(async (manager) => {
+                    if (manager.person?.photo) {
+                        manager.person.photo = await safeConvertToBase64(manager.person.photo);
+                    }
+
+                    // Process supervisors
+                    if (manager.supervisors) {
+                        await Promise.all(manager.supervisors.map(async (spv) => {
+                            if (spv.person?.photo) {
+                                spv.person.photo = await safeConvertToBase64(spv
+                                    .person.photo);
+                            }
+                        }));
+                    }
+                }));
+
+                return {
+                    main: processedMain,
+                    managers: processedManagers
+                };
+            }
+
             // ✅ 3. Buat chart
-            const chart = new OrgChart(document.getElementById("orgchart-container"), {
-                template: "myTemplate",
-                mode: "dark",
+            prepareChartData(main, managers).then(({
+                main,
+                managers
+            }) => {
+                const nodes = buildChartData(main, managers);
+                console.log('Final nodes with images:', nodes);
 
-                enableSearch: false,
-                enableDragDrop: false,
+                const chart = new OrgChart(document.getElementById("orgchart-container"), {
+                    template: "myTemplate",
+                    mode: "dark",
+                    enableSearch: false,
+                    enableDragDrop: false,
+                    enableZoom: true,
+                    enablePan: true,
+                    scaleInitial: OrgChart.match.boundary,
+                    scaleMin: 0.3,
+                    scaleMax: 2,
+                    nodeMouseClick: OrgChart.action.none,
+                    nodeBinding: {
+                        node: "color",
+                        img_0: "img",
+                        field_0: "department",
+                        field_1: "name",
+                        field_2: "grade",
+                        field_3: "age",
+                        field_4: "los",
+                        field_5: "lcp",
+                        field_6: "cand_st",
+                        field_7: "cand_mt",
+                        field_8: "cand_lt",
+                        field_9: "field_9",
+                    },
+                    nodes: nodes, // Gunakan nodes yang sudah diproses
+                });
 
-                enableZoom: true,
-                enablePan: true,
+                // Export handlers
+                document.getElementById("btn-pdf").addEventListener("click", () => {
+                    chart.exportPDF({
+                        filename: "chart.pdf"
+                    });
+                });
 
-                scaleInitial: OrgChart.match.boundary,
-                scaleMin: 0.3,
-                scaleMax: 2,
+                document.getElementById("btn-png").addEventListener("click", () => {
+                    chart.fit();
+                    setTimeout(() => {
+                        chart.exportPNG({
+                            filename: "chart.png"
+                        });
+                    }, 1500); // Tambah delay lebih besar
+                });
 
-                nodeMouseClick: OrgChart.action.none,
-                nodeBinding: {
-                    node: "color",
-                    img_0: "img",
-                    field_0: "department",
-                    field_1: "name",
-                    field_2: "grade",
-                    field_3: "age",
-                    field_4: "los",
-                    field_5: "lcp",
-                    field_6: "cand_st",
-                    field_7: "cand_mt",
-                    field_8: "cand_lt",
-                    field_9: "field_9",
-                },
-                nodes: buildChartData(main, managers),
-            });
+                document.getElementById("btn-svg").addEventListener("click", () => {
+                    chart.exportSVG({
+                        filename: "chart.svg"
+                    });
+                });
 
-            // Tombol export manual
-            document.getElementById("btn-pdf").addEventListener("click", function() {
-                chart.exportPDF({
-                    filename: "chart.pdf"
+                document.getElementById("btn-csv").addEventListener("click", () => {
+                    chart.exportCSV({
+                        filename: "chart.csv"
+                    });
+                });
+
+                chart.fit();
+            }).catch(error => {
+                console.error('Error initializing chart:', error);
+                // Fallback: Render chart without images
+                const nodes = buildChartData(main, managers);
+                new OrgChart(document.getElementById("orgchart-container"), {
+                    template: "myTemplate",
+                    mode: "dark",
+                    enableSearch: false,
+                    enableDragDrop: false,
+                    enableZoom: true,
+                    enablePan: true,
+                    scaleInitial: OrgChart.match.boundary,
+                    scaleMin: 0.3,
+                    scaleMax: 2,
+                    nodeMouseClick: OrgChart.action.none,
+                    nodeBinding: {
+                        node: "color",
+                        img_0: "img",
+                        field_0: "department",
+                        field_1: "name",
+                        field_2: "grade",
+                        field_3: "age",
+                        field_4: "los",
+                        field_5: "lcp",
+                        field_6: "cand_st",
+                        field_7: "cand_mt",
+                        field_8: "cand_lt",
+                        field_9: "field_9",
+                    },
+                    nodes: nodes
                 });
             });
-            document.getElementById("btn-png").addEventListener("click", function() {
-                chart.exportPNG({
-                    filename: "chart.png"
-                });
-            });
-            document.getElementById("btn-svg").addEventListener("click", function() {
-                chart.exportSVG({
-                    filename: "chart.svg"
-                });
-            });
-            document.getElementById("btn-csv").addEventListener("click", function() {
-                chart.exportCSV({
-                    filename: "chart.csv"
-                });
-            });
-            chart.fit();
         });
     </script>
 @endpush
