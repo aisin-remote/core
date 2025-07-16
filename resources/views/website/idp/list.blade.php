@@ -397,9 +397,16 @@
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Simpan modal aktif saat ini
+            let currentActiveModal = null;
 
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
+
+                // Tutup semua modal yang ada terlebih dahulu
+                if (currentActiveModal) {
+                    $(currentActiveModal).modal('hide');
+                }
 
                 let employeeId = $(this).data("employee-id");
                 console.log("Fetching history for Employee ID:", employeeId);
@@ -472,7 +479,9 @@
                 `);
                         }
 
-                        $("#detailAssessmentModal").modal("show");
+                        // Tampilkan modal dan simpan sebagai aktif saat ini
+                        currentActiveModal = "#detailAssessmentModal";
+                        $(currentActiveModal).modal('show');
                     },
                     error: function(error) {
                         console.error("Error fetching data:", error);
@@ -484,20 +493,30 @@
             $(document).on('show.bs.modal', '.modal', function(event) {
                 const modalId = $(this).attr('id');
                 if (modalId.startsWith('notes_')) {
-                    // Sembunyikan modal detailAssessmentModal secara sementara
-                    $('.modal-backdrop').last().remove();
-
-                    $('#detailAssessmentModal').modal('hide');
+                    if (currentActiveModal) {
+                        $(currentActiveModal).modal('hide');
+                    }
                 }
+
+                // Perbarui modal aktif saat ini
+                currentActiveModal = `#${modalId}`;
             });
 
             // Ketika modal notes ditutup, tampilkan kembali modal detailAssessmentModal
             $(document).on('hidden.bs.modal', '.modal', function(event) {
                 const modalId = $(this).attr('id');
-                if (modalId.startsWith('notes_')) {
-                    $('#detailAssessmentModal').modal('show');
+                // Jika menutup modal catatan, tampilkan modal utama lagi
+                if (modalId.startsWith('notes_') && currentActiveModal === `#${modalId}`) {
+                    currentActiveModal = "#detailAssessmentModal";
+                    $(currentActiveModal).modal('show');
+                } else if (currentActiveModal === `#${modalId}`) {
+                    currentActiveModal = null;
+                    // Bersihkan latar belakang yang tersisa
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
                 }
             });
+
             $(document).on('click', '.btn-delete', function() {
                 const id = $(this).data('id');
                 const employeeId = $(this).data('employee-id')
@@ -533,8 +552,12 @@
                                     timer: 2000,
                                     showConfirmButton: false
                                 }).then(() => {
-                                    // Tutup modal setelah notifikasi selesai
-                                    $('#detailAssessmentModal').modal('hide');
+                                    // Tutup modal dengan benar
+                                    if (currentActiveModal) {
+                                        $(currentActiveModal).modal('hide');
+                                        currentActiveModal = null;
+                                    }
+                                    // Bersihkan latar belakang
                                     $('.modal-backdrop').remove();
                                     $('body').removeClass('modal-open');
                                 });
@@ -546,8 +569,10 @@
                                     url: `/idp/history/${employeeId}`,
                                     type: 'GET',
                                     success: function(response) {
-                                        if(response.grouped_assessments.length === 0){
-                                            $(`.history-btn[data-employee-id="${employeeId}"]`).closest('tr').remove();
+                                        if (response.grouped_assessments
+                                            .length === 0) {
+                                            $(`.history-btn[data-employee-id="${employeeId}"]`)
+                                                .closest('tr').remove();
                                         }
                                     }
                                 })
