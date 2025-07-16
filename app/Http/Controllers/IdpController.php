@@ -832,8 +832,9 @@ class IdpController extends Controller
                     ->pluck('status')
                     ->toArray();
 
-                // Semua status harus 2, dan tidak boleh ada -1
-                return count(array_unique($relatedStatuses)) === 1 && $relatedStatuses[0] === 2;
+                // - Minimal satu status = 2
+                // - Tidak boleh ada status = -1
+                return in_array(2, $relatedStatuses) && !in_array(-1, $relatedStatuses);
             });
 
         $idps = $checkIdps->merge($approveIdps);
