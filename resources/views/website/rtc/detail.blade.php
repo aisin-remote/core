@@ -1,11 +1,16 @@
-@extends('layouts.root.blank')
+@extends('layouts.root.view-rtc')
 
 @section('title', $title ?? 'RTC')
 @section('breadcrumbs', $title ?? 'RTC')
 
 @section('main')
+    <div class="fixed top-4 right-4 z-50 flex gap-2">
+        <button id="btn-pdf" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PDF</button>
+        <button id="btn-png" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PNG</button>
+        <button id="btn-svg" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">SVG</button>
+        <button id="btn-csv" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">CSV</button>
+    </div>
     <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
-
     <style>
         * {
             margin: 0;
@@ -172,7 +177,7 @@
                 mode: "dark",
 
                 enableSearch: false,
-                enableDragDrop: true,
+                enableDragDrop: false,
 
                 enableZoom: true,
                 enablePan: true,
@@ -181,6 +186,7 @@
                 scaleMin: 0.3,
                 scaleMax: 2,
 
+                nodeMouseClick: OrgChart.action.none,
                 nodeBinding: {
                     node: "color",
                     img_0: "img",
@@ -195,21 +201,29 @@
                     field_8: "cand_lt",
                     field_9: "field_9",
                 },
-                menu: {
-                    pdf: {
-                        text: "Export PDF"
-                    },
-                    png: {
-                        text: "Export PNG"
-                    },
-                    svg: {
-                        text: "Export SVG"
-                    },
-                    csv: {
-                        text: "Export CSV"
-                    }
-                },
                 nodes: buildChartData(main, managers),
+            });
+
+            // Tombol export manual
+            document.getElementById("btn-pdf").addEventListener("click", function() {
+                chart.exportPDF({
+                    filename: "chart.pdf"
+                });
+            });
+            document.getElementById("btn-png").addEventListener("click", function() {
+                chart.exportPNG({
+                    filename: "chart.png"
+                });
+            });
+            document.getElementById("btn-svg").addEventListener("click", function() {
+                chart.exportSVG({
+                    filename: "chart.svg"
+                });
+            });
+            document.getElementById("btn-csv").addEventListener("click", function() {
+                chart.exportCSV({
+                    filename: "chart.csv"
+                });
             });
             chart.fit();
         });
