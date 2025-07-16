@@ -4,12 +4,26 @@
 @section('breadcrumbs', $title ?? 'RTC')
 
 @section('main')
+    <!-- List menu export -->
     <div class="fixed top-4 right-4 z-50 flex gap-2">
         <button id="btn-pdf" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PDF</button>
         <button id="btn-png" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PNG</button>
         <button id="btn-svg" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">SVG</button>
         <button id="btn-csv" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">CSV</button>
     </div>
+
+    <!-- Loading Indicator Bootstrap 5 -->
+    <div id="loading-overlay"
+        class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75 z-50">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-3" style="width: 3rem; height: 3rem;" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h5 class="text-white mb-1">Memuat Data Organisasi</h5>
+            <p class="text-light mb-0" id="loading-progress">Mengunduh gambar 0/0</p>
+        </div>
+    </div>
+
     <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
     <style>
         * {
@@ -94,7 +108,6 @@
             OrgChart.templates.myTemplate.field_9 = `
 <text style="font-size: 11px;" fill="#888" x="150" y="350" text-anchor="middle">(gol, usia, HAV)</text>`;
 
-
             const colorMap = {
                 'color-1': '#007bff',
                 'color-2': '#28a745',
@@ -169,11 +182,45 @@
             console.log('Main data:', main);
             console.log('Managers data:', managers);
             console.log('Chart nodes:', buildChartData(main, managers));
-            console.log(buildChartData(main, managers)[0])
+
+            async function countTotalImages(data) {
+                let count = 0;
+                if (data.main.person?.photo) count++;
+                data.managers.forEach(manager => {
+                    if (manager.person.photo) count++;
+                    (manager.supervisors || []).forEach(spv => {
+                        if (spv.person.photo) count++;
+                    })
+                })
+
+                return count;
+            }
+
+            // inisiasi loading overflow
+            const loadingOverlay = $('#loading-overlay');
+            const loadingProgress = $('#loading-progress');
+            const totalImages = countTotalImages({
+                main,
+                managers
+            });
+            let loadedImages = 0;
+
+            // Update progress text
+            function updateProgress() {
+                loadedImages++;
+                loadingProgress.text(`Mengunduh gambar ${loadedImages}/${totalImages}`);
+            }
+
+            // Tampilkan loading overlay
+            loadingOverlay.removeClass('d-none').addClass('d-flex');
+            loadingProgress.text(`Mengunduh gambar 0/${totalImages}`);
 
             async function safeConvertToBase64(url) {
                 try {
-                    if (!url) return null;
+                    if (!url) {
+                        updateProgress();
+                        return null;
+                    }
 
                     // Fix protocol-relative URLs
                     if (url.startsWith('//')) url = window.location.protocol + url;
@@ -192,8 +239,14 @@
                     const blob = await response.blob();
                     return new Promise((resolve, reject) => {
                         const reader = new FileReader();
-                        reader.onloadend = () => resolve(reader.result);
-                        reader.onerror = () => reject(new Error('Failed to read blob'));
+                        reader.onloadend = () => {
+                            updateProgress(); // Update progress ketika gambar selesai
+                            resolve(reader.result)
+                        };
+                        reader.onerror = () => {
+                            updateProgress(); // Update progress ketika gambar selesai
+                            resolve(null);
+                        };
                         reader.readAsDataURL(blob);
                     });
                 } catch (error) {
@@ -243,7 +296,11 @@
                 managers
             }) => {
                 const nodes = buildChartData(main, managers);
-                console.log('Final nodes with images:', nodes);
+
+                // Sembunyikan loading dengan animasi
+                loadingOverlay.fadeOut(300, function() {
+                    $(this).addClass('d-none').removeClass('d-flex');
+                });
 
                 const chart = new OrgChart(document.getElementById("orgchart-container"), {
                     template: "myTemplate",
@@ -275,9 +332,12 @@
 
                 // Export handlers
                 document.getElementById("btn-pdf").addEventListener("click", () => {
-                    chart.exportPDF({
-                        filename: "chart.pdf"
-                    });
+                    chart.fit();
+                    setTimeout(() => {
+                        chart.exportPDF({
+                            filename: "chart.pdf"
+                        });
+                    }, 1500);
                 });
 
                 document.getElementById("btn-png").addEventListener("click", () => {
@@ -290,20 +350,29 @@
                 });
 
                 document.getElementById("btn-svg").addEventListener("click", () => {
-                    chart.exportSVG({
-                        filename: "chart.svg"
-                    });
+                    chart.fit();
+                    setTimeout(() => {
+                        chart.exportSVG({
+                            filename: "chart.svg"
+                        });
+                    }, 1500);
                 });
 
                 document.getElementById("btn-csv").addEventListener("click", () => {
-                    chart.exportCSV({
-                        filename: "chart.csv"
-                    });
+                    chart.fit();
+                    setTimeout(() => {
+                        chart.exportCSV({
+                            filename: "chart.csv"
+                        });
+                    }, 1500);
                 });
 
                 chart.fit();
             }).catch(error => {
                 console.error('Error initializing chart:', error);
+                loadingOverlay.fadeOut(300, function() {
+                    $(this).addClass('d-none').removeClass('d-flex');
+                });
                 // Fallback: Render chart without images
                 const nodes = buildChartData(main, managers);
                 new OrgChart(document.getElementById("orgchart-container"), {
