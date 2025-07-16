@@ -896,8 +896,7 @@ class IdpController extends Controller
 
     public function destroy($id)
     {
-        $idp = Idp::findOrFail($id);
-        $idp->delete();
+        Idp::where('assessment_id', $id)->delete();
 
         return redirect()->back()->with('success', 'IDP deleted successfully.');
     }

@@ -431,7 +431,10 @@
                         let index = 1;
 
                         if (grouped && Object.keys(grouped).length > 0) {
-                            Object.entries(grouped).forEach(([assessmentId, assessments]) => {
+                            Object.entries(grouped).forEach(([assessmentId, assessments,
+                                id
+                            ]) => {
+
                                 const first = assessments[0];
                                 const createdAt = new Date(first.created_at);
                                 const year = createdAt.getFullYear();
@@ -439,7 +442,7 @@
                                 let deleteButton = "";
                                 if (currentUserRole === "HRD") {
                                     deleteButton = `
-                            <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}">
+                            <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}" data-employee-id="${employeeId}">
                                 Delete
                             </button>
                         `;
@@ -497,6 +500,8 @@
             });
             $(document).on('click', '.btn-delete', function() {
                 const id = $(this).data('id');
+                const employeeId = $(this).data('employee-id')
+                const clickedButton = $(this);
 
                 Swal.fire({
                     title: 'Are you sure?',
@@ -527,10 +532,25 @@
                                     icon: 'success',
                                     timer: 2000,
                                     showConfirmButton: false
+                                }).then(() => {
+                                    // Tutup modal setelah notifikasi selesai
+                                    $('#detailAssessmentModal').modal('hide');
+                                    $('.modal-backdrop').remove();
+                                    $('body').removeClass('modal-open');
                                 });
-
                                 // Hapus baris dari tabel langsung tanpa reload
-                                $(`button[data-id="${id}"]`).closest('tr').remove();
+                                clickedButton.closest('tr').remove();
+
+                                // AJAX cek apakah masih ada IDP dari karyawan ini
+                                $.ajax({
+                                    url: `/idp/history/${employeeId}`,
+                                    type: 'GET',
+                                    success: function(response) {
+                                        if(response.grouped_assessments.length === 0){
+                                            $(`.history-btn[data-employee-id="${employeeId}"]`).closest('tr').remove();
+                                        }
+                                    }
+                                })
                             },
                             error: function() {
                                 Swal.fire('Error!', 'Something went wrong.', 'error');
