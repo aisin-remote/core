@@ -4,14 +4,6 @@
 @section('breadcrumbs', $title ?? 'RTC')
 
 @section('main')
-    <!-- List menu export -->
-    <div class="fixed top-4 right-4 z-50 flex gap-2">
-        <button id="btn-pdf" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PDF</button>
-        <button id="btn-png" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PNG</button>
-        <button id="btn-svg" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">SVG</button>
-        <button id="btn-csv" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">CSV</button>
-    </div>
-
     <!-- Loading Indicator Bootstrap 5 -->
     <div id="loading-overlay"
         class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-dark bg-opacity-75 z-50">
@@ -24,7 +16,18 @@
         </div>
     </div>
 
-    <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
+    <div style="position: relative;">
+        <!-- Floating export buttons -->
+        <div style="position: absolute; top: 20px; right: 20px; z-index: 10000; display: flex; gap: 8px;">
+            <button id="btn-pdf" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PDF</button>
+            <button id="btn-png" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PNG</button>
+            <button id="btn-svg" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">SVG</button>
+            <button id="btn-csv" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">CSV</button>
+        </div>
+
+        <!-- Chart container -->
+        <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
+    </div>
     <style>
         * {
             margin: 0;
@@ -199,9 +202,13 @@
             // inisiasi loading overflow
             const loadingOverlay = $('#loading-overlay');
             const loadingProgress = $('#loading-progress');
-            const totalImages = countTotalImages({
+            let totalImages = 0;
+            countTotalImages({
                 main,
                 managers
+            }).then(total => {
+                totalImages = total;
+                loadingProgress.text(`Mengunduh gambar 0/${totalImages}`);
             });
             let loadedImages = 0;
 
@@ -328,45 +335,52 @@
                         field_9: "field_9",
                     },
                     nodes: nodes, // Gunakan nodes yang sudah diproses
+                    onInit: function() {
+                        // Pastikan tombol tetap ada setelah chart diinisialisasi
+                        document.querySelector('.export-buttons').style.display = 'flex';
+                    }
                 });
 
                 // Export handlers
-                document.getElementById("btn-pdf").addEventListener("click", () => {
-                    chart.fit();
-                    setTimeout(() => {
-                        chart.exportPDF({
-                            filename: "chart.pdf"
-                        });
-                    }, 1500);
-                });
+                function setupExportButtons() {
+                    document.getElementById("btn-pdf")?.addEventListener("click", () => {
+                        chart.fit();
+                        setTimeout(() => {
+                            chart.exportPDF({
+                                filename: "chart.pdf"
+                            });
+                        }, 1500);
+                    });
 
-                document.getElementById("btn-png").addEventListener("click", () => {
-                    chart.fit();
-                    setTimeout(() => {
-                        chart.exportPNG({
-                            filename: "chart.png"
-                        });
-                    }, 1500); // Tambah delay lebih besar
-                });
+                    document.getElementById("btn-png")?.addEventListener("click", () => {
+                        chart.fit();
+                        setTimeout(() => {
+                            chart.exportPNG({
+                                filename: "chart.png"
+                            });
+                        }, 1500); // Tambah delay lebih besar
+                    });
 
-                document.getElementById("btn-svg").addEventListener("click", () => {
-                    chart.fit();
-                    setTimeout(() => {
-                        chart.exportSVG({
-                            filename: "chart.svg"
-                        });
-                    }, 1500);
-                });
+                    document.getElementById("btn-svg")?.addEventListener("click", () => {
+                        chart.fit();
+                        setTimeout(() => {
+                            chart.exportSVG({
+                                filename: "chart.svg"
+                            });
+                        }, 1500);
+                    });
 
-                document.getElementById("btn-csv").addEventListener("click", () => {
-                    chart.fit();
-                    setTimeout(() => {
-                        chart.exportCSV({
-                            filename: "chart.csv"
-                        });
-                    }, 1500);
-                });
+                    document.getElementById("btn-csv")?.addEventListener("click", () => {
+                        chart.fit();
+                        setTimeout(() => {
+                            chart.exportCSV({
+                                filename: "chart.csv"
+                            });
+                        }, 1500);
+                    });
+                }
 
+                setupExportButtons();
                 chart.fit();
             }).catch(error => {
                 console.error('Error initializing chart:', error);
