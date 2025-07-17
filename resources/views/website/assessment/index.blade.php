@@ -178,33 +178,113 @@
 
         <script>
             document.addEventListener("DOMContentLoaded", function() {
+                // Modal management system
+                 window.modalManager = {
+                    activeModals: [],
+
+                    openModal: function(modalId) {
+                        // Close all existing modals first
+                        this.closeAllModals();
+
+                        const modalElement = document.getElementById(modalId);
+                        if (!modalElement) return;
+
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+
+                        this.activeModals.push(modalId);
+
+                        // Clean up any orphaned backdrops
+                        this.cleanupBackdrops();
+
+                        // Add new backdrop
+                        this.addBackdrop();
+                    },
+
+                    closeModal: function(modalId) {
+                        const modalElement = document.getElementById(modalId);
+                        if (!modalElement) return;
+
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        if (modal) {
+                            modal.hide();
+                        }
+
+                        this.activeModals = this.activeModals.filter(id => id !== modalId);
+                        this.cleanupBackdrops();
+
+                        // If there are still modals open, add backdrop for the topmost one
+                        if (this.activeModals.length > 0) {
+                            this.addBackdrop();
+                        } else {
+                            // No more modals, ensure body is clean
+                            document.body.classList.remove('modal-open');
+                        }
+                    },
+
+                    closeAllModals: function() {
+                        this.activeModals.forEach(modalId => {
+                            const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+                            if (modal) modal.hide();
+                        });
+                        this.activeModals = [];
+                        this.cleanupBackdrops();
+                        document.body.classList.remove('modal-open');
+                    },
+
+                    cleanupBackdrops: function() {
+                        const backdrops = document.querySelectorAll('.modal-backdrop');
+                        backdrops.forEach(backdrop => backdrop.remove());
+                    },
+
+                    addBackdrop: function() {
+                        // Only add if not already exists
+                        if (!document.querySelector('.modal-backdrop')) {
+                            const backdrop = document.createElement('div');
+                            backdrop.className = 'modal-backdrop fade show';
+                            document.body.appendChild(backdrop);
+                            document.body.classList.add('modal-open');
+                        }
+                    }
+                };
+
+                // Tab filtering functionality
                 const tabs = document.querySelectorAll(".filter-tab");
                 const rows = document.querySelectorAll("#kt_table_users tbody tr");
 
                 tabs.forEach(tab => {
                     tab.addEventListener("click", function(e) {
                         e.preventDefault();
-
-                        // Hapus class active dari semua tab
                         tabs.forEach(t => t.classList.remove("active"));
                         this.classList.add("active");
 
-                        const filter = this.getAttribute("data-filter")
-                            .toLowerCase(); // Ambil filter dari tab
-
+                        const filter = this.getAttribute("data-filter").toLowerCase();
                         rows.forEach(row => {
-                            const position = row.getAttribute("data-position")
-                                .toLowerCase(); // Ambil posisi dari row
-                            if (filter === "all" || position.includes(filter)) {
-                                row.style.display = "";
-                            } else {
-                                row.style.display = "none";
-                            }
+                            const position = row.getAttribute("data-position").toLowerCase();
+                            row.style.display = (filter === "all" || position.includes(
+                                filter)) ? "" : "none";
                         });
                     });
                 });
             });
+
+            // Initialize all modals with proper handlers
+            function initModals() {
+                const modals = ['detailAssessmentModal', 'updateAssessmentModal', 'noteAssessmentModal',
+                    'addAssessmentModal'
+                ];
+                modals.forEach(modalId => {
+                    const modalElement = document.getElementById(modalId);
+                    if (modalElement) {
+                        modalElement.addEventListener('hidden.bs.modal', function() {
+                            modalManager.closeModal(modalId);
+                        });
+                    }
+                });
+            };
+
             $(document).ready(function() {
+                initModals();
 
                 function safeEncode(str) {
                     return btoa(unescape(encodeURIComponent(str || '')));
@@ -214,9 +294,9 @@
                     return decodeURIComponent(escape(atob(str || '')));
                 }
 
+                // History button click handler
                 $(document).on("click", ".history-btn", function(event) {
                     event.preventDefault();
-
                     let employeeId = $(this).data("employee-id");
 
                     $("#npkText").text("-");
@@ -268,9 +348,10 @@
                                     data-id="${assessment.id}">Delete</button>
                             `;
 
-                                        noteBtn = `
+                                        noteBtn =
+                                            `
                                 <button type="button" class="btn btn-dark btn-sm noteAssessment" data-bs-toggle="modal"           data-bs-target="#noteAssessmentModal" data-note="${safeEncode(assessment.note || '')}">Note</button>`
-                            }
+                                    }
 
                                     let row = `
                             <tr>
@@ -303,8 +384,8 @@
                         </tr>
                     `);
                             }
-
-                            $("#detailAssessmentModal").modal("show");
+                            // Use modalManager to open the modal
+                            modalManager.openModal("detailAssessmentModal");
                         },
                         error: function() {
                             alert("Failed to load assessment data!");
@@ -312,6 +393,7 @@
                     });
                 });
 
+                // Update assessment button click handler
                 $(document).on("click", ".updateAssessment", function() {
                     let assessmentId = $(this).data("id");
                     let employeeId = $(this).data("employee-id");
@@ -344,36 +426,16 @@
                     syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses,
                         suggestion_development);
 
-                    const modal = new bootstrap.Modal(document.getElementById("updateAssessmentModal"));
-                    modal.show();
-
-                    $("#detailAssessmentModal").modal("hide");
-
-                    setTimeout(() => {
-                        $(".modal-backdrop").remove();
-                        $("body").removeClass("modal-open");
-
-                        $("#updateAssessmentModal").modal("show");
-                        $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                    }, 10);
+                    modalManager.closeModal("detailAssessmentModal");
+                    modalManager.openModal("updateAssessmentModal");
                 });
 
+                // Note assessment button click handler
                 $(document).on("click", ".noteAssessment", function() {
-                    let note = safeDecode($(this).data("note"));
-                    $("#assessmentNote").val(note);
-
-                    // tutup modal sebelumnya
-                    const detailModalEl = document.getElementById("detailAssessmentModal");
-                    const detailModal = bootstrap.Modal.getInstance(detailModalEl);
-                    if(detailModal){
-                        detailModal.hide();
-                    }
-
-                    // tampilkan modal note
-                    const noteModalEld = document.getElementById("noteAssessmentModal");
-                    const noteModal = bootstrap.Modal.getOrCreateInstance(noteModalEld);
-                    noteModal.show();
-                })
+                    $("#assessmentNote").val(safeDecode($(this).data("note")));
+                    modalManager.closeModal("detailAssessmentModal");
+                    modalManager.openModal("noteAssessmentModal");
+                });
 
                 function syncStrengthWeaknessFromScores(scores, alcs, alcNames, strengths, weaknesses, suggestions) {
                     let strengthContainer = document.getElementById("update-strengths-wrapper");
@@ -426,26 +488,26 @@
                     }
 
                     templateCard.innerHTML = `
-        <div class="mb-3">
-            <label>ALC</label>
-            <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
-                <option value="">Pilih ALC</option>
-                @foreach ($alcs as $alc)
-                    <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
-                        {{ $alc->name }}
-                    </option>
-                @endforeach
-            </select>
-        </div>
-        <div class="mb-3">
-            <label>Description</label>
-            <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${description}</textarea>
-        </div>
-        <div class="mb-3">
-            <label>Suggestion Development</label>
-            <textarea class="form-control suggestion-textarea" name="suggestion_development[${alcId}]" rows="2">${suggestion}</textarea>
-        </div>
-    `;
+                    <div class="mb-3">
+                        <label>ALC</label>
+                        <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
+                            <option value="">Pilih ALC</option>
+                            @foreach ($alcs as $alc)
+                                <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
+                                    {{ $alc->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label>Description</label>
+                        <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${description}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label>Suggestion Development</label>
+                        <textarea class="form-control suggestion-textarea" name="suggestion_development[${alcId}]" rows="2">${suggestion}</textarea>
+                    </div>
+                `;
 
                     let selectElement = templateCard.querySelector(".alc-dropdown");
                     selectElement.addEventListener("change", function() {
@@ -504,6 +566,7 @@
                         });
                     });
                 }
+
                 // Fungsi untuk menangani perubahan skor
                 $(document).on("change", ".update-score", function() {
                     const radio = $(this);
@@ -573,12 +636,7 @@
                     updateDropdownOptions();
                 });
 
-
-
                 // Fungsi untuk memperbarui dropdown ALC agar tidak ada pilihan yang tumpang tindih
-
-
-
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
                 // $("#updateAssessmentModal").on("hidden.bs.modal", function() {
                 //     setTimeout(() => {
@@ -593,25 +651,13 @@
                 // });
                 // Saat modal update ditutup
 
-                $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-                    if ($(".modal.show").length === 0) {
-                        $("body").removeClass("modal-open");
-                        $(".modal-backdrop").remove();
-                    }
-                });
-
-                $("#noteAssessmentModal").on("hidden.bs.modal", function() {
-                    if ($(".modal.show").length === 0) {
-                        $("body").removeClass("modal-open");
-                        $(".modal-backdrop").remove();
-                    }
-                });
-
-                // Saat modal history ditutup
-                $("#detailAssessmentModal").on("hidden.bs.modal", function() {
-                    if ($(".modal.show").length === 0) {
-                        $("body").removeClass("modal-open");
-                        $(".modal-backdrop").remove();
+                const modals = ['detailAssessmentModal', 'updateAssessmentModal', 'noteAssessmentModal'];
+                modals.forEach(modalId => {
+                    const modalElement = document.getElementById(modalId);
+                    if (modalElement) {
+                        modalElement.addEventListener('hidden.bs.modal', function() {
+                            modalManager.closeModal(modalId);
+                        });
                     }
                 });
 
@@ -621,8 +667,6 @@
                 });
 
                 // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
-
-
                 var searchInput = $("#searchInput");
                 var filterItems = $(".filter-department");
                 var table = $("#kt_table_users");
@@ -662,16 +706,10 @@
                             }
                         }
                     });
-
-
                 }
-
-
-
 
                 // 🔹 Variabel Global untuk Chart
                 let assessmentChartInstance = null;
-
                 // 🔹 Fungsi untuk Membuat Chart
                 function renderChart(details) {
                     let canvas = document.getElementById('assessmentChart');
@@ -848,7 +886,6 @@
                         }
                     });
                 });
-
             });
 
             document.addEventListener("DOMContentLoaded", function() {
@@ -871,9 +908,6 @@
                         applyFilters();
                     });
                 });
-
-
-
 
 
                 function applyFilters() {
@@ -906,6 +940,7 @@
                     });
                 }
             });
+
             document.getElementById('searchButton').addEventListener('click', function() {
                 const search = document.getElementById('searchInput').value;
                 const url = new URL(window.location.href);
