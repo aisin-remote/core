@@ -875,13 +875,13 @@ class HavController extends Controller
         // path yang disimpan di DB, misalnya "hav_uploads/hav_1747960986.xlsx"
         $filePath = $latestUpload->upload;
 
-        // cek apakah file ada di disk 'local' (storage/app)
-        if (!Storage::disk('local')->exists($filePath)) {
+        // cek apakah file ada di disk 'public' (storage/app)
+        if (!Storage::disk('public')->exists($filePath)) {
             return abort(404, 'File tidak ditemukan di storage.');
         }
 
-        // download file dari disk 'local'
-        return Storage::disk('local')->download($filePath);
+        // download file dari disk 'public'
+        return Storage::disk('public')->download($filePath);
     }
 
     public function approval(Request $request, $company = null)
@@ -939,7 +939,7 @@ class HavController extends Controller
 
         $comment = $request->input('comment');
         $employee = auth()->user()->employee;
-        
+
         $filePath = null;
         $latestComment = $hav->commentHistory()->latest()->first();
 
