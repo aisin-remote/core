@@ -396,17 +396,114 @@
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script>
-        $(document).ready(function() {
-            // Simpan modal aktif saat ini
-            let currentActiveModal = null;
+        document.addEventListener("DOMContentLoaded", function() {
+            // Modal management system
+            window.modalManager = {
+                activeModals: [],
+                modalStack: [],
 
+                openModal: function(modalId) {
+                    // Cegah pembukaan ulang modal yang sama
+                    if (this.modalStack.length > 0 && this.modalStack[this.modalStack.length - 1] ===
+                        modalId) {
+                        return;
+                    }
+
+                    // Tutup semua modal dulu
+                    this.closeAllModals();
+
+                    const modalElement = document.getElementById(modalId);
+                    if (!modalElement) return;
+
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+
+                    this.activeModals.push(modalId);
+                    this.modalStack.push(modalId);
+
+                    this.cleanupBackdrops();
+                    this.addBackdrop();
+                },
+
+                closeModal: function(modalId) {
+                    const modalElement = document.getElementById(modalId);
+                    if (!modalElement) return;
+
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    this.activeModals = this.activeModals.filter(id => id !== modalId);
+                    this.modalStack = this.modalStack.filter(id => id !== modalId);
+
+                    this.cleanupBackdrops();
+
+                    if (this.activeModals.length > 0) {
+                        this.addBackdrop();
+                    } else {
+                        document.body.classList.remove('modal-open');
+                    }
+                },
+
+                closeAllModals: function() {
+                    this.activeModals.forEach(modalId => {
+                        const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
+                        if (modal) modal.hide();
+                    });
+                    this.activeModals = [];
+                    this.modalStack = [];
+                    this.cleanupBackdrops();
+                    document.body.classList.remove('modal-open');
+                },
+
+                cleanupBackdrops: function() {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => backdrop.remove());
+                },
+
+                addBackdrop: function() {
+                    if (!document.querySelector('.modal-backdrop')) {
+                        const backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        document.body.appendChild(backdrop);
+                        document.body.classList.add('modal-open');
+                    }
+                },
+
+                getPreviousModal: function() {
+                    if (this.modalStack.length > 1) {
+                        return this.modalStack[this.modalStack.length - 2];
+                    }
+                    return null;
+                }
+            };
+
+            initModals(); // Panggil init setelah modalManager dibuat
+        });
+
+        function initModals() {
+            const modals = [
+                'detailAssessmentModal',
+                'updateAssessmentModal',
+                'noteAssessmentModal',
+                'addAssessmentModal'
+            ];
+
+            modals.forEach(modalId => {
+                const modalElement = document.getElementById(modalId);
+                if (modalElement) {
+                    modalElement.addEventListener('hidden.bs.modal', function() {
+                        modalManager.closeModal(modalId);
+                    });
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // Buka modal detail dengan AJAX
             $(document).on("click", ".history-btn", function(event) {
                 event.preventDefault();
-
-                // Tutup semua modal yang ada terlebih dahulu
-                if (currentActiveModal) {
-                    $(currentActiveModal).modal('hide');
-                }
 
                 let employeeId = $(this).data("employee-id");
                 console.log("Fetching history for Employee ID:", employeeId);
@@ -438,10 +535,7 @@
                         let index = 1;
 
                         if (grouped && Object.keys(grouped).length > 0) {
-                            Object.entries(grouped).forEach(([assessmentId, assessments,
-                                id
-                            ]) => {
-
+                            Object.entries(grouped).forEach(([assessmentId, assessments]) => {
                                 const first = assessments[0];
                                 const createdAt = new Date(first.created_at);
                                 const year = createdAt.getFullYear();
@@ -449,39 +543,35 @@
                                 let deleteButton = "";
                                 if (currentUserRole === "HRD") {
                                     deleteButton = `
-                            <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}" data-employee-id="${employeeId}">
-                                Delete
-                            </button>
-                        `;
+                                        <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}" data-employee-id="${employeeId}">
+                                            Delete
+                                        </button>
+                                    `;
                                 }
 
                                 const row = `
-                        <tr>
-                            <td class="text-center">${index++}</td>
-                            <td class="text-center">${year}</td>
-                            <td class="text-center">
-                                <a class="btn btn-info btn-sm btn-idp-detail"
-                                   data-bs-toggle="modal"
-                                   data-bs-target="#notes_${first.hav.hav.employee.id}">
-                                    Detail
-                                </a>
-                                ${deleteButton}
-                            </td>
-                        </tr>
-                    `;
+                                    <tr>
+                                        <td class="text-center">${index++}</td>
+                                        <td class="text-center">${year}</td>
+                                        <td class="text-center">
+                                            <button class="btn btn-info btn-sm btn-idp-detail" data-modal-id="notes_${first.hav.hav.employee.id}">
+                                                Detail
+                                            </button>
+                                            ${deleteButton}
+                                        </td>
+                                    </tr>
+                                `;
                                 tbody.append(row);
                             });
                         } else {
                             tbody.append(`
-                    <tr>
-                        <td colspan="3" class="text-center text-muted">No IDP found</td>
-                    </tr>
-                `);
+                                <tr>
+                                    <td colspan="3" class="text-center text-muted">No IDP found</td>
+                                </tr>
+                            `);
                         }
 
-                        // Tampilkan modal dan simpan sebagai aktif saat ini
-                        currentActiveModal = "#detailAssessmentModal";
-                        $(currentActiveModal).modal('show');
+                        modalManager.openModal("detailAssessmentModal");
                     },
                     error: function(error) {
                         console.error("Error fetching data:", error);
@@ -490,36 +580,28 @@
                 });
             });
 
-            $(document).on('show.bs.modal', '.modal', function(event) {
-                const modalId = $(this).attr('id');
-                if (modalId.startsWith('notes_')) {
-                    if (currentActiveModal) {
-                        $(currentActiveModal).modal('hide');
-                    }
-                }
-
-                // Perbarui modal aktif saat ini
-                currentActiveModal = `#${modalId}`;
+            // Buka modal detail dari tombol dinamis
+            $(document).on("click", ".btn-idp-detail", function(e) {
+                e.preventDefault();
+                const modalId = $(this).data("modal-id");
+                modalManager.openModal(modalId);
             });
 
-            // Ketika modal notes ditutup, tampilkan kembali modal detailAssessmentModal
+            // Saat modal notes ditutup, tampilkan modal sebelumnya
             $(document).on('hidden.bs.modal', '.modal', function(event) {
                 const modalId = $(this).attr('id');
-                // Jika menutup modal catatan, tampilkan modal utama lagi
-                if (modalId.startsWith('notes_') && currentActiveModal === `#${modalId}`) {
-                    currentActiveModal = "#detailAssessmentModal";
-                    $(currentActiveModal).modal('show');
-                } else if (currentActiveModal === `#${modalId}`) {
-                    currentActiveModal = null;
-                    // Bersihkan latar belakang yang tersisa
-                    $('.modal-backdrop').remove();
-                    $('body').removeClass('modal-open');
+                modalManager.closeModal(modalId);
+
+                const previousModal = modalManager.getPreviousModal();
+                if (previousModal) {
+                    modalManager.openModal(previousModal);
                 }
             });
 
+            // Tombol delete IDP
             $(document).on('click', '.btn-delete', function() {
                 const id = $(this).data('id');
-                const employeeId = $(this).data('employee-id')
+                const employeeId = $(this).data('employee-id');
                 const clickedButton = $(this);
 
                 Swal.fire({
@@ -552,30 +634,26 @@
                                     timer: 2000,
                                     showConfirmButton: false
                                 }).then(() => {
-                                    // Tutup modal dengan benar
-                                    if (currentActiveModal) {
-                                        $(currentActiveModal).modal('hide');
-                                        currentActiveModal = null;
-                                    }
-                                    // Bersihkan latar belakang
-                                    $('.modal-backdrop').remove();
-                                    $('body').removeClass('modal-open');
+                                    modalManager.closeModal(
+                                        "detailAssessmentModal");
                                 });
-                                // Hapus baris dari tabel langsung tanpa reload
+
                                 clickedButton.closest('tr').remove();
 
-                                // AJAX cek apakah masih ada IDP dari karyawan ini
+                                // Cek apakah masih ada IDP lainnya
                                 $.ajax({
                                     url: `/idp/history/${employeeId}`,
                                     type: 'GET',
                                     success: function(response) {
-                                        if (response.grouped_assessments
+                                        if (!response.grouped_assessments ||
+                                            Object.keys(response
+                                                .grouped_assessments)
                                             .length === 0) {
                                             $(`.history-btn[data-employee-id="${employeeId}"]`)
                                                 .closest('tr').remove();
                                         }
                                     }
-                                })
+                                });
                             },
                             error: function() {
                                 Swal.fire('Error!', 'Something went wrong.', 'error');
