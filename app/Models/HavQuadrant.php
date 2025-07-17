@@ -93,15 +93,28 @@ class HavQuadrant extends Model
     // Get average Assessment from Alc score
     public function updateHavFromAssessment($employee_id, $year, $alc1, $alc2, $alc3, $alc4, $alc5, $alc6, $alc7, $alc8)
     {
-        // Menghitung rata-rata dengan bobot yang sesuai
-        $average = ($alc1 * 0.15) + ($alc2 * 0.15) + ($alc3 * 0.10) + ($alc4 * 0.10) + ($alc5 * 0.10)
-            + ($alc6 * 0.15) + ($alc7 * 0.10) + ($alc8 * 0.15);
+        // Ambil grade dari karyawan
+        $emp = Employee::select('grade')->find($employee_id);
+        $grade = $emp?->grade;
 
-            $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
+        // Cek apakah termasuk golongan 4-6
+        $gradeGroup = (int) filter_var($grade, FILTER_SANITIZE_NUMBER_INT); // Ambil angka dari grade, contoh: "4A" => 4
+
+        if ($gradeGroup >= 4 && $gradeGroup <= 6) {
+            // Golongan 4-6: hitung rata-rata dari ALC 3,4,5,7,8 (tanpa bobot, rata-rata biasa)
+            $average = ($alc3 + $alc4 + $alc5 + $alc7 + $alc8) / 5;
+        } else {
+            // Selain golongan 4-6: gunakan bobot normal
+            $average = ($alc1 * 0.15) + ($alc2 * 0.15) + ($alc3 * 0.10) + ($alc4 * 0.10) + ($alc5 * 0.10)
+                + ($alc6 * 0.15) + ($alc7 * 0.10) + ($alc8 * 0.15);
+        }
+
+        $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
         $this->generateHavQuadrant($employee_id, $average, $pkScore);
-        // Mengembalikan nilai rata-rata
-        return $this->generateHavQuadrant($employee_id, $average, $pkScore);;
+
+        return $this->generateHavQuadrant($employee_id, $average, $pkScore);
     }
+
 
     //Update Hav Quadrant from Performance Appraisal
     public function updateHavFromPerformance($employee_id, $year)
