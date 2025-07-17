@@ -23,6 +23,7 @@ use App\Http\Controllers\Controller;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -494,17 +495,41 @@ class AssessmentController extends Controller
         $directory = 'hav_uploads';
         $fileName = 'hav_' . now()->timestamp . '.xlsx';
         $relativePath = "{$directory}/{$fileName}";
+        $fullPath = storage_path("app/public/{$relativePath}");
+
+        // Pastikan direktori tujuan ada
         Storage::disk('public')->makeDirectory($directory);
 
-        // simpan file excel ke lokasi sementara
+        // Simpan spreadsheet ke file sementara
         $tempPath = storage_path("app/temp_{$fileName}");
         (new Xlsx($spreadsheet))->save($tempPath);
 
-        // pindahkan isi file ke disk 'public'
-        Storage::disk('public')->put($relativePath, file_get_contents($tempPath));
+        try {
+            // Pindahkan file ke disk 'public'
+            Storage::disk('public')->put($relativePath, file_get_contents($tempPath));
+        } catch (\Throwable $e) {
+            Log::error('Gagal memindahkan file ke disk public', [
+                'file' => $fileName,
+                'temp_path' => $tempPath,
+                'exception' => $e,
+            ]);
 
-        // hapus file sementara
-        unlink($tempPath);
+            // Hapus file sementara jika ada
+            if (file_exists($tempPath)) {
+                unlink($tempPath);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan file ke storage: ' . $e->getMessage(),
+            ]);
+        }
+
+        // Hapus file sementara
+        if (file_exists($tempPath)) {
+            unlink($tempPath);
+        }
+
 
         // Simpan ke comment history (sementara, sebelum import)
         DB::table('hav_comment_histories')->insert([
@@ -518,10 +543,19 @@ class AssessmentController extends Controller
         // ⬇⬇⬇ Jalankan Import HAV ⬇⬇⬇
         try {
             Excel::import(
-                new AssessmentImport($excelFileName, $havId, $detailData),
+                new AssessmentImport($fileName, $havId, $detailData),
                 $fullPath
             );
         } catch (\Throwable $e) {
+            Log::error('Gagal import HAV', [
+                'file' => $fileName,
+                'hav_id' => $havId,
+                'path' => $fullPath,
+                'exception' => $e,
+                'message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
             return response()->json([
                 'success' => false,
                 'message' => 'Gagal import HAV: ' . $e->getMessage(),
