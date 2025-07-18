@@ -1236,6 +1236,11 @@
                                     My Profile
                                 </a>
                             </div>
+                            <div class="menu-item px-5">
+                                <a href="/change-password" class="menu-link px-5">
+                                    Change Password
+                                </a>
+                            </div>
                         @endif
 
                         <!--end::Menu item-->

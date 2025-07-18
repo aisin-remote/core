@@ -27,6 +27,8 @@ class RegisterController extends Controller
                 'name' => $request->name,
                 'email' => $request->email,
                 'password' => bcrypt($request->password),
+                'is_first_login' => true,
+                'password_changed_at' => null
             ]);
 
             // Buat data employee

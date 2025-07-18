@@ -183,6 +183,42 @@
     <!-- KeenIcons JS -->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
 
+    <!-- Tambahkan di bagian sebelum </body> -->
+    @if (session('show_first_login_alert'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: 'Welcome!',
+                    text: 'This is your first login. Please change your password to continue.',
+                    icon: 'warning',
+                    confirmButtonText: 'I Understand',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    confirmButtonColor: '#3085d6',
+                    backdrop: `
+                rgba(0,0,0,0.7)
+                url("/images/security-icon.png")
+                center top
+                no-repeat
+              `
+                });
+            });
+        </script>
+    @endif
+
+    @if (session('warning'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: 'Perhatian',
+                    text: '{{ session('warning') }}',
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
+                });
+            });
+        </script>
+    @endif
+
     <!--end::Custom Javascript-->
     <!--end::Javascript-->
 </body>

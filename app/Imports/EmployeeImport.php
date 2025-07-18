@@ -45,18 +45,18 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     // **5. Simpan employee baru**
                     Log::info("Membuat Employee baru: {$row['name']}");
                     $employee = Employee::create([
-                        'npk'              => $row['npk'],
-                        'name'             => $row['name'],
-                        'phone_number'             => $row['phone_number'],
-                        'birthday_date'             =>$birthday,
-                        'gender'           => $row['gender'],
-                        'company_name'     => $row['company_name'],
+                        'npk' => $row['npk'],
+                        'name' => $row['name'],
+                        'phone_number' => $row['phone_number'],
+                        'birthday_date' => $birthday,
+                        'gender' => $row['gender'],
+                        'company_name' => $row['company_name'],
                         'aisin_entry_date' => $joinDate,
-                        'position'         => $row['position'],
-                        'grade'            => $row['grade'],
-                        'grade_astra'            => $row['grade_astra'],
-                        'working_period'   => $workingPeriod,
-                    ]);         
+                        'position' => $row['position'],
+                        'grade' => $row['grade'],
+                        'grade_astra' => $row['grade_astra'],
+                        'working_period' => $workingPeriod,
+                    ]);
 
                     Log::info("Employee ID: {$employee->id} berhasil dibuat.");
 
@@ -81,11 +81,13 @@ class EmployeeImport implements ToCollection, WithHeadingRow
                     // **9. Jika jabatan adalah "manager", buat akun user untuk login**
                     if ($position === 'manager') {
                         User::create([
-                            'name'        => $row['name'],
-                            'email'       => strtolower(str_replace(' ', '.', $row['name'])) . '@aiia.co.id',
-                            'password'    => bcrypt('aiia'),
-                            'role'        => 'manager',
+                            'name' => $row['name'],
+                            'email' => strtolower(str_replace(' ', '.', $row['name'])) . '@aiia.co.id',
+                            'password' => bcrypt('aiia'),
+                            'role' => 'manager',
                             'employee_id' => $employee->id,
+                            'is_first_login' => true,
+                            'password_changed_at' => null
                         ]);
                         Log::info("Akun user dibuat untuk {$row['name']} dengan email " . strtolower(str_replace(' ', '.', $row['name'])) . '@aiia.co.id');
                     }

@@ -19,6 +19,7 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
+use App\Http\Controllers\PasswordController;
 
 /*
 |--------------------------------------------------------------------------
@@ -89,7 +90,7 @@ Route::middleware('guest')->group(function () {
     });
 });
 
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::get('/dashboard', function () {
         return view('website.dashboard.index');
     })->name('dashboard.index');
@@ -151,11 +152,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/hav', [HavController::class, 'approval'])->name('hav.approval');
         Route::patch('/hav/approve/{id}', [HavController::class, 'approve'])->name('hav.approve');
         Route::patch('/hav/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
-        
+
         Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
         Route::get('/idp/{id}', [IdpController::class, 'approve'])->name('idp.approve');
         Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
-        
+
         Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
         Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
         Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
@@ -326,4 +327,6 @@ Route::middleware('auth')->group(function () {
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
+    Route::get('/change-password', [PasswordController::class, 'showChangeForm'])->name('change-password.auth');
+    Route::post('/change-password', [PasswordController::class, 'changeForm'])->name('change-password.post');
 });

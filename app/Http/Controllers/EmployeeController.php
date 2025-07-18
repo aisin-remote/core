@@ -451,6 +451,8 @@ class EmployeeController extends Controller
                     'name' => $validatedData['name'],
                     'email' => strtolower(strtok($validatedData['name'], ' ')) . '@aiia.co.id',
                     'password' => bcrypt('aiia'),
+                    'is_first_login' => true,
+                    'password_changed_at' => null
                 ]);
                 $employee->update(['user_id' => $user->id]);
             }
