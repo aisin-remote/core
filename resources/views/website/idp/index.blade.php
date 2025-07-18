@@ -194,7 +194,13 @@
                                                         $hasNotCreated = false; // Flag untuk cek apakah ada yang belum punya IDP
 
                                                         foreach ($assessment->details as $detail) {
+                                                            // Hanya proses jika score <= 3 ATAU ada suggesstion development
                                                             if ($detail->score <= 3 || $detail->suggestion_development !== null) {
+
+                                                                // Jika score >= 3 DAN tidak ada suggesstion development, skip
+                                                                if($detail->score >= 3 && $detail->suggestion_development === null) {
+                                                                    continue;
+                                                                }
 
                                                                 // cek apakah detail memiliki relasi IDP yang valid
                                                                 $hasValidIdp= \App\Models\Idp::where("hav_detail_id", $detail->id)
@@ -242,6 +248,7 @@
                                                                 }
                                                             }
                                                         }
+                                                        // dd($collectedStatuses);
 
                                                         // Jika ada yang belum punya IDP, prioritaskan not_created
                                                         if (count($collectedStatuses) > 0) {
