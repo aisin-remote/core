@@ -26,11 +26,11 @@
         </script>
     @endif
 
-    <div class="container">
+    <div class="app-container">
         <div class="row justify-content-center">
-            <div class="col-lg-8">
-                <div class="card shadow-sm">
-                    <div class="card-header bg-light-primary text-white">
+            <div class="col-lg-12">
+                <div class="card">
+                    <div class="card-header bg-light-primary border-0 cursor-pointer">
                         <h5 class="card-title mb-0">
                             @if (auth()->user()->is_first_login)
                                 {{ __('Set New Password') }}
