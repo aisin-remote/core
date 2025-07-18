@@ -61,8 +61,7 @@ class ToDoListController extends Controller
                 });
         
                 if (
-                    ($detail->score < 3 || $detail->suggestion_development !== null) &&
-                    $validIdp
+                    ((int) $detail->score < 3 || $detail->suggestion_development !== null)
                 ) {
                     $emp[$assessment->employee_id][] = [
                         'hav_detail_id' => $detail->id,

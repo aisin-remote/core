@@ -145,197 +145,224 @@
                                                     <td class="text-center">{{ $rowNumber++ }}</td>
                                                     <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
                                                     @foreach ($assessment->details as $title)
-                                                        @php
-                                                            $score = $title->score ?? '-';
-                                                            $idpExists = DB::table('idp')
-                                                                ->where('hav_detail_id', $title->id)
-                                                                ->where('alc_id', $title->alc_id)
-                                                                ->exists();
+                                                    @php
+                                                        $score = $title->score ?? '-';
+                                                        $idpExists = DB::table('idp')
+                                                            ->where('hav_detail_id', $title->id)
+                                                            ->where('alc_id', $title->alc_id)
+                                                            ->exists();
 
-                                                            $assessmentId = DB::table('assessments')
-                                                                ->select('id')
-                                                                ->where('employee_id', $index)
-                                                                ->latest()
-                                                                ->first();
+                                                        $assessmentId = DB::table('assessments')
+                                                            ->select('id')
+                                                            ->where('employee_id', $index)
+                                                            ->latest()
+                                                            ->first();
 
-                                                            $isRevise = false;
+                                                        $isRevise = false;
 
-                                                            $idp = \App\Models\Idp::where('hav_detail_id', $title->id)
-                                                                ->where('alc_id', $title->alc_id)
-                                                                ->first();
+                                                        $idp = \App\Models\Idp::where('hav_detail_id', $title->id)
+                                                            ->where('alc_id', $title->alc_id)
+                                                            ->first();
 
-                                                            if ($idp && $idp->status === -1) {
-                                                                $isRevise = true;
+                                                        if ($idp && $idp->status === -1) {
+                                                            $isRevise = true;
+                                                        }
+
+                                                        // Ambil level approval dari employee yang sedang di-assess
+                                                        $approvalLevel = $assessment->employee->getCreateAuth();
+
+                                                        // Ambil atasan dari employee tsb berdasarkan level approval
+                                                        $superiors = $assessment->employee->getSuperiorsByLevel($approvalLevel);
+
+                                                        $isSuperior = $superiors->contains('id', auth()->user()->employee->id);
+
+                                                        $emp = [];
+                                                        foreach ($assessment->details as $assessmentDetail) {
+                                                            if ($assessmentDetail->score < 3) {
+                                                                $emp[$assessment->employee_id][] = [
+                                                                    'assessment_id' => $assessmentDetail->assessment_id,
+                                                                    'alc_id' => $assessmentDetail->alc_id,
+                                                                    'alc_name' => $assessmentDetail->alc->name ?? 'Unknown',
+                                                                ];
                                                             }
+                                                        }
 
-                                                            // Ambil level approval dari employee yang sedang di-assess
-                                                            $approvalLevel = $assessment->employee->getCreateAuth();
+                                                        $status = 'not_created'; // Default jika tidak ada satupun IDP
 
-                                                            // Ambil atasan dari employee tsb berdasarkan level approval
-                                                            $superiors = $assessment->employee->getSuperiorsByLevel(
-                                                                $approvalLevel,
-                                                            );
+                                                        // Check dulu apakah semua sudah punya IDP
+                                                        $collectedStatuses = [];
+                                                        $hasNotCreated = false; // Flag untuk cek apakah ada yang belum punya IDP
 
-                                                            $isSuperior = $superiors->contains(
-                                                                'id',
-                                                                auth()->user()->employee->id,
-                                                            );
+                                                        foreach ($assessment->details as $detail) {
+                                                            if ($detail->score <= 3 || $detail->suggestion_development !== null) {
 
-                                                            $emp = [];
-                                                            foreach ($assessment->details as $assessmentDetail) {
-                                                                if ($assessmentDetail->score < 3) {
-                                                                    $emp[$assessment->employee_id][] = [
-                                                                        'assessment_id' =>
-                                                                            $assessmentDetail->assessment_id,
-                                                                        'alc_id' => $assessmentDetail->alc_id,
-                                                                        'alc_name' =>
-                                                                            $assessmentDetail->alc->name ?? 'Unknown',
-                                                                    ];
+                                                                // cek apakah detail memiliki relasi IDP yang valid
+                                                                $hasValidIdp= \App\Models\Idp::where("hav_detail_id", $detail->id)
+                                                                    ->where("alc_id", $detail->alc_id)
+                                                                    ->exists();
+
+                                                                if (!$hasValidIdp) {
+                                                                    $collectedStatuses[] = 'not_created';
+                                                                    $hasNotCreated = true; // Set flag
+                                                                    continue;
                                                                 }
-                                                            }
 
-                                                            $status = 'not_created'; // Default jika tidak ada satupun IDP
-
-                                                            $statusPriority = [
-                                                                'draft' => 1,
-                                                                'waiting' => 2,
-                                                                'checked' => 3,
-                                                                'approved' => 4,
-                                                                'revise' => 0, // revisi paling prioritas
-                                                            ];
-
-                                                            $collectedStatuses = [];
-
-                                                            foreach ($assessment->details as $detail) {
-                                                                if (
-                                                                    $detail->score <= 3 ||
-                                                                    $detail->suggestion_development !== null
-                                                                ) {
-                                                                    $idp = \App\Models\Idp::where(
-                                                                        'hav_detail_id',
-                                                                        $detail->id,
-                                                                    )
+                                                                // Jika IDP exists, ambil statusnya
+                                                                if ($detail->relationLoaded('idp') && $detail->idp->isNotEmpty()) {
+                                                                    $idpRecord = $detail->idp->first();
+                                                                } else {
+                                                                    $idpRecord = \App\Models\Idp::where('hav_detail_id', $detail->id)
                                                                         ->where('alc_id', $detail->alc_id)
                                                                         ->first();
+                                                                }
 
-                                                                    if ($idp) {
-                                                                        switch ($idp->status) {
-                                                                            case 0:
-                                                                                $collectedStatuses[] = 'draft';
-                                                                                break;
-                                                                            case 1:
-                                                                                $collectedStatuses[] = 'waiting';
-                                                                                break;
-                                                                            case 2:
-                                                                                $collectedStatuses[] = 'checked';
-                                                                                break;
-                                                                            case 3:
-                                                                                $collectedStatuses[] = 'approved';
-                                                                                break;
-                                                                            case -1:
-                                                                                $collectedStatuses[] = 'revise';
-                                                                                break;
-                                                                        }
+                                                                if ($idpRecord && isset($idpRecord->status)) {
+                                                                    switch ($idpRecord->status) {
+                                                                        case 0:
+                                                                            $collectedStatuses[] = 'draft';
+                                                                            break;
+                                                                        case 1:
+                                                                            $collectedStatuses[] = 'waiting';
+                                                                            break;
+                                                                        case 2:
+                                                                            $collectedStatuses[] = 'checked';
+                                                                            break;
+                                                                        case 3:
+                                                                            $collectedStatuses[] = 'approved';
+                                                                            break;
+                                                                        case -1:
+                                                                            $collectedStatuses[] = 'revise';
+                                                                            break;
+                                                                        default:
+                                                                            $collectedStatuses[] = 'unknown';
                                                                     }
+                                                                } else {
+                                                                    $collectedStatuses[] = 'not_created';
+                                                                    $hasNotCreated = true;
                                                                 }
                                                             }
+                                                        }
 
-                                                            if (count($collectedStatuses) > 0) {
-                                                                // Ambil status dengan prioritas paling rendah angkanya
-                                                                usort($collectedStatuses, function ($a, $b) use (
-                                                                    $statusPriority,
-                                                                ) {
-                                                                    return $statusPriority[$a] <=> $statusPriority[$b];
+                                                        // Jika ada yang belum punya IDP, prioritaskan not_created
+                                                        if (count($collectedStatuses) > 0) {
+
+                                                            // Jika ada yang belum punya IDP, langsung set ke not_created
+                                                            if ($hasNotCreated) {
+                                                                $status = 'not_created';
+                                                            } else {
+                                                                // Jika semua sudah punya IDP, baru sort berdasarkan prioritas normal
+                                                                $normalPriority = [
+                                                                    'revise' => 0,
+                                                                    'draft' => 1,
+                                                                    'waiting' => 2,
+                                                                    'checked' => 3,
+                                                                    'approved' => 4,
+                                                                    'unknown' => 5,
+                                                                ];
+
+                                                                usort($collectedStatuses, function ($a, $b) use ($normalPriority) {
+                                                                    $priorityA = $normalPriority[$a] ?? 999;
+                                                                    $priorityB = $normalPriority[$b] ?? 999;
+                                                                    return $priorityA <=> $priorityB;
                                                                 });
 
-                                                                $status = $collectedStatuses[0]; // status prioritas tertinggi
+                                                                $status = $collectedStatuses[0];
                                                             }
+                                                        }
 
-                                                            $badges = [
-                                                                'no_approval_needed' => [
-                                                                    'text' => '-',
-                                                                    'class' => 'light-primary',
-                                                                ],
-                                                                'not_created' => [
-                                                                    'text' => 'Not Created',
-                                                                    'class' => 'light-dark',
-                                                                ],
-                                                                'draft' => [
-                                                                    'text' => 'Need Submit',
-                                                                    'class' => 'light-secondary',
-                                                                ],
-                                                                'waiting' => [
-                                                                    'text' => 'Waiting',
-                                                                    'class' => 'light-warning',
-                                                                ],
-                                                                'checked' => [
-                                                                    'text' => 'Checked',
-                                                                    'class' => 'light-info',
-                                                                ],
-                                                                'approved' => [
-                                                                    'text' => 'Approved',
-                                                                    'class' => 'light-success',
-                                                                ],
-                                                                'revise' => [
-                                                                    'text' => 'Need Revise',
-                                                                    'class' => 'light-danger',
-                                                                ],
-                                                            ];
+                                                        $badges = [
+                                                            'no_approval_needed' => [
+                                                                'text' => '-',
+                                                                'class' => 'light-primary',
+                                                            ],
+                                                            'not_created' => [
+                                                                'text' => 'Not Created',
+                                                                'class' => 'light-dark',
+                                                            ],
+                                                            'draft' => [
+                                                                'text' => 'Need Submit',
+                                                                'class' => 'light-secondary',
+                                                            ],
+                                                            'waiting' => [
+                                                                'text' => 'Waiting',
+                                                                'class' => 'light-warning',
+                                                            ],
+                                                            'checked' => [
+                                                                'text' => 'Checked',
+                                                                'class' => 'light-info',
+                                                            ],
+                                                            'approved' => [
+                                                                'text' => 'Approved',
+                                                                'class' => 'light-success',
+                                                            ],
+                                                            'revise' => [
+                                                                'text' => 'Need Revise',
+                                                                'class' => 'light-danger',
+                                                            ],
+                                                            'unknown' => [
+                                                                'text' => 'Unknown',
+                                                                'class' => 'light-secondary',
+                                                            ],
+                                                        ];
 
-                                                            $badge = $badges[$status] ?? $badges['approved'];
+                                                        $badge = $badges[$status] ?? $badges['not_created'];
 
-                                                            $badgeClass = 'badge-lg d-block w-100 ';
-                                                            if ($isRevise) {
-                                                                $badgeClass .= 'badge-light-danger';
-                                                            } elseif ($score < 3) {
-                                                                $badgeClass .= 'badge-danger';
-                                                            } elseif ($title->suggestion_development !== null) {
-                                                                $badgeClass .= 'badge-warning';
-                                                            } else {
-                                                                $badgeClass .= 'badge-success';
-                                                            }
+                                                        $badgeClass = 'badge-lg d-block w-100 ';
+                                                        if ($isRevise) {
+                                                            $badgeClass .= 'badge-light-danger';
+                                                        } elseif ($score < 3) {
+                                                            $badgeClass .= 'badge-danger';
+                                                        } elseif ($title->suggestion_development !== null) {
+                                                            $badgeClass .= 'badge-warning';
+                                                        } else {
+                                                            $badgeClass .= 'badge-success';
+                                                        }
 
-                                                            $showIcon = false;
-                                                            if ($score < 3) {
-                                                                $showIcon = true;
-                                                            } elseif (
-                                                                $title->suggestion_development !== null &&
-                                                                !$idpExists
-                                                            ) {
-                                                                $showIcon = true;
-                                                            } elseif ($idpExists) {
-                                                                $showIcon = true;
-                                                            }
+                                                        $showIcon = false;
+                                                        if ($score < 3) {
+                                                            $showIcon = true;
+                                                        } elseif ($title->suggestion_development !== null && !$idpExists) {
+                                                            $showIcon = true;
+                                                        } elseif ($idpExists) {
+                                                            $showIcon = true;
+                                                        }
 
-                                                            $disableButton = $status == 'draft' ? '' : 'none';
+                                                        $disableButton = $status == 'draft' ? '' : 'none';
+                                                        $disableButton2 = $status == 'approved' ? '' : 'none';
 
-                                                            $disableButton2 = $status == 'approved' ? '' : 'none';
+                                                        // DEBUG - uncomment untuk melihat status yang dikumpulkan
+                                                        // if ($assessment->employee->name == 'Rafie Afif Andika') {
+                                                        //     dd([
+                                                        //         'collectedStatuses' => $collectedStatuses,
+                                                        //         'hasNotCreated' => $hasNotCreated,
+                                                        //         'finalStatus' => $status
+                                                        //     ]);
+                                                        // }
 
-                                                        @endphp
-                                                        <td class="text-center">
-                                                            @if ($score === '-')
-                                                                <span class="badge badge-lg badge-success d-block w-100">
-                                                                    {{ $score }}
-                                                                </span>
-                                                            @else
-                                                                <span class="badge {{ $badgeClass }}"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $title->alc_id }}"
-                                                                    data-title="Update IDP - {{ $title->alc->name }}"
-                                                                    data-assessment="{{ $assessmentId?->id }}"
-                                                                    data-alc="{{ $title->alc_id }}"
-                                                                    style="cursor: pointer;">
+                                                    @endphp
+                                                    <td class="text-center">
+                                                        @if ($score === '-')
+                                                            <span class="badge badge-lg badge-success d-block w-100">
+                                                                {{ $score }}
+                                                            </span>
+                                                        @else
+                                                            <span class="badge {{ $badgeClass }}"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $title->alc_id }}"
+                                                                data-title="Update IDP - {{ $title->alc->name }}"
+                                                                data-assessment="{{ $assessmentId?->id }}"
+                                                                data-alc="{{ $title->alc_id }}"
+                                                                style="cursor: pointer;">
 
-                                                                    {{ $score }}
+                                                                {{ $score }}
 
-                                                                    @if ($showIcon)
-                                                                        <i
-                                                                            class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
-                                                                    @endif
-                                                                </span>
-                                                            @endif
-                                                        </td>
-                                                    @endforeach
+                                                                @if ($showIcon)
+                                                                    <i class="fas {{ $idpExists ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                                @endif
+                                                            </span>
+                                                        @endif
+                                                    </td>
+                                                @endforeach
                                                     <td class="text-center">
                                                         <span class="badge badge-{{ $badge['class'] }}"
                                                             style="
