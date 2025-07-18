@@ -24,6 +24,23 @@
             background-color: #0E54DE !important;
             color: white !important;
         }
+
+        [data-kt-app-sidebar-minimize="on"] [data-kt-app-sidebar-minimize-hide="on"] {
+            display: none !important;
+        }
+
+        [data-kt-app-sidebar-minimize="on"] .app-sidebar-user {
+            padding: 0.5rem !important;
+        }
+
+        [data-kt-app-sidebar-minimize="on"] .logo-img {
+            width: 100px;
+            /* Sesuaikan ukuran */
+            height: auto;
+            /* Menjaga proporsi */
+            display: block;
+        }
+
     </style>
 
     @php
@@ -32,7 +49,7 @@
 
     <div class="app-sidebar-logo px-6" id="kt_app_sidebar_logo" style="margin-top: 20px;">
         <div class="d-flex align-items-center">
-            <img src="{{ asset('assets/media/logos/logo-putih.png') }}" alt="Logo" class="logo-img">
+            <img src="{{ asset('assets/media/logos/logo-putih.png') }}" alt="Logo" class="logo-img" data-kt-app-sidebar-minimize-small="on">
             <img alt="Logo" src="{{ asset('assets/media/logos/logo-putih-kecil.png') }}"
                 class="h-20px app-sidebar-logo-minimize">
         </div>
@@ -792,9 +809,7 @@
             <div class="menu-item menu-accordion" data-kt-menu-expand="true" data-kt-menu-trigger="click"
                 id="menu-approval">
                 <span class="menu-link">
-                    <span class="menu-icon">
-                        <i class="fas fa-check  "></i>
-                    </span>
+                    <span class="menu-icon"><i class="fas fa-check"></i></span>
                     <span class="menu-title ps-1">Approval</span>
                     <span class="menu-arrow"></span>
                 </span>
@@ -849,7 +864,7 @@
                     : asset('assets/media/avatars/user.jpg') }}"
                     class="rounded-3" alt="user" style="width: 40px; height: 40px; object-fit: cover;" />
             </div>
-            <div class="ms-3">
+            <div class="ms-3" data-kt-app-sidebar-minimize-hide="on">
                 <div class="fw-bold text-white">{{ auth()->user()->name }}</div>
                 <div class="text-muted fs-8">{{ auth()->user()->employee->position ?? '-' }}</div>
             </div>
