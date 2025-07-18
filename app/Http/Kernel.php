@@ -7,6 +7,15 @@ use Illuminate\Foundation\Http\Kernel as HttpKernel;
 class Kernel extends HttpKernel
 {
     /**
+     * Summary of commands
+     * @var array
+     */
+    protected $commands = [
+        // Other commands...
+        \App\Console\Commands\MakeServiceCommand::class,
+    ];
+
+    /**
      * The application's global HTTP middleware stack.
      *
      * These middleware are run during every request to your application.
