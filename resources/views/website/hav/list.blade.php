@@ -93,6 +93,11 @@
                     </tbody>
                 </table>
             </div>
+            <div class="d-flex justify-content-between p-2">
+                <small class="text-muted fw-bold">
+                    Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
+                </small>
+            </div>
         </div>
     </div>
 
