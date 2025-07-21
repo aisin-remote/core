@@ -635,11 +635,10 @@ class AssessmentController extends Controller
 
     public function update(Request $request)
     {
-
         $validated = $request->validate([
             'assessment_id' => 'required|exists:assessments,id',
             'date' => 'required|date',
-            'description' => 'required|string|max:255',
+            'description' => 'nullable|string|max:255',
             'scores' => 'required|array',
             'strength' => 'nullable|array',
             'weakness' => 'nullable|array',
