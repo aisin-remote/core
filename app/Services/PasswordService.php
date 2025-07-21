@@ -71,7 +71,7 @@ class PasswordService
                 'regex:/[A-Z]/',      // at least 1 uppercase
                 'regex:/[a-z]/',      // at least 1 lowercase
                 'regex:/[0-9]/',      // at least 1 number
-                'regex:/[@$!%*#?&]/', // at least 1 special char
+                'regex:/[@$!%*#?&^()\-_+=<>:;",.\/~\\[\]{}|`]/', // at least 1 special char
                 'confirmed'
             ]
         ];
