@@ -78,36 +78,36 @@
                                     'grade' => $h->employee->grade ?? '-',
                                 ];
                             });
-                    @endphp
+                        @endphp
 
-                    <div class="col-3">
-                        <a href="#"
-                            class="open-modal"
-                            data-id="{{ $i }}"
-                            data-title="Quadrant {{ $i }} - {{ $title }}"
-                            data-hav='@json($jsonData)'
-                            data-toggle="modal"
-                            data-target="#tes">
-                            <div class="card {{ $colorClass }} card-md-stretch mb-xl-6 card-clickable">
-                                <div class="card-body" style="padding: 10px;">
-                                    <div class="card-title fw-bold text-center text-dark fs-5 mb-3 d-block">
-                                         {{ $i }}. {{ $title }}
-                                    </div>
-                                    <div class="card-body bg-white text-center" style="height: 50px;">
-                                        <h1>
-                                            <span class="text-dark fw-bold me-2">{{ $havList->count() }}</span>
-                                        </h1>
-                                    </div>
-                                    <div class="py-1 text-center">
-                                        {{-- <span class="text-danger fw-bold me-2">{{ $persen }}</span> --}}
+                        <div class="col-3">
+                            <a href="#" class="open-modal" data-id="{{ $i }}"
+                                data-title="Quadrant {{ $i }} - {{ $title }}"
+                                data-hav='@json($jsonData)' data-toggle="modal" data-target="#tes">
+                                <div class="card {{ $colorClass }} card-md-stretch mb-xl-6 card-clickable">
+                                    <div class="card-body p-2">
+                                        <div class="card-title fw-bold text-center text-dark fs-5 mb-2">
+                                            {{ $i }}. {{ $title }}
+                                        </div>
+                                        <div class="card-body bg-white text-center p-0 d-flex align-items-center justify-content-center"
+                                            style="height: 50px;">
+                                            <h1>
+                                                <span class="m-0 text-dark fw-bold">{{ $havList->count() }}</span>
+                                            </h1>
+                                        </div>
+                                        <div class="py-1 text-center">
+                                            {{-- <span class="text-danger fw-bold me-2">{{ $persen }}</span> --}}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </a>
+                            </a>
+                        </div>
+                    @endforeach
+                    <div class="d-flex justify-content-between p-2">
+                        <small class="text-muted fw-bold">
+                            Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
+                        </small>
                     </div>
-                @endforeach
-
-
                 </div>
             </div>
             <!--end::Content container-->
