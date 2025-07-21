@@ -603,25 +603,33 @@ class AssessmentController extends Controller
     }
     public function edit($id)
     {
-        $assessment = Assessment::with('details.alc')->findOrFail($id);
-        \Log::info("DETAILS: ", $assessment->details->toArray()); // Tambah ini
-        return response()->json([
-            'id' => $assessment->id,
-            'employee_id' => $assessment->employee_id,
-            'date' => $assessment->date,
-            'description' => $assessment->description,
-            'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
-            'details' => $assessment->details->map(fn($d) => [
-                'alc_id' => $d->alc_id,
-                'score' => $d->score,
-                'strength' => $d->strength,
-                'weakness' => $d->weakness,
-                'suggestion_development' => $d->suggestion_development,
-                'alc' => $d->alc
-            ]),
+        try {
+            $assessment = Assessment::with('details.alc')->findOrFail($id);
+            \Log::info("DETAILS: ", $assessment->details->toArray()); // Tambah ini
+            return response()->json([
+                'id' => $assessment->id,
+                'employee_id' => $assessment->employee_id,
+                'date' => $assessment->date,
+                'description' => $assessment->description,
+                'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null, // Buat URL file
+                'details' => $assessment->details->map(fn($d) => [
+                    'alc_id' => $d->alc_id,
+                    'score' => $d->score,
+                    'strength' => $d->strength,
+                    'weakness' => $d->weakness,
+                    'suggestion_development' => $d->suggestion_development,
+                    'alc' => $d->alc
+                ]),
 
-            'alc_options' => Alc::select('id', 'name')->get()
-        ]);
+                'alc_options' => Alc::select('id', 'name')->get()
+            ], 400);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'messasge' => 'Assesment tidak ditemukan.',
+                'error' => $e->getMessage()
+            ], 404);
+        }
     }
 
 
