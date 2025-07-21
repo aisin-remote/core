@@ -672,7 +672,6 @@
                                                         <div id="kt_signin_email">
                                                             <div class="fs-6 fw-bold mb-1">
                                                                 {{ $titles[(int) $asset['quadrant']] ?? 'Unknown' }}
-                                                                [{{ $asset['count'] }}]
                                                                 <div class="text-muted fs-7">
                                                                     {{ $asset['year'] }}
                                                                 </div>
