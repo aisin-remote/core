@@ -998,6 +998,7 @@ class EmployeeController extends Controller
 
     public function workExperienceUpdate(Request $request, $id)
     {
+        dd($request->all());
         $experience = WorkingExperience::findOrFail($id);
 
         $request->validate([
