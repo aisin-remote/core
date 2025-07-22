@@ -28,6 +28,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Models\EducationalBackground;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PerformanceAppraisalHistory;
+use App\Models\PerformanceMaster;
 use Illuminate\Pagination\LengthAwarePaginator;
 
 
@@ -648,7 +649,7 @@ class EmployeeController extends Controller
         $plants = Plant::all();
         $sections = Section::all();
         $subSections = SubSection::all();
-        $scores = GradeConversion::select('aisin_grade')->distinct()->pluck('aisin_grade');
+        $scores = PerformanceMaster::select('code')->distinct()->pluck('code');
 
         return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants', 'sections', 'subSections', 'scores'))->with('mode', 'edit');
     }
@@ -993,40 +994,6 @@ class EmployeeController extends Controller
             dd($th);
             DB::rollback();
             return redirect()->back()->with('error', 'Pengalaman kerja gagal ditambahkan!');
-        }
-    }
-
-    public function workExperienceUpdate(Request $request, $id)
-    {
-        dd($request->all());
-        $experience = WorkingExperience::findOrFail($id);
-
-        $request->validate([
-            'position'   => 'required|string|max:255',
-            'company'    => 'required|string|max:255',
-            'department'    => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date'   => 'nullable|date|after_or_equal:start_date',
-            'description' => 'nullable|string',
-        ]);
-
-        try {
-            DB::beginTransaction();
-
-            $experience->update([
-                'position'    => $request->position,
-                'company'     => $request->company,
-                'department'  => $request->department,
-                'start_date'  => $request->start_date ? Carbon::parse($request->start_date) : null,
-                'end_date'    => $request->end_date ? Carbon::parse($request->end_date) : null,
-                'description' => $request->description,
-            ]);
-
-            DB::commit();
-            return redirect()->back()->with('success', 'Pengalaman kerja berhasil diupdate.');
-        } catch (\Throwable $th) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Pengalaman kerja gagal diupdate.');
         }
     }
 
