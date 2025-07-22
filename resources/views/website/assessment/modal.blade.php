@@ -99,7 +99,7 @@
                                                 <input class="form-check-input" type="radio"
                                                     name="scores[{{ $alc->id }}]"
                                                     id="score_{{ $alc->id }}_{{ $i }}"
-                                                    value="{{ $i }}" required>
+                                                    value="{{ $i }}">
                                                 <label class="form-check-label"
                                                     for="score_{{ $alc->id }}_{{ $i }}">{{ $i }}</label>
                                             </div>
@@ -183,7 +183,7 @@
             card.innerHTML = `
                 <div class="mb-3">
                     <label>ALC</label>
-                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" required>
+                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]">
                         <option value="${alcId}" selected>${alcName}</option>
                     </select>
                 </div>

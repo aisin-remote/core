@@ -43,7 +43,7 @@
                                                 <input class="form-check-input update-score" type="radio"
                                                     name="scores[{{ $alc->id }}]"
                                                     id="update_score_{{ $alc->id }}_{{ $i }}"
-                                                    value="{{ $i }}" required>
+                                                    value="{{ $i }}">
                                                 <label class="form-check-label"
                                                     for="update_score_{{ $alc->id }}_{{ $i }}">{{ $i }}</label>
                                             </div>
@@ -153,8 +153,6 @@
 
 
         // Load data ke modal saat tombol update diklik
-
-
         function addAssessmentCard(type, containerId, selectedAlc = "", descriptions = "", alcName = "",
             suggestion = "") {
             console.log(`addAssessmentCard called with type=${type}, alcId=${selectedAlc}`);
