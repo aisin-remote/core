@@ -17,24 +17,19 @@
                         <label class="fs-5 fw-bold form-label mb-2">
                             <span class="required">Education Level</span>
                         </label>
-                        <select name="level" aria-label="Select a Category" data-control="select2"
-                            data-placeholder="Select categories..." class="form-select form-select-lg fw-semibold">
+                        <select name="level" class="form-select form-select-lg fw-semibold">
                             <option value="">Select Category</option>
                             <option value="SMK"
-                                {{ old('level', $education->educational_level) == 'SMK' ? 'selected' : '' }}>
-                                SMK</option>
+                                {{ old('level', $education->educational_level) == 'SMK' ? 'selected' : '' }}>SMK
+                            </option>
                             <option value="D3"
-                                {{ old('level', $education->educational_level) == 'D3' ? 'selected' : '' }}>
-                                D3</option>
+                                {{ old('level', $education->educational_level) == 'D3' ? 'selected' : '' }}>D3</option>
                             <option value="D4"
-                                {{ old('level', $education->educational_level) == 'D4' ? 'selected' : '' }}>
-                                D4</option>
+                                {{ old('level', $education->educational_level) == 'D4' ? 'selected' : '' }}>D4</option>
                             <option value="S1"
-                                {{ old('level', $education->educational_level) == 'S1' ? 'selected' : '' }}>
-                                S1</option>
+                                {{ old('level', $education->educational_level) == 'S1' ? 'selected' : '' }}>S1</option>
                             <option value="S2"
-                                {{ old('level', $education->educational_level) == 'S2' ? 'selected' : '' }}>
-                                S2</option>
+                                {{ old('level', $education->educational_level) == 'S2' ? 'selected' : '' }}>S2</option>
                         </select>
                     </div>
                     <div class="mb-3">
