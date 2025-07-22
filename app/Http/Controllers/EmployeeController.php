@@ -997,6 +997,38 @@ class EmployeeController extends Controller
         }
     }
 
+    public function workExperienceUpdate(Request $request, $id)
+    {
+        $experience = WorkingExperience::findOrFail($id);
+
+        $request->validate([
+            'position' => 'required|string|max:255',
+            'department' => 'required|string|max:255',
+            'start_date' => 'required|date',
+            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'description' => 'nullable|string',
+        ]);
+
+
+        try {
+            DB::beginTransaction();
+
+            $experience->update([
+                'position' => $request->position,
+                'department' => $request->department,
+                'start_date' => $request->start_date ? Carbon::parse($request->start_date) : null,
+                'end_date' => $request->end_date ? Carbon::parse($request->end_date) : null,
+                'description' => $request->description,
+            ]);
+
+            DB::commit();
+            return redirect()->back()->with('success', 'Pengalaman kerja berhasil diupdate.');
+        } catch (\Throwable $th) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Pengalaman kerja gagal diupdate.');
+        }
+    }
+
     public function workExperienceDestroy($id)
     {
         $experience = WorkingExperience::findOrFail($id);
