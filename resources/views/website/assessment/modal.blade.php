@@ -83,9 +83,7 @@
                     </div>
 
                     <div class="mb-4">
-
-                        <input type="hidden" id="description" name="description" required>
-
+                        {{-- <input type="hidden" id="description" name="description"> --}}
                     </div>
 
                     <div class="mb-4">
