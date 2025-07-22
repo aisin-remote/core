@@ -26,13 +26,8 @@
                     </div>
 
                     <div class="mb-3">
-                        <label class="form-label">Company</label>
-                        <input type="text" class="form-control" name="company" value="{{ $experience->company }}"
-                            required>
-                    </div>
-                    <div class="mb-3">
                         <label class="form-label">Department</label>
-                        <select name="position" class="form-control" required>
+                        <select name="department" class="form-control" required>
                             <option value="">-- Pilih Department --</option>
                             @foreach ($departments as $department)
                                 <option value="{{ $department->name }}"

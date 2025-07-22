@@ -12,20 +12,21 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Score</label>
-                        <input type="text" name="score" class="form-control" value="{{ $appraisal->score }}"
-                            required>
+                        <select name="score" class="form-control" required>
+                            <option value="">-- Select Score --</option>
+                            @foreach ($scores as $score)
+                                <option value="{{ $score }}"
+                                    {{ old('score', $appraisal->score ?? '') === $score ? 'selected' : '' }}>
+                                    {{ $score }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Date</label>
                         <input type="date" name="date" class="form-control"
                             value="{{ isset($appraisal) ? \Illuminate\Support\Carbon::parse($appraisal->date)->format('Y-m-d') : old('date') }}"
                             required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" rows="3">
-                    {{ $appraisal->description }}
-                </textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

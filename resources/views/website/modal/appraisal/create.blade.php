@@ -12,15 +12,19 @@
                     <input type="hidden" name="employee_id" value="{{ $employee_id }}">
                     <div class="mb-3">
                         <label class="form-label">Score</label>
-                        <input type="text" name="score" class="form-control" required>
+                        <select name="score" class="form-control" required>
+                            <option value="">-- Select Score --</option>
+                            @foreach ($scores as $score)
+                                <option value="{{ $score }}"
+                                    {{ old('score', $experience->score ?? '') === $score ? 'selected' : '' }}>
+                                    {{ $score }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Date</label>
                         <input type="date" name="date" class="form-control" required>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Description</label>
-                        <textarea class="form-control" name="description" rows="3"></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">

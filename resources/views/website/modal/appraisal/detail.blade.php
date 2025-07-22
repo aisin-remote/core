@@ -8,7 +8,6 @@
             </div>
             <div class="modal-body">
                 <p><strong>Hasil:</strong> {{ $appraisal->score }}</p>
-                <p><strong>Catatan:</strong> {{ $appraisal->description }}</p>
                 <p><strong>Tahun:</strong> {{ $appraisal->date }}</p>
             </div>
             <div class="modal-footer">

@@ -648,8 +648,9 @@ class EmployeeController extends Controller
         $plants = Plant::all();
         $sections = Section::all();
         $subSections = SubSection::all();
+        $scores = GradeConversion::select('aisin_grade')->distinct()->pluck('aisin_grade');
 
-        return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps',  'divisions', 'plants', 'sections', 'subSections'))->with('mode', 'edit');;
+        return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants', 'sections', 'subSections', 'scores'))->with('mode', 'edit');
     }
 
     public function update(Request $request, $npk)
