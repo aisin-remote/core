@@ -18,17 +18,19 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
     protected $filePath;
     protected $havId;
     protected $detailData;
+    protected $updateHav; // Flag untuk menentukan apakah perlu update HAV
 
-    public function __construct($filePath, $havId = null, array $detailData = [])
+    public function __construct($filePath, $havId = null, array $detailData = [], $updateHav = true)
     {
         $this->filePath = $filePath;
         $this->havId = $havId;
-        $this->detailData = $detailData; // ← per alc_id
+        $this->detailData = $detailData;
+        $this->updateHav = $updateHav; // Tambahkan parameter baru
     }
 
     public function sheets(): array
     {
-        return [0 => $this]; // Sheet pertama
+        return [0 => $this];
     }
 
     public function registerEvents(): array
@@ -38,9 +40,7 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
                 $sheet = $event->getDelegate();
 
                 $npk = $sheet->getCell('C7')->getValue();
-
                 $employee = Employee::where('npk', $npk)->first();
-                $comment = '';
                 $year = $sheet->getCell('C13')->getCalculatedValue();
 
                 if (!$employee) {
@@ -55,78 +55,91 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
 
                 try {
                     // === Step 1: HAV update or create ===
-                    if ($this->havId) {
-                        $hav = Hav::findOrFail($this->havId);
-                        $hav->status = 2;
-                        $hav->year = $year;
+                        if ($this->havId) {
+                            $hav = Hav::findOrFail($this->havId);
+                            $hav->status = 2;
+                            $hav->year = $year;
 
-                        HavDetail::where('hav_id', $hav->id)->delete();
-                    } else {
-                        $hav = new Hav();
-                        $hav->employee_id = $employee->id;
-                        $hav->status = 2;
-                        $hav->year = $year;
-                    }
+                            HavDetail::where('hav_id', $hav->id)->delete();
+                        } else {
+                            $hav = new Hav();
+                            $hav->employee_id = $employee->id;
+                            $hav->status = 2;
+                            $hav->year = $year;
+                        }
 
-                    // === Step 2: Quadrant & save ===
-                    $scoreMap = [
-                        1 => 'D15', 2 => 'I15', 3 => 'O15', 4 => 'T15',
-                        5 => 'D25', 6 => 'I25', 7 => 'O25', 8 => 'T25',
-                    ];
-                
-                    $evidenceMap = [
-                        1 => 'E17', 2 => 'J17', 3 => 'P17', 4 => 'U17',
-                        5 => 'E27', 6 => 'J27', 7 => 'P27', 8 => 'U27',
-                    ];
-                
-                    $developmentMap = [
-                        1 => 'F17', 2 => 'K17', 3 => 'Q17', 4 => 'V17',
-                        5 => 'F27', 6 => 'K27', 7 => 'Q27', 8 => 'V27',
-                    ];
-
-                    $quadrant = (new HavQuadrant())->updateHavFromAssessment(
-                        $employee->id,
-                        $sheet->getCell('C13')->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[1])->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[2])->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[3])->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[4])->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[5])->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[6])->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[7])->getCalculatedValue(),
-                        $sheet->getCell($scoreMap[8])->getCalculatedValue(),
-                    );
-
-                    $hav->quadrant = $quadrant;
-                    $hav->save();
-
-                    // === Step 3: HavDetail ===
-                    foreach ($scoreMap as $index => $cell) {
-                        $alc = Alc::find($index);
-                        if (!$alc) continue;
-
-                        $detail = $this->detailData[$alc->id] ?? [
-                            'score' => 0,
-                            'strength' => '',
-                            'weakness' => '',
-                            'suggestion_development' => '',
+                        // === Step 2: Quadrant & save ===
+                        $scoreMap = [
+                            1 => 'D15',
+                            2 => 'I15',
+                            3 => 'O15',
+                            4 => 'T15',
+                            5 => 'D25',
+                            6 => 'I25',
+                            7 => 'O25',
+                            8 => 'T25',
                         ];
 
-                        HavDetail::create([
-                            'hav_id' => $hav->id,
-                            'alc_id' => $alc->id,
-                            'score' => floatval($sheet->getCell($cell)->getCalculatedValue()),
-                            'evidence' => $sheet->getCell($evidenceMap[$index])->getCalculatedValue(),
-                            'suggestion_development' => $detail['suggestion_development'] == '' ? null : $detail['suggestion_development'],
-                            'is_assessment' => 1,
-                        ]);
-                    }
-                    
+                        $quadrant = (new HavQuadrant())->updateHavFromAssessment(
+                            $employee->id,
+                            $year,
+                            $sheet->getCell($scoreMap[1])->getCalculatedValue(),
+                            $sheet->getCell($scoreMap[2])->getCalculatedValue(),
+                            $sheet->getCell($scoreMap[3])->getCalculatedValue(),
+                            $sheet->getCell($scoreMap[4])->getCalculatedValue(),
+                            $sheet->getCell($scoreMap[5])->getCalculatedValue(),
+                            $sheet->getCell($scoreMap[6])->getCalculatedValue(),
+                            $sheet->getCell($scoreMap[7])->getCalculatedValue(),
+                            $sheet->getCell($scoreMap[8])->getCalculatedValue(),
+                        );
+
+                        $hav->quadrant = $quadrant;
+                        $hav->save();
+
+                        // === Step 3: HavDetail ===
+                        $evidenceMap = [
+                            1 => 'E17',
+                            2 => 'J17',
+                            3 => 'P17',
+                            4 => 'U17',
+                            5 => 'E27',
+                            6 => 'J27',
+                            7 => 'P27',
+                            8 => 'U27',
+                        ];
+
+                        foreach ($scoreMap as $index => $cell) {
+                            $alc = Alc::find($index);
+                            if (!$alc)
+                                continue;
+
+                            $detail = $this->detailData[$alc->id] ?? [
+                                'score' => 0,
+                                'strength' => '',
+                                'weakness' => '',
+                                'suggestion_development' => '',
+                            ];
+
+                            HavDetail::updateOrCreate(
+                                [
+                                    'hav_id' => $hav->id,
+                                    'alc_id' => $alc->id
+                                ],
+                                [
+                                    'score' => floatval($sheet->getCell($cell)->getCalculatedValue()),
+                                    'evidence' => $sheet->getCell($evidenceMap[$index])->getCalculatedValue(),
+                                    'suggestion_development' => $detail['suggestion_development'] == '' ? null : $detail['suggestion_development'],
+                                    'is_assessment' => 1,
+                                    'updated_at' => now()
+                                ]
+                            );
+                        }
+
                     DB::commit();
                 } catch (\Throwable $e) {
                     DB::rollBack();
+                    throw $e; // Re-throw exception setelah rollback
                 }
-            
             }
         ];
     }

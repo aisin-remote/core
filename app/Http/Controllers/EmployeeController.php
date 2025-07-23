@@ -255,8 +255,6 @@ class EmployeeController extends Controller
         return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions'));
     }
 
-
-
     public function status($id)
     {
         try {
@@ -398,31 +396,31 @@ class EmployeeController extends Controller
                     'roles' => ['act leader', 'leader'],
                     'update' => fn() => $validatedData['sub_section_id'] &&
                         DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                        ->update(['leader_id' => $employee->id]),
+                            ->update(['leader_id' => $employee->id]),
                 ],
                 'section' => [
                     'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
                     'update' => fn() => $validatedData['section_id'] &&
                         DB::table('sections')->where('id', $validatedData['section_id'])
-                        ->update(['supervisor_id' => $employee->id]),
+                            ->update(['supervisor_id' => $employee->id]),
                 ],
                 'department' => [
                     'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
                     'update' => fn() => $validatedData['department_id'] &&
                         DB::table('departments')->where('id', $validatedData['department_id'])
-                        ->update(['manager_id' => $employee->id]),
+                            ->update(['manager_id' => $employee->id]),
                 ],
                 'division' => [
                     'roles' => ['act gm', 'gm'],
                     'update' => fn() => $validatedData['division_id'] &&
                         DB::table('divisions')->where('id', $validatedData['division_id'])
-                        ->update(['gm_id' => $employee->id]),
+                            ->update(['gm_id' => $employee->id]),
                 ],
                 'plant' => [
                     'roles' => ['director'],
                     'update' => fn() => $validatedData['plant_id'] &&
                         DB::table('plants')->where('id', $validatedData['plant_id'])
-                        ->update(['director_id' => $employee->id]),
+                            ->update(['director_id' => $employee->id]),
                 ],
             ];
 
@@ -565,7 +563,8 @@ class EmployeeController extends Controller
         $departments = Department::all();
         $divisions = Division::all();
         $plants = Plant::all();
-        return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');;
+        return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');
+        ;
     }
 
     public function edit($npk)
@@ -714,24 +713,24 @@ class EmployeeController extends Controller
                 $employee->update($validatedData);
 
                 $positionAliasMap = [
-                    'section head'     => 'supervisor',
+                    'section head' => 'supervisor',
                     'act section head' => 'supervisor',
-                    'coordinator'      => 'manager',
-                    'act coordinator'  => 'manager',
-                    'act manager'      => 'manager',
-                    'act supervisor'   => 'supervisor',
-                    'act leader'       => 'leader',
-                    'act jp'           => 'jp',
-                    'act gm'           => 'gm',
+                    'coordinator' => 'manager',
+                    'act coordinator' => 'manager',
+                    'act manager' => 'manager',
+                    'act supervisor' => 'supervisor',
+                    'act leader' => 'leader',
+                    'act jp' => 'jp',
+                    'act gm' => 'gm',
                 ];
 
                 $promotionPaths = [
                     'operator' => ['leader' => ['clear' => 'sub_section_id']],
-                    'jp'       => ['leader' => ['clear' => 'sub_section_id']],
-                    'leader'   => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
+                    'jp' => ['leader' => ['clear' => 'sub_section_id']],
+                    'leader' => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
                     'supervisor' => ['manager' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id']],
-                    'manager'  => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
-                    'gm'       => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
+                    'manager' => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
+                    'gm' => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
                 ];
 
                 $normalizePosition = function ($position) use ($positionAliasMap) {
@@ -770,31 +769,31 @@ class EmployeeController extends Controller
                         'roles' => ['act leader', 'leader'],
                         'update' => fn() => $validatedData['sub_section_id'] &&
                             DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                            ->update(['leader_id' => $employee->id]),
+                                ->update(['leader_id' => $employee->id]),
                     ],
                     'section' => [
                         'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
                         'update' => fn() => $validatedData['section_id'] &&
                             DB::table('sections')->where('id', $validatedData['section_id'])
-                            ->update(['supervisor_id' => $employee->id]),
+                                ->update(['supervisor_id' => $employee->id]),
                     ],
                     'department' => [
                         'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
                         'update' => fn() => $validatedData['department_id'] &&
                             DB::table('departments')->where('id', $validatedData['department_id'])
-                            ->update(['manager_id' => $employee->id]),
+                                ->update(['manager_id' => $employee->id]),
                     ],
                     'division' => [
                         'roles' => ['act gm', 'gm'],
                         'update' => fn() => $validatedData['division_id'] &&
                             DB::table('divisions')->where('id', $validatedData['division_id'])
-                            ->update(['gm_id' => $employee->id]),
+                                ->update(['gm_id' => $employee->id]),
                     ],
                     'plant' => [
                         'roles' => ['director'],
                         'update' => fn() => $validatedData['plant_id'] &&
                             DB::table('plants')->where('id', $validatedData['plant_id'])
-                            ->update(['director_id' => $employee->id]),
+                                ->update(['director_id' => $employee->id]),
                     ],
                 ];
 
@@ -959,6 +958,7 @@ class EmployeeController extends Controller
 
     public function workExperienceStore(Request $request)
     {
+        \Log::debug($request->all());
         $employee = DB::table('employees')->where('id', $request->employee_id)->exists();
 
         if (!$employee) {
@@ -967,7 +967,6 @@ class EmployeeController extends Controller
 
         $request->validate([
             'position' => 'required|string|max:255',
-            'company' => 'required|string|max:255',
             'department' => 'required|string|max:255',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -979,11 +978,10 @@ class EmployeeController extends Controller
 
             WorkingExperience::create([
                 'employee_id' => $request->employee_id,
-                'position'    => $request->position,
-                'company'     => $request->company,
-                'department'  => $request->department,
-                'start_date'  => $request->start_date,
-                'end_date'    => $request->end_date ?: null, // konversi kosong jadi null
+                'position' => $request->position,
+                'department' => $request->department,
+                'start_date' => $request->start_date,
+                'end_date' => $request->end_date ?: null, // konversi kosong jadi null
                 'description' => $request->description,
             ]);
 
@@ -1106,11 +1104,11 @@ class EmployeeController extends Controller
 
             $education->update([
                 'educational_level' => $validatedData['level'],
-                'major'             => $validatedData['major'],
-                'institute'         => $validatedData['institute'],
-                'start_date'        => $validatedData['start_date'] ? Carbon::parse($validatedData['start_date']) : null,
-                'end_date'          => $validatedData['end_date'] ? Carbon::parse($validatedData['end_date']) : null,
-            ]);            
+                'major' => $validatedData['major'],
+                'institute' => $validatedData['institute'],
+                'start_date' => $validatedData['start_date'] ? Carbon::parse($validatedData['start_date']) : null,
+                'end_date' => $validatedData['end_date'] ? Carbon::parse($validatedData['end_date']) : null,
+            ]);
 
             DB::commit();
             return redirect()->back()->with('success', 'Riwayat pendidikan berhasil diupdate.');
@@ -1164,9 +1162,9 @@ class EmployeeController extends Controller
             // Simpan data appraisal
             PerformanceAppraisalHistory::create([
                 'employee_id' => $request->employee_id,
-                'score'       => $validatedData['score'],
+                'score' => $validatedData['score'],
                 'description' => $validatedData['description'] ?? null,
-                'date'        => Carbon::parse($validatedData['date']),
+                'date' => Carbon::parse($validatedData['date']),
             ]);
 
             DB::commit();
@@ -1193,9 +1191,9 @@ class EmployeeController extends Controller
 
             // Update dengan field yang benar
             $appraisal->update([
-                'score'       => $validatedData['score'],
+                'score' => $validatedData['score'],
                 'description' => $validatedData['description'] ?? null,
-                'date'        => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
+                'date' => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
             ]);
 
             DB::commit();
@@ -1226,10 +1224,10 @@ class EmployeeController extends Controller
     public function promotionStore(Request $request)
     {
         $request->validate([
-            'previous_grade'      => 'required|string|max:255',
-            'previous_position'   => 'required|string|max:255',
-            'current_grade'       => 'required|string|max:255',
-            'current_position'    => 'required|string|max:255',
+            'previous_grade' => 'required|string|max:255',
+            'previous_position' => 'required|string|max:255',
+            'current_grade' => 'required|string|max:255',
+            'current_position' => 'required|string|max:255',
             'last_promotion_date' => 'required|date',
         ]);
 
@@ -1237,11 +1235,11 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             PromotionHistory::create([
-                'employee_id'         => $request->employee_id,
-                'previous_grade'      => $request->previous_grade,
-                'previous_position'   => $request->previous_position,
-                'current_grade'       => $request->current_grade,
-                'current_position'    => $request->current_position,
+                'employee_id' => $request->employee_id,
+                'previous_grade' => $request->previous_grade,
+                'previous_position' => $request->previous_position,
+                'current_grade' => $request->current_grade,
+                'current_position' => $request->current_position,
                 'last_promotion_date' => $request->last_promotion_date,
             ]);
 
@@ -1258,10 +1256,10 @@ class EmployeeController extends Controller
         $experience = PromotionHistory::findOrFail($id);
 
         $request->validate([
-            'previous_grade'    => 'required',
-            'previous_position'    => 'required',
+            'previous_grade' => 'required',
+            'previous_position' => 'required',
             'current_grade' => 'required',
-            'current_position'   => 'required',
+            'current_position' => 'required',
             'last_promotion_date' => 'required',
         ]);
 
@@ -1269,11 +1267,11 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $experience->update([
-                'previous_grade'    => $request->previous_grade,
-                'previous_position'     => $request->previous_position,
-                'current_grade'     => $request->current_grade,
-                'current_position'  => $request->current_position,
-                'last_promotion_date'    =>  $request->last_promotion_date,
+                'previous_grade' => $request->previous_grade,
+                'previous_position' => $request->previous_position,
+                'current_grade' => $request->current_grade,
+                'current_position' => $request->current_position,
+                'last_promotion_date' => $request->last_promotion_date,
             ]);
 
             DB::commit();
@@ -1323,10 +1321,10 @@ class EmployeeController extends Controller
 
             // Validasi input
             $validatedData = $request->validate([
-                'program'        => 'required|string|max:255',
-                'ict_score'      => 'required',
-                'project_score'  => 'required',
-                'total_score'    => 'required',
+                'program' => 'required|string|max:255',
+                'ict_score' => 'required',
+                'project_score' => 'required',
+                'total_score' => 'required',
                 'date_start' => 'required',
                 'date_end' => 'required',
                 'institusi' => 'required',
@@ -1341,14 +1339,14 @@ class EmployeeController extends Controller
 
             // Simpan data ke AstraTraining
             AstraTraining::create([
-                'employee_id'   => $request->employee_id,
-                'program'       => $validatedData['program'],
-                'ict_score'     => $validatedData['ict_score'],
+                'employee_id' => $request->employee_id,
+                'program' => $validatedData['program'],
+                'ict_score' => $validatedData['ict_score'],
                 'project_score' => $validatedData['project_score'],
-                'total_score'   => $validatedData['total_score'],
-                'date_start'       => $validatedData['date_start'],
-                'date_end'       => $validatedData['date_end'],
-                'institusi'       => $validatedData['institusi'],
+                'total_score' => $validatedData['total_score'],
+                'date_start' => $validatedData['date_start'],
+                'date_end' => $validatedData['date_end'],
+                'institusi' => $validatedData['institusi'],
             ]);
 
             DB::commit();
@@ -1372,10 +1370,10 @@ class EmployeeController extends Controller
             $validatedData = $request->validate([
                 'date_start' => 'required',
                 'date_end' => 'required',
-                'program'        => 'required|string|max:255',
-                'ict_score'      => 'required',
-                'project_score'  => 'required',
-                'total_score'    => 'required',
+                'program' => 'required|string|max:255',
+                'ict_score' => 'required',
+                'project_score' => 'required',
+                'total_score' => 'required',
                 'institusi' => 'required',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1387,13 +1385,13 @@ class EmployeeController extends Controller
 
             // Update data AstraTraining
             $astraTraining->update([
-                'date_start'       => $validatedData['date_start'],
-                'date_end'       => $validatedData['date_end'],
-                'institusi'       => $validatedData['institusi'],
-                'program'       => $validatedData['program'],
-                'ict_score'     => $validatedData['ict_score'],
+                'date_start' => $validatedData['date_start'],
+                'date_end' => $validatedData['date_end'],
+                'institusi' => $validatedData['institusi'],
+                'program' => $validatedData['program'],
+                'ict_score' => $validatedData['ict_score'],
                 'project_score' => $validatedData['project_score'],
-                'total_score'   => $validatedData['total_score'],
+                'total_score' => $validatedData['total_score'],
             ]);
 
             DB::commit();
@@ -1438,7 +1436,7 @@ class EmployeeController extends Controller
             // Validasi input
             $validatedData = $request->validate([
                 'program' => 'required|string|max:255',
-                'vendor'  => 'required|string|max:255',
+                'vendor' => 'required|string|max:255',
                 'date_start' => 'required',
                 'date_end' => 'required',
             ]);
@@ -1452,10 +1450,10 @@ class EmployeeController extends Controller
             // Simpan data ke ExternalTraining
             ExternalTraining::create([
                 'employee_id' => $request->employee_id,
-                'date_start'       => $validatedData['date_start'],
-                'date_end'       => $validatedData['date_end'],
-                'program'     => $validatedData['program'],
-                'vendor'      => $validatedData['vendor'],
+                'date_start' => $validatedData['date_start'],
+                'date_end' => $validatedData['date_end'],
+                'program' => $validatedData['program'],
+                'vendor' => $validatedData['vendor'],
             ]);
 
             DB::commit();
@@ -1477,7 +1475,7 @@ class EmployeeController extends Controller
                 'program' => 'required|string|max:255',
                 'date_start' => 'required',
                 'date_end' => 'required',
-                'vendor'  => 'required|string|max:255',
+                'vendor' => 'required|string|max:255',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
@@ -1488,10 +1486,10 @@ class EmployeeController extends Controller
 
             // Update data di database
             $externalTraining->update([
-                'date_start'       => $validatedData['date_start'],
-                'date_end'       => $validatedData['date_end'],
+                'date_start' => $validatedData['date_start'],
+                'date_end' => $validatedData['date_end'],
                 'program' => $validatedData['program'],
-                'vendor'  => $validatedData['vendor'],
+                'vendor' => $validatedData['vendor'],
             ]);
 
             DB::commit();
