@@ -165,6 +165,7 @@
                                 <tr>
                                     <th class="text-center" width="10%">No</th>
                                     <th class="text-center">IDP Year</th>
+                                    <th class="text-center" width="40%">Status</th>
                                     <th class="text-center" width="40%">Action</th>
                                 </tr>
                             </thead>
@@ -540,6 +541,65 @@
                                 const createdAt = new Date(first.created_at);
                                 const year = createdAt.getFullYear();
 
+
+                                let status = first.status;
+                                switch (status) {
+                                    case 0:
+                                        status = "draft";
+                                        break;
+                                    case 1:
+                                        status = "waiting";
+                                        break;
+                                    case 2:
+                                        status = "checked";
+                                        break;
+                                    case 3:
+                                        status = "approved";
+                                        break;
+                                    case -1:
+                                        status = "revise";
+                                        break;
+                                    default:
+                                        status = "unknown";
+                                        break;
+                                }
+
+                                const badges = {
+                                    no_approval_needed: {
+                                        text: "-",
+                                        class: "bg-light text-dark",
+                                    },
+                                    not_created: {
+                                        text: "Not Created",
+                                        class: "bg-dark",
+                                    },
+                                    draft: {
+                                        text: "Need Submit",
+                                        class: "bg-secondary",
+                                    },
+                                    waiting: {
+                                        text: "Waiting",
+                                        class: "bg-warning",
+                                    },
+                                    checked: {
+                                        text: "Checked",
+                                        class: "bg-info",
+                                    },
+                                    approved: {
+                                        text: "Approved",
+                                        class: "bg-success",
+                                    },
+                                    revise: {
+                                        text: "Need Revise",
+                                        class: "bg-danger",
+                                    },
+                                    unknown: {
+                                        text: "Unknown",
+                                        class: "bg-secondary",
+                                    },
+                                };
+                                const badge = badges[status] || badges.unknown;
+
                                 let deleteButton = "";
                                 if (currentUserRole === "HRD") {
                                     deleteButton = `
@@ -553,6 +613,20 @@
                                     <tr>
                                         <td class="text-center">${index++}</td>
                                         <td class="text-center">${year}</td>
+                                        <td class="text-center">
+                                            <span class="badge ${badge.class}"
+                                            style="
+                                                display: inline-block;
+                                                padding: 0.75rem;
+                                                text-align: center;
+                                                font-size: 0.85rem;
+                                                font-weight: 600;
+                                                border-radius: 0.375rem;
+                                                white-space: nowrap;
+                                            ">
+                                            ${badge.text}
+                                        </span>
+                                        </td>
                                         <td class="text-center">
                                             <button class="btn btn-info btn-sm btn-idp-detail" data-modal-id="notes_${first.hav.hav.employee.id}">
                                                 Detail
