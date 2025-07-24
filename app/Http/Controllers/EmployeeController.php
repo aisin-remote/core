@@ -13,6 +13,7 @@ use App\Models\Employee;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
+use App\Models\HavQuadrant;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\AstraTraining;
@@ -1195,6 +1196,10 @@ class EmployeeController extends Controller
                 'description' => $validatedData['description'] ?? null,
                 'date' => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
             ]);
+
+            // Update HAV Quadran
+            $year = Carbon::parse($appraisal['date'])->year;
+            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, $year);
 
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil diperbarui.');

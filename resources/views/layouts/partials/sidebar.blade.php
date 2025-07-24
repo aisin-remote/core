@@ -750,6 +750,32 @@
                             </div>
                         </div>
 
+                        {{-- Users --}}
+                        <div class="menu-item menu-accordion {{ request()->is('master/users/aii') || request()->is('master/users/aiia') ? 'show' : '' }}"
+                            data-kt-menu-expand="true" data-kt-menu-trigger="click">
+                            <span
+                                class="menu-link {{ request()->is('master/users/aii') || request()->is('master/users/aiia') ? 'active' : '' }}">
+                                <span class="menu-title ps-1">Users</span>
+                                <span class="menu-arrow"></span>
+                            </span>
+                            <div class="menu-sub menu-sub-accordion menu-active-bg">
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/users/aii') ? 'active' : '' }}"
+                                        href="{{ url('master/users/aii') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AII</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
+                                    <a class="menu-link {{ request()->is('master/users/aiia') ? 'active' : '' }}"
+                                        href="{{ url('master/users/aiia') }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">AIIA</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
 
                     </div>
                 </div>

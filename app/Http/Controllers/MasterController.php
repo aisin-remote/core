@@ -8,6 +8,7 @@ use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\SubSection;
+use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 
@@ -294,7 +295,7 @@ class MasterController extends Controller
         //     'section_id' => 'required|string|max:255',
         //     'leader_id' => 'required|string|max:255',
         // ]);
-    
+
         try {
             SubSection::create([
                 'name' => $request->name,
@@ -441,8 +442,29 @@ class MasterController extends Controller
         return view('website.master.subSection.index', compact('subSections', 'leaders', 'sections', 'company'));
     }
 
+    public function users(Request $request, $company = null)
+    {
+        $search = $request->input('search');
 
+        $users = User::with('employee')
+            ->when($search, function ($query, $search) {
+                return $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%")
+                    ->orWhere('role', 'like', "%{$search}%")
+                    ->orWhereHas('employee', function ($q) use ($search) {
+                        $q->where('npk', 'like', "%{$search}%");
+                    });
+            })
+            ->when($company, function ($query) use ($company) {
+                $query->whereHas('employee', function ($q) use ($company) {
+                    $q->where('company_name', $company);
+                });
+            })
+            ->orderBy('name')
+            ->paginate(10);
 
+        return view('website.master.users.index', compact('users', 'company'));
+    }
 
     public function grade()
     {
