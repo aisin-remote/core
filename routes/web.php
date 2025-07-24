@@ -7,10 +7,12 @@ use App\Http\Controllers\HavController;
 use App\Http\Controllers\IcpController;
 use App\Http\Controllers\IdpController;
 use App\Http\Controllers\RtcController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlantController;
 use App\Http\Controllers\MasterController;
 use App\Http\Controllers\EmployeeController;
+use App\Http\Controllers\PasswordController;
 use App\Http\Controllers\RegisterController;
 use App\Http\Controllers\ToDoListController;
 use App\Http\Controllers\AssessmentController;
@@ -19,8 +21,6 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
-use App\Http\Controllers\PasswordController;
-use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -123,7 +123,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/edit/{id}', [IcpController::class, 'edit'])->name('icp.edit');
        Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
 
-
+       Route::post('/delete/{id}', [IcpController::class, 'destroy'])->name('icp.destroy');
     });
 
     Route::prefix('hav')->group(function () {
