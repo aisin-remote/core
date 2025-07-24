@@ -121,8 +121,12 @@ class HavQuadrant extends Model
     {
         $getHavQuadrant = HavQuadrant::where('employee_id', $employee_id)->first();
         $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
-        $this->generateHavQuadrant($employee_id, $getHavQuadrant->assessment_score ?? 1, $pkScore);
+        $quadrant = $this->generateHavQuadrant($employee_id, $getHavQuadrant->assessment_score ?? 1, $pkScore);
+
+        Hav::where('employee_id', $employee_id)
+            ->update(['quadrant' => $quadrant]);
     }
+
 
     public function getValidatedPerformanceScores($employee_id, $year)
     {
