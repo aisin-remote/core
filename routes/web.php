@@ -20,6 +20,7 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\PasswordController;
+use App\Http\Controllers\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -319,6 +320,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
             Route::delete('/delete/{id}', [MasterController::class, 'subSectionDestroy'])->name('subSection.master.destroy');
         });
 
+        Route::prefix('users')->group(function () {
+            Route::get('/{company?}', [MasterController::class, 'users'])->name('users.master.index');
+        });
+
         Route::prefix('grade')->group(function () {
             Route::get('/', [MasterController::class, 'grade'])->name('grade.master.index');
             Route::post('/store', [MasterController::class, 'gradeStore'])->name('grade.master.store');
@@ -329,4 +334,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');
     Route::get('/change-password', [PasswordController::class, 'showChangeForm'])->name('change-password.auth');
     Route::post('/change-password', [PasswordController::class, 'changeForm'])->name('change-password.post');
+
+    Route::prefix('users')->group(function () {
+        Route::get('/edit/{id}', [UserController::class, 'edit'])->name('users.master.edit');
+        Route::put('/update/{id}', [UserController::class, 'update'])->name('users.master.update');
+        Route::delete('/delete/{id}', [UserController::class, 'destroy'])->name('users.master.destroy');
+    });
 });
