@@ -56,6 +56,8 @@ class UserService
 
         if (isset($data['password'])) {
             $data['password'] = bcrypt($data['password']);
+            $user->is_first_login = 1;
+            $user->password_changed_at = null;
         } else {
             unset($data['password']);
         }
