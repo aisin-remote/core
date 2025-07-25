@@ -599,7 +599,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2005-07-01',
-                'position' => 'Group Manager'
+                'position' => 'GM'
             ],
             [
                 'npk' => '1906',
