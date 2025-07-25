@@ -610,4 +610,17 @@ class IcpController extends Controller
             'positions' // tambahkan ini
         ));
     }
+
+    public function destroy($id)
+    {
+        $icp = Icp::find($id);
+
+        if (!$icp) {
+            return response()->json(['message' => 'ICP not found'], 404);
+        }
+
+        $icp->delete();
+
+        return response()->json(['message' => 'ICP deleted successfully']);
+    }
 }

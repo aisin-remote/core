@@ -257,5 +257,46 @@
                 }
             });
         });
+
+        // Listener tombol delete
+        $(document).on("click", ".btn-delete", function() {
+            const icpId = $(this).data("id");
+
+            Swal.fire({
+                title: "Are you sure?",
+                text: "You won't be able to revert this!",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#d33",
+                cancelButtonColor: "#3085d6",
+                confirmButtonText: "Yes, delete it!"
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: `/icp/delete/${icpId}`,
+                        type: "POST",
+                        headers: {
+                            "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                        },
+                        success: function(response) {
+                            Swal.fire(
+                                "Deleted!",
+                                "ICP record has been deleted.",
+                                "success"
+                            ).then(() => {
+                                location.reload(); // 🔄 reload seluruh halaman
+                            });
+                        },
+                        error: function(xhr, status, error) {
+                            Swal.fire(
+                                "Failed!",
+                                "ICP record could not be deleted.",
+                                "error"
+                            );
+                        }
+                    });
+                }
+            });
+        });
     </script>
 @endpush
