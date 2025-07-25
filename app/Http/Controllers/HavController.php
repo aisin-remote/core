@@ -650,7 +650,7 @@ class HavController extends Controller
         $sheet->setCellValue("C7", date('d-m-Y H:i:s'));
 
 
-        foreach ($employees as $i => $emp) {
+        foreach ($employees->sortBy('name')->values() as $i => $emp) {
             $row = $startRow + $i;
             $assessment = $emp->hav->sortByDesc('created_at')->first();
             $details = $assessment ? $assessment->details->keyBy('alc_id') : collect();
@@ -691,7 +691,7 @@ class HavController extends Controller
             $sheet->setCellValue("C{$row}", $emp->name);
             $sheet->setCellValue("D{$row}", $emp->function);
             $sheet->setCellValue("E{$row}", $emp->division->name); // Divisi
-            $sheet->setCellValue("F{$row}", $emp->department->name); // Departemen
+            $sheet->setCellValue("F{$row}", $emp->departments->pluck('name')->implode(', ')); // Departemen
             $sheet->setCellValue("G{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia
             $sheet->setCellValue("H{$row}", $emp->grade); // Sub Gol
             $sheet->setCellValue("I{$row}", $emp->working_period); // Masa kerja
@@ -710,24 +710,27 @@ class HavController extends Controller
             $sheet->setCellValue("T{$row}", $formulaT);
 
 
-            $sheet->setCellValue("U11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("V11", substr($appraisals[1]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("W11", substr($appraisals[2]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("X11", substr($appraisals[0]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("Y11", substr($appraisals[1]->date, 0, 4) ?? '-');
-            $sheet->setCellValue("Z11", substr($appraisals[2]->date, 0, 4) ?? '-');
+            $sheet->setCellValue("U11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
+            $sheet->setCellValue("V11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
+            $sheet->setCellValue("W11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
+            $sheet->setCellValue("X11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
+            $sheet->setCellValue("Y11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
+            $sheet->setCellValue("Z11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
 
-            $sheet->setCellValue("U{$row}", $appraisals[0]->score ?? '-');
-            $sheet->setCellValue("V{$row}", $appraisals[1]->score ?? '-');
-            $sheet->setCellValue("W{$row}", $appraisals[2]->score ?? '-');
 
-            $sheet->setCellValue("X{$row}", $appraisals[0]->masterPerformance->score ?? '-');
-            $sheet->setCellValue("Y{$row}", $appraisals[1]->masterPerformance->score ?? '-');
-            $sheet->setCellValue("Z{$row}", $appraisals[2]->masterPerformance->score ?? '-');
+            $sheet->setCellValue("U{$row}", isset($appraisals[0]) ? $appraisals[0]->score : '-');
+            $sheet->setCellValue("V{$row}", isset($appraisals[1]) ? $appraisals[1]->score : '-');
+            $sheet->setCellValue("W{$row}", isset($appraisals[2]) ? $appraisals[2]->score : '-');
 
-            $score1 = optional($appraisals[0]->masterPerformance)->score;
-            $score2 = optional($appraisals[1]->masterPerformance)->score;
-            $score3 = optional($appraisals[2]->masterPerformance)->score;
+            $sheet->setCellValue("X{$row}", isset($appraisals[0]) && $appraisals[0]->masterPerformance ? $appraisals[0]->masterPerformance->score : '-');
+            $sheet->setCellValue("Y{$row}", isset($appraisals[1]) && $appraisals[1]->masterPerformance ? $appraisals[1]->masterPerformance->score : '-');
+            $sheet->setCellValue("Z{$row}", isset($appraisals[2]) && $appraisals[2]->masterPerformance ? $appraisals[2]->masterPerformance->score : '-');
+
+            // Gunakan optional() hanya jika objek $appraisals[0] aman diakses
+            $score1 = isset($appraisals[0]) ? optional($appraisals[0]->masterPerformance)->score : null;
+            $score2 = isset($appraisals[1]) ? optional($appraisals[1]->masterPerformance)->score : null;
+            $score3 = isset($appraisals[2]) ? optional($appraisals[2]->masterPerformance)->score : null;
+
             $scores = array_filter([$score1, $score2, $score3], fn($s) => $s !== null);
 
             $avgScore = count($scores) > 0 ? round(array_sum($scores) / count($scores), 2) : '-';
