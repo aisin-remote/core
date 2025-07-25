@@ -411,9 +411,19 @@ class IdpController extends Controller
 
     public function store(Request $request)
     {
-        $assessment = Assessment::where('id', $request->assessment_id)->first();
         try {
             DB::beginTransaction();
+
+            $request->validate([
+                'hav_detail_id'       => 'nullable',
+                'alc_id'              => 'required',
+                'assessment_id'       => 'required',
+                'development_program' => 'required',
+                'category'            => 'required',
+                'development_target'  => 'required',
+                'date'                => 'required',
+            ]);
+
             $idp = Idp::where('hav_detail_id', $request->hav_detail_id)
                 ->where('alc_id', $request->alc_id)
                 ->first();
@@ -577,10 +587,10 @@ class IdpController extends Controller
 
         foreach ($assessmentDetails as $detail) {
             if (!empty($detail->strength)) {
-                $strengths[] =  " - " . $detail->alc_name;
+                $strengths[] = " - " . $detail->alc_name;
             }
             if (!empty($detail->weakness)) {
-                $weaknesses[] = " - "  . $detail->alc_name;
+                $weaknesses[] = " - " . $detail->alc_name;
             }
         }
 
@@ -804,7 +814,8 @@ class IdpController extends Controller
             ->get()
             ->filter(function ($idp) {
                 $havId = $idp->hav->hav_id ?? null;
-                if (!$havId) return false;
+                if (!$havId)
+                    return false;
 
                 // Tidak ada yang status = -1
                 return !Idp::whereHas('hav', function ($q) use ($havId) {
@@ -824,11 +835,12 @@ class IdpController extends Controller
             ->get()
             ->filter(function ($idp) {
                 $havId = $idp->hav->hav_id ?? null;
-                if (!$havId) return false;
+                if (!$havId)
+                    return false;
 
                 $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
-                        $q->where('hav_id', $havId);
-                    })
+                    $q->where('hav_id', $havId);
+                })
                     ->pluck('status')
                     ->toArray();
 
@@ -884,7 +896,7 @@ class IdpController extends Controller
         if ($employee) {
             $idp->commentHistory()->create([
                 'comment' => $comment,
-                'employee_id' =>  $employee->id  // Menyimpan siapa yang memberikan komentar
+                'employee_id' => $employee->id  // Menyimpan siapa yang memberikan komentar
             ]);
         }
 
