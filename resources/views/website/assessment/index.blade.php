@@ -136,6 +136,10 @@
     @push('custom-css')
         <link rel="stylesheet" href="{{ asset('assets/plugins/custom/select2/css/select2.min.css') }}">
         <style>
+            .modal-backdrop {
+                pointer-events: none !important;
+            }
+
             .select2-container {
                 width: 100% !important;
                 /* Pastikan Select2 mengambil seluruh lebar */
@@ -177,31 +181,141 @@
         <script src="{{ asset('assets/plugins/custom/select2/js/select2.min.js') }}"></script>
 
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                // Modal management system
-                 window.modalManager = {
-                    activeModals: [],
+            class ModalManager {
+                constructor() {
+                    this.activeModals = [];
+                    this.modalStack = [];
+                    this.initEventListeners();
+                }
 
-                    openModal: function(modalId) {
-                        // Close all existing modals first
+                initEventListeners() {
+                    // Global click handler for modal triggers
+                    document.addEventListener('click', (e) => {
+                        if (e.target.matches('[data-bs-toggle="modal"]')) {
+                            const modalId = e.target.getAttribute('data-bs-target').replace('#', '');
+                            this.openModal(modalId);
+                        }
+                    });
+
+                    // Handle escape key - COMPLETELY DISABLE
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape' && this.activeModals.length > 0) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            // Do not close modal on escape
+                            return false;
+                        }
+                    });
+
+                    // Prevent backdrop clicks from closing modals
+                    document.addEventListener('click', (e) => {
+                        if (e.target.classList.contains('modal-backdrop')) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                    });
+                }
+
+                openModal(modalId) {
+                    // Close all modals if this is a new root modal
+                    if (this.modalStack.length === 0 || !this.modalStack.includes(modalId)) {
                         this.closeAllModals();
+                    }
 
-                        const modalElement = document.getElementById(modalId);
-                        if (!modalElement) return;
+                    const modalElement = document.getElementById(modalId);
+                    if (!modalElement) {
+                        console.error(`Modal with ID ${modalId} not found`);
+                        return;
+                    }
 
-                        const modal = new bootstrap.Modal(modalElement);
-                        modal.show();
+                    // Force set attributes to prevent closing
+                    modalElement.setAttribute('data-bs-backdrop', 'static');
+                    modalElement.setAttribute('data-bs-keyboard', 'false');
 
+                    // Initialize or get existing modal instance
+                    let modal = bootstrap.Modal.getInstance(modalElement);
+                    if (!modal) {
+                        modal = new bootstrap.Modal(modalElement, {
+                            backdrop: 'static',
+                            keyboard: false,
+                            focus: true
+                        });
+                    } else {
+                        // Update existing modal options
+                        modal._config.backdrop = 'static';
+                        modal._config.keyboard = false;
+                    }
+
+                    // Show the modal
+                    modal.show();
+
+                    // Add to active modals if not already there
+                    if (!this.activeModals.includes(modalId)) {
                         this.activeModals.push(modalId);
+                        this.modalStack.push(modalId);
+                    }
 
-                        // Clean up any orphaned backdrops
-                        this.cleanupBackdrops();
+                    // Manage backdrop
+                    this.manageBackdrop();
 
-                        // Add new backdrop
-                        this.addBackdrop();
-                    },
+                    // Add additional event listeners to prevent closing
+                    this.preventModalClose(modalElement);
+                }
 
-                    closeModal: function(modalId) {
+                preventModalClose(modalElement) {
+                    // Remove any existing event listeners that might close the modal
+                    modalElement.removeEventListener('click', this.backdropClickHandler);
+                    modalElement.removeEventListener('keydown', this.escapeKeyHandler);
+
+                    // Add our custom handlers
+                    this.backdropClickHandler = (e) => {
+                        if (e.target === modalElement) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                    };
+
+                    this.escapeKeyHandler = (e) => {
+                        if (e.key === 'Escape') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                    };
+
+                    modalElement.addEventListener('click', this.backdropClickHandler);
+                    modalElement.addEventListener('keydown', this.escapeKeyHandler);
+                }
+
+                closeModal(modalId) {
+                    const modalElement = document.getElementById(modalId);
+                    if (!modalElement) return;
+
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    }
+
+                    // Remove from active modals
+                    this.activeModals = this.activeModals.filter(id => id !== modalId);
+                    this.modalStack = this.modalStack.filter(id => id !== modalId);
+
+                    // Clean up event listeners
+                    if (this.backdropClickHandler) {
+                        modalElement.removeEventListener('click', this.backdropClickHandler);
+                    }
+                    if (this.escapeKeyHandler) {
+                        modalElement.removeEventListener('keydown', this.escapeKeyHandler);
+                    }
+
+                    // Manage backdrop
+                    this.manageBackdrop();
+                }
+
+                closeAllModals() {
+                    this.activeModals.forEach(modalId => {
                         const modalElement = document.getElementById(modalId);
                         if (!modalElement) return;
 
@@ -210,43 +324,88 @@
                             modal.hide();
                         }
 
-                        this.activeModals = this.activeModals.filter(id => id !== modalId);
-                        this.cleanupBackdrops();
-
-                        // If there are still modals open, add backdrop for the topmost one
-                        if (this.activeModals.length > 0) {
-                            this.addBackdrop();
-                        } else {
-                            // No more modals, ensure body is clean
-                            document.body.classList.remove('modal-open');
+                        // Clean up event listeners
+                        if (this.backdropClickHandler) {
+                            modalElement.removeEventListener('click', this.backdropClickHandler);
                         }
-                    },
+                        if (this.escapeKeyHandler) {
+                            modalElement.removeEventListener('keydown', this.escapeKeyHandler);
+                        }
+                    });
 
-                    closeAllModals: function() {
-                        this.activeModals.forEach(modalId => {
-                            const modal = bootstrap.Modal.getInstance(document.getElementById(modalId));
-                            if (modal) modal.hide();
-                        });
-                        this.activeModals = [];
-                        this.cleanupBackdrops();
+                    this.activeModals = [];
+                    this.modalStack = [];
+                    this.cleanupBackdrops();
+                }
+
+                manageBackdrop() {
+                    this.cleanupBackdrops();
+
+                    if (this.activeModals.length > 0) {
+                        const backdrop = document.createElement('div');
+                        backdrop.className = 'modal-backdrop fade show';
+                        backdrop.style.pointerEvents = 'none'; // Disable click events on backdrop
+                        document.body.appendChild(backdrop);
+                        document.body.classList.add('modal-open');
+                    } else {
                         document.body.classList.remove('modal-open');
-                    },
-
-                    cleanupBackdrops: function() {
-                        const backdrops = document.querySelectorAll('.modal-backdrop');
-                        backdrops.forEach(backdrop => backdrop.remove());
-                    },
-
-                    addBackdrop: function() {
-                        // Only add if not already exists
-                        if (!document.querySelector('.modal-backdrop')) {
-                            const backdrop = document.createElement('div');
-                            backdrop.className = 'modal-backdrop fade show';
-                            document.body.appendChild(backdrop);
-                            document.body.classList.add('modal-open');
-                        }
                     }
-                };
+                }
+
+                cleanupBackdrops() {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => backdrop.remove());
+                }
+            }
+
+            document.addEventListener("DOMContentLoaded", function() {
+                window.modalManager = new ModalManager();
+
+                // Initialize all modals with proper handlers
+                const modals = ['detailAssessmentModal', 'updateAssessmentModal', 'noteAssessmentModal',
+                    'addAssessmentModal'
+                ];
+
+                modals.forEach(modalId => {
+                    const modalElement = document.getElementById(modalId);
+                    if (modalElement) {
+                        // Force set static backdrop attributes
+                        modalElement.setAttribute('data-bs-backdrop', 'static');
+                        modalElement.setAttribute('data-bs-keyboard', 'false');
+
+                        // Override Bootstrap's default behavior
+                        modalElement.addEventListener('show.bs.modal', function(e) {
+                            // Ensure modal cannot be closed by backdrop or keyboard
+                            const modal = bootstrap.Modal.getInstance(modalElement);
+                            if (modal) {
+                                modal._config.backdrop = 'static';
+                                modal._config.keyboard = false;
+                            }
+                        });
+
+                        modalElement.addEventListener('hidden.bs.modal', function() {
+                            modalManager.closeModal(modalId);
+                        });
+
+                        // Prevent any clicks on the modal backdrop area from closing the modal
+                        modalElement.addEventListener('click', function(e) {
+                            if (e.target === modalElement) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                return false;
+                            }
+                        });
+                    }
+                });
+
+                // Additional global prevention
+                document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape' && modalManager.activeModals.length > 0) {
+                        e.preventDefault();
+                        e.stopImmediatePropagation();
+                        return false;
+                    }
+                }, true); // Use capture phase
 
                 // Tab filtering functionality
                 const tabs = document.querySelectorAll(".filter-tab");
@@ -268,32 +427,15 @@
                 });
             });
 
-            // Initialize all modals with proper handlers
-            function initModals() {
-                const modals = ['detailAssessmentModal', 'updateAssessmentModal', 'noteAssessmentModal',
-                    'addAssessmentModal'
-                ];
-                modals.forEach(modalId => {
-                    const modalElement = document.getElementById(modalId);
-                    if (modalElement) {
-                        modalElement.addEventListener('hidden.bs.modal', function() {
-                            modalManager.closeModal(modalId);
-                        });
-                    }
-                });
-            };
+            function safeEncode(str) {
+                return btoa(unescape(encodeURIComponent(str || '')));
+            }
+
+            function safeDecode(str) {
+                return decodeURIComponent(escape(atob(str || '')));
+            }
 
             $(document).ready(function() {
-                initModals();
-
-                function safeEncode(str) {
-                    return btoa(unescape(encodeURIComponent(str || '')));
-                }
-
-                function safeDecode(str) {
-                    return decodeURIComponent(escape(atob(str || '')));
-                }
-
                 // History button click handler
                 $(document).on("click", ".history-btn", function(event) {
                     event.preventDefault();
@@ -326,63 +468,62 @@
 
                                     if (isHRD) {
                                         editBtn = `
-                                <button type="button" class="btn btn-warning btn-sm updateAssessment"
-                                    data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
-                                    data-id="${assessment.id}"
-                                    data-employee-id="${assessment.employee_id}"
-                                    data-date="${assessment.date}"
-                                    data-description="${safeEncode(assessment.description || '')}"
-                                    data-upload="${assessment.upload || ''}"
-                                    data-note="${safeEncode(assessment.note || '')}"
-                                    data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
-                                    data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
-                                    data-alc_name='${safeEncode(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
-                                    data-strengths='${safeEncode(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
-                                    data-weaknesses='${safeEncode(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
-                                    data-suggestion_development='${safeEncode(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'
-                                >Edit</button>
-                            `;
+                            <button type="button" class="btn btn-warning btn-sm updateAssessment"
+                                data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
+                                data-id="${assessment.id}"
+                                data-employee-id="${assessment.employee_id}"
+                                data-date="${assessment.date}"
+                                data-description="${safeEncode(assessment.description || '')}"
+                                data-upload="${assessment.upload || ''}"
+                                data-note="${safeEncode(assessment.note || '')}"
+                                data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
+                                data-alcs='${btoa(JSON.stringify(assessment.details.map(d => d.alc_id)))}'
+                                data-alc_name='${safeEncode(JSON.stringify(assessment.details.map(d => d.alc?.name || "")))}'
+                                data-strengths='${safeEncode(JSON.stringify(assessment.details.map(d => d.strength || "")))}'
+                                data-weaknesses='${safeEncode(JSON.stringify(assessment.details.map(d => d.weakness || "")))}'
+                                data-suggestion_development='${safeEncode(JSON.stringify(assessment.details.map(d => d.suggestion_development || "")))}'>Edit</button>
+                        `;
 
                                         deleteBtn = `
-                                <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                    data-id="${assessment.id}">Delete</button>
-                            `;
+                            <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                data-id="${assessment.id}">Delete</button>
+                        `;
 
                                         noteBtn =
                                             `
-                                <button type="button" class="btn btn-dark btn-sm noteAssessment" data-bs-toggle="modal"           data-bs-target="#noteAssessmentModal" data-note="${safeEncode(assessment.note || '')}">Note</button>`
+                            <button type="button" class="btn btn-dark btn-sm noteAssessment" data-bs-toggle="modal"           data-bs-target="#noteAssessmentModal" data-note="${safeEncode(assessment.note || '')}">Note</button>`
                                     }
 
                                     let row = `
-                            <tr>
-                                <td class="text-center">${index + 1}</td>
-                                <td class="text-center">${assessment.date}</td>
-                                <td class="text-center">${assessment.target_position || '-'}</td>
-                                <td class="text-center">
-                                    <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
-                                        Detail
-                                    </a>
-                                    <a class="btn btn-primary btn-sm"
-                                       target="_blank"
-                                       href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
-                                       onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
-                                        View PDF
-                                    </a>
-                                    ${editBtn}
-                                    ${noteBtn}
-                                    ${deleteBtn}
-                                </td>
-                            </tr>
-                        `;
+                        <tr>
+                            <td class="text-center">${index + 1}</td>
+                            <td class="text-center">${assessment.date}</td>
+                            <td class="text-center">${assessment.target_position || '-'}</td>
+                            <td class="text-center">
+                                <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
+                                    Detail
+                                </a>
+                                <a class="btn btn-primary btn-sm"
+                                   target="_blank"
+                                   href="${assessment.upload ? `/storage/${assessment.upload}` : '#'}"
+                                   onclick="${!assessment.upload ? `event.preventDefault(); Swal.fire('Data tidak tersedia');` : ''}">
+                                    View PDF
+                                </a>
+                                ${editBtn}
+                                ${noteBtn}
+                                ${deleteBtn}
+                            </td>
+                        </tr>
+                    `;
 
                                     $("#kt_table_assessments tbody").append(row);
                                 });
                             } else {
                                 $("#kt_table_assessments tbody").append(`
-                        <tr>
-                            <td colspan="4" class="text-center text-muted">No assessment found</td>
-                        </tr>
-                    `);
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">No assessment found</td>
+                    </tr>
+                `);
                             }
                             // Use modalManager to open the modal
                             modalManager.openModal("detailAssessmentModal");
@@ -488,26 +629,26 @@
                     }
 
                     templateCard.innerHTML = `
-                    <div class="mb-3">
-                        <label>ALC</label>
-                        <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
-                            <option value="">Pilih ALC</option>
-                            @foreach ($alcs as $alc)
-                                <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
-                                    {{ $alc->name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="mb-3">
-                        <label>Description</label>
-                        <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${description}</textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label>Suggestion Development</label>
-                        <textarea class="form-control suggestion-textarea" name="suggestion_development[${alcId}]" rows="2">${suggestion}</textarea>
-                    </div>
-                `;
+                <div class="mb-3">
+                    <label>ALC</label>
+                    <select class="form-control alc-dropdown" name="${type}_alc_ids[]" >
+                        <option value="">Pilih ALC</option>
+                        @foreach ($alcs as $alc)
+                            <option value="{{ $alc->id }}" ${alcId == "{{ $alc->id }}" ? "selected" : ""}>
+                                {{ $alc->name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label>Description</label>
+                    <textarea class="form-control ${type}-textarea" name="${type}[${alcId}]" rows="2">${description}</textarea>
+                </div>
+                <div class="mb-3">
+                    <label>Suggestion Development</label>
+                    <textarea class="form-control suggestion-textarea" name="suggestion_development[${alcId}]" rows="2">${suggestion}</textarea>
+                </div>
+            `;
 
                     let selectElement = templateCard.querySelector(".alc-dropdown");
                     selectElement.addEventListener("change", function() {
@@ -612,7 +753,7 @@
                     if (card.length === 0) {
                         console.log(
                             `[INFO] Card ALC ${alcId} not found in newType container, creating new in ${newType}`
-                        );
+                            );
                         addAssessmentCard(newType, containerMap[newType].substring(1), alcId, description,
                             alcName, suggestion);
                         card = $(`#assessment_card_${alcId}`);
@@ -636,21 +777,7 @@
                     updateDropdownOptions();
                 });
 
-                // Fungsi untuk memperbarui dropdown ALC agar tidak ada pilihan yang tumpang tindih
-                // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
-                // $("#updateAssessmentModal").on("hidden.bs.modal", function() {
-                //     setTimeout(() => {
-                //         $(".modal-backdrop").remove(); // Hapus overlay modal update
-                //         $("body").removeClass("modal-open");
-
-                //         $("#detailAssessmentModal").modal("hide");
-
-                //         // Tambahkan overlay kembali untuk modal history
-                //         $("<div class='modal-backdrop fade show'></div>").appendTo(document.body);
-                //     }, 300);
-                // });
-                // Saat modal update ditutup
-
+                // Ensure proper modal event handling
                 const modals = ['detailAssessmentModal', 'updateAssessmentModal', 'noteAssessmentModal'];
                 modals.forEach(modalId => {
                     const modalElement = document.getElementById(modalId);
@@ -661,12 +788,18 @@
                     }
                 });
 
-                // Jaga z-index backdrop agar tidak terlalu tebal saat banyak modal muncul
+                // Prevent any modal from being closed unexpectedly
                 $(".modal").on("shown.bs.modal", function() {
                     $(".modal-backdrop").css("z-index", 1050);
+                    // Force static behavior
+                    const modal = bootstrap.Modal.getInstance(this);
+                    if (modal) {
+                        modal._config.backdrop = 'static';
+                        modal._config.keyboard = false;
+                    }
                 });
 
-                // Pastikan overlay baru dibuat saat modal update ditutup dan kembali ke modal history
+                // Search and filter functionality
                 var searchInput = $("#searchInput");
                 var filterItems = $(".filter-department");
                 var table = $("#kt_table_users");
@@ -696,7 +829,7 @@
                                 npk.includes(searchValue) || age.includes(searchValue);
 
                             var departmentMatch = selectedDepartment === "" || department ===
-                                selectedDepartment;
+                            selectedDepartment;
 
                             if (searchMatch && departmentMatch) {
                                 row.show();
@@ -708,25 +841,22 @@
                     });
                 }
 
-                // 🔹 Variabel Global untuk Chart
+                // Chart functionality
                 let assessmentChartInstance = null;
-                // 🔹 Fungsi untuk Membuat Chart
+
                 function renderChart(details) {
                     let canvas = document.getElementById('assessmentChart');
                     let ctx = canvas.getContext('2d');
 
-                    // **Cek jika chart sudah ada, lalu hancurkan**
                     if (assessmentChartInstance) {
                         assessmentChartInstance.destroy();
                     }
 
-                    // **Bersihkan canvas sebelum menggambar ulang**
                     canvas.width = canvas.width;
 
                     let labels = details.map(d => d.alc.name);
                     let scores = details.map(d => d.score);
 
-                    // **Buat chart baru dan simpan ke variabel global**
                     assessmentChartInstance = new Chart(ctx, {
                         type: 'bar',
                         data: {
@@ -781,16 +911,6 @@
                 });
 
                 $('#addAssessmentModal').on('show.bs.modal', function(event) {
-                    // $('#employee_id').select2({
-                    //     dropdownParent: $('#addAssessmentModal')
-                    // });
-                    // $('#employee_id').select2({
-                    //     dropdownParent: $('#addAssessmentModal')
-                    // });
-                    // $('.alc-dropdown').select2({
-                    //     dropdownParent: $('#addAssessmentModal')
-                    // });
-
                     let button = $(event.relatedTarget);
                     let assessment_id = button.data('id') || null;
 
@@ -831,7 +951,7 @@
                     e.preventDefault();
                     let assessment_id = $('#assessment_id').val();
 
-                    const fileInput = document.getElementById("upload"); // Ganti ini kalau ID-nya beda
+                    const fileInput = document.getElementById("upload");
                     if (fileInput && fileInput.files.length > 0) {
                         const fileSize = fileInput.files[0].size;
                         if (fileSize > 2 * 1024 * 1024) {
@@ -909,7 +1029,6 @@
                     });
                 });
 
-
                 function applyFilters() {
                     rows.forEach(row => {
                         const position = row.getAttribute("data-position").toLowerCase();
@@ -950,5 +1069,34 @@
 
                 window.location.href = url.toString();
             });
+
+            // Enhanced CSS to prevent modal closing
+            $('head').append(`
+            <style>
+                .modal-backdrop {
+                    pointer-events: none !important;
+                }
+                .modal .btn-close {
+                    pointer-events: auto !important;
+                }
+                .modal[data-bs-backdrop="static"] {
+                    pointer-events: auto !important;
+                }
+                .modal-dialog {
+                    pointer-events: auto !important;
+                }
+                /* Force prevent backdrop clicks */
+                .modal-backdrop.show {
+                    opacity: 0.5 !important;
+                    pointer-events: none !important;
+                }
+                /* Ensure modal content is clickable */
+                .modal-content {
+                    pointer-events: auto !important;
+                    position: relative;
+                    z-index: 1060 !important;
+                }
+            </style>
+        `);
         </script>
     @endpush
