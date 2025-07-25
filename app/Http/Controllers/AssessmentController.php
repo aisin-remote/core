@@ -16,6 +16,7 @@ use App\Models\DetailAssessment;
 use App\Imports\AssessmentImport;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\Hav;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -269,20 +270,42 @@ class AssessmentController extends Controller
      */
     public function destroy($id)
     {
-        $assessment = Assessment::findOrFail($id);
-        DetailAssessment::where('assessment_id', $id)->delete();
+        try {
+            DB::beginTransaction();
 
-        if ($assessment->upload) {
-            Storage::delete('public/' . $assessment->upload);
+            $assessment = Assessment::findOrFail($id);
+
+            // Hapus detail assessment
+            DetailAssessment::where('assessment_id', $id)->delete();
+
+            // Hapus data HAV
+            Hav::where('assessment_id', $id)->delete();
+
+            // Hapus file upload jika ada
+            if ($assessment->upload) {
+                Storage::delete('public/' . $assessment->upload);
+            }
+
+            // Hapus assessment utama
+            $assessment->delete();
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Assessment dan data HAV berhasil dihapus.'
+            ]);
+        } catch (\Throwable $th) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menghapus assessment dan data HAV.',
+                'error' => $th->getMessage()
+            ], 500);
         }
-
-        $assessment->delete();
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Assessment berhasil dihapus.'
-        ]);
     }
+
 
     /********************
      * PRIVATE METHODS *

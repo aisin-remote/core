@@ -12,7 +12,7 @@ class Hav extends Model
 
     protected $guarded = ['id'];
 
-    protected $fillable = ['employee_id', 'quadrant', 'status'];
+    protected $fillable = ['employee_id', 'quadrant', 'status', 'assessment_id'];
 
     // One-to-Many: Hav -> HavDetails
     public function details()
