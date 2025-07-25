@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
         $employees = [
             [
                 'npk' => '0158',
-                'nama' => 'I NENGAH SURYADI',
+                'name' => 'I NENGAH SURYADI',
                 'phone_number' => '081318405806',
                 'birthday_date' => '1971-01-22',
                 'gender' => 'Male',
@@ -32,7 +32,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0161',
-                'nama' => 'OPIK TAOPIK PIKRAP',
+                'name' => 'OPIK TAOPIK PIKRAP',
                 'phone_number' => '081514674886',
                 'birthday_date' => '1972-12-07',
                 'gender' => 'Male',
@@ -41,7 +41,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0155',
-                'nama' => 'SUTARJA',
+                'name' => 'SUTARJA',
                 'phone_number' => '081310177060',
                 'birthday_date' => '1971-03-17',
                 'gender' => 'Male',
@@ -50,7 +50,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0209',
-                'nama' => 'TEGOEH SETYADI',
+                'name' => 'TEGOEH SETYADI',
                 'phone_number' => '08811652497',
                 'birthday_date' => '1970-09-01',
                 'gender' => 'Male',
@@ -59,7 +59,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0208',
-                'nama' => 'RUDY HENDRAWAN',
+                'name' => 'RUDY HENDRAWAN',
                 'phone_number' => '085891165366',
                 'birthday_date' => '1971-03-15',
                 'gender' => 'Male',
@@ -68,7 +68,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0223',
-                'nama' => 'SUNARDI',
+                'name' => 'SUNARDI',
                 'phone_number' => '081288777923',
                 'birthday_date' => '1970-10-26',
                 'gender' => 'Male',
@@ -77,7 +77,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0225',
-                'nama' => 'DENI AANG SUHENDAR',
+                'name' => 'DENI AANG SUHENDAR',
                 'phone_number' => '083815675516',
                 'birthday_date' => '1973-08-13',
                 'gender' => 'Male',
@@ -86,7 +86,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0222',
-                'nama' => 'NGATIJO',
+                'name' => 'NGATIJO',
                 'phone_number' => '081584411816',
                 'birthday_date' => '1970-07-19',
                 'gender' => 'Male',
@@ -95,7 +95,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0217',
-                'nama' => 'HARDIANTO',
+                'name' => 'HARDIANTO',
                 'phone_number' => '081808284128',
                 'birthday_date' => '1971-11-23',
                 'gender' => 'Male',
@@ -104,7 +104,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0233',
-                'nama' => 'AGUS SARIF',
+                'name' => 'AGUS SARIF',
                 'phone_number' => '081398440473',
                 'birthday_date' => '1973-07-10',
                 'gender' => 'Male',
@@ -113,7 +113,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0237',
-                'nama' => 'SUKIRMAN',
+                'name' => 'SUKIRMAN',
                 'phone_number' => '085218396844',
                 'birthday_date' => '1973-05-09',
                 'gender' => 'Male',
@@ -122,7 +122,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0342',
-                'nama' => 'DENI SEPTIAWAN',
+                'name' => 'DENI SEPTIAWAN',
                 'phone_number' => '08128014272',
                 'birthday_date' => '1972-09-07',
                 'gender' => 'Male',
@@ -131,7 +131,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0256',
-                'nama' => 'ROSMIATY',
+                'name' => 'ROSMIATY',
                 'phone_number' => '081295946181',
                 'birthday_date' => '1972-09-04',
                 'gender' => 'Female',
@@ -140,7 +140,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0311',
-                'nama' => 'SUHARYANTO',
+                'name' => 'SUHARYANTO',
                 'phone_number' => '08128425944',
                 'birthday_date' => '1974-11-18',
                 'gender' => 'Male',
@@ -149,7 +149,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0330',
-                'nama' => 'LS. SUJARWO',
+                'name' => 'LS. SUJARWO',
                 'phone_number' => '081314009075',
                 'birthday_date' => '1972-03-25',
                 'gender' => 'Male',
@@ -158,7 +158,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0339',
-                'nama' => 'MUSKHOLIS',
+                'name' => 'MUSKHOLIS',
                 'phone_number' => '088898274333',
                 'birthday_date' => '1974-09-02',
                 'gender' => 'Male',
@@ -167,7 +167,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0360',
-                'nama' => 'SUDILAN',
+                'name' => 'SUDILAN',
                 'phone_number' => '08561025672',
                 'birthday_date' => '1971-06-15',
                 'gender' => 'Male',
@@ -176,7 +176,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0372',
-                'nama' => 'EVA SUDARYANTO',
+                'name' => 'EVA SUDARYANTO',
                 'phone_number' => '085694678492',
                 'birthday_date' => '1971-06-18',
                 'gender' => 'Male',
@@ -185,7 +185,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0358',
-                'nama' => 'WIDARTO',
+                'name' => 'WIDARTO',
                 'phone_number' => '081317994696',
                 'birthday_date' => '1974-04-22',
                 'gender' => 'Male',
@@ -194,7 +194,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0353',
-                'nama' => 'ABDUL AZIS',
+                'name' => 'ABDUL AZIS',
                 'phone_number' => '087840209349',
                 'birthday_date' => '1975-11-21',
                 'gender' => 'Male',
@@ -203,7 +203,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0354',
-                'nama' => 'SULATNO',
+                'name' => 'SULATNO',
                 'phone_number' => '081281713836',
                 'birthday_date' => '1975-11-17',
                 'gender' => 'Male',
@@ -212,7 +212,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0415',
-                'nama' => 'ARI SETIAWAN',
+                'name' => 'ARI SETIAWAN',
                 'phone_number' => '085711942561',
                 'birthday_date' => '1975-01-05',
                 'gender' => 'Male',
@@ -221,7 +221,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0383',
-                'nama' => 'DARYONO',
+                'name' => 'DARYONO',
                 'phone_number' => '081286724083',
                 'birthday_date' => '1972-10-06',
                 'gender' => 'Male',
@@ -230,7 +230,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0469',
-                'nama' => 'BOWO ISKANDAR',
+                'name' => 'BOWO ISKANDAR',
                 'phone_number' => '088213276693',
                 'birthday_date' => '1978-01-24',
                 'gender' => 'Male',
@@ -239,7 +239,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0468',
-                'nama' => 'ABETNICO',
+                'name' => 'ABETNICO',
                 'phone_number' => '081280675975',
                 'birthday_date' => '1976-01-12',
                 'gender' => 'Male',
@@ -248,7 +248,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0379',
-                'nama' => 'HERI SUPRIJATNA',
+                'name' => 'HERI SUPRIJATNA',
                 'phone_number' => '08161618184',
                 'birthday_date' => '1970-11-22',
                 'gender' => 'Male',
@@ -257,7 +257,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0472',
-                'nama' => 'TOPO SUHARSO',
+                'name' => 'TOPO SUHARSO',
                 'phone_number' => '08129997610',
                 'birthday_date' => '1974-12-13',
                 'gender' => 'Male',
@@ -266,7 +266,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0427',
-                'nama' => 'JANTO RAHARJO',
+                'name' => 'JANTO RAHARJO',
                 'phone_number' => '08158706224',
                 'birthday_date' => '1972-01-06',
                 'gender' => 'Male',
@@ -275,7 +275,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0485',
-                'nama' => 'NURDIANA RASMAWAN',
+                'name' => 'NURDIANA RASMAWAN',
                 'phone_number' => '087877718306',
                 'birthday_date' => '1976-10-09',
                 'gender' => 'Male',
@@ -284,7 +284,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0517',
-                'nama' => 'ADE AGUS HIDAYAT',
+                'name' => 'ADE AGUS HIDAYAT',
                 'phone_number' => '087770032840',
                 'birthday_date' => '1972-08-24',
                 'gender' => 'Male',
@@ -293,7 +293,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0538',
-                'nama' => 'ENDANG SWARA',
+                'name' => 'ENDANG SWARA',
                 'phone_number' => '08567070605',
                 'birthday_date' => '1975-05-10',
                 'gender' => 'Male',
@@ -302,7 +302,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0533',
-                'nama' => 'TRIYONO',
+                'name' => 'TRIYONO',
                 'phone_number' => '081281027750',
                 'birthday_date' => '1975-03-01',
                 'gender' => 'Male',
@@ -311,7 +311,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0442',
-                'nama' => 'HERU SUBROTO',
+                'name' => 'HERU SUBROTO',
                 'phone_number' => '08159290473',
                 'birthday_date' => '1973-05-26',
                 'gender' => 'Male',
@@ -320,7 +320,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0529',
-                'nama' => 'KODIRIN',
+                'name' => 'KODIRIN',
                 'phone_number' => '081319132177',
                 'birthday_date' => '1977-01-21',
                 'gender' => 'Male',
@@ -329,7 +329,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0486',
-                'nama' => 'MULYANTO',
+                'name' => 'MULYANTO',
                 'phone_number' => '081298609306',
                 'birthday_date' => '1972-11-27',
                 'gender' => 'Male',
@@ -338,7 +338,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0512',
-                'nama' => 'GANI HERYADI N.',
+                'name' => 'GANI HERYADI N.',
                 'phone_number' => '08161343069',
                 'birthday_date' => '1971-11-20',
                 'gender' => 'Male',
@@ -347,7 +347,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0483',
-                'nama' => 'GANGSAR BUDIONO',
+                'name' => 'GANGSAR BUDIONO',
                 'phone_number' => '081514545967',
                 'birthday_date' => '1972-03-16',
                 'gender' => 'Male',
@@ -356,7 +356,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0505',
-                'nama' => 'TOMI JAYA',
+                'name' => 'TOMI JAYA',
                 'phone_number' => '08111147615',
                 'birthday_date' => '1975-05-30',
                 'gender' => 'Male',
@@ -365,7 +365,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0683',
-                'nama' => 'IMAM MUCHODI',
+                'name' => 'IMAM MUCHODI',
                 'phone_number' => '085778475388',
                 'birthday_date' => '1980-05-21',
                 'gender' => 'Male',
@@ -374,7 +374,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0789',
-                'nama' => 'AFIF AHMADI',
+                'name' => 'AFIF AHMADI',
                 'phone_number' => '08128121502',
                 'birthday_date' => '1977-07-14',
                 'gender' => 'Male',
@@ -383,7 +383,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0799',
-                'nama' => 'ARIANTO NUGROHO',
+                'name' => 'ARIANTO NUGROHO',
                 'phone_number' => '081218541363',
                 'birthday_date' => '1979-12-16',
                 'gender' => 'Male',
@@ -392,7 +392,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0791',
-                'nama' => 'EDWIN SUSILO',
+                'name' => 'EDWIN SUSILO',
                 'phone_number' => '081280791985',
                 'birthday_date' => '1978-12-22',
                 'gender' => 'Male',
@@ -401,7 +401,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '10469',
-                'nama' => 'ARIA SAPUTRA',
+                'name' => 'ARIA SAPUTRA',
                 'phone_number' => '081387750202',
                 'birthday_date' => '1975-11-14',
                 'gender' => 'Male',
@@ -410,7 +410,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '0959',
-                'nama' => 'IRVAN SENJAYA',
+                'name' => 'IRVAN SENJAYA',
                 'phone_number' => '085890025431',
                 'birthday_date' => '1980-07-02',
                 'gender' => 'Male',
@@ -419,7 +419,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '10459',
-                'nama' => 'IRAWAN HENDRO RAHARJO',
+                'name' => 'IRAWAN HENDRO RAHARJO',
                 'phone_number' => '08129511674',
                 'birthday_date' => '1971-05-08',
                 'gender' => 'Male',
@@ -428,7 +428,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1002',
-                'nama' => 'HARI NUGROHO',
+                'name' => 'HARI NUGROHO',
                 'phone_number' => '081510858889',
                 'birthday_date' => '1979-04-01',
                 'gender' => 'Male',
@@ -437,7 +437,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1041',
-                'nama' => 'JOHANSEN',
+                'name' => 'JOHANSEN',
                 'phone_number' => '08121921648',
                 'birthday_date' => '1977-06-19',
                 'gender' => 'Male',
@@ -446,7 +446,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1061',
-                'nama' => 'RUDI RUDIYAN',
+                'name' => 'RUDI RUDIYAN',
                 'phone_number' => '081219815759',
                 'birthday_date' => '1975-05-12',
                 'gender' => 'Male',
@@ -455,7 +455,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1066',
-                'nama' => 'BUDHI JAYA',
+                'name' => 'BUDHI JAYA',
                 'phone_number' => '087722437111',
                 'birthday_date' => '1977-04-12',
                 'gender' => 'Male',
@@ -464,7 +464,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '10468',
-                'nama' => 'KOMANG YOGA PRAMANA PUTRA',
+                'name' => 'KOMANG YOGA PRAMANA PUTRA',
                 'phone_number' => '081282308384',
                 'birthday_date' => '1981-07-04',
                 'gender' => 'Male',
@@ -473,7 +473,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1392',
-                'nama' => 'HERMANSYAH',
+                'name' => 'HERMANSYAH',
                 'phone_number' => '081808282872',
                 'birthday_date' => '1978-07-21',
                 'gender' => 'Male',
@@ -482,7 +482,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1541',
-                'nama' => 'BAKHTIAR PURNAMA INSAN KAMIL',
+                'name' => 'BAKHTIAR PURname INSAN KAMIL',
                 'phone_number' => '081283276399',
                 'birthday_date' => '1980-11-23',
                 'gender' => 'Male',
@@ -491,7 +491,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1583',
-                'nama' => 'NYONO',
+                'name' => 'NYONO',
                 'phone_number' => '085776895046',
                 'birthday_date' => '1981-06-11',
                 'gender' => 'Male',
@@ -500,7 +500,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1582',
-                'nama' => 'RONI SYAHRONI',
+                'name' => 'RONI SYAHRONI',
                 'phone_number' => '081286062396',
                 'birthday_date' => '1982-11-02',
                 'gender' => 'Male',
@@ -509,7 +509,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1651',
-                'nama' => 'FAOZAN',
+                'name' => 'FAOZAN',
                 'phone_number' => '081326409197',
                 'birthday_date' => '1982-10-26',
                 'gender' => 'Male',
@@ -518,7 +518,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1648',
-                'nama' => 'PARWOTO',
+                'name' => 'PARWOTO',
                 'phone_number' => '081314591517',
                 'birthday_date' => '1981-07-10',
                 'gender' => 'Male',
@@ -527,7 +527,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '1733',
-                'nama' => 'ADITYA AVIANTO NUGROHO',
+                'name' => 'ADITYA AVIANTO NUGROHO',
                 'phone_number' => '085697299058',
                 'birthday_date' => '1978-04-03',
                 'gender' => 'Male',
@@ -536,7 +536,7 @@ class DatabaseSeeder extends Seeder
             ],
             [
                 'npk' => '11818',
-                'nama' => 'ANANTYA FIKRI RIVALDI',
+                'name' => 'ANANTYA FIKRI RIVALDI',
                 'phone_number' => '089649544633',
                 'birthday_date' => '2002-09-01',
                 'gender' => 'Male',
