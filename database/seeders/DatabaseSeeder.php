@@ -29,6 +29,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1990-07-04',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0161',
@@ -38,6 +39,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1990-07-04',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0155',
@@ -47,6 +49,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1990-08-22',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0209',
@@ -56,6 +59,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-06-24',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0208',
@@ -65,6 +69,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-07-08',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0223',
@@ -74,6 +79,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-07-29',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0225',
@@ -83,6 +89,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-07-29',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0222',
@@ -92,6 +99,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-07-29',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0217',
@@ -101,6 +109,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-07-29',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0233',
@@ -110,6 +119,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-08-12',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0237',
@@ -119,6 +129,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1991-10-01',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0342',
@@ -128,6 +139,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1992-05-18',
+                'position' => 'Section Head'
             ],
             [
                 'npk' => '0256',
@@ -137,6 +149,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Female',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1992-09-15',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0311',
@@ -146,6 +159,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-02-01',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0330',
@@ -155,6 +169,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-02-15',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0339',
@@ -164,6 +179,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-05-04',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0360',
@@ -173,6 +189,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-05-25',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0372',
@@ -182,6 +199,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-06-06',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0358',
@@ -191,6 +209,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-10-05',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0353',
@@ -200,6 +219,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-11-16',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0354',
@@ -209,6 +229,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1994-11-16',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0415',
@@ -218,6 +239,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1995-03-15',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0383',
@@ -227,6 +249,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1995-03-15',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0469',
@@ -236,6 +259,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1995-07-03',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0468',
@@ -245,6 +269,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1995-07-03',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0379',
@@ -254,6 +279,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1995-07-26',
+                'position' => 'Manager'
             ],
             [
                 'npk' => '0472',
@@ -263,6 +289,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-01-04',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0427',
@@ -272,6 +299,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-04-01',
+                'position' => 'Manager'
             ],
             [
                 'npk' => '0485',
@@ -281,6 +309,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-04-16',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0517',
@@ -290,6 +319,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-04-16',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0538',
@@ -299,6 +329,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-05-14',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0533',
@@ -308,6 +339,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-05-14',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0442',
@@ -317,6 +349,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-06-03',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0529',
@@ -326,6 +359,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-08-21',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0486',
@@ -335,6 +369,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1996-10-01',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0512',
@@ -344,6 +379,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1997-01-02',
+                'position' => 'Manager'
             ],
             [
                 'npk' => '0483',
@@ -353,6 +389,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1997-01-02',
+                'position' => 'Manager'
             ],
             [
                 'npk' => '0505',
@@ -362,6 +399,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '1997-01-02',
+                'position' => 'Acting Deputy GM'
             ],
             [
                 'npk' => '0683',
@@ -371,6 +409,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2000-11-01',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0789',
@@ -380,6 +419,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2001-09-01',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '0799',
@@ -389,6 +429,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2001-10-01',
+                'position' => 'Acting Deputy GM'
             ],
             [
                 'npk' => '0791',
@@ -398,6 +439,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2001-10-01',
+                'position' => 'Acting Deputy GM'
             ],
             [
                 'npk' => '10469',
@@ -407,6 +449,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2001-12-01',
+                'position' => 'Coordinator'
             ],
             [
                 'npk' => '0959',
@@ -416,6 +459,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2002-11-18',
+                'position' => 'Deputy Group Manager'
             ],
             [
                 'npk' => '10459',
@@ -425,6 +469,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2003-04-01',
+                'position' => 'Manager'
             ],
             [
                 'npk' => '1002',
@@ -434,6 +479,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2003-05-01',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '1041',
@@ -443,6 +489,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2003-07-16',
+                'position' => 'Section Head'
             ],
             [
                 'npk' => '1061',
@@ -452,6 +499,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2003-08-19',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '1066',
@@ -461,6 +509,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2003-08-29',
+                'position' => 'Deputy Group Manager'
             ],
             [
                 'npk' => '10468',
@@ -470,6 +519,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-06-01',
+                'position' => 'Deputy Group Manager'
             ],
             [
                 'npk' => '1392',
@@ -479,15 +529,17 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-06-01',
+                'position' => 'Supervisor'
             ],
             [
                 'npk' => '1541',
-                'name' => 'BAKHTIAR PURname INSAN KAMIL',
+                'name' => 'BAKHTIAR PURNAMA INSAN KAMIL',
                 'phone_number' => '081283276399',
                 'birthday_date' => '1980-11-23',
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-08-11',
+                'position' => 'Section Head'
             ],
             [
                 'npk' => '1583',
@@ -497,6 +549,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-09-08',
+                'position' => 'Coordinator'
             ],
             [
                 'npk' => '1582',
@@ -506,6 +559,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-09-08',
+                'position' => 'Section Head'
             ],
             [
                 'npk' => '1651',
@@ -515,6 +569,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-11-01',
+                'position' => 'Section Head'
             ],
             [
                 'npk' => '1648',
@@ -524,6 +579,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-11-01',
+                'position' => 'Deputy Group Manager'
             ],
             [
                 'npk' => '1733',
@@ -533,7 +589,209 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2005-02-14',
+                'position' => 'Supervisor'
             ],
+            [
+                'npk' => '1905',
+                'name' => 'ARIEF WIDODO',
+                'phone_number' => '0818118406',
+                'birthday_date' => '1981-01-05',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2005-07-01',
+                'position' => 'Group Manager'
+            ],
+            [
+                'npk' => '1906',
+                'name' => 'DODI DARSANA',
+                'phone_number' => '085795585680',
+                'birthday_date' => '1980-11-21',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2005-07-01',
+                'position' => 'Supervisor'
+            ],
+            [
+                'npk' => '2099',
+                'name' => 'BENEDIKTUS SETIO A.N.',
+                'phone_number' => '081353040145',
+                'birthday_date' => '1983-11-06',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2005-09-12',
+                'position' => 'Supervisor'
+            ],
+            [
+                'npk' => '2097',
+                'name' => 'PIPIN HARYANTO',
+                'phone_number' => '081578046315',
+                'birthday_date' => '1982-08-13',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2005-09-12',
+                'position' => 'Section Head'
+            ],
+            [
+                'npk' => '2155',
+                'name' => 'YANNIEK INGDRIYA SURATMAN',
+                'phone_number' => '081573745235',
+                'birthday_date' => '1984-05-26',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2005-10-10',
+                'position' => 'Section Head'
+            ],
+            [
+                'npk' => '2191',
+                'name' => 'RINI THEODORA',
+                'phone_number' => '0811115049',
+                'birthday_date' => '1975-09-11',
+                'gender' => 'Female',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2005-11-09',
+                'position' => 'Section Head'
+            ],
+            [
+                'npk' => '2474',
+                'name' => 'RUDY SETYAWAN',
+                'phone_number' => '081382690479',
+                'birthday_date' => '1978-12-02',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2006-07-01',
+                'position' => 'Section Head'
+            ],
+            [
+                'npk' => '2714',
+                'name' => 'MIFTAKUL FITRA',
+                'phone_number' => '081219268247',
+                'birthday_date' => '1984-06-21',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2006-11-27',
+                'position' => 'Supervisor'
+            ],
+            [
+                'npk' => '3333',
+                'name' => 'YOHANNES ADE KRISTIAWAN',
+                'phone_number' => '0812810960350',
+                'birthday_date' => '1986-03-17',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2008-04-11',
+                'position' => 'Supervisor'
+            ],
+            [
+                'npk' => '3394',
+                'name' => 'ROSSI WIDJANANTO, ST',
+                'phone_number' => '0818255355',
+                'birthday_date' => '1982-02-14',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2008-05-23',
+                'position' => 'Manager'
+            ],
+            [
+                'npk' => '3527',
+                'name' => 'RIDO UTOMO',
+                'phone_number' => '083873985832',
+                'birthday_date' => '1985-10-24',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2008-10-10',
+                'position' => 'Supervisor'
+            ],
+            [
+                'npk' => '3587',
+                'name' => 'NADIA AWARDDINI',
+                'phone_number' => '08122232484',
+                'birthday_date' => '1984-06-26',
+                'gender' => 'Female',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2009-01-09',
+                'position' => 'Coordinator'
+            ],
+            [
+                'npk' => '3901',
+                'name' => 'ARIF RACHMANTO',
+                'phone_number' => '085229799244',
+                'birthday_date' => '1987-10-15',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2009-11-13',
+                'position' => 'Supervisor'
+            ],
+            [
+                'npk' => '4151',
+                'name' => 'FEBRIDANI MISWAN',
+                'phone_number' => '081281090991',
+                'birthday_date' => '1987-02-19',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2010-04-23',
+                'position' => 'Section Head'
+            ],
+            [
+                'npk' => '4239',
+                'name' => 'HERIZAL ARFIANSYAH',
+                'phone_number' => '085959169470',
+                'birthday_date' => '1986-06-16',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2010-06-04',
+                'position' => 'Manager'
+            ],
+            [
+                'npk' => '4525',
+                'name' => 'FAISAL RACHMAN PUTRA',
+                'phone_number' => '085959559000',
+                'birthday_date' => '1987-09-05',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2010-11-12',
+                'position' => 'Section Head'
+            ],
+            [
+                'npk' => '4656',
+                'name' => 'RATNA WULANDARI',
+                'phone_number' => '085793252912',
+                'birthday_date' => '1988-09-15',
+                'gender' => 'Female',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2011-01-03',
+                'position' => 'Supervisor'
+            ],
+            [
+                'npk' => '4875',
+                'name' => 'TRI WAHYU UTOMO',
+                'phone_number' => '081805077005',
+                'birthday_date' => '1987-07-14',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2011-04-29',
+                'position' => 'Coordinator'
+            ],
+            [
+                'npk' => '4901',
+                'name' => 'LIEM NELI ANGGRAENI',
+                'phone_number' => '081311288587',
+                'birthday_date' => '1989-01-09',
+                'gender' => 'Female',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2011-06-06',
+                'position' => 'Coordinator'
+            ],
+            [
+                'npk' => '4989',
+                'name' => 'FAJAR NURAHMAN',
+                'phone_number' => '085643604302',
+                'birthday_date' => '1988-11-14',
+                'gender' => 'Male',
+                'company_name' => 'AII',
+                'aisin_entry_date' => '2011-08-01',
+                'position' => 'Manager'
+            ],
+            // New employee
             [
                 'npk' => '11818',
                 'name' => 'ANANTYA FIKRI RIVALDI',
@@ -542,7 +800,8 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2024-11-05',
-            ],
+                'position' => 'Manager'
+            ]
         ];
 
         foreach ($employees as $employee) {
