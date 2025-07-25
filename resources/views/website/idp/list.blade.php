@@ -537,80 +537,79 @@
 
                         if (grouped && Object.keys(grouped).length > 0) {
                             Object.entries(grouped).forEach(([assessmentId, assessments]) => {
-                                assessments.forEach((assessment) => {
-                                    const createdAt = new Date(assessment
-                                        .created_at);
-                                    const year = createdAt.getFullYear();
+                                const first = assessments[0];
+                                const createdAt = new Date(first.created_at);
+                                const year = createdAt.getFullYear();
 
-                                    let status = assessment.status;
-                                    switch (status) {
-                                        case 0:
-                                            status = "draft";
-                                            break;
-                                        case 1:
-                                            status = "waiting";
-                                            break;
-                                        case 2:
-                                            status = "checked";
-                                            break;
-                                        case 3:
-                                            status = "approved";
-                                            break;
-                                        case -1:
-                                            status = "revise";
-                                            break;
-                                        default:
-                                            status = "unknown";
-                                            break;
-                                    }
 
-                                    const badges = {
-                                        no_approval_needed: {
-                                            text: "-",
-                                            class: "bg-light text-dark",
-                                        },
-                                        not_created: {
-                                            text: "Not Created",
-                                            class: "bg-dark",
-                                        },
-                                        draft: {
-                                            text: "Need Submit",
-                                            class: "bg-secondary",
-                                        },
-                                        waiting: {
-                                            text: "Waiting",
-                                            class: "bg-warning",
-                                        },
-                                        checked: {
-                                            text: "Checked",
-                                            class: "bg-info",
-                                        },
-                                        approved: {
-                                            text: "Approved",
-                                            class: "bg-success",
-                                        },
-                                        revise: {
-                                            text: "Need Revise",
-                                            class: "bg-danger",
-                                        },
-                                        unknown: {
-                                            text: "Unknown",
-                                            class: "bg-secondary",
-                                        },
-                                    };
-                                    const badge = badges[status] || badges
-                                        .unknown;
+                                let status = first.status;
+                                switch (status) {
+                                    case 0:
+                                        status = "draft";
+                                        break;
+                                    case 1:
+                                        status = "waiting";
+                                        break;
+                                    case 2:
+                                        status = "checked";
+                                        break;
+                                    case 3:
+                                        status = "approved";
+                                        break;
+                                    case -1:
+                                        status = "revise";
+                                        break;
+                                    default:
+                                        status = "unknown";
+                                        break;
+                                }
 
-                                    let deleteButton = "";
-                                    if (currentUserRole === "HRD") {
-                                        deleteButton = `
+                                const badges = {
+                                    no_approval_needed: {
+                                        text: "-",
+                                        class: "bg-light text-dark",
+                                    },
+                                    not_created: {
+                                        text: "Not Created",
+                                        class: "bg-dark",
+                                    },
+                                    draft: {
+                                        text: "Need Submit",
+                                        class: "bg-secondary",
+                                    },
+                                    waiting: {
+                                        text: "Waiting",
+                                        class: "bg-warning",
+                                    },
+                                    checked: {
+                                        text: "Checked",
+                                        class: "bg-info",
+                                    },
+                                    approved: {
+                                        text: "Approved",
+                                        class: "bg-success",
+                                    },
+                                    revise: {
+                                        text: "Need Revise",
+                                        class: "bg-danger",
+                                    },
+                                    unknown: {
+                                        text: "Unknown",
+                                        class: "bg-secondary",
+                                    },
+                                };
+                                const badge = badges[status] || badges.unknown;
+
+                                let deleteButton = "";
+                                if (currentUserRole === "HRD") {
+                                    deleteButton = `
                                         <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}" data-employee-id="${employeeId}">
                                             Delete
                                         </button>
                                     `;
-                                    }
+                                }
 
-                                    const row = `
+                                const row = `
                                     <tr>
                                         <td class="text-center">${index++}</td>
                                         <td class="text-center">${year}</td>
@@ -629,15 +628,14 @@
                                         </span>
                                         </td>
                                         <td class="text-center">
-                                            <button class="btn btn-info btn-sm btn-idp-detail" data-modal-id="notes_${assessment.hav.hav.employee.id}">
+                                            <button class="btn btn-info btn-sm btn-idp-detail" data-modal-id="notes_${first.hav.hav.employee.id}">
                                                 Detail
                                             </button>
                                             ${deleteButton}
                                         </td>
                                     </tr>
                                 `;
-                                    tbody.append(row);
-                                })
+                                tbody.append(row);
                             });
                         } else {
                             tbody.append(`
