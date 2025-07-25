@@ -3,9 +3,11 @@
 namespace Database\Seeders;
 
 // use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use Carbon\Carbon;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
 class DatabaseSeeder extends Seeder
@@ -41,17 +43,10 @@ class DatabaseSeeder extends Seeder
         $users = User::with('employee')->get();
 
         foreach ($users as $user) {
-            // Cek apakah employee dan npk tersedia
-            $npk = optional($user->employee)->npk;
-
-            // Buat password berdasarkan kondisi npk
-            $newPassword = $npk
-                ? 'P@55w0rd' . substr($npk, -4)
-                : 'P@55w0rd';
-
-            // Update password
             $user->update([
-                'password' => bcrypt($newPassword),
+                'password' => Hash::make('aiia'),
+                'is_first_login' => 0,
+                'password_changed_at' => Carbon::now(),
             ]);
         }
 
