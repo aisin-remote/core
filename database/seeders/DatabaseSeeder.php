@@ -28,7 +28,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-01-22',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1990-07-04',
+                'aisin_entry_date' => '1990-07-04',
             ],
             [
                 'npk' => '0161',
@@ -37,7 +37,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-12-07',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1990-07-04',
+                'aisin_entry_date' => '1990-07-04',
             ],
             [
                 'npk' => '0155',
@@ -46,7 +46,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-03-17',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1990-08-22',
+                'aisin_entry_date' => '1990-08-22',
             ],
             [
                 'npk' => '0209',
@@ -55,7 +55,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1970-09-01',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-06-24',
+                'aisin_entry_date' => '1991-06-24',
             ],
             [
                 'npk' => '0208',
@@ -64,7 +64,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-03-15',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-07-08',
+                'aisin_entry_date' => '1991-07-08',
             ],
             [
                 'npk' => '0223',
@@ -73,7 +73,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1970-10-26',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-07-29',
+                'aisin_entry_date' => '1991-07-29',
             ],
             [
                 'npk' => '0225',
@@ -82,7 +82,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1973-08-13',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-07-29',
+                'aisin_entry_date' => '1991-07-29',
             ],
             [
                 'npk' => '0222',
@@ -91,7 +91,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1970-07-19',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-07-29',
+                'aisin_entry_date' => '1991-07-29',
             ],
             [
                 'npk' => '0217',
@@ -100,7 +100,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-11-23',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-07-29',
+                'aisin_entry_date' => '1991-07-29',
             ],
             [
                 'npk' => '0233',
@@ -109,7 +109,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1973-07-10',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-08-12',
+                'aisin_entry_date' => '1991-08-12',
             ],
             [
                 'npk' => '0237',
@@ -118,7 +118,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1973-05-09',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1991-10-01',
+                'aisin_entry_date' => '1991-10-01',
             ],
             [
                 'npk' => '0342',
@@ -127,7 +127,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-09-07',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1992-05-18',
+                'aisin_entry_date' => '1992-05-18',
             ],
             [
                 'npk' => '0256',
@@ -136,7 +136,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-09-04',
                 'gender' => 'Female',
                 'company_name' => 'AII',
-                'join_date' => '1992-09-15',
+                'aisin_entry_date' => '1992-09-15',
             ],
             [
                 'npk' => '0311',
@@ -145,7 +145,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1974-11-18',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-02-01',
+                'aisin_entry_date' => '1994-02-01',
             ],
             [
                 'npk' => '0330',
@@ -154,7 +154,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-03-25',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-02-15',
+                'aisin_entry_date' => '1994-02-15',
             ],
             [
                 'npk' => '0339',
@@ -163,7 +163,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1974-09-02',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-05-04',
+                'aisin_entry_date' => '1994-05-04',
             ],
             [
                 'npk' => '0360',
@@ -172,7 +172,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-06-15',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-05-25',
+                'aisin_entry_date' => '1994-05-25',
             ],
             [
                 'npk' => '0372',
@@ -181,7 +181,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-06-18',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-06-06',
+                'aisin_entry_date' => '1994-06-06',
             ],
             [
                 'npk' => '0358',
@@ -190,7 +190,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1974-04-22',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-10-05',
+                'aisin_entry_date' => '1994-10-05',
             ],
             [
                 'npk' => '0353',
@@ -199,7 +199,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-11-21',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-11-16',
+                'aisin_entry_date' => '1994-11-16',
             ],
             [
                 'npk' => '0354',
@@ -208,7 +208,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-11-17',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1994-11-16',
+                'aisin_entry_date' => '1994-11-16',
             ],
             [
                 'npk' => '0415',
@@ -217,7 +217,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-01-05',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1995-03-15',
+                'aisin_entry_date' => '1995-03-15',
             ],
             [
                 'npk' => '0383',
@@ -226,7 +226,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-10-06',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1995-03-15',
+                'aisin_entry_date' => '1995-03-15',
             ],
             [
                 'npk' => '0469',
@@ -235,7 +235,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1978-01-24',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1995-07-03',
+                'aisin_entry_date' => '1995-07-03',
             ],
             [
                 'npk' => '0468',
@@ -244,7 +244,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1976-01-12',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1995-07-03',
+                'aisin_entry_date' => '1995-07-03',
             ],
             [
                 'npk' => '0379',
@@ -253,7 +253,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1970-11-22',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1995-07-26',
+                'aisin_entry_date' => '1995-07-26',
             ],
             [
                 'npk' => '0472',
@@ -262,7 +262,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1974-12-13',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-01-04',
+                'aisin_entry_date' => '1996-01-04',
             ],
             [
                 'npk' => '0427',
@@ -271,7 +271,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-01-06',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-04-01',
+                'aisin_entry_date' => '1996-04-01',
             ],
             [
                 'npk' => '0485',
@@ -280,7 +280,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1976-10-09',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-04-16',
+                'aisin_entry_date' => '1996-04-16',
             ],
             [
                 'npk' => '0517',
@@ -289,7 +289,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-08-24',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-04-16',
+                'aisin_entry_date' => '1996-04-16',
             ],
             [
                 'npk' => '0538',
@@ -298,7 +298,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-05-10',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-05-14',
+                'aisin_entry_date' => '1996-05-14',
             ],
             [
                 'npk' => '0533',
@@ -307,7 +307,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-03-01',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-05-14',
+                'aisin_entry_date' => '1996-05-14',
             ],
             [
                 'npk' => '0442',
@@ -316,7 +316,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1973-05-26',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-06-03',
+                'aisin_entry_date' => '1996-06-03',
             ],
             [
                 'npk' => '0529',
@@ -325,7 +325,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1977-01-21',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-08-21',
+                'aisin_entry_date' => '1996-08-21',
             ],
             [
                 'npk' => '0486',
@@ -334,7 +334,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-11-27',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1996-10-01',
+                'aisin_entry_date' => '1996-10-01',
             ],
             [
                 'npk' => '0512',
@@ -343,7 +343,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-11-20',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1997-01-02',
+                'aisin_entry_date' => '1997-01-02',
             ],
             [
                 'npk' => '0483',
@@ -352,7 +352,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1972-03-16',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1997-01-02',
+                'aisin_entry_date' => '1997-01-02',
             ],
             [
                 'npk' => '0505',
@@ -361,7 +361,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-05-30',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '1997-01-02',
+                'aisin_entry_date' => '1997-01-02',
             ],
             [
                 'npk' => '0683',
@@ -370,7 +370,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1980-05-21',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2000-11-01',
+                'aisin_entry_date' => '2000-11-01',
             ],
             [
                 'npk' => '0789',
@@ -379,7 +379,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1977-07-14',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2001-09-01',
+                'aisin_entry_date' => '2001-09-01',
             ],
             [
                 'npk' => '0799',
@@ -388,7 +388,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1979-12-16',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2001-10-01',
+                'aisin_entry_date' => '2001-10-01',
             ],
             [
                 'npk' => '0791',
@@ -397,7 +397,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1978-12-22',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2001-10-01',
+                'aisin_entry_date' => '2001-10-01',
             ],
             [
                 'npk' => '10469',
@@ -406,7 +406,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-11-14',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2001-12-01',
+                'aisin_entry_date' => '2001-12-01',
             ],
             [
                 'npk' => '0959',
@@ -415,7 +415,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1980-07-02',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2002-11-18',
+                'aisin_entry_date' => '2002-11-18',
             ],
             [
                 'npk' => '10459',
@@ -424,7 +424,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1971-05-08',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2003-04-01',
+                'aisin_entry_date' => '2003-04-01',
             ],
             [
                 'npk' => '1002',
@@ -433,7 +433,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1979-04-01',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2003-05-01',
+                'aisin_entry_date' => '2003-05-01',
             ],
             [
                 'npk' => '1041',
@@ -442,7 +442,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1977-06-19',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2003-07-16',
+                'aisin_entry_date' => '2003-07-16',
             ],
             [
                 'npk' => '1061',
@@ -451,7 +451,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1975-05-12',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2003-08-19',
+                'aisin_entry_date' => '2003-08-19',
             ],
             [
                 'npk' => '1066',
@@ -460,7 +460,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1977-04-12',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2003-08-29',
+                'aisin_entry_date' => '2003-08-29',
             ],
             [
                 'npk' => '10468',
@@ -469,7 +469,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1981-07-04',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2004-06-01',
+                'aisin_entry_date' => '2004-06-01',
             ],
             [
                 'npk' => '1392',
@@ -478,7 +478,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1978-07-21',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2004-06-01',
+                'aisin_entry_date' => '2004-06-01',
             ],
             [
                 'npk' => '1541',
@@ -487,7 +487,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1980-11-23',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2004-08-11',
+                'aisin_entry_date' => '2004-08-11',
             ],
             [
                 'npk' => '1583',
@@ -496,7 +496,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1981-06-11',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2004-09-08',
+                'aisin_entry_date' => '2004-09-08',
             ],
             [
                 'npk' => '1582',
@@ -505,7 +505,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1982-11-02',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2004-09-08',
+                'aisin_entry_date' => '2004-09-08',
             ],
             [
                 'npk' => '1651',
@@ -514,7 +514,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1982-10-26',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2004-11-01',
+                'aisin_entry_date' => '2004-11-01',
             ],
             [
                 'npk' => '1648',
@@ -523,7 +523,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1981-07-10',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2004-11-01',
+                'aisin_entry_date' => '2004-11-01',
             ],
             [
                 'npk' => '1733',
@@ -532,7 +532,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '1978-04-03',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2005-02-14',
+                'aisin_entry_date' => '2005-02-14',
             ],
             [
                 'npk' => '11818',
@@ -541,7 +541,7 @@ class DatabaseSeeder extends Seeder
                 'birthday_date' => '2002-09-01',
                 'gender' => 'Male',
                 'company_name' => 'AII',
-                'join_date' => '2024-11-05',
+                'aisin_entry_date' => '2024-11-05',
             ],
         ];
 
