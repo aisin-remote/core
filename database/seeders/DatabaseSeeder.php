@@ -459,7 +459,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2002-11-18',
-                'position' => 'Deputy Group Manager'
+                'position' => 'GM'
             ],
             [
                 'npk' => '10459',
@@ -509,7 +509,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2003-08-29',
-                'position' => 'Deputy Group Manager'
+                'position' => 'GM'
             ],
             [
                 'npk' => '10468',
@@ -519,7 +519,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-06-01',
-                'position' => 'Deputy Group Manager'
+                'position' => 'GM'
             ],
             [
                 'npk' => '1392',
@@ -579,7 +579,7 @@ class DatabaseSeeder extends Seeder
                 'gender' => 'Male',
                 'company_name' => 'AII',
                 'aisin_entry_date' => '2004-11-01',
-                'position' => 'Deputy Group Manager'
+                'position' => 'GM'
             ],
             [
                 'npk' => '1733',
