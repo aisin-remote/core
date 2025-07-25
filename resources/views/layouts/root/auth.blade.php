@@ -121,6 +121,8 @@
     </div>
     <!--end::Root-->
 
+    @stack('scripts')
+
     <!--begin::Javascript-->
     <script>
         var hostUrl = "../../../assets/index.html";
