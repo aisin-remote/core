@@ -182,6 +182,12 @@
 
             function createAssessmentCard(type, alcId, alcName) {
                 const container = document.getElementById(`${type}-container`);
+
+                // cegah duplikasi
+                const exits = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
+                    .value === alcId);
+                if (exits) return;
+
                 const card = document.createElement('div');
                 card.classList.add('card', 'p-3', 'mb-3', 'assessment-card', `${type}-card`);
 
@@ -213,24 +219,33 @@
                 updateDropdownOptions();
             }
 
+            function renderInitialWeaknessCard() {
+                @foreach ($alcs as $alc)
+                    createAssessmentCard('weakness', '{{ $alc->id }}', '{{ $alc->name }}');
+                @endforeach
+            }
+
             function handleAutoWeakness(alcId, alcName, score) {
-                if (score < 3) {
-                    const container = document.getElementById('weakness-container');
-                    const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
-                        .value === alcId);
-                    if (!existing) createAssessmentCard('weakness', alcId, alcName);
-                    removeStrengthIfExists(alcId);
+                const container = document.getElementById('weakness-container');
+                const exits = Array.from(container.querySelectorAll('.alc-dropdown'))
+                    .some(select => select.value === alcId);
+
+                if (!exits) {
+                    createAssessmentCard('weakness', alcId, alcName);
                 }
+
+                removeStrengthIfExists(alcId);
             }
 
             function handleAutoStrength(alcId, alcName, score) {
-                if (score >= 3) {
-                    const container = document.getElementById('strength-container');
-                    const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
-                        .value === alcId);
-                    if (!existing) createAssessmentCard('strength', alcId, alcName);
-                    removeWeaknessIfExists(alcId);
-                }
+                const container = document.getElementById('strength-container');
+                const existing = Array.from(container.querySelectorAll('.alc-dropdown'))
+                    .some(select => select.value === alcId);
+
+                if (!existing) createAssessmentCard('strength', alcId, alcName);
+
+                // Hapus dari Weakness jika masuk ke Strength
+                removeWeaknessIfExists(alcId);
             }
 
             function removeWeaknessIfExists(alcId) {
@@ -321,6 +336,7 @@
 
             });
 
+            renderInitialWeaknessCard();
             updateDropdownOptions();
         });
         $(document).ready(function() {
