@@ -27,40 +27,40 @@
                     </div>
 
                     <div class="mb-4">
-                        <label for="target" class="form-label">Target Position</label>
-                        <select id="target" name="target" data-placeholder="Select Position..."
+                        <label for="update_target" class="form-label">Target Position</label>
+                        <select id="update_target" name="target" data-placeholder="Select Position..."
                             class="form-select form-select-lg fw-semibold" required>
                             <option value="">Select Position</option>
-
                             @php
                                 $positions = [
-                                    'Director' => 'flags/afghanistan.svg',
-                                    'GM' => 'flags/afghanistan.svg',
-                                    'Act GM' => 'flags/afghanistan.svg',
-                                    'Manager' => 'flags/afghanistan.svg',
-                                    'Act Manager' => 'flags/afghanistan.svg',
-                                    'Coordinator' => 'flags/aland-islands.svg',
-                                    'Act Coordinator' => 'flags/aland-islands.svg',
-                                    'Section Head' => 'flags/albania.svg',
-                                    'Act Section Head' => 'flags/albania.svg',
-                                    'Supervisor' => 'flags/algeria.svg',
-                                    'Act Supervisor' => 'flags/algeria.svg',
-                                    'Leader' => 'flags/algeria.svg',
-                                    'Act Leader' => 'flags/algeria.svg',
-                                    'JP' => 'flags/algeria.svg',
-                                    'Act JP' => 'flags/algeria.svg',
-                                    'Operator' => 'flags/algeria.svg',
+                                    'GM' => 'General Manager',
+                                    'Act GM' => 'Act General Manager',
+                                    'Manager' => 'Manager',
+                                    'Act Manager' => 'Act Manager',
+                                    'Coordinator' => 'Coordinator',
+                                    'Act Coordinator' => 'Act Coordinator',
+                                    'Section Head' => 'Section Head',
+                                    'Act Section Head' => 'Act Section Head',
+                                    'Supervisor' => 'Supervisor',
+                                    'Act Supervisor' => 'Act Supervisor',
+                                    'Act Leader' => 'Act Leader',
+                                    'Leader' => 'Leader',
+                                    'Staff' => 'Staff',
+                                    'Act JP' => 'Act JP',
+                                    'Operator' => 'Operator',
+                                    'Direktur' => 'Direktur',
                                 ];
                             @endphp
-
-
-                            @foreach ($positions as $position => $flag)
-                                <option value="{{ $position }}"
-                                    {{ isset($assessment) && $assessment->target_position == $position ? 'selected' : '' }}>
-                                    {{ $position }}
+                            @foreach ($positions as $value => $label)
+                                <option value="{{ $value }}"
+                                    {{ old('position', $employee->position ?? '') == $value ? 'selected' : '' }}>
+                                    {{ $label }}
                                 </option>
                             @endforeach
                         </select>
+                        @error('position')
+                            <div class="text-danger">{{ $message }}</div>
+                        @enderror
                     </div>
 
                     <div class="mb-4" style="display: none;">
