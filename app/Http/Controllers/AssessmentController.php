@@ -633,7 +633,6 @@ class AssessmentController extends Controller
 
         foreach ($request->alc_ids as $alc_id) {
             $score = $request->scores[$alc_id] ?? "0";
-            dd($score);
         }
     }
 
@@ -741,6 +740,7 @@ class AssessmentController extends Controller
         $assessment->date = $request->date;
         $assessment->description = $request->description;
         $assessment->note = $request->note;
+        $assessment->target_position = $request->target;
 
         if ($request->hasFile('upload')) {
             $path = $this->handleFileUpload($request, $assessment->upload);

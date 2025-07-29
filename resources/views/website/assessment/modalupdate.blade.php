@@ -53,17 +53,13 @@
                                 ];
                             @endphp
 
-                            @foreach ($assessments as $assessment)
-                                <select name="target[]" class="form-select">
-                                    @foreach ($positions as $position => $flag)
-                                        <option value="{{ $position }}"
-                                            {{ $assessment->target_position === $position ? 'selected' : '' }}>
-                                            {{ $position }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            @endforeach
 
+                            @foreach ($positions as $position => $flag)
+                                <option value="{{ $position }}"
+                                    {{ isset($assessment) && $assessment->target_position == $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
                         </select>
                     </div>
 
@@ -118,7 +114,6 @@
             </form>
         </div>
     </div>
-</div>
 </div>
 
 <script>
@@ -355,10 +350,6 @@
 
             updateDropdownOptions();
         });
-
-
-
-
 
         function updateDropdownOptions() {
             let selectedStrengths = new Set();
