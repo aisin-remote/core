@@ -188,26 +188,46 @@ class AssessmentController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $this->validateAssessmentRequest($request);
-        $filePath = $this->handleFileUpload($request);
+        DB::beginTransaction();
 
-        $assessment = Assessment::create([
-            'employee_id' => $request->employee_id,
-            'date' => $request->date,
-            'target_position' => $request->target,
-            'upload' => $filePath,
-            'note' => $request->note,
-        ]);
+        try {
+            $this->validateAssessmentRequest($request);
+            $filePath = $this->handleFileUpload($request);
 
-        $this->storeAssessmentDetails($request, $assessment);
-        $this->processHav($request, $assessment);
+            $assessment = Assessment::create([
+                'employee_id' => $request->employee_id,
+                'date' => $request->date,
+                'target_position' => $request->target,
+                'upload' => $filePath,
+                'note' => $request->note,
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Data assessment dan HAV berhasil disimpan.',
-            'assessment' => $assessment,
-        ]);
+            $this->storeAssessmentDetails($request, $assessment);
+            $this->processHav($request, $assessment);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data assessment dan HAV berhasil disimpan.',
+                'assessment' => $assessment,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            // Log error jika perlu
+            Log::error('Gagal menyimpan data assessment', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan data. ' . $e->getMessage(),
+            ], 500);
+        }
     }
+
 
     /**
      * Edit assessment form
@@ -754,11 +774,13 @@ class AssessmentController extends Controller
     {
         DetailAssessment::where('assessment_id', $assessment->id)->delete();
 
-        foreach ($request->scores as $alc_id => $score) {
+        foreach ($request->alc_ids as $alc_id) {
+            $alc_id = (int) $alc_id;
+
             DetailAssessment::create([
                 'assessment_id' => $assessment->id,
                 'alc_id' => $alc_id,
-                'score' => $score,
+                'score' => $request->scores[$alc_id] ?? 0, // default ke 0 jika tidak ada score
                 'strength' => $request->strength[$alc_id] ?? null,
                 'weakness' => $request->weakness[$alc_id] ?? null,
                 'suggestion_development' => $request->suggestion_development[$alc_id] ?? null
