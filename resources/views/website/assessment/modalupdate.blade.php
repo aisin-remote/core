@@ -25,6 +25,43 @@
                         <label for="update_date" class="form-label">Date Assessment</label>
                         <input type="date" class="form-control" id="update_date" name="date" required>
                     </div>
+
+                    <div class="mb-4">
+                        <label for="target" class="form-label">Target Position</label>
+                        <select id="target" name="target" data-placeholder="Select Position..."
+                            class="form-select form-select-lg fw-semibold" required>
+                            <option value="">Select Position</option>
+
+                            @php
+                                $positions = [
+                                    'Director' => 'flags/afghanistan.svg',
+                                    'GM' => 'flags/afghanistan.svg',
+                                    'Act GM' => 'flags/afghanistan.svg',
+                                    'Manager' => 'flags/afghanistan.svg',
+                                    'Act Manager' => 'flags/afghanistan.svg',
+                                    'Coordinator' => 'flags/aland-islands.svg',
+                                    'Act Coordinator' => 'flags/aland-islands.svg',
+                                    'Section Head' => 'flags/albania.svg',
+                                    'Act Section Head' => 'flags/albania.svg',
+                                    'Supervisor' => 'flags/algeria.svg',
+                                    'Act Supervisor' => 'flags/algeria.svg',
+                                    'Leader' => 'flags/algeria.svg',
+                                    'Act Leader' => 'flags/algeria.svg',
+                                    'JP' => 'flags/algeria.svg',
+                                    'Act JP' => 'flags/algeria.svg',
+                                    'Operator' => 'flags/algeria.svg',
+                                ];
+                            @endphp
+
+                            @foreach ($positions as $position => $flag)
+                                <option data-kt-flag="{{ $flag }}" value="{{ $position }}"
+                                    {{ $assessment->target_position === $position ? 'selected' : '' }}>
+                                    {{ $position }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
                     <div class="mb-4" style="display: none;">
                         <label for="update_description" class="form-label">Description Assessment</label>
                         <input type="hidden" class="form-control" id="update_description" name="description" required>
