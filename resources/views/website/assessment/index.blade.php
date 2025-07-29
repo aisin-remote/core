@@ -468,12 +468,13 @@
 
                                     if (isHRD) {
                                         editBtn = `
-                            <button type="button" class="btn btn-warning btn-sm updateAssessment"
+                                <button type="button" class="btn btn-warning btn-sm updateAssessment"
                                 data-bs-toggle="modal" data-bs-target="#updateAssessmentModal"
                                 data-id="${assessment.id}"
                                 data-employee-id="${assessment.employee_id}"
                                 data-date="${assessment.date}"
                                 data-description="${safeEncode(assessment.description || '')}"
+                                data-targetposition="${assessment.target_position}"
                                 data-upload="${assessment.upload || ''}"
                                 data-note="${safeEncode(assessment.note || '')}"
                                 data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
@@ -543,12 +544,14 @@
                     let description = safeDecode($(this).data("description"));
                     let upload = $(this).data("upload");
                     let note = safeDecode($(this).data("note"));
+                    let targetPosition = $(this).data("targetposition");
 
                     let scores = JSON.parse(atob($(this).attr("data-scores")));
                     let alcs = JSON.parse(atob($(this).attr("data-alcs")));
                     let alcNames = JSON.parse(safeDecode($(this).attr("data-alc_name")));
                     let strengths = JSON.parse(safeDecode($(this).attr("data-strengths")));
                     let weaknesses = JSON.parse(safeDecode($(this).attr("data-weaknesses")));
+
                     let suggestion_development = JSON.parse(safeDecode($(this).attr(
                         "data-suggestion_development")));
 
@@ -558,6 +561,7 @@
                     $("#update_description").val(description);
                     $("#update_upload").attr("href", `/storage/${upload}`).text("Lihat File");
                     $("#update_note").val(note);
+                    $("#update_target").val(targetPosition);
 
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];

@@ -76,7 +76,13 @@
                                                 <i class="fa fa-times fs-2"></i>
                                             </span>
                                         </div>
-                                        <div class="form-text">Tipe file yang diizinkan: png, jpg, jpeg.</div>
+                                        <div class="form-text text-warning">
+                                            <i class="bi bi-info-circle"></i> Format yang diizinkan: PNG, JPG, JPEG.
+                                        </div>
+                                        <div class="form-text text-warning">
+                                            <i class="bi bi-info-circle"></i> Ukuran maksimal file: 2 MB.
+                                        </div>
+
                                         @error('photo')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
