@@ -361,7 +361,7 @@ class AssessmentController extends Controller
         }
 
         if ($subordinateIds->isEmpty()) {
-            return Employee::whereRaw('1=0');
+            return collect(); // Return koleksi kosong, bukan query builder
         }
 
         return Employee::whereIn('id', $subordinateIds)->get();
