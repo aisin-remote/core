@@ -53,12 +53,17 @@
                                 ];
                             @endphp
 
-                            @foreach ($positions as $position => $flag)
-                                <option data-kt-flag="{{ $flag }}" value="{{ $position }}"
-                                    {{ $assessment->target_position === $position ? 'selected' : '' }}>
-                                    {{ $position }}
-                                </option>
+                            @foreach ($assessments as $assessment)
+                                <select name="target[]" class="form-select">
+                                    @foreach ($positions as $position => $flag)
+                                        <option value="{{ $position }}"
+                                            {{ $assessment->target_position === $position ? 'selected' : '' }}>
+                                            {{ $position }}
+                                        </option>
+                                    @endforeach
+                                </select>
                             @endforeach
+
                         </select>
                     </div>
 
