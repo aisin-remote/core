@@ -138,59 +138,14 @@ class RtcController extends Controller
 
         $sections = Section::whereIn('department_id', $departmentIds)->get();
         $supervisorIds = $sections->pluck('supervisor_id')->filter()->unique();
-        $employeeIds = $managerIds->merge($supervisorIds)->unique();
 
+        $employeeIds = $managerIds->merge($supervisorIds)->unique();
         $bawahans = Employee::whereIn('id', $employeeIds)->get();
 
         // Generate color mapping
         $colors = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5', 'color-6', 'color-7'];
         $assignedColors = [];
         $colorIndex = 0;
-
-        $managers = [];
-
-        foreach ($departmentIds as $departmentId) {
-            $department = Department::with(['manager', 'short', 'mid', 'long'])
-                ->find($departmentId);
-
-            if (!$department)
-                continue;
-
-            if (!isset($assignedColors[$departmentId])) {
-                $assignedColors[$departmentId] = $colors[$colorIndex++ % count($colors)];
-            }
-
-            $manager = $department->manager;
-
-            $managers[$departmentId] = [
-                'title' => $department->name,
-                'person' => RtcHelper::formatPerson($manager),
-                'shortTerm' => RtcHelper::formatCandidate($department->short),
-                'midTerm' => RtcHelper::formatCandidate($department->mid),
-                'longTerm' => RtcHelper::formatCandidate($department->long),
-                'colorClass' => $assignedColors[$departmentId],
-                'supervisors' => [],
-            ];
-
-            // Add supervisors under this department
-            $relatedSections = Section::where('department_id', $departmentId)
-                ->with(['supervisor', 'short', 'mid', 'long'])
-                ->get();
-
-            foreach ($relatedSections as $section) {
-                if (!$section->supervisor)
-                    continue;
-
-                $managers[$departmentId]['supervisors'][] = [
-                    'title' => $section->name,
-                    'person' => RtcHelper::formatPerson($section->supervisor),
-                    'shortTerm' => RtcHelper::formatCandidate($section->short),
-                    'midTerm' => RtcHelper::formatCandidate($section->mid),
-                    'longTerm' => RtcHelper::formatCandidate($section->long),
-                    'colorClass' => $assignedColors[$departmentId],
-                ];
-            }
-        }
 
         // Current main card
         $field = match ($filter) {
@@ -207,14 +162,73 @@ class RtcController extends Controller
             'longTerm' => RtcHelper::formatCandidate($data->long ?? null),
         ];
 
+        $managers = [];
+
+        foreach ($departmentIds as $departmentId) {
+            $department = Department::with(['manager', 'short', 'mid', 'long'])
+                ->find($departmentId);
+
+            if (!$department)
+                continue;
+
+            if (!isset($assignedColors[$departmentId])) {
+                $assignedColors[$departmentId] = $colors[$colorIndex++ % count($colors)];
+            }
+
+            $managerPerson = RtcHelper::formatPerson($department->manager);
+            $isManagerSameAsMain = RtcHelper::isSamePerson($main['person'], $managerPerson);
+
+            // Collect supervisors first
+            $supervisors = [];
+            $relatedSections = Section::where('department_id', $departmentId)
+                ->with(['supervisor', 'short', 'mid', 'long'])
+                ->get();
+
+            foreach ($relatedSections as $section) {
+                if (!$section->supervisor)
+                    continue;
+
+                $supervisorPerson = RtcHelper::formatPerson($section->supervisor);
+
+                // Skip if supervisor is same as main person or manager
+                if (
+                    RtcHelper::isSamePerson($main['person'], $supervisorPerson) ||
+                    RtcHelper::isSamePerson($managerPerson, $supervisorPerson)
+                ) {
+                    continue;
+                }
+
+                $supervisors[] = [
+                    'title' => $section->name,
+                    'person' => $supervisorPerson,
+                    'shortTerm' => RtcHelper::formatCandidate($section->short),
+                    'midTerm' => RtcHelper::formatCandidate($section->mid),
+                    'longTerm' => RtcHelper::formatCandidate($section->long),
+                    'colorClass' => $assignedColors[$departmentId],
+                ];
+            }
+
+            // Only add manager if it's different from main OR if it has supervisors
+            if (!$isManagerSameAsMain || count($supervisors) > 0) {
+                $managers[$departmentId] = [
+                    'title' => $department->name,
+                    'person' => $managerPerson,
+                    'shortTerm' => RtcHelper::formatCandidate($department->short),
+                    'midTerm' => RtcHelper::formatCandidate($department->mid),
+                    'longTerm' => RtcHelper::formatCandidate($department->long),
+                    'colorClass' => $assignedColors[$departmentId],
+                    'supervisors' => $supervisors,
+                    'skipManagerNode' => $isManagerSameAsMain, // Flag untuk frontend
+                ];
+            }
+        }
+
         return view('website.rtc.detail', [
             'main' => $main,
             'managers' => array_values($managers),
             'title' => $data->name,
         ]);
     }
-
-
 
     public function update(Request $request)
     {

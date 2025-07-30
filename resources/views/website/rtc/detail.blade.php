@@ -143,27 +143,33 @@
                 managers.forEach((manager, i) => {
                     const managerId = `m-${i}`;
 
-                    nodes.push({
-                        id: managerId,
-                        pid: rootId,
-                        department: manager.title ?? '-',
-                        name: manager.person?.name ?? '-',
-                        grade: manager.person?.grade ?? '-',
-                        age: manager.person?.age ?? '-',
-                        los: manager.person?.los ?? '-',
-                        lcp: manager.person?.lcp ?? '-',
-                        cand_st: `${manager.shortTerm?.name ?? '-'} (${manager.shortTerm?.grade ?? '-'}, ${manager.shortTerm?.age ?? '-'})`,
-                        cand_mt: `${manager.midTerm?.name ?? '-'} (${manager.midTerm?.grade ?? '-'}, ${manager.midTerm?.age ?? '-'})`,
-                        cand_lt: `${manager.longTerm?.name ?? '-'} (${manager.longTerm?.grade ?? '-'}, ${manager.longTerm?.age ?? '-'})`,
-                        color: colorMap[manager.colorClass] || '#28a745',
-                        img: manager.person?.photo ? manager.person.photo : null
-                    });
+                    // Only create manager node if it's not the same as main person
+                    if (!manager.skipManagerNode) {
+                        nodes.push({
+                            id: managerId,
+                            pid: rootId,
+                            department: manager.title ?? '-',
+                            name: manager.person?.name ?? '-',
+                            grade: manager.person?.grade ?? '-',
+                            age: manager.person?.age ?? '-',
+                            los: manager.person?.los ?? '-',
+                            lcp: manager.person?.lcp ?? '-',
+                            cand_st: `${manager.shortTerm?.name ?? '-'} (${manager.shortTerm?.grade ?? '-'}, ${manager.shortTerm?.age ?? '-'})`,
+                            cand_mt: `${manager.midTerm?.name ?? '-'} (${manager.midTerm?.grade ?? '-'}, ${manager.midTerm?.age ?? '-'})`,
+                            cand_lt: `${manager.longTerm?.name ?? '-'} (${manager.longTerm?.grade ?? '-'}, ${manager.longTerm?.age ?? '-'})`,
+                            color: colorMap[manager.colorClass] || '#28a745',
+                            img: manager.person?.photo ? manager.person.photo : null
+                        });
+                    }
+
+                    // Add supervisors - connect to main if manager is skipped, otherwise to manager
+                    const parentId = manager.skipManagerNode ? rootId : managerId;
 
                     (manager.supervisors ?? []).forEach((spv, j) => {
                         const spvId = `m-${i}-s-${j}`;
                         nodes.push({
                             id: spvId,
-                            pid: managerId,
+                            pid: parentId,
                             department: spv.title ?? '-',
                             name: spv.person?.name ?? '-',
                             grade: spv.person?.grade ?? '-',
