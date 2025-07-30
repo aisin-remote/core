@@ -11,11 +11,8 @@ class PlantController extends Controller
     public function plant($company = null)
     {
         $plants = Plant::with('director')
-            ->when($company, function ($query) use ($company) {
-                $query->whereHas('director', function ($q) use ($company) {
-                    $q->where('company_name', $company);
-                });
-            })->get();
+            ->where('company', $company)
+            ->get();
 
         $directors = Employee::where('position', 'Direktur')
             ->when($company, function ($query) use ($company) {
@@ -31,12 +28,23 @@ class PlantController extends Controller
     {
         $request->validate([
             'name' => 'required|string',
-            'director_id' => 'required'
+            'company' => 'required|string',
+            'director_id' => 'required',
         ]);
+
+        $director = Employee::where('id', $request->director_id)
+        ->where('position', 'Direktur')
+        ->where('company_name', $request->company)
+        ->first();
+
+        if (!$director) {
+            return redirect()->back()->with('error', 'Direktur tidak sesuai dengan perusahaan yang dipilih.');
+        }
 
         try {
             Plant::create([
                 'name' => $request->name,
+                'company' => $request->company,
                 'director_id' => $request->director_id
             ]);
 
@@ -45,17 +53,29 @@ class PlantController extends Controller
             return redirect()->back()->with('error', 'Gagal menambahkan Plant: ' . $e->getMessage());
         }
     }
+
     public function update(Request $request, $id)
     {
         $request->validate([
-            'name' => 'required|string' . $id,
+            'name' => 'required|string',
+            'company' => 'required|string',
             'director_id' => 'required|exists:employees,id',
         ]);
 
+        $director = Employee::where('id', $request->director_id)
+        ->where('position', 'Direktur')
+        ->where('company_name', $request->company)
+        ->first();
+
+        if (!$director) {
+            return redirect()->back()->with('error', 'Direktur tidak sesuai dengan perusahaan yang dipilih.');
+        }
+
         try {
-            $plant = Plant::findOrFail($id);
+            $plant = Plant::findOrFail(id: $id);
             $plant->update([
                 'name' => $request->name,
+                'company' => $request->company,
                 'director_id' => $request->director_id,
             ]);
 

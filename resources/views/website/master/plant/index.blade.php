@@ -60,7 +60,8 @@
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
                             <th>Name Plant</th>
-                              <th>Name Director</th>
+                            <th>Company</th>
+                            <th>Name Director</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -69,7 +70,8 @@
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $plant->name }}</td>
-                                 <td>{{ $plant->director->name }}</td>
+                                <td>{{ $plant->company }}</td>
+                                <td>{{ $plant->director->name }}</td>
 
                                 <td class="text-center">
                                     <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
@@ -135,11 +137,17 @@
                         </div>
 
                         <div class="mb-3">
+                            <label for="company" class="form-label">Company</label>
+                            <input type="text" class="form-control" id="company" name="company" value="AII" required disabled>
+                            <input type="hidden" class="form-control" id="company" name="company" value="AII">
+                        </div>
+
+                        <div class="mb-3">
                             <label for="director_id" class="form-label">Director</label>
                             <select class="form-control" id="director_id" name="director_id" required>
                                 <option value="" disabled selected>-- Select Director --</option>
                                 @foreach ($directors as $director)
-                                    <option value="{{ $director->id }}">{{ $director->name }}
+                                    <option value="{{ $director->id }}">{{ $director->name }} - {{ $director->company_name }}
                                     </option>
                                 @endforeach
                             </select>
@@ -176,13 +184,19 @@
                             </div>
 
                             <div class="mb-3">
+                                <label for="company" class="form-label">Company</label>
+                                <input type="text" class="form-control" id="company" name="company" value="AII" required disabled>
+                                <input type="hidden" class="form-control" id="company" name="company" value="AII">
+                            </div>
+
+                            <div class="mb-3">
                                 <label for="director_id{{ $plant->id }}" class="form-label">Director</label>
                                 <select class="form-control" id="director_id{{ $plant->id }}" name="director_id"
                                     required>
                                     @foreach ($directors as $director)
                                         <option value="{{ $director->id }}"
                                             {{ $plant->director_id == $director->id ? 'selected' : '' }}>
-                                            {{ $director->name }}
+                                            {{ $director->name }} - {{ $director->company_name }}
                                         </option>
                                     @endforeach
                                 </select>

@@ -32,7 +32,7 @@ class HavQuadrant extends Model
         } elseif ($assessment >= 3.6 && $assessment <= 5) {
             $col = 3;  // Kolom "3.6 - 5"
         } else {
-            return "Invalid Assessment value";
+            throw new \Exception("Nilai Assessment tidak valid. Mohon periksa kembali input Anda.");
         }
 
         // Tentukan rentang Y
@@ -45,7 +45,7 @@ class HavQuadrant extends Model
         } elseif ($performance >= 21 && $performance <= 24) {
             $row = 0;  // Baris "21 - 24" => Indeks 0 (Baris paling atas)
         } else {
-            return "Invalid Performance value";
+            throw new \Exception("Nilai Assessment tidak valid. Mohon periksa kembali input Anda.");
         }
 
         // Matriks nilai dalam tabel
