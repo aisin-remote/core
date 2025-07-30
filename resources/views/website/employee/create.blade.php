@@ -113,6 +113,14 @@
                                 @enderror
                             </div>
                             <div class="mb-3">
+                                <label class="form-label">Email</label>
+                                <input type="text" name="email" class="form-control"
+                                    value="{{ old('email') }}" placeholder="employe@example.com" required>
+                                @error('email')
+                                    <div class="text-danger">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="mb-3">
                                 <div class="col-lg-12 mb-3">
                                     <label class="fs-5 fw-bold form-label mb-2">
                                         <label class="form-label">Company</label>
