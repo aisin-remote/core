@@ -38,11 +38,6 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Section List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
                     <button type="button" class="btn btn-primary me-3" data-bs-toggle="modal"
                         data-bs-target="#addDepartmentModal">
                         <i class="fas fa-plus"></i> Add
@@ -55,45 +50,43 @@
             </div>
 
             <div class="card-body">
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                    <thead>
-                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
-                            <th>Name Section</th>
-                            <th>Department</th>
-                             <th>Company</th>
-                              <th>Name</th>
+                <table class="table table-hover table-bordered align-middle text-center" id="table-section">
+                    <thead class="bg-primary">
+                        <tr>
+                            <th class="text-center">No</th>
+                            <th class="text-center">Name Section</th>
+                            <th class="text-center">Department</th>
+                            <th class="text-center">Company</th>
+                            <th class="text-center">Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($sections as $section)
                             <tr>
-                                <td>{{ $loop->iteration }}</td>
+                                <td class="text-center">{{ $loop->iteration }}</td>
                                 <td>{{ $section->name }}</td>
                                 <td>{{ $section->department->name }}</td>
-                                 <td>{{ $section->company }}</td>
-                                   <td>{{ $section->supervisor->name }}</td>
-
-                                <td class="text-center">
-                                     <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#editSectionModal{{ $section->id }}">
-                                        Edit
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $section->id }}">Delete</button>
+                                <td>{{ $section->company }}</td>
+                                <td>{{ $section->supervisor->name }}</td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#editSectionModal{{ $section->id }}">
+                                            Edit
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                            data-id="{{ $section->id }}">Delete</button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted">No employees found</td>
+                                <td colspan="9" class="text-center text-muted">No data found</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
-                <div class="d-flex justify-content-end mt-4">
-                    {{ $sections->links('vendor.pagination.bootstrap-5') }}
-                </div>
             </div>
         </div>
     </div>
@@ -258,66 +251,35 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("✅ Script Loaded!");
-
-            var searchInput = document.getElementById("searchInput");
-            var filterItems = document.querySelectorAll(".filter-department");
-            var table = document.getElementById("kt_table_users");
-
-            if (!searchInput || !table) {
-                console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
+            // Pastikan jQuery tersedia
+            if (typeof $ === 'undefined') {
+                console.error("jQuery not loaded. DataTable won't initialize.");
                 return;
             }
 
-            var tbody = table.getElementsByTagName("tbody")[0];
-            var rows = tbody.getElementsByTagName("tr");
-
-            function filterTable(selectedDepartment = "") {
-                var searchValue = searchInput.value.toLowerCase();
-
-                for (var i = 0; i < rows.length; i++) {
-                    var cells = rows[i].getElementsByTagName("td");
-                    var match = false;
-
-                    if (cells.length >= 7) {
-                        var npk = cells[1].textContent.toLowerCase();
-                        var name = cells[2].textContent.toLowerCase();
-                        var company = cells[3].textContent.toLowerCase();
-                        var position = cells[4].textContent.toLowerCase();
-                        var functionName = cells[5].textContent.toLowerCase();
-                        var grade = cells[6].textContent.toLowerCase();
-                        var age = cells[7].textContent.toLowerCase();
-
-                        var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
-                            company.includes(searchValue) || position.includes(searchValue) ||
-                            functionName.includes(searchValue) || grade.includes(searchValue) ||
-                            age.includes(searchValue);
-
-                        var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
-
-                        if (searchMatch && departmentMatch) {
-                            match = true;
-                        }
+            // Inisialisasi DataTable
+            $('#table-section').DataTable({
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    zeroRecords: "No matching records found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
                     }
-
-                    rows[i].style.display = match ? "" : "none";
-                }
-            }
-
-            // Event Pencarian
-            searchInput.addEventListener("keyup", function() {
-                filterTable();
+                },
+                ordering: false
             });
 
-            // Event Filter Dropdown
-            filterItems.forEach(item => {
-                item.addEventListener("click", function(event) {
-                    event.preventDefault();
-                    var selectedDepartment = this.getAttribute("data-department").toLowerCase();
-                    console.log("🔍 Filter dipilih: ", selectedDepartment);
-                    filterTable(selectedDepartment);
-                });
-            });
+            console.log("✅ DataTable Initialized Successfully");
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            console.log("✅ Script Loaded!");
 
             console.log("✅ Event Listeners Added Successfully");
 

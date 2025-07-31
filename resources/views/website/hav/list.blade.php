@@ -78,7 +78,7 @@
                                 <td>{{ $item->employee->position }}</td>
                                 <td>{{ $item->employee->bagian }}</td>
                                 <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge badge-light-warning fs-7 fw-bold">{{ $item->quadran->name ?? '-' }}
+                                <td><span class="badge {{ $item->bg_color }} fs-7 fw-bold">{{ $item->quadran->name ?? '-' }}
                                     </span>
                                 </td>
                                 <td class="text-center">

@@ -305,6 +305,21 @@ class HavController extends Controller
             'Operator',
         ];
 
+        foreach ($employees as $employee) {
+            $code = (int) ($employee->quadran->code ?? 0);
+            if ($code >= 10 && $code <= 16) {
+                $employee->bg_color = 'bg-light-secondary';
+            } elseif ($code >= 5 && $code <= 9) {
+                $employee->bg_color = 'bg-light-warning';
+            } elseif ($code >= 2 && $code <= 4) {
+                $employee->bg_color = 'bg-light-warning';
+            } elseif ($code === 1) {
+                $employee->bg_color = 'bg-light-primary';
+            } else {
+                $employee->bg_color = 'bg-light-secondary'; // Default
+            }
+        }
+
         $rawPosition = $user->employee->position ?? 'Operator';
         $currentPosition = Str::contains($rawPosition, 'Act ')
             ? trim(str_replace('Act', '', $rawPosition))

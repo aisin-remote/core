@@ -290,9 +290,8 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
-        DB::beginTransaction();
-
         try {
+            DB::beginTransaction();
             // Validasi
             $validatedData = $request->validate([
                 'npk' => 'required|string|max:255|unique:employees,npk',
@@ -303,6 +302,7 @@ class EmployeeController extends Controller
                 'phone_number' => 'nullable|string|max:14',
                 'aisin_entry_date' => 'required|date',
                 'company_group' => 'required|string',
+                'email' => 'required|email',
                 'position' => 'required|string',
                 'grade' => 'required|string',
                 'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
@@ -443,13 +443,14 @@ class EmployeeController extends Controller
                 'section head',
                 'act gm',
                 'gm',
-                'director'
+                'director',
+                'operator'
             ];
 
             if (in_array($pos, $userRoles)) {
                 $user = User::create([
                     'name' => $validatedData['name'],
-                    'email' => strtolower(strtok($validatedData['name'], ' ')) . '@aiia.co.id',
+                    'email' => $validatedData['email'],
                     'password' => bcrypt('aiia'),
                     'is_first_login' => true,
                     'password_changed_at' => null
