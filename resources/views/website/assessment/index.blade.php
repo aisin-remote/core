@@ -954,6 +954,10 @@
                 $('#assessmentForm').submit(function(e) {
                     e.preventDefault();
                     let assessment_id = $('#assessment_id').val();
+                    const submitBtn = $('#btnSubmit');
+
+                    // Disable tombol saya proses dimulai
+                    submitBtn.prop('disabled', true);
 
                     const fileInput = document.getElementById("upload");
                     if (fileInput && fileInput.files.length > 0) {
@@ -965,6 +969,7 @@
                                 icon: "error",
                                 confirmButtonText: "OK"
                             });
+                            submitBtn.prop('disabled', false);
                             return;
                         }
                     }
@@ -1007,6 +1012,8 @@
                                 icon: "error",
                                 confirmButtonText: "Coba Lagi"
                             });
+
+                            submitBtn.prop('disabled', false);
                         }
                     });
                 });
