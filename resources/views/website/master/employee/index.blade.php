@@ -76,18 +76,18 @@
                         </li>
                     @endforeach
                 </ul>
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
-                    <thead>
-                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
-                            <th>Photo</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Company</th>
-                            <th>Position</th>
-                            <th>Department</th>
-                            <th>Grade</th>
-                            <th>Age</th>
+                <table class="table table-hover table-bordered align-middle text-center dataTable" id="kt_table_users">
+                    <thead class="bg-primary">
+                        <tr>
+                            <th class="text-center">No</th>
+                            <th class="text-center">Photo</th>
+                            <th class="text-center">NPK</th>
+                            <th class="text-center">Employee Name</th>
+                            <th class="text-center">Company</th>
+                            <th class="text-center">Position</th>
+                            <th class="text-center">Department</th>
+                            <th class="text-center">Grade</th>
+                            <th class="text-center">Age</th>
                             <th class="text-center nowrap" style="min-width: 120px;">Actions</th>
                             <th class="text-center nowrap" style="min-width: 120px;">Status</th>
                         </tr>
@@ -96,7 +96,7 @@
                     <tbody>
                         @forelse ($employee as $index => $employees)
                             <tr>
-                                <td>{{ $employee->firstItem() + $index }}</td>
+                                <td class="text-center">{{ $employee->firstItem() + $index }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employees->photo ? asset('storage/' . $employees->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
