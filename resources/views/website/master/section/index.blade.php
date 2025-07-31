@@ -50,7 +50,7 @@
             </div>
 
             <div class="card-body">
-                <table class="table table-striped table-bordered align-middle text-center nowrap" id="table-section">
+                <table class="table table-hover table-bordered align-middle text-center" id="table-section">
                     <thead class="bg-primary">
                         <tr>
                             <th class="text-center">No</th>

@@ -49,7 +49,7 @@
                 </div>
             </div>
             <div class="card-body">
-                <table class="table table-striped table-bordered align-middle text-center nowrap" id="kt_table_users">
+                <table class="table table-hover table-bordered align-middle text-center" id="kt_table_users">
                     <thead class="bg-primary">
                         <tr>
                             <th class="text-center">No</th>
