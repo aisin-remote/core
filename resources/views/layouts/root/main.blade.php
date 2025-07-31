@@ -42,6 +42,7 @@
         type="text/css" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.datatables.net/2.3.2/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
     <!--end::Vendor Stylesheets-->
 
     <!--begin::Global Stylesheets Bundle(mandatory for all pages)-->
@@ -182,6 +183,9 @@
     <script src="{{ asset('assets/js/custom/utilities/modals/users-search.js') }}"></script>
     <!-- KeenIcons JS -->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
+
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.bootstrap5.min.js"></script>
 
     <!-- Tambahkan di bagian sebelum </body> -->
     @if (session('show_first_login_alert'))
