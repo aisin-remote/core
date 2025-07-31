@@ -298,8 +298,13 @@ class AssessmentController extends Controller
             // Hapus detail assessment
             DetailAssessment::where('assessment_id', $id)->delete();
 
+            // Log sebelum menghapus data HAV
+            Log::info('Menghapus data HAV untuk assessment_id: ' . $id . ' dan created_at: ' . $assessment->created_at);
+
             // Hapus data HAV
-            Hav::where('assessment_id', $id)->delete();
+            Hav::where('assessment_id', $id)
+                ->orWhere('created_at', $assessment->created_at)
+                ->delete();
 
             // Hapus file upload jika ada
             if ($assessment->upload) {
@@ -580,6 +585,7 @@ class AssessmentController extends Controller
             'year' => now()->year,
             'quadrant' => $latestHav->quadrant ?? null,
             'status' => '0',
+            'assessment_id' => $assessment->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
