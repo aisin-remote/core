@@ -414,7 +414,7 @@ class MasterController extends Controller
                 $q->whereHas('supervisor', function ($sub) use ($company) {
                     $sub->where('company_name', $company);
                 });
-            })->paginate(10);
+            })->get();
 
         return view('website.master.section.index', compact('sections', 'departments', 'supervisors', 'company'));
     }
