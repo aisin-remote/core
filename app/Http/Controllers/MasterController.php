@@ -461,7 +461,7 @@ class MasterController extends Controller
                 });
             })
             ->orderBy('name')
-            ->paginate(10);
+            ->get();
 
         return view('website.master.users.index', compact('users', 'company'));
     }
