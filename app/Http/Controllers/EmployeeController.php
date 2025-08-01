@@ -563,7 +563,7 @@ class EmployeeController extends Controller
             ->where('npk', $npk)
             ->firstOrFail();
         $departments = Department::all();
-        $divisions = Division::all();
+        $divisions = Division::where('company', $employee->company_name)->get();
         $plants = Plant::all();
         return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');
         ;
