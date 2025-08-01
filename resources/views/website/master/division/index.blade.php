@@ -50,14 +50,14 @@
             </div>
 
             <div class="card-body">
-                <table class="table table-hover table-bordered align-middle text-center" id="table-division">
-                    <thead class="bg-primary">
-                        <tr>
-                            <th class="text-center">No</th>
-                            <th class="text-center">Name Division</th>
-                            <th class="text-center">Plant</th>
-                            <th class="text-center">Name</th>
-                            <th class="text-center">Actions</th>
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-division">
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>No</th>
+                            <th>Name Division</th>
+                            <th>Plant</th>
+                            <th>Name</th>
+                            <th clas>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -144,7 +144,8 @@
                             <select name="gm_id" id="gm_id" class="form-select" required>
                                 <option value="">Pilih GM</option>
                                 @foreach ($gms as $gm)
-                                    <option value="{{ $gm->id }}">{{ $gm->name }} - {{ $gm->company_name }}</option>
+                                    <option value="{{ $gm->id }}">{{ $gm->name }} - {{ $gm->company_name }}
+                                    </option>
                                 @endforeach
                             </select>
                         </div>

@@ -49,20 +49,20 @@
                 </div>
             </div>
             <div class="card-body">
-                <table class="table table-hover table-bordered align-middle text-center" id="kt_table_users">
-                    <thead class="bg-primary">
-                        <tr>
-                            <th class="text-center">No</th>
-                            <th class="text-center">Name Plant</th>
-                            <th class="text-center">Company</th>
-                            <th class="text-center">Name Director</th>
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-plant">
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>No</th>
+                            <th>Name Plant</th>
+                            <th>Company</th>
+                            <th>Name Director</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($plants as $plant)
                             <tr>
-                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td>{{ $loop->iteration }}</td>
                                 <td>{{ $plant->name }}</td>
                                 <td>{{ $plant->company }}</td>
                                 <td>{{ $plant->director->name }}</td>
@@ -228,7 +228,7 @@
             }
 
             // Inisialisasi DataTable
-            $('#kt_table_users').DataTable({
+            $('#table-plant').DataTable({
                 responsive: true,
                 language: {
                     search: "_INPUT_",

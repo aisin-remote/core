@@ -50,21 +50,21 @@
             </div>
 
             <div class="card-body">
-                <table class="table table-hover table-bordered align-middle text-center" id="table-department">
-                    <thead class="bg-primary">
-                        <tr>
-                            <th class="text-center">No</th>
-                            <th class="text-center">Name Department</th>
-                            <th class="text-center">Division</th>
-                            <th class="text-center">Company</th>
-                            <th class="text-center">Name</th>
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-department">
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>No</th>
+                            <th>Name Department</th>
+                            <th>Division</th>
+                            <th>Company</th>
+                            <th>Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($departments as $department)
                             <tr>
-                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td>{{ $loop->iteration }}</td>
                                 <td>{{ $department->name }}</td>
                                 <td>{{ $department->division->name ?? '-' }}</td>
                                 <td>{{ $department->company }}</td>
@@ -156,7 +156,8 @@
                             <select name="manager_id" id="manager_id" class="form-select" required>
                                 <option value="">Pilih Manager</option>
                                 @foreach ($managers as $manager)
-                                    <option value="{{ $manager->id }}">{{ $manager->name }} - {{ $manager->company_name }}</option>
+                                    <option value="{{ $manager->id }}">{{ $manager->name }} -
+                                        {{ $manager->company_name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -290,7 +291,7 @@
             });
         });
     </script>
-      <script>
+    <script>
         document.addEventListener("DOMContentLoaded", function() {
             // Pastikan jQuery tersedia
             if (typeof $ === 'undefined') {

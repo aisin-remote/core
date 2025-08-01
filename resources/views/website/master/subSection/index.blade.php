@@ -50,20 +50,20 @@
             </div>
 
             <div class="card-body">
-                <table class="table table-hover table-bordered align-middle text-center" id="table-subSection">
-                    <thead class="bg-primary">
-                        <tr>
-                            <th class="text-center">No</th>
-                            <th class="text-center">Sub Secion Name</th>
-                            <th class="text-center">Section</th>
-                            <th class="text-center">Name</th>
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-section">
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>No</th>
+                            <th>Sub Secion Name</th>
+                            <th>Section</th>
+                            <th>Name</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($subSections as $subSection)
                             <tr>
-                                <td class="text-center">{{ $loop->iteration }}</td>
+                                <td>{{ $loop->iteration }}</td>
                                 <td>{{ $subSection->name }}</td>
                                 <td>{{ $subSection->section->name }}</td>
                                 <td>{{ $subSection->leader->name }}</td>

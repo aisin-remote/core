@@ -253,6 +253,14 @@ class EmployeeController extends Controller
             ? array_slice($allPositions, $positionIndex)
             : [];
 
+        // Hilangkan 'Operator' jika posisi user ada 'President'
+        if ($currentPosition === 'President') {
+            $visiblePositions = array_filter($visiblePositions, function  ($pos) {
+                return $pos !== 'Operator' && $pos !== 'President';
+            });
+            $visiblePositions = array_values($visiblePositions); // reset index
+        }
+
         return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions'));
     }
 
@@ -563,7 +571,7 @@ class EmployeeController extends Controller
             ->where('npk', $npk)
             ->firstOrFail();
         $departments = Department::all();
-        $divisions = Division::all();
+        $divisions = Division::where('company', $employee->company_name)->get();
         $plants = Plant::all();
         return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');
         ;

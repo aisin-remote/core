@@ -170,7 +170,7 @@
 
     <!--begin::Vendors Javascript(used for this page only)-->
     <script src="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.js') }}"></script>
-    <script src="{{ asset('assets/plugins/custom/datatables/datatables.bundle.js') }}"></script>
+    {{-- <script src="{{ asset('assets/plugins/custom/datatables/datatables.bundle.js'  ) }}"></script> --}}
     <!--end::Vendors Javascript-->
 
     <!--begin::Custom Javascript(used for this page only)-->
