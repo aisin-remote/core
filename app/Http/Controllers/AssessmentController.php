@@ -121,23 +121,39 @@ class AssessmentController extends Controller
             'leadingDepartment.division'
         )->findOrFail($assessment->employee_id);
 
-        $assessments = DetailAssessment::with('alc')
-            ->where('assessment_id', $assessment_id)
-            ->get();
+        $grade = $employee?->grade;
+        $gradeGroup = (int) filter_var($grade, FILTER_SANITIZE_NUMBER_INT); // Ambil angka dari grade, contoh: "4A" => 4
+
+        $assessmentsQuery = DetailAssessment::with('alc')
+            ->where('assessment_id', $assessment_id);
+
+
+        if ($gradeGroup >= 4 && $gradeGroup <= 6) {
+            $assessmentsQuery->whereNotIn('alc_id', [1, 2, 6]);
+        }
+
+        $assessments = $assessmentsQuery->get();
+
 
         if ($assessments->isEmpty()) {
             return back()->with('error', 'Tidak ada data assessment pada tanggal tersebut.');
         }
 
-        $details = DB::table('detail_assessments')
+        $detailsQuery = DB::table('detail_assessments')
             ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
             ->where('detail_assessments.assessment_id', $assessment_id)
             ->select(
                 'detail_assessments.*',
                 'alc.name as alc_name',
                 'detail_assessments.score'
-            )
-            ->get();
+            );
+
+
+        if ($gradeGroup >= 4 && $gradeGroup <= 6) {
+            $detailsQuery->whereNotIn('detail_assessments.alc_id', [1, 2, 6]);
+        }
+
+        $details = $detailsQuery->get();
 
         return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details'));
     }
