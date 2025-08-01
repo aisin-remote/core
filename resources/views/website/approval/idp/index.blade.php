@@ -108,16 +108,25 @@
                                                                             <span
                                                                                 class="badge badge-secondary">{{ $idp->hav->score }}</span>
                                                                         </td>
-                                                                        <td class="text-center">
-                                                                            <button class="btn btn-sm btn-danger btn-revise"
-                                                                                data-id="{{ $idp->id }}">
-                                                                                <i class="fas fa-edit"></i> Revise
-                                                                            </button>
-                                                                            <button
-                                                                                class="btn btn-sm btn-success btn-approve"
-                                                                                data-idp-id="{{ $idp->id }}">
-                                                                                <i class="fas fa-check-circle"></i> Approve
-                                                                            </button>
+                                                                        <td>
+                                                                            <div
+                                                                                class="d-flex flex-column gap-2">
+                                                                                <!-- Tombol Revise -->
+                                                                                <button
+                                                                                    class="btn btn-sm btn-danger w-100 d-flex align-items-center justify-content-center gap-1 btn-revise"
+                                                                                    data-id="{{ $idp->id }}">
+                                                                                    <i class="fas fa-edit"></i>
+                                                                                    <span>Revise</span>
+                                                                                </button>
+
+                                                                                <!-- Tombol Approve -->
+                                                                                <button
+                                                                                    class="btn btn-sm btn-success w-100 d-flex align-items-center justify-content-center gap-1 btn-approve"
+                                                                                    data-idp-id="{{ $idp->id }}">
+                                                                                    <i class="fas fa-check-circle"></i>
+                                                                                    <span>Approve</span>
+                                                                                </button>
+                                                                            </div>
                                                                         </td>
                                                                     </tr>
                                                                 @endforeach
