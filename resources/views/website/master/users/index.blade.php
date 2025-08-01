@@ -41,14 +41,14 @@
             </div>
 
             <div class="card-body">
-                <table class="table table-hover table-bordered align-middle text-center" id="table-user">
-                    <thead class="bg-primary">
-                        <tr>
-                            <th class="text-center">No</th>
-                            <th class="text-center">ID</th>
-                            <th class="text-center">Name</th>
-                            <th class="text-center">Email</th>
-                            <th class="text-center">Role</th>
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-user">
+                    <thead>
+                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                            <th>No</th>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
                             <th class="text-center" style="min-width: 120px;">Actions</th>
                         </tr>
                     </thead>
@@ -56,10 +56,10 @@
                     <tbody>
                         @forelse ($users as $index => $user)
                             <tr>
-                                <td>{{ $loop->iteration}}</td>
+                                <td>{{ $loop->iteration }}</td>
                                 <td>{{ $user->id }}</td>
                                 <td>{{ $user->name }}</td>
-                                <td>{{ $user->email }}</td>
+                                <td>{{ $user->email }}</td>``
                                 <td>{{ $user->role }}</td>
                                 <td class="text-center nowrap" style="min-width: 120px;">
                                     <a href="{{ route('users.master.edit', $user->id) }}"
