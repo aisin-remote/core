@@ -109,8 +109,7 @@
                                                                                 class="badge badge-secondary">{{ $idp->hav->score }}</span>
                                                                         </td>
                                                                         <td>
-                                                                            <div
-                                                                                class="d-flex flex-column gap-2">
+                                                                            <div class="d-flex flex-column gap-2">
                                                                                 <!-- Tombol Revise -->
                                                                                 <button
                                                                                     class="btn btn-sm btn-danger w-100 d-flex align-items-center justify-content-center gap-1 btn-revise"
@@ -170,9 +169,20 @@
                 button.addEventListener('click', function() {
                     const targetId = this.getAttribute('data-bs-target');
                     const row = document.querySelector(targetId);
-                    document.querySelectorAll('.accordion-collapse').forEach(el => el.classList
-                        .remove('show'));
-                    row.classList.add('show');
+                    const collapse = bootstrap.Collapse.getInstance(row);
+
+                    if (row.classList.contains('show')) {
+                        // Sudah terbuka → tutup
+                        collapse?.hide();
+                    } else {
+                        // Tutup semua dulu
+                        document.querySelectorAll('.accordion-collapse').forEach(el => {
+                            bootstrap.Collapse.getInstance(el)?.hide();
+                        });
+
+                        // Buka yang ini
+                        new bootstrap.Collapse(row);
+                    }
                 });
             });
 
@@ -210,7 +220,14 @@
                                         timer: 1500,
                                         showConfirmButton: false
                                     });
-                                    setTimeout(() => location.reload(), 1500);
+
+                                    const mainRow = button.closest('tr');
+                                    const collapseRow = mainRow.nextElementSibling;
+                                    mainRow.remove();
+                                    if (collapseRow && collapseRow.classList.contains(
+                                            'accordion-collapse')) {
+                                        collapseRow.remove();
+                                    }
                                 })
                                 .catch(() => {
                                     Swal.fire('Error!', 'Something went wrong.',
@@ -266,7 +283,14 @@
                                         timer: 2000,
                                         showConfirmButton: false
                                     });
-                                    setTimeout(() => location.reload(), 1500);
+
+                                    const mainRow = button.closest('tr');
+                                    const collapseRow = mainRow.nextElementSibling;
+                                    mainRow.remove();
+                                    if (collapseRow && collapseRow.classList.contains(
+                                            'accordion-collapse')) {
+                                        collapseRow.remove();
+                                    }
                                 })
                                 .catch(() => {
                                     Swal.fire('Error!', 'Something went wrong.',

@@ -59,7 +59,7 @@
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $user->id }}</td>
                                 <td>{{ $user->name }}</td>
-                                <td>{{ $user->email }}</td>``
+                                <td>{{ $user->email }}</td>
                                 <td>{{ $user->role }}</td>
                                 <td class="text-center nowrap" style="min-width: 120px;">
                                     <a href="{{ route('users.master.edit', $user->id) }}"
