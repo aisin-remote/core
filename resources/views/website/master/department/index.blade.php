@@ -38,11 +38,6 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Department List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
                     <button type="button" class="btn btn-primary me-3" data-bs-toggle="modal"
                         data-bs-target="#addDepartmentModal">
                         <i class="fas fa-plus"></i> Add
@@ -55,7 +50,7 @@
             </div>
 
             <div class="card-body">
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-department">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
@@ -73,26 +68,25 @@
                                 <td>{{ $department->name }}</td>
                                 <td>{{ $department->division->name ?? '-' }}</td>
                                 <td>{{ $department->company }}</td>
-                                <td>{{ $department->manager->name ?? '-'}}</td>
-                                <td class="text-center">
-                                    <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#editDepartmentModal{{ $department->id }}">
-                                        Edit
-                                    </button>
-                                    <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $department->id }}">Delete</button>
+                                <td>{{ $department->manager->name ?? '-' }}</td>
+                                <td>
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
+                                            data-bs-target="#editDepartmentModal{{ $department->id }}">
+                                            Edit
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                            data-id="{{ $department->id }}">Delete</button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted">No employees found</td>
+                                <td colspan="9" class="text-center text-muted">No data found</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
-                <div class="d-flex justify-content-end mt-4">
-                    {{ $departments->links('vendor.pagination.bootstrap-5') }}
-                </div>
             </div>
         </div>
     </div>
@@ -151,11 +145,10 @@
                         </div>
                         <div class="mb-3">
                             <label for="company" class="form-label">Company</label>
-                            <select name="company" id="company" class="form-select" required>
-                                <option value="">Pilih Company</option>
-                                <option value="AII">AII</option>
-                                <option value="AIIA">AIIA</option>
-                            </select>
+                            <input type="text" class="form-control" id="company" name="company"
+                                value="{{ strtoupper($company) }}" required disabled>
+                            <input type="hidden" class="form-control" id="company" name="company"
+                                value="{{ strtoupper($company) }}">
                         </div>
 
                         <div class="mb-3">
@@ -163,7 +156,8 @@
                             <select name="manager_id" id="manager_id" class="form-select" required>
                                 <option value="">Pilih Manager</option>
                                 @foreach ($managers as $manager)
-                                    <option value="{{ $manager->id }}">{{ $manager->name }}</option>
+                                    <option value="{{ $manager->id }}">{{ $manager->name }} -
+                                        {{ $manager->company_name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -217,14 +211,11 @@
 
                             {{-- Company --}}
                             <div class="mb-3">
-                                <label for="company{{ $department->id }}" class="form-label">Company</label>
-                                <select name="company" id="company{{ $department->id }}" class="form-select" required>
-                                    <option value="">Pilih Company</option>
-                                    <option value="AII" {{ $department->company == 'AII' ? 'selected' : '' }}>AII
-                                    </option>
-                                    <option value="AIIA" {{ $department->company == 'AIIA' ? 'selected' : '' }}>AIIA
-                                    </option>
-                                </select>
+                                <label for="company" class="form-label">Company</label>
+                                <input type="text" class="form-control" id="company" name="company"
+                                    value="{{ strtoupper($company) }}" required disabled>
+                                <input type="hidden" class="form-control" id="company" name="company"
+                                    value="{{ strtoupper($company) }}">
                             </div>
 
                             {{-- Manager --}}
@@ -235,8 +226,8 @@
                                     <option value="">Pilih Manager</option>
                                     @foreach ($managers as $manager)
                                         <option value="{{ $manager->id }}"
-                                            {{ $manager->id == $department->manager_id? 'selected' : '' }}>
-                                            {{ $manager->name }}
+                                            {{ $manager->id == $department->manager_id ? 'selected' : '' }}>
+                                            {{ $manager->name }} - {{ $manager->company_name }}
                                         </option>
                                     @endforeach
 
@@ -261,68 +252,6 @@
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             console.log("✅ Script Loaded!");
-
-            var searchInput = document.getElementById("searchInput");
-            var filterItems = document.querySelectorAll(".filter-department");
-            var table = document.getElementById("kt_table_users");
-
-            if (!searchInput || !table) {
-                console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
-                return;
-            }
-
-            var tbody = table.getElementsByTagName("tbody")[0];
-            var rows = tbody.getElementsByTagName("tr");
-
-            function filterTable(selectedDepartment = "") {
-                var searchValue = searchInput.value.toLowerCase();
-
-                for (var i = 0; i < rows.length; i++) {
-                    var cells = rows[i].getElementsByTagName("td");
-                    var match = false;
-
-                    if (cells.length >= 7) {
-                        var npk = cells[1].textContent.toLowerCase();
-                        var name = cells[2].textContent.toLowerCase();
-                        var company = cells[3].textContent.toLowerCase();
-                        var position = cells[4].textContent.toLowerCase();
-                        var functionName = cells[5].textContent.toLowerCase();
-                        var grade = cells[6].textContent.toLowerCase();
-                        var age = cells[7].textContent.toLowerCase();
-
-                        var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
-                            company.includes(searchValue) || position.includes(searchValue) ||
-                            functionName.includes(searchValue) || grade.includes(searchValue) ||
-                            age.includes(searchValue);
-
-                        var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
-
-                        if (searchMatch && departmentMatch) {
-                            match = true;
-                        }
-                    }
-
-                    rows[i].style.display = match ? "" : "none";
-                }
-            }
-
-            // Event Pencarian
-            searchInput.addEventListener("keyup", function() {
-                filterTable();
-            });
-
-            // Event Filter Dropdown
-            filterItems.forEach(item => {
-                item.addEventListener("click", function(event) {
-                    event.preventDefault();
-                    var selectedDepartment = this.getAttribute("data-department").toLowerCase();
-                    console.log("🔍 Filter dipilih: ", selectedDepartment);
-                    filterTable(selectedDepartment);
-                });
-            });
-
-            console.log("✅ Event Listeners Added Successfully");
-
             // SweetAlert untuk Delete Button
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', function() {
@@ -360,6 +289,34 @@
                     });
                 });
             });
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Pastikan jQuery tersedia
+            if (typeof $ === 'undefined') {
+                console.error("jQuery not loaded. DataTable won't initialize.");
+                return;
+            }
+
+            // Inisialisasi DataTable
+            $('#table-department').DataTable({
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    zeroRecords: "No matching records found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                },
+                ordering: false
+            });
+
+            console.log("✅ DataTable Initialized Successfully");
         });
     </script>
 @endpush

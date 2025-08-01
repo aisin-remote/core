@@ -357,7 +357,7 @@ class MasterController extends Controller
                 $q->whereHas('manager', function ($sub) use ($company) {
                     $sub->where('company_name', $company);
                 });
-            })->paginate(10);
+            })->get();
 
         $managers = Employee::when($company, function ($q) use ($company) {
             $q->where('company_name', $company);
@@ -414,7 +414,7 @@ class MasterController extends Controller
                 $q->whereHas('supervisor', function ($sub) use ($company) {
                     $sub->where('company_name', $company);
                 });
-            })->paginate(10);
+            })->get();
 
         return view('website.master.section.index', compact('sections', 'departments', 'supervisors', 'company'));
     }
@@ -461,7 +461,7 @@ class MasterController extends Controller
                 });
             })
             ->orderBy('name')
-            ->paginate(10);
+            ->get();
 
         return view('website.master.users.index', compact('users', 'company'));
     }

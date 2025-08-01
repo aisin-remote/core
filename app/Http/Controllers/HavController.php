@@ -33,7 +33,7 @@ use App\Models\PerformanceAppraisalHistory;
 use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 use Illuminate\Database\Events\TransactionBeginning;
 use Illuminate\Database\Eloquent\Builder;
-
+use Illuminate\Support\Facades\Log;
 
 class HavController extends Controller
 {
@@ -304,6 +304,21 @@ class HavController extends Controller
             'JP',
             'Operator',
         ];
+
+        foreach ($employees as $employee) {
+            $code = (int) ($employee->quadran->code ?? 0);
+            if ($code >= 10 && $code <= 16) {
+                $employee->bg_color = 'bg-light-secondary';
+            } elseif ($code >= 5 && $code <= 9) {
+                $employee->bg_color = 'bg-light-warning';
+            } elseif ($code >= 2 && $code <= 4) {
+                $employee->bg_color = 'bg-light-warning';
+            } elseif ($code === 1) {
+                $employee->bg_color = 'bg-light-primary';
+            } else {
+                $employee->bg_color = 'bg-light-secondary'; // Default
+            }
+        }
 
         $rawPosition = $user->employee->position ?? 'Operator';
         $currentPosition = Str::contains($rawPosition, 'Act ')
@@ -866,25 +881,35 @@ class HavController extends Controller
     }
     public function downloadLatestUpload($havId)
     {
-        $latestUpload = DB::table('hav_comment_histories')
-            ->where('hav_id', $havId)
-            ->orderBy('created_at', 'desc')
-            ->first();
+        try {
+            $latestUpload = DB::table('hav_comment_histories')
+                ->where('hav_id', $havId)
+                ->orderBy('created_at', 'desc')
+                ->first();
 
-        if (!$latestUpload || !$latestUpload->upload) {
-            return abort(404, 'File upload tidak ditemukan.');
+            if (!$latestUpload || !$latestUpload->upload) {
+                Log::warning("Download gagal: Tidak ada upload untuk HAV ID: $havId");
+                return abort(404, 'File upload tidak ditemukan.');
+            }
+
+            $filePath = $latestUpload->upload;
+
+            if (Storage::disk('public')->exists($filePath)) {
+                return Storage::disk('public')->download($filePath);
+            } elseif (Storage::disk('local')->exists($filePath)) {
+                Log::info("File ditemukan di disk lokal untuk HAV ID: $havId");
+                return Storage::disk('local')->download($filePath);
+            } else {
+                Log::warning("Download gagal: File tidak ditemukan di public maupun local untuk HAV ID: $havId, path: $filePath");
+                return abort(404, 'File tidak ditemukan di storage.');
+            }
+        } catch (\Exception $e) {
+            Log::error("Terjadi error saat download file HAV ID: $havId. Pesan: " . $e->getMessage(), [
+                'hav_id' => $havId,
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return abort(500, 'Terjadi kesalahan saat mengunduh file.');
         }
-
-        // path yang disimpan di DB, misalnya "hav_uploads/hav_1747960986.xlsx"
-        $filePath = $latestUpload->upload;
-
-        // cek apakah file ada di disk 'public' (storage/app)
-        if (!Storage::disk('public')->exists($filePath)) {
-            return abort(404, 'File tidak ditemukan di storage.');
-        }
-
-        // download file dari disk 'public'
-        return Storage::disk('public')->download($filePath);
     }
 
     public function approval(Request $request, $company = null)
