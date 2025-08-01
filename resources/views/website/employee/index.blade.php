@@ -38,27 +38,27 @@
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist" style="cursor:pointer">
+                <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
+                    style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4
-                            {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                            Show All
+                            <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
 
-                    {{-- Tab Dinamis --}}
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
-                        <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
-                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                {{ $position }}
-                            </a>
-                        </li>
+                            <li class="nav-item" role="presentation">
+                                <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
+                                    href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                    <i class="fas fa-user-tag me-2"></i>{{ $position }}
+                                </a>
+                            </li>
                     @endforeach
                 </ul>
+
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">

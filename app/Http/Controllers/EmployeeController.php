@@ -253,6 +253,14 @@ class EmployeeController extends Controller
             ? array_slice($allPositions, $positionIndex)
             : [];
 
+        // Hilangkan 'Operator' jika posisi user ada 'President'
+        if ($currentPosition === 'President') {
+            $visiblePositions = array_filter($visiblePositions, function  ($pos) {
+                return $pos !== 'Operator' && $pos !== 'President';
+            });
+            $visiblePositions = array_values($visiblePositions); // reset index
+        }
+
         return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions'));
     }
 
