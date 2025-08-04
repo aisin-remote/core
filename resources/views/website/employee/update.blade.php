@@ -247,7 +247,7 @@
                                                         @foreach ($subSections as $subSection)
                                                             <option value="{{ $subSection->id }}"
                                                                 {{ old('sub_section_id', $employee->subSection->id ?? '') == $subSection->id ? 'selected' : '' }}>
-                                                                {{ $subSection->name }}
+                                                                {{ $subSection->name }} - {{ $subSection->section->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -266,7 +266,7 @@
                                                         @foreach ($sections as $section)
                                                             <option value="{{ $section->id }}"
                                                                 {{ old('section_id', (int) $employee->leadingSection?->id ?? '') == (int) $section->id ? 'selected' : '' }}>
-                                                                {{ $section->name }}
+                                                                {{ $section->name }} - {{ $section->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -285,7 +285,7 @@
                                                         @foreach ($departments as $department)
                                                             <option value="{{ $department->id }}"
                                                                 {{ old('department_id', (int) $employee->leadingDepartment?->id ?? '') == (int) $department->id ? 'selected' : '' }}>
-                                                                {{ $department->name }}
+                                                                {{ $department->name }} - {{ $department->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -304,7 +304,7 @@
                                                         @foreach ($divisions as $division)
                                                             <option value="{{ $division->id }}"
                                                                 {{ old('division_id', $employee->leadingDivision?->id ?? '') == $division->id ? 'selected' : '' }}>
-                                                                {{ $division->name }}
+                                                                {{ $division->name }} - {{ $division->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -322,7 +322,7 @@
                                                         @foreach ($plants as $plant)
                                                             <option value="{{ $plant->id }}"
                                                                 {{ old('plant_id', $employee->plant->id ?? '') == $plant->id ? 'selected' : '' }}>
-                                                                {{ $plant->name }}
+                                                                {{ $plant->name }} - {{ $plant->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>

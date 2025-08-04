@@ -255,7 +255,7 @@ class EmployeeController extends Controller
 
         // Hilangkan 'Operator' jika posisi user ada 'President'
         if ($currentPosition === 'President') {
-            $visiblePositions = array_filter($visiblePositions, function  ($pos) {
+            $visiblePositions = array_filter($visiblePositions, function ($pos) {
                 return $pos !== 'Operator' && $pos !== 'President';
             });
             $visiblePositions = array_values($visiblePositions); // reset index
@@ -570,6 +570,7 @@ class EmployeeController extends Controller
         $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
             ->where('npk', $npk)
             ->firstOrFail();
+
         $departments = Department::all();
         $divisions = Division::where('company', $employee->company_name)->get();
         $plants = Plant::all();
@@ -652,12 +653,16 @@ class EmployeeController extends Controller
             ->where('npk', $npk)
             ->firstOrFail();
 
-        $departments = Department::all();
         $positions = Employee::select('position')->distinct()->pluck('position');
-        $divisions = Division::all();
         $plants = Plant::all();
-        $sections = Section::all();
-        $subSections = SubSection::all();
+        $departments = Department::where('company', $employee->company_name)->get();
+        $divisions = Division::where('company', $employee->company_name)->get();
+        $sections = Section::where('company', $employee->company_name)->get();
+        $subSections = SubSection::with('section')
+            ->whereHas('section', function ($query) use ($employee) {
+                $query->where('company', $employee->company_name);
+            })
+            ->get();
         $scores = PerformanceMaster::select('code')->distinct()->pluck('code');
 
         return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants', 'sections', 'subSections', 'scores'))->with('mode', 'edit');
@@ -881,7 +886,6 @@ class EmployeeController extends Controller
         $durationText = $this->formatDuration($durationMonths);
         try {
             DB::beginTransaction();
-            // dd($durationText);
 
             MutationHistory::create([
                 'employee_id' => $employeeId,

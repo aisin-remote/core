@@ -230,9 +230,10 @@ class IcpController extends Controller
     public function create()
     {
         $title = 'Add icp';
-        $departments = Department::all();
-        $employees = Employee::all();
 
+        $employee = Employee::findOrFail($employeeId);
+        $departments = Department::where('company', $employee->company_name)->get();
+        $employees = Employee::where('company_name', $employee->company_name)->get();
         $grades = GradeConversion::all();
 
         $technicalCompetencies = MatrixCompetency::all();

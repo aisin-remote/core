@@ -366,10 +366,12 @@ class HavController extends Controller
                 });
             })
             ->when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))
-            ->with(['hav' => function ($q) {
-                $q->orderByDesc('created_at') // urutkan biar first() dapat yang terbaru
-                    ->with(['details', 'commentHistory']);
-            }])
+            ->with([
+                'hav' => function ($q) {
+                    $q->orderByDesc('created_at') // urutkan biar first() dapat yang terbaru
+                        ->with(['details', 'commentHistory']);
+                }
+            ])
             ->get();
 
         $employees = $subordinates->map(function ($emp) {
@@ -626,199 +628,213 @@ class HavController extends Controller
      */
     public function export(Request $request)
     {
-        $position = $request->input('position');
-        $templatePath = public_path('assets/file/HAV_Summary.xls');
-        $spreadsheet = IOFactory::load($templatePath);
-        $sheet = $spreadsheet->getActiveSheet();
+        try {
+            $position = $request->input('position');
+            $templatePath = public_path('assets/file/HAV_Summary.xls');
+            $spreadsheet = IOFactory::load($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
 
-        $user = auth()->user();
-        $role = strtolower($user->employee->position); // pastikan lowercase atau sesuai penulisan
-        $hrd = strtolower($user->role);
+            $user = auth()->user();
+            $role = strtolower($user->employee->position); // pastikan lowercase atau sesuai penulisan
+            $hrd = strtolower($user->role);
 
-        if ($hrd === 'hrd') {
-            // HRD bisa akses semua data
-            $subordinates = Employee::pluck('id');
-        } elseif (in_array($role, ['president', 'vpd'])) {
-            // Role VPD atau President (berdasarkan jabatan di employee)
-            $subordinates = Employee::pluck('id');
-        } else {
-            // Role biasa hanya lihat bawahannya
-            $subordinates = $this->getSubordinatesFromStructure($user->employee)->pluck('id');
-        }
-        $employees = Employee::with([
-            'departments',
-            'assessments.details',
-            'havQuadrants' => fn($q) => $q->orderByDesc('created_at'),
-            'performanceAppraisalHistories' => fn($q) => $q->orderBy('date')->with('masterPerformance')
-        ])
-            ->whereHas('havQuadrants')
-            ->when($position, function ($q) use ($position) {
-                $q->where(function ($subQuery) use ($position) {
-                    $subQuery->where('position', $position)
-                        ->orWhere('position', 'like', "Act %{$position}");
-                });
-            })
-            ->whereIn('id', $subordinates)->get();
-
-        $startRow = 13;
-        $sheet->setCellValue("C6", auth()->user()->employee->name);
-        $sheet->setCellValue("C7", date('d-m-Y H:i:s'));
-
-
-        foreach ($employees->sortBy('name')->values() as $i => $emp) {
-            $row = $startRow + $i;
-            $assessment = $emp->hav->sortByDesc('created_at')->first();
-            $details = $assessment ? $assessment->details->keyBy('alc_id') : collect();
-
-            // Total Score
-            $weights = [
-                1 => 0.15,
-                2 => 0.15,
-                3 => 0.10,
-                4 => 0.10,
-                5 => 0.10,
-                6 => 0.15,
-                7 => 0.10,
-                8 => 0.15,
-            ];
-
-            $totalScore = 0;
-            foreach ($weights as $alcId => $weight) {
-                $score = floatval($details[$alcId]->score ?? 0);
-                $totalScore += $score * $weight;
+            if ($hrd === 'hrd') {
+                // HRD bisa akses semua data
+                $subordinates = Employee::pluck('id');
+            } elseif (in_array($role, ['president', 'vpd'])) {
+                // Role VPD atau President (berdasarkan jabatan di employee)
+                $subordinates = Employee::pluck('id');
+            } else {
+                // Role biasa hanya lihat bawahannya
+                $subordinates = $this->getSubordinatesFromStructure($user->employee)->pluck('id');
             }
-            $totalScorePercent = $totalScore ? $totalScore / 5 : '0';
+            $employees = Employee::with([
+                'departments',
+                'assessments.details',
+                'havQuadrants' => fn($q) => $q->orderByDesc('created_at'),
+                'performanceAppraisalHistories' => fn($q) => $q->orderBy('date')->with('masterPerformance')
+            ])
+                ->whereHas('havQuadrants')
+                ->when($position, function ($q) use ($position) {
+                    $q->where(function ($subQuery) use ($position) {
+                        $subQuery->where('position', $position)
+                            ->orWhere('position', 'like', "Act %{$position}");
+                    });
+                })
+                ->whereIn('id', $subordinates)->get();
 
-            // HAV Quadrant
-            $hav = $emp->havQuadrants->first();
-            $quadrant = $hav->quadrant ?? null;
+            $startRow = 13;
+            $sheet->setCellValue("C6", auth()->user()->employee->name);
+            $sheet->setCellValue("C7", date('d-m-Y H:i:s'));
 
-            // Performance Appraisal 3 tahun terakhir
-            $appraisals = $emp->performanceAppraisalHistories
-                ->sortByDesc('date')
-                ->take(3)
-                ->sortBy('date')
-                ->values();
 
-            // Mapping kolom (semua geser 1 ke kanan)
-            $sheet->setCellValue("A{$row}", $i + 1);
-            $sheet->setCellValue("B{$row}", $emp->npk);
-            $sheet->setCellValue("C{$row}", $emp->name);
-            $sheet->setCellValue("D{$row}", $emp->function);
-            $sheet->setCellValue("E{$row}", $emp->division->name); // Divisi
-            $sheet->setCellValue("F{$row}", $emp->departments->pluck('name')->implode(', ')); // Departemen
-            $sheet->setCellValue("G{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia
-            $sheet->setCellValue("H{$row}", $emp->grade); // Sub Gol
-            $sheet->setCellValue("I{$row}", $emp->working_period); // Masa kerja
+            foreach ($employees->sortBy('name')->values() as $i => $emp) {
+                $row = $startRow + $i;
+                $assessment = $emp->hav->sortByDesc('created_at')->first();
+                $details = $assessment ? $assessment->details->keyBy('alc_id') : collect();
 
-            // ALCs
-            $col = 'J';
-            for ($j = 1; $j <= 8; $j++) {
-                $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '-');
-                $col++;
+                // Total Score
+                $weights = [
+                    1 => 0.15,
+                    2 => 0.15,
+                    3 => 0.10,
+                    4 => 0.10,
+                    5 => 0.10,
+                    6 => 0.15,
+                    7 => 0.10,
+                    8 => 0.15,
+                ];
+
+                $totalScore = 0;
+                foreach ($weights as $alcId => $weight) {
+                    $score = floatval($details[$alcId]->score ?? 0);
+                    $totalScore += $score * $weight;
+                }
+                $totalScorePercent = $totalScore ? $totalScore / 5 : '0';
+
+                // HAV Quadrant
+                $hav = $emp->havQuadrants->first();
+                $quadrant = $hav->quadrant ?? null;
+
+                // Performance Appraisal 3 tahun terakhir
+                $appraisals = $emp->performanceAppraisalHistories
+                    ->sortByDesc('date')
+                    ->take(3)
+                    ->sortBy('date')
+                    ->values();
+
+                // Mapping kolom (semua geser 1 ke kanan)
+                $sheet->setCellValue("A{$row}", $i + 1);
+                $sheet->setCellValue("B{$row}", $emp->npk);
+                $sheet->setCellValue("C{$row}", $emp->name);
+                $sheet->setCellValue("D{$row}", $emp->function);
+                if (!$emp->division) {
+                    Log::warning("Division NULL untuk employee: {$emp->name} (ID: {$emp->id}), division_id: {$emp->division_id}");
+                }
+
+                $sheet->setCellValue("E{$row}", $emp->division?->name); // Divisi
+                $sheet->setCellValue("F{$row}", $emp->departments->pluck('name')->implode(', ')); // Departemen
+                $sheet->setCellValue("G{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia
+                $sheet->setCellValue("H{$row}", $emp->grade); // Sub Gol
+                $sheet->setCellValue("I{$row}", $emp->working_period); // Masa kerja
+
+                // ALCs
+                $col = 'J';
+                for ($j = 1; $j <= 8; $j++) {
+                    $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '-');
+                    $col++;
+                }
+
+                $sheet->setCellValue("R{$row}", $totalScore);
+                $sheet->setCellValue("S{$row}", $totalScorePercent);
+
+                $formulaT = "=IF(S{$row}>=0.71,\"C3\",IF(S{$row}>=0.61,\"C2\",IF(S{$row}>=0.5,\"C1\",IF(S{$row}<0.5,\"C0\",0))))";
+                $sheet->setCellValue("T{$row}", $formulaT);
+
+
+                $sheet->setCellValue("U11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
+                $sheet->setCellValue("V11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
+                $sheet->setCellValue("W11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
+                $sheet->setCellValue("X11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
+                $sheet->setCellValue("Y11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
+                $sheet->setCellValue("Z11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
+
+
+                $sheet->setCellValue("U{$row}", isset($appraisals[0]) ? $appraisals[0]->score : '-');
+                $sheet->setCellValue("V{$row}", isset($appraisals[1]) ? $appraisals[1]->score : '-');
+                $sheet->setCellValue("W{$row}", isset($appraisals[2]) ? $appraisals[2]->score : '-');
+
+                $sheet->setCellValue("X{$row}", isset($appraisals[0]) && $appraisals[0]->masterPerformance ? $appraisals[0]->masterPerformance->score : '-');
+                $sheet->setCellValue("Y{$row}", isset($appraisals[1]) && $appraisals[1]->masterPerformance ? $appraisals[1]->masterPerformance->score : '-');
+                $sheet->setCellValue("Z{$row}", isset($appraisals[2]) && $appraisals[2]->masterPerformance ? $appraisals[2]->masterPerformance->score : '-');
+
+                // Gunakan optional() hanya jika objek $appraisals[0] aman diakses
+                $score1 = isset($appraisals[0]) ? optional($appraisals[0]->masterPerformance)->score : null;
+                $score2 = isset($appraisals[1]) ? optional($appraisals[1]->masterPerformance)->score : null;
+                $score3 = isset($appraisals[2]) ? optional($appraisals[2]->masterPerformance)->score : null;
+
+                $scores = array_filter([$score1, $score2, $score3], fn($s) => $s !== null);
+
+                $avgScore = count($scores) > 0 ? round(array_sum($scores) / count($scores), 2) : '-';
+                $sheet->setCellValue("AA{$row}", $avgScore);
+
+                $formulaAB = "=IF(AA{$row}>=21,\"R3\",IF(AA{$row}>=16,\"R2\",IF(AA{$row}>=12,\"R1\",IF(AA{$row}>=1,\"R0\",0))))";
+                $sheet->setCellValue("AB{$row}", $formulaAB);
+
+                $formulaAC = '=IF(OR(U' . $row . '="C",U' . $row . '="C+",U' . $row . '="K",V' . $row . '="C",V' . $row . '="C+",V' . $row . '="K",W' . $row . '="C",W' . $row . '="C+",W' . $row . '="K"),"R0",AB' . $row . ')';
+                $sheet->setCellValue("AC{$row}", $formulaAC);
+
+
+                // HAV terakhir (W, X, Y)
+                $sheet->setCellValue("AD{$row}", QuadranMaster::where('code', $quadrant)->first()->name ?? '-'); // Quadrant
+
+                $getLastAssessment = $emp->assessments->sortByDesc('date')->first();
+
+                $withWeakness = $getLastAssessment?->details->filter(fn($item) => !empty($item['weakness']))
+                    ->values() // reset index agar rapi
+                    ->take(8);
+                $withStrength = $getLastAssessment?->details->filter(fn($item) => !empty($item['strength']))
+                    ->values() // reset index agar rapi
+                    ->take(8);
+
+                $sheet->setCellValue("AE{$row}", $withStrength[0]->alc->name ?? '-');
+                $sheet->setCellValue("AF{$row}", $withStrength[1]->alc->name ?? '-');
+                $sheet->setCellValue("AG{$row}", $withStrength[2]->alc->name ?? '-');
+                $sheet->setCellValue("AH{$row}", $withStrength[3]->alc->name ?? '-');
+                $sheet->setCellValue("AI{$row}", $withStrength[4]->alc->name ?? '-');
+                $sheet->setCellValue("AJ{$row}", $withStrength[5]->alc->name ?? '-');
+                $sheet->setCellValue("AK{$row}", $withStrength[6]->alc->name ?? '-');
+                $sheet->setCellValue("AL{$row}", $withStrength[7]->alc->name ?? '-');
+
+                $sheet->setCellValue("AM{$row}", $withWeakness[0]->alc->name ?? '-');
+                $sheet->setCellValue("AN{$row}", $withWeakness[1]->alc->name ?? '-');
+                $sheet->setCellValue("AO{$row}", $withWeakness[2]->alc->name ?? '-');
+                $sheet->setCellValue("AP{$row}", $withWeakness[3]->alc->name ?? '-');
+                $sheet->setCellValue("AQ{$row}", $withWeakness[4]->alc->name ?? '-');
+                $sheet->setCellValue("AR{$row}", $withWeakness[5]->alc->name ?? '-');
+                $sheet->setCellValue("AS{$row}", $withWeakness[6]->alc->name ?? '-');
+                $sheet->setCellValue("AT{$row}", $withWeakness[7]->alc->name ?? '-');
+
+                $getLast3AstraTraining = AstraTraining::where('employee_id', $emp->id)
+                    ->orderBy('created_at', 'desc')
+                    ->take(4)
+                    ->get();
+
+                $sheet->setCellValue("AU{$row}", $getLast3AstraTraining[0]->program ?? '-');
+                $sheet->setCellValue("AV{$row}", $getLast3AstraTraining[1]->program ?? '-');
+                $sheet->setCellValue("AW{$row}", $getLast3AstraTraining[2]->program ?? '-');
+                $sheet->setCellValue("AX{$row}", $getLast3AstraTraining[3]->program ?? '-');
+
+                $getLastHav = Hav::where('employee_id', $emp->id)
+                    ->orderBy('created_at', 'desc')
+                    ->first();
+                $sheet->setCellValue("AY{$row}", $getLastHav->details[0]->evidence ?? '-');
+                $sheet->setCellValue("AZ{$row}", $getLastHav->details[1]->evidence ?? '-');
+                $sheet->setCellValue("BA{$row}", $getLastHav->details[2]->evidence ?? '-');
+                $sheet->setCellValue("BB{$row}", $getLastHav->details[3]->evidence ?? '-');
+                $sheet->setCellValue("BC{$row}", $getLastHav->details[4]->evidence ?? '-');
+                $sheet->setCellValue("BD{$row}", $getLastHav->details[5]->evidence ?? '-');
+                $sheet->setCellValue("BE{$row}", $getLastHav->details[6]->evidence ?? '-');
+                $sheet->setCellValue("BF{$row}", $getLastHav->details[7]->evidence ?? '-');
             }
 
-            $sheet->setCellValue("R{$row}", $totalScore);
-            $sheet->setCellValue("S{$row}", $totalScorePercent);
 
-            $formulaT = "=IF(S{$row}>=0.71,\"C3\",IF(S{$row}>=0.61,\"C2\",IF(S{$row}>=0.5,\"C1\",IF(S{$row}<0.5,\"C0\",0))))";
-            $sheet->setCellValue("T{$row}", $formulaT);
+            $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
+            $filename = 'HAV_Summary_Exported.xlsx';
+            $writer->save(public_path($filename));
 
+            return response()->download(public_path($filename))->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            // Log error detail
+            Log::error('HAV Export Error: ' . $e->getMessage(), [
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
 
-            $sheet->setCellValue("U11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
-            $sheet->setCellValue("V11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
-            $sheet->setCellValue("W11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
-            $sheet->setCellValue("X11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
-            $sheet->setCellValue("Y11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
-            $sheet->setCellValue("Z11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
-
-
-            $sheet->setCellValue("U{$row}", isset($appraisals[0]) ? $appraisals[0]->score : '-');
-            $sheet->setCellValue("V{$row}", isset($appraisals[1]) ? $appraisals[1]->score : '-');
-            $sheet->setCellValue("W{$row}", isset($appraisals[2]) ? $appraisals[2]->score : '-');
-
-            $sheet->setCellValue("X{$row}", isset($appraisals[0]) && $appraisals[0]->masterPerformance ? $appraisals[0]->masterPerformance->score : '-');
-            $sheet->setCellValue("Y{$row}", isset($appraisals[1]) && $appraisals[1]->masterPerformance ? $appraisals[1]->masterPerformance->score : '-');
-            $sheet->setCellValue("Z{$row}", isset($appraisals[2]) && $appraisals[2]->masterPerformance ? $appraisals[2]->masterPerformance->score : '-');
-
-            // Gunakan optional() hanya jika objek $appraisals[0] aman diakses
-            $score1 = isset($appraisals[0]) ? optional($appraisals[0]->masterPerformance)->score : null;
-            $score2 = isset($appraisals[1]) ? optional($appraisals[1]->masterPerformance)->score : null;
-            $score3 = isset($appraisals[2]) ? optional($appraisals[2]->masterPerformance)->score : null;
-
-            $scores = array_filter([$score1, $score2, $score3], fn($s) => $s !== null);
-
-            $avgScore = count($scores) > 0 ? round(array_sum($scores) / count($scores), 2) : '-';
-            $sheet->setCellValue("AA{$row}", $avgScore);
-
-            $formulaAB = "=IF(AA{$row}>=21,\"R3\",IF(AA{$row}>=16,\"R2\",IF(AA{$row}>=12,\"R1\",IF(AA{$row}>=1,\"R0\",0))))";
-            $sheet->setCellValue("AB{$row}", $formulaAB);
-
-            $formulaAC = '=IF(OR(U' . $row . '="C",U' . $row . '="C+",U' . $row . '="K",V' . $row . '="C",V' . $row . '="C+",V' . $row . '="K",W' . $row . '="C",W' . $row . '="C+",W' . $row . '="K"),"R0",AB' . $row . ')';
-            $sheet->setCellValue("AC{$row}", $formulaAC);
-
-
-            // HAV terakhir (W, X, Y)
-            $sheet->setCellValue("AD{$row}", QuadranMaster::where('code', $quadrant)->first()->name ?? '-'); // Quadrant
-
-            $getLastAssessment = $emp->assessments->sortByDesc('date')->first();
-
-            $withWeakness = $getLastAssessment?->details->filter(fn($item) => !empty($item['weakness']))
-                ->values() // reset index agar rapi
-                ->take(8);
-            $withStrength = $getLastAssessment?->details->filter(fn($item) => !empty($item['strength']))
-                ->values() // reset index agar rapi
-                ->take(8);
-
-            $sheet->setCellValue("AE{$row}", $withStrength[0]->alc->name ?? '-');
-            $sheet->setCellValue("AF{$row}", $withStrength[1]->alc->name ?? '-');
-            $sheet->setCellValue("AG{$row}", $withStrength[2]->alc->name ?? '-');
-            $sheet->setCellValue("AH{$row}", $withStrength[3]->alc->name ?? '-');
-            $sheet->setCellValue("AI{$row}", $withStrength[4]->alc->name ?? '-');
-            $sheet->setCellValue("AJ{$row}", $withStrength[5]->alc->name ?? '-');
-            $sheet->setCellValue("AK{$row}", $withStrength[6]->alc->name ?? '-');
-            $sheet->setCellValue("AL{$row}", $withStrength[7]->alc->name ?? '-');
-
-            $sheet->setCellValue("AM{$row}", $withWeakness[0]->alc->name ?? '-');
-            $sheet->setCellValue("AN{$row}", $withWeakness[1]->alc->name ?? '-');
-            $sheet->setCellValue("AO{$row}", $withWeakness[2]->alc->name ?? '-');
-            $sheet->setCellValue("AP{$row}", $withWeakness[3]->alc->name ?? '-');
-            $sheet->setCellValue("AQ{$row}", $withWeakness[4]->alc->name ?? '-');
-            $sheet->setCellValue("AR{$row}", $withWeakness[5]->alc->name ?? '-');
-            $sheet->setCellValue("AS{$row}", $withWeakness[6]->alc->name ?? '-');
-            $sheet->setCellValue("AT{$row}", $withWeakness[7]->alc->name ?? '-');
-
-            $getLast3AstraTraining = AstraTraining::where('employee_id', $emp->id)
-                ->orderBy('created_at', 'desc')
-                ->take(4)
-                ->get();
-
-            $sheet->setCellValue("AU{$row}", $getLast3AstraTraining[0]->program ?? '-');
-            $sheet->setCellValue("AV{$row}", $getLast3AstraTraining[1]->program ?? '-');
-            $sheet->setCellValue("AW{$row}", $getLast3AstraTraining[2]->program ?? '-');
-            $sheet->setCellValue("AX{$row}", $getLast3AstraTraining[3]->program ?? '-');
-
-            $getLastHav = Hav::where('employee_id', $emp->id)
-                ->orderBy('created_at', 'desc')
-                ->first();
-            $sheet->setCellValue("AY{$row}", $getLastHav->details[0]->evidence ?? '-');
-            $sheet->setCellValue("AZ{$row}", $getLastHav->details[1]->evidence ?? '-');
-            $sheet->setCellValue("BA{$row}", $getLastHav->details[2]->evidence ?? '-');
-            $sheet->setCellValue("BB{$row}", $getLastHav->details[3]->evidence ?? '-');
-            $sheet->setCellValue("BC{$row}", $getLastHav->details[4]->evidence ?? '-');
-            $sheet->setCellValue("BD{$row}", $getLastHav->details[5]->evidence ?? '-');
-            $sheet->setCellValue("BE{$row}", $getLastHav->details[6]->evidence ?? '-');
-            $sheet->setCellValue("BF{$row}", $getLastHav->details[7]->evidence ?? '-');
+            // Redirect atau response error user-friendly
+            return back()->with('error', 'Terjadi kesalahan saat mengekspor data. Silakan coba lagi.');
         }
-
-
-        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        $filename = 'HAV_Summary_Exported.xlsx';
-        $writer->save(public_path($filename));
-
-        return response()->download(public_path($filename))->deleteFileAfterSend(true);
-
-        // return Excel::download(new HavSummaryExport, 'HAV_Summary_Exported.xlsx');
     }
     /**
      * Display the specified resource.
@@ -871,7 +887,7 @@ class HavController extends Controller
             $filePath = $file->storeAs('/hav_uploads', $fileName);
 
             // Pass the file path to the import class
-            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport($filePath,  $havId), $file);
+            \Maatwebsite\Excel\Facades\Excel::import(new \App\Imports\HavImport($filePath, $havId), $file);
 
             return back()->with('success', 'Import HAV berhasil.');
         } catch (\Throwable $e) {
@@ -947,7 +963,7 @@ class HavController extends Controller
             } else {
 
                 $approvallevel = $employee->getFirstApproval();
-                $subordinate =  $employee->getSubordinatesByLevel($approvallevel)->pluck('id');
+                $subordinate   = $employee->getSubordinatesByLevel($approvallevel)->pluck('id');
                 // dd($approvallevel);
                 $employees = Hav::with('employee')
                     ->select('havs.*', 'havs.status as hav_status')
@@ -1025,9 +1041,11 @@ class HavController extends Controller
     {
         $employee = Employee::with([
             'hav' => function ($query) {
-                $query->with(['details' => function ($q) {
-                    $q->orderBy('created_at', 'desc'); // urutkan detail dari yang terbaru
-                }]);
+                $query->with([
+                    'details' => function ($q) {
+                        $q->orderBy('created_at', 'desc'); // urutkan detail dari yang terbaru
+                    }
+                ]);
             }
         ])->find($id);
 

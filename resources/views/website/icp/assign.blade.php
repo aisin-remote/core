@@ -121,7 +121,7 @@
 
                                     @if ($status === 3 || $noIcp)
                                         {{-- Tombol Add jika belum ada data atau sudah Approved lebih dari 1 tahun --}}
-                                        <a href="{{ route('icp.create', ['employee_id' => $item->id]) }}"
+                                        <a href="{{ route('icp.create',  $item->id) }}"
                                             class="btn btn-sm btn-primary">
                                             <i class="fas fa-plus"></i> Add
                                         </a>

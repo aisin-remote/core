@@ -113,7 +113,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
        Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
 
-        Route::get('/create', [IcpController::class, 'create'])->name('icp.create');
+        Route::get('/create/{employee_id}', [IcpController::class, 'create'])->name('icp.create');
         Route::post('/', [IcpController::class, 'store'])->name('icp.store');
           Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
 

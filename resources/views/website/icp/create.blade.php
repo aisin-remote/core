@@ -65,7 +65,7 @@
                                                 <option value="{{ $employee->id }}"
                                                     data-position="{{ $employee->position }}"
                                                     {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
-                                                    {{ $employee->name }}
+                                                    {{ $employee->name }} - {{ $employee->company_name }}
                                                 </option>
                                             @endforeach
                                         </select>
@@ -104,7 +104,7 @@
                                     @foreach ($departments as $department)
                                         <option value="{{ $department->name }}"
                                             {{ old('job_function', $employee->job_function ?? '') == $department->name ? 'selected' : '' }}>
-                                            {{ $department->name }}
+                                            {{ $department->name }} - {{ $department->company }}
                                         </option>
                                     @endforeach
                                 </select>
@@ -210,9 +210,7 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-2">
                 <label class="form-label">Current Tech</label>
-                <select name="details[${index}][current_technical]" class="form-select form-select-sm" required>
-                    ${technicalOptionsHtml}
-                </select>
+                <input type="text" name="details[${index}][current_technical]" class="form-control form-control-sm" required>
             </div>
             <div class="col-md-2">
                 <label class="form-label">Current Non-Tech</label>
