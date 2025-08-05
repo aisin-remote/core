@@ -118,17 +118,17 @@ class HavController extends Controller
 
         $titles = [
             13 => 'Maximal Contributor',
-            7  => 'Top Performer',
-            3  => 'Future Star',
-            1  => 'Star',
+            7 => 'Top Performer',
+            3 => 'Future Star',
+            1 => 'Star',
             14 => 'Contributor',
-            8  => 'Strong Performer',
-            4  => 'Potential Candidate',
-            2  => 'Future Star',
+            8 => 'Strong Performer',
+            4 => 'Potential Candidate',
+            2 => 'Future Star',
             15 => 'Minimal Contributor',
-            9  => 'Career Person',
-            6  => 'Candidate',
-            5  => 'Raw Diamond',
+            9 => 'Career Person',
+            6 => 'Candidate',
+            5 => 'Raw Diamond',
             16 => 'Dead Wood',
             12 => 'Problem Employee',
             11 => 'Unfit Employee',
@@ -388,7 +388,7 @@ class HavController extends Controller
                 }
             }
 
-            return (object)[
+            return (object) [
                 'employee' => $emp,
                 'hav' => $latestHav,
                 'allowAdd' => $allowAdd,
@@ -667,7 +667,6 @@ class HavController extends Controller
             $sheet->setCellValue("C6", auth()->user()->employee->name);
             $sheet->setCellValue("C7", date('d-m-Y H:i:s'));
 
-
             foreach ($employees->sortBy('name')->values() as $i => $emp) {
                 $row = $startRow + $i;
                 $assessment = $emp->hav->sortByDesc('created_at')->first();
@@ -703,50 +702,48 @@ class HavController extends Controller
                     ->sortBy('date')
                     ->values();
 
-                // Mapping kolom (semua geser 1 ke kanan)
+                // Mapping kolom (kolom D/Function dihapus, semua kolom setelahnya digeser ke kiri)
                 $sheet->setCellValue("A{$row}", $i + 1);
                 $sheet->setCellValue("B{$row}", $emp->npk);
                 $sheet->setCellValue("C{$row}", $emp->name);
-                $sheet->setCellValue("D{$row}", $emp->function);
+                // Kolom D (Function) dihapus
                 if (!$emp->division) {
                     Log::warning("Division NULL untuk employee: {$emp->name} (ID: {$emp->id}), division_id: {$emp->division_id}");
                 }
 
-                $sheet->setCellValue("E{$row}", $emp->division?->name); // Divisi
-                $sheet->setCellValue("F{$row}", $emp->departments->pluck('name')->implode(', ')); // Departemen
-                $sheet->setCellValue("G{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia
-                $sheet->setCellValue("H{$row}", $emp->grade); // Sub Gol
-                $sheet->setCellValue("I{$row}", $emp->working_period); // Masa kerja
+                $sheet->setCellValue("D{$row}", $emp->division?->name); // Divisi (sebelumnya E)
+                $sheet->setCellValue("E{$row}", $emp->departments->pluck('name')->implode(', ')); // Departemen (sebelumnya F)
+                $sheet->setCellValue("F{$row}", Carbon::parse($emp->birthday_date)->age ?? null); // Usia (sebelumnya G)
+                $sheet->setCellValue("G{$row}", $emp->grade); // Sub Gol (sebelumnya H)
+                $sheet->setCellValue("H{$row}", $emp->working_period); // Masa kerja (sebelumnya I)
 
-                // ALCs
-                $col = 'J';
+                // ALCs (kolom dimulai dari I sekarang, sebelumnya J)
+                $col = 'I';
                 for ($j = 1; $j <= 8; $j++) {
                     $sheet->setCellValue("{$col}{$row}", $details[$j]->score ?? '-');
                     $col++;
                 }
 
-                $sheet->setCellValue("R{$row}", $totalScore);
-                $sheet->setCellValue("S{$row}", $totalScorePercent);
+                $sheet->setCellValue("Q{$row}", $totalScore); // sebelumnya R
+                $sheet->setCellValue("R{$row}", $totalScorePercent); // sebelumnya S
 
-                $formulaT = "=IF(S{$row}>=0.71,\"C3\",IF(S{$row}>=0.61,\"C2\",IF(S{$row}>=0.5,\"C1\",IF(S{$row}<0.5,\"C0\",0))))";
-                $sheet->setCellValue("T{$row}", $formulaT);
+                $formulaS = "=IF(R{$row}>=0.71,\"C3\",IF(R{$row}>=0.61,\"C2\",IF(R{$row}>=0.5,\"C1\",IF(R{$row}<0.5,\"C0\",0))))"; // sebelumnya T
+                $sheet->setCellValue("S{$row}", $formulaS);
 
+                $sheet->setCellValue("T10", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-'); // sebelumnya U11
+                $sheet->setCellValue("U10", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-'); // sebelumnya V11
+                $sheet->setCellValue("V10", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-'); // sebelumnya W11
+                $sheet->setCellValue("W10", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-'); // sebelumnya X11
+                $sheet->setCellValue("X10", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-'); // sebelumnya Y11
+                $sheet->setCellValue("Y10", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-'); // sebelumnya Z11
 
-                $sheet->setCellValue("U11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
-                $sheet->setCellValue("V11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
-                $sheet->setCellValue("W11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
-                $sheet->setCellValue("X11", isset($appraisals[0]) ? substr($appraisals[0]->date, 0, 4) : '-');
-                $sheet->setCellValue("Y11", isset($appraisals[1]) ? substr($appraisals[1]->date, 0, 4) : '-');
-                $sheet->setCellValue("Z11", isset($appraisals[2]) ? substr($appraisals[2]->date, 0, 4) : '-');
+                $sheet->setCellValue("T{$row}", isset($appraisals[0]) ? $appraisals[0]->score : '-'); // sebelumnya U
+                $sheet->setCellValue("U{$row}", isset($appraisals[1]) ? $appraisals[1]->score : '-'); // sebelumnya V
+                $sheet->setCellValue("V{$row}", isset($appraisals[2]) ? $appraisals[2]->score : '-'); // sebelumnya W
 
-
-                $sheet->setCellValue("U{$row}", isset($appraisals[0]) ? $appraisals[0]->score : '-');
-                $sheet->setCellValue("V{$row}", isset($appraisals[1]) ? $appraisals[1]->score : '-');
-                $sheet->setCellValue("W{$row}", isset($appraisals[2]) ? $appraisals[2]->score : '-');
-
-                $sheet->setCellValue("X{$row}", isset($appraisals[0]) && $appraisals[0]->masterPerformance ? $appraisals[0]->masterPerformance->score : '-');
-                $sheet->setCellValue("Y{$row}", isset($appraisals[1]) && $appraisals[1]->masterPerformance ? $appraisals[1]->masterPerformance->score : '-');
-                $sheet->setCellValue("Z{$row}", isset($appraisals[2]) && $appraisals[2]->masterPerformance ? $appraisals[2]->masterPerformance->score : '-');
+                $sheet->setCellValue("W{$row}", isset($appraisals[0]) && $appraisals[0]->masterPerformance ? $appraisals[0]->masterPerformance->score : '-'); // sebelumnya X
+                $sheet->setCellValue("X{$row}", isset($appraisals[1]) && $appraisals[1]->masterPerformance ? $appraisals[1]->masterPerformance->score : '-'); // sebelumnya Y
+                $sheet->setCellValue("Y{$row}", isset($appraisals[2]) && $appraisals[2]->masterPerformance ? $appraisals[2]->masterPerformance->score : '-'); // sebelumnya Z
 
                 // Gunakan optional() hanya jika objek $appraisals[0] aman diakses
                 $score1 = isset($appraisals[0]) ? optional($appraisals[0]->masterPerformance)->score : null;
@@ -756,17 +753,16 @@ class HavController extends Controller
                 $scores = array_filter([$score1, $score2, $score3], fn($s) => $s !== null);
 
                 $avgScore = count($scores) > 0 ? round(array_sum($scores) / count($scores), 2) : '-';
-                $sheet->setCellValue("AA{$row}", $avgScore);
+                $sheet->setCellValue("Z{$row}", $avgScore); // sebelumnya AA
 
-                $formulaAB = "=IF(AA{$row}>=21,\"R3\",IF(AA{$row}>=16,\"R2\",IF(AA{$row}>=12,\"R1\",IF(AA{$row}>=1,\"R0\",0))))";
+                $formulaAA = "=IF(Z{$row}>=21,\"R3\",IF(Z{$row}>=16,\"R2\",IF(Z{$row}>=12,\"R1\",IF(Z{$row}>=1,\"R0\",0))))"; // sebelumnya AB
+                $sheet->setCellValue("AA{$row}", $formulaAA);
+
+                $formulaAB = '=IF(OR(T' . $row . '="C",T' . $row . '="C+",T' . $row . '="K",U' . $row . '="C",U' . $row . '="C+",U' . $row . '="K",V' . $row . '="C",V' . $row . '="C+",V' . $row . '="K"),"R0",AA' . $row . ')'; // sebelumnya AC
                 $sheet->setCellValue("AB{$row}", $formulaAB);
 
-                $formulaAC = '=IF(OR(U' . $row . '="C",U' . $row . '="C+",U' . $row . '="K",V' . $row . '="C",V' . $row . '="C+",V' . $row . '="K",W' . $row . '="C",W' . $row . '="C+",W' . $row . '="K"),"R0",AB' . $row . ')';
-                $sheet->setCellValue("AC{$row}", $formulaAC);
-
-
-                // HAV terakhir (W, X, Y)
-                $sheet->setCellValue("AD{$row}", QuadranMaster::where('code', $quadrant)->first()->name ?? '-'); // Quadrant
+                // HAV terakhir
+                $sheet->setCellValue("AC{$row}", QuadranMaster::where('code', $quadrant)->first()->name ?? '-'); // Quadrant (sebelumnya AD)
 
                 $getLastAssessment = $emp->assessments->sortByDesc('date')->first();
 
@@ -777,47 +773,46 @@ class HavController extends Controller
                     ->values() // reset index agar rapi
                     ->take(8);
 
-                $sheet->setCellValue("AE{$row}", $withStrength[0]->alc->name ?? '-');
-                $sheet->setCellValue("AF{$row}", $withStrength[1]->alc->name ?? '-');
-                $sheet->setCellValue("AG{$row}", $withStrength[2]->alc->name ?? '-');
-                $sheet->setCellValue("AH{$row}", $withStrength[3]->alc->name ?? '-');
-                $sheet->setCellValue("AI{$row}", $withStrength[4]->alc->name ?? '-');
-                $sheet->setCellValue("AJ{$row}", $withStrength[5]->alc->name ?? '-');
-                $sheet->setCellValue("AK{$row}", $withStrength[6]->alc->name ?? '-');
-                $sheet->setCellValue("AL{$row}", $withStrength[7]->alc->name ?? '-');
+                $sheet->setCellValue("AD{$row}", $withStrength[0]->alc->name ?? '-'); // sebelumnya AE
+                $sheet->setCellValue("AE{$row}", $withStrength[1]->alc->name ?? '-'); // sebelumnya AF
+                $sheet->setCellValue("AF{$row}", $withStrength[2]->alc->name ?? '-'); // sebelumnya AG
+                $sheet->setCellValue("AG{$row}", $withStrength[3]->alc->name ?? '-'); // sebelumnya AH
+                $sheet->setCellValue("AH{$row}", $withStrength[4]->alc->name ?? '-'); // sebelumnya AI
+                $sheet->setCellValue("AI{$row}", $withStrength[5]->alc->name ?? '-'); // sebelumnya AJ
+                $sheet->setCellValue("AJ{$row}", $withStrength[6]->alc->name ?? '-'); // sebelumnya AK
+                $sheet->setCellValue("AK{$row}", $withStrength[7]->alc->name ?? '-'); // sebelumnya AL
 
-                $sheet->setCellValue("AM{$row}", $withWeakness[0]->alc->name ?? '-');
-                $sheet->setCellValue("AN{$row}", $withWeakness[1]->alc->name ?? '-');
-                $sheet->setCellValue("AO{$row}", $withWeakness[2]->alc->name ?? '-');
-                $sheet->setCellValue("AP{$row}", $withWeakness[3]->alc->name ?? '-');
-                $sheet->setCellValue("AQ{$row}", $withWeakness[4]->alc->name ?? '-');
-                $sheet->setCellValue("AR{$row}", $withWeakness[5]->alc->name ?? '-');
-                $sheet->setCellValue("AS{$row}", $withWeakness[6]->alc->name ?? '-');
-                $sheet->setCellValue("AT{$row}", $withWeakness[7]->alc->name ?? '-');
+                $sheet->setCellValue("AL{$row}", $withWeakness[0]->alc->name ?? '-'); // sebelumnya AM
+                $sheet->setCellValue("AM{$row}", $withWeakness[1]->alc->name ?? '-'); // sebelumnya AN
+                $sheet->setCellValue("AN{$row}", $withWeakness[2]->alc->name ?? '-'); // sebelumnya AO
+                $sheet->setCellValue("AO{$row}", $withWeakness[3]->alc->name ?? '-'); // sebelumnya AP
+                $sheet->setCellValue("AP{$row}", $withWeakness[4]->alc->name ?? '-'); // sebelumnya AQ
+                $sheet->setCellValue("AQ{$row}", $withWeakness[5]->alc->name ?? '-'); // sebelumnya AR
+                $sheet->setCellValue("AR{$row}", $withWeakness[6]->alc->name ?? '-'); // sebelumnya AS
+                $sheet->setCellValue("AS{$row}", $withWeakness[7]->alc->name ?? '-'); // sebelumnya AT
 
                 $getLast3AstraTraining = AstraTraining::where('employee_id', $emp->id)
                     ->orderBy('created_at', 'desc')
                     ->take(4)
                     ->get();
 
-                $sheet->setCellValue("AU{$row}", $getLast3AstraTraining[0]->program ?? '-');
-                $sheet->setCellValue("AV{$row}", $getLast3AstraTraining[1]->program ?? '-');
-                $sheet->setCellValue("AW{$row}", $getLast3AstraTraining[2]->program ?? '-');
-                $sheet->setCellValue("AX{$row}", $getLast3AstraTraining[3]->program ?? '-');
+                $sheet->setCellValue("AT{$row}", $getLast3AstraTraining[0]->program ?? '-'); // sebelumnya AU
+                $sheet->setCellValue("AU{$row}", $getLast3AstraTraining[1]->program ?? '-'); // sebelumnya AV
+                $sheet->setCellValue("AV{$row}", $getLast3AstraTraining[2]->program ?? '-'); // sebelumnya AW
+                $sheet->setCellValue("AW{$row}", $getLast3AstraTraining[3]->program ?? '-'); // sebelumnya AX
 
                 $getLastHav = Hav::where('employee_id', $emp->id)
                     ->orderBy('created_at', 'desc')
                     ->first();
-                $sheet->setCellValue("AY{$row}", $getLastHav->details[0]->evidence ?? '-');
-                $sheet->setCellValue("AZ{$row}", $getLastHav->details[1]->evidence ?? '-');
-                $sheet->setCellValue("BA{$row}", $getLastHav->details[2]->evidence ?? '-');
-                $sheet->setCellValue("BB{$row}", $getLastHav->details[3]->evidence ?? '-');
-                $sheet->setCellValue("BC{$row}", $getLastHav->details[4]->evidence ?? '-');
-                $sheet->setCellValue("BD{$row}", $getLastHav->details[5]->evidence ?? '-');
-                $sheet->setCellValue("BE{$row}", $getLastHav->details[6]->evidence ?? '-');
-                $sheet->setCellValue("BF{$row}", $getLastHav->details[7]->evidence ?? '-');
+                $sheet->setCellValue("AX{$row}", $getLastHav->details[0]->evidence ?? '-'); // sebelumnya AY
+                $sheet->setCellValue("AY{$row}", $getLastHav->details[1]->evidence ?? '-'); // sebelumnya AZ
+                $sheet->setCellValue("AZ{$row}", $getLastHav->details[2]->evidence ?? '-'); // sebelumnya BA
+                $sheet->setCellValue("BA{$row}", $getLastHav->details[3]->evidence ?? '-'); // sebelumnya BB
+                $sheet->setCellValue("BB{$row}", $getLastHav->details[4]->evidence ?? '-'); // sebelumnya BC
+                $sheet->setCellValue("BC{$row}", $getLastHav->details[5]->evidence ?? '-'); // sebelumnya BD
+                $sheet->setCellValue("BD{$row}", $getLastHav->details[6]->evidence ?? '-'); // sebelumnya BE
+                $sheet->setCellValue("BE{$row}", $getLastHav->details[7]->evidence ?? '-'); // sebelumnya BF
             }
-
 
             $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
             $filename = 'HAV_Summary_Exported.xlsx';
