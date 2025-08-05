@@ -47,6 +47,7 @@
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
                                     <th class="text-center">{{ $table }}</th>
+                                    <th class="text-center">Current PIC</th>
                                     <th class="text-center">Short Term</th>
                                     <th class="text-center">Mid Term</th>
                                     <th class="text-center">Long Term</th>
@@ -68,7 +69,7 @@
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $division->name }}</td>
-
+                                        <td class="text-center">{{ $division->gm->name }}</td>
                                         @foreach ($terms as $term)
                                             @php
                                                 $rtcForTerm = $rtcs->firstWhere(
