@@ -685,145 +685,145 @@ $employee = optional($data)->employee;
         });
 
         // Function to initialize assessment chart
-function initAssessmentChart(modalId, employeeId) {
-    const modal = document.getElementById(modalId);
-    if (!modal) return;
+        function initAssessmentChart(modalId, employeeId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) return;
 
-    // Wait for modal to be fully shown
-    $(modal).one('shown.bs.modal', function() {
-        const canvas = modal.querySelector(`canvas[data-employee-id="${employeeId}"]`);
-        if (!canvas) return;
+            // Wait for modal to be fully shown
+            $(modal).one('shown.bs.modal', function() {
+                const canvas = modal.querySelector(`canvas[data-employee-id="${employeeId}"]`);
+                if (!canvas) return;
 
-        // Destroy previous chart if exists
-        if (canvas.chart) {
-            canvas.chart.destroy();
-        }
+                // Destroy previous chart if exists
+                if (canvas.chart) {
+                    canvas.chart.destroy();
+                }
 
-        // Get data from PHP
-        const groupedAssessments = @json($groupedAssessments ?? []);
-        console.log('Grouped assessments:', groupedAssessments);
+                // Get data from PHP
+                const groupedAssessments = @json($groupedAssessments ?? []);
+                console.log('Grouped assessments:', groupedAssessments);
 
-        const employeeAssessments = groupedAssessments[employeeId];
+                const employeeAssessments = groupedAssessments[employeeId];
 
-        if (!employeeAssessments || !employeeAssessments.length) {
-            console.warn(`No assessment data for employee ${employeeId}`);
-            return;
-        }
+                if (!employeeAssessments || !employeeAssessments.length) {
+                    console.warn(`No assessment data for employee ${employeeId}`);
+                    return;
+                }
 
-        // Find first assessment with details
-        let assessmentWithDetails = null;
-        for (const assessment of employeeAssessments) {
-            if (assessment.assessment?.details) {
-                assessmentWithDetails = assessment.assessment;
-                break;
-            }
-        }
+                // Find first assessment with details
+                let assessmentWithDetails = null;
+                for (const assessment of employeeAssessments) {
+                    if (assessment.assessment?.details) {
+                        assessmentWithDetails = assessment.assessment;
+                        break;
+                    }
+                }
 
-        if (!assessmentWithDetails || !assessmentWithDetails.details) {
-            console.warn(`No assessment details for employee ${employeeId}`);
-            return;
-        }
+                if (!assessmentWithDetails || !assessmentWithDetails.details) {
+                    console.warn(`No assessment details for employee ${employeeId}`);
+                    return;
+                }
 
-        // Prepare chart data
-        const labels = [];
-        const scores = [];
-        const alcNames = @json($alcs ?? []);
+                // Prepare chart data
+                const labels = [];
+                const scores = [];
+                const alcNames = @json($alcs ?? []);
 
-        // Sort details by ALC ID to maintain consistent order
-        const sortedDetails = assessmentWithDetails.details.sort((a, b) => a.alc_id - b.alc_id);
+                // Sort details by ALC ID to maintain consistent order
+                const sortedDetails = assessmentWithDetails.details.sort((a, b) => a.alc_id - b.alc_id);
 
-        sortedDetails.forEach(detail => {
-            if (detail.alc_id) {
-                labels.push(alcNames[detail.alc_id] || `ALC ${detail.alc_id}`);
-                scores.push(parseInt(detail.score) || 0);
-            }
-        });
+                sortedDetails.forEach(detail => {
+                    if (detail.alc_id) {
+                        labels.push(alcNames[detail.alc_id] || `ALC ${detail.alc_id}`);
+                        scores.push(parseInt(detail.score) || 0);
+                    }
+                });
 
-        console.log('Chart data:', {labels, scores});
+                console.log('Chart data:', {labels, scores});
 
-        // Create chart
-        const ctx = canvas.getContext('2d');
-        canvas.chart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Assessment Scores',
-                    data: scores,
-                    backgroundColor: scores.map(score =>
-                        score < 3 ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)'),
-                    borderColor: scores.map(score =>
-                        score < 3 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)'),
-                    borderWidth: 1,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return `Score: ${context.raw}`;
+                // Create chart
+                const ctx = canvas.getContext('2d');
+                canvas.chart = new Chart(ctx, {
+                    type: 'bar'
+                    , data: {
+                        labels: labels
+                        , datasets: [{
+                            label: 'Assessment Scores'
+                            , data: scores
+                            , backgroundColor: scores.map(score =>
+                                score < 3 ? 'rgba(255, 99, 132, 0.8)' : 'rgba(75, 192, 192, 0.8)')
+                            , borderColor: scores.map(score =>
+                                score < 3 ? 'rgba(255, 99, 132, 1)' : 'rgba(75, 192, 192, 1)')
+                            , borderWidth: 1
+                            , borderRadius: 4
+                        }]
+                    }
+                    , options: {
+                        responsive: true
+                        , maintainAspectRatio: false
+                        , plugins: {
+                            legend: {
+                                display: false
                             }
+                            , tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Score: ${context.raw}`;
+                                    }
+                                }
+                            }
+                        }
+                        , scales: {
+                            y: {
+                                beginAtZero: true
+                                , suggestedMax: 5
+                                , ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        }
+                        , animation: {
+                            duration: 1000
+                            , easing: 'easeOutQuart'
                         }
                     }
-                },
-                scales: {
-                        y: {
-                            beginAtZero: true,
-                            suggestedMax: 5,
-                            ticks: {
-                                stepSize: 1
-                            }
-                        }
-                },
-                animation: {
-                    duration: 1000,
-                    easing: 'easeOutQuart'
-                }
+                });
+            });
+        }
+
+        // Handle detail button click
+        $(document).on("click", ".btn-idp-detail", function(e) {
+            e.preventDefault();
+            const modalId = $(this).data("modal-id");
+            const employeeId = $(this).data("employee-id");
+
+            // Tutup modal saat ini terlebih dahulu
+            $('#detailAssessmentModal').modal('hide');
+
+            // Buka modal baru setelah yang sebelumnya tertutup
+            setTimeout(() => {
+                const modal = new bootstrap.Modal(document.getElementById(modalId));
+                modal.show();
+                initAssessmentChart(modalId, employeeId);
+            }, 500);
+        });
+
+        $(document).on('shown.bs.modal', '.modal', function(e) {
+            const modalId = $(this).attr('id');
+            const employeeId = $(this).find('canvas').data('employee-id');
+
+            if (employeeId) {
+                initAssessmentChart(modalId, employeeId);
             }
         });
-    });
-}
 
-// Handle detail button click
-$(document).on("click", ".btn-idp-detail", function(e) {
-    e.preventDefault();
-    const modalId = $(this).data("modal-id");
-    const employeeId = $(this).data("employee-id");
-
-    // Tutup modal saat ini terlebih dahulu
-    $('#detailAssessmentModal').modal('hide');
-
-    // Buka modal baru setelah yang sebelumnya tertutup
-    setTimeout(() => {
-        const modal = new bootstrap.Modal(document.getElementById(modalId));
-        modal.show();
-        initAssessmentChart(modalId, employeeId);
-    }, 500);
-});
-
-$(document).on('shown.bs.modal', '.modal', function(e) {
-    const modalId = $(this).attr('id');
-    const employeeId = $(this).find('canvas').data('employee-id');
-
-    if (employeeId) {
-        initAssessmentChart(modalId, employeeId);
-    }
-});
-
-$(document).on('hidden.bs.modal', '.modal', function() {
-    const canvas = this.querySelector('canvas');
-    if (canvas && canvas.chart) {
-        canvas.chart.destroy();
-        canvas.chart = null;
-    }
-});
+        $(document).on('hidden.bs.modal', '.modal', function() {
+            const canvas = this.querySelector('canvas');
+            if (canvas && canvas.chart) {
+                canvas.chart.destroy();
+                canvas.chart = null;
+            }
+        });
 
         // Saat modal notes ditutup, tampilkan modal sebelumnya
         $(document).on('hidden.bs.modal', '.modal', function(event) {
