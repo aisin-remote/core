@@ -302,39 +302,39 @@ class EmployeeController extends Controller
             DB::beginTransaction();
             // Validasi
             $validatedData = $request->validate([
-                'npk' => 'required|string|max:255|unique:employees,npk',
-                'name' => 'required|string|max:255',
-                'birthday_date' => 'required|date',
-                'gender' => 'required|in:Male,Female',
-                'company_name' => 'required|string',
-                'phone_number' => 'nullable|string|max:14',
+                'npk'              => 'required|string|max:255|unique:employees,npk',
+                'name'             => 'required|string|max:255',
+                'birthday_date'    => 'nullable|date',
+                'gender'           => 'required|in:Male,Female',
+                'company_name'     => 'required|string',
+                'phone_number'     => 'nullable|string|max:14',
                 'aisin_entry_date' => 'required|date',
-                'company_group' => 'required|string',
-                'email' => 'required|email',
-                'position' => 'required|string',
-                'grade' => 'required|string',
-                'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'company_group'    => 'nullable|string',
+                'email'            => 'nullable|email',
+                'position'         => 'required|string',
+                'grade'            => 'nullable|string',
+                'photo'            => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
                 // Struktur organisasi
-                'plant_id' => 'nullable|exists:plants,id',
-                'division_id' => 'nullable|exists:divisions,id',
-                'department_id' => 'nullable|exists:departments,id',
-                'section_id' => 'nullable|exists:sections,id',
+                'plant_id'       => 'nullable|exists:plants,id',
+                'division_id'    => 'nullable|exists:divisions,id',
+                'department_id'  => 'nullable|exists:departments,id',
+                'section_id'     => 'nullable|exists:sections,id',
                 'sub_section_id' => 'nullable|exists:sub_sections,id',
 
                 // Pendidikan
-                'level' => 'array',
-                'level.*' => 'nullable|string|max:255',
-                'major.*' => 'nullable|string|max:255',
-                'institute.*' => 'nullable|string|max:255',
+                'level'        => 'array',
+                'level.*'      => 'nullable|string|max:255',
+                'major.*'      => 'nullable|string|max:255',
+                'institute.*'  => 'nullable|string|max:255',
                 'start_date.*' => 'nullable|string|max:255',
-                'end_date.*' => 'nullable|string|max:255',
+                'end_date.*'   => 'nullable|string|max:255',
 
                 // Pengalaman kerja
-                'company.*' => 'nullable|string|max:255',
-                'work_position.*' => 'nullable|string|max:255',
+                'company.*'         => 'nullable|string|max:255',
+                'work_position.*'   => 'nullable|string|max:255',
                 'work_start_date.*' => 'nullable|string|max:255',
-                'work_end_date.*' => 'nullable|string|max:255',
+                'work_end_date.*'   => 'nullable|string|max:255',
             ]);
 
             if ($request->hasFile('photo')) {
