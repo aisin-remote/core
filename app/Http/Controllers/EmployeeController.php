@@ -171,8 +171,7 @@ class EmployeeController extends Controller
                     });
                 })
 
-                ->paginate(10)
-                ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
+                ->get();
         } else {
             // Untuk user biasa (misalnya Supervisor), pencarian hanya berlaku untuk 'company_name' yang terkait
             $employee = Employee::with([
