@@ -524,4 +524,10 @@ class Employee extends Model
         $direksiPositions = ['President', 'VPD'];  // Tambah posisi direksi lain kalau perlu
         return in_array($this->position, $direksiPositions);
     }
+
+    public function isActGM(): bool
+    {
+        $actGmPositions = ['Act GM'];
+        return in_array($this->position, $actGmPositions);
+    }
 }
