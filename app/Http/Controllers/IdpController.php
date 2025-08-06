@@ -239,8 +239,6 @@ class IdpController extends Controller
             }
         }
 
-
-
         return view('website.idp.index', compact(
             'employees',
             'assessments',
@@ -371,6 +369,10 @@ class IdpController extends Controller
 
         $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
+        $groupedAssessments= $assessments->groupBy(function($item){
+            return optional(optional($item->hav)->hav)->employee->id;
+        });
+
         return view('website.idp.list', compact(
             'employees',
             'assessments',
@@ -380,7 +382,8 @@ class IdpController extends Controller
             'details',
             'mid',
             'idps',
-            'company'
+            'company',
+            'groupedAssessments'
         ));
     }
     public function show($employee_id)

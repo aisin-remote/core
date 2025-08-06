@@ -24,17 +24,6 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
-                <div class="d-flex align-items-center">
-                    <form method="GET" action="{{ route('employee.index') }}" class="d-flex align-items-center">
-                        <input type="text" name="search" id="searchInput" class="form-control me-2"
-                            placeholder="Search Employee..." style="width: 200px;" value="{{ request('search') }}">
-
-                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-
-                    </form>
-                </div>
             </div>
 
             <div class="card-body">
@@ -84,7 +73,7 @@
                                 };
                             @endphp
                             <tr data-position="{{ $employee->position }}">
-                                <td>{{ $employees->firstItem() + $index }}</td>
+                                <td>{{ $loop->iteration }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
@@ -116,9 +105,6 @@
                         @endforelse
                     </tbody>
                 </table>
-                <div class="d-flex justify-content-end mt-4">
-                    {{ $employees->links('pagination::bootstrap-5') }}
-                </div>
                 <div class="d-flex justify-content-between">
                     <small class="text-muted fw-bold">
                         Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
@@ -134,6 +120,34 @@
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Pastikan jQuery tersedia
+            if (typeof $ === 'undefined') {
+                console.error("jQuery not loaded. DataTable won't initialize.");
+                return;
+            }
+
+            // Inisialisasi DataTable
+            $('#kt_table_users').DataTable({
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    zeroRecords: "No matching records found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                },
+                ordering: false
+            });
+
+            console.log("✅ DataTable Initialized Successfully");
+        });
+    </script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const tabs = document.querySelectorAll(".filter-tab");
