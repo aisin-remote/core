@@ -231,14 +231,15 @@ class IcpController extends Controller
     {
         $title = 'Add icp';
 
-        $employee = Employee::findOrFail($employeeId);
+        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
+            ->findOrFail($employeeId);
         $departments = Department::where('company', $employee->company_name)->get();
         $employees = Employee::where('company_name', $employee->company_name)->get();
         $grades = GradeConversion::all();
 
         $technicalCompetencies = MatrixCompetency::all();
 
-        return view('website.icp.create', compact('title', 'grades', 'departments', 'employees', 'technicalCompetencies'));
+        return view('website.icp.create', compact('title', 'employee', 'grades', 'departments', 'employees', 'technicalCompetencies'));
     }
 
     public function store(Request $request)
@@ -252,7 +253,6 @@ class IcpController extends Controller
             'position' => 'required',
             'level' => 'required',
 
-
             // Validasi array untuk detail
             'details.*.current_technical' => 'required',
             'details.*.current_nontechnical' => 'required',
@@ -260,8 +260,25 @@ class IcpController extends Controller
             'details.*.required_nontechnical' => 'required',
             'details.*.development_technical' => 'required',
             'details.*.development_nontechnical' => 'required',
+        ], [
+            // Custom error messages
+            'employee_id.required' => 'Employee ID is required',
+            'aspiration.required' => 'Aspiration is required',
+            'career_target.required' => 'Career target is required',
+            'date.required' => 'Date is required',
+            'job_function.required' => 'Job function is required',
+            'position.required' => 'Position is required',
+            'level.required' => 'Level is required',
+
+            'details.*.current_technical.required' => 'Current technical skill is required',
+            'details.*.current_nontechnical.required' => 'Current non-technical skill is required',
+            'details.*.required_technical.required' => 'Required technical skill is required',
+            'details.*.required_nontechnical.required' => 'Required non-technical skill is required',
+            'details.*.development_technical.required' => 'Technical development plan is required',
+            'details.*.development_nontechnical.required' => 'Non-technical development plan is required',
         ]);
 
+        DB::beginTransaction();
         try {
             // Simpan data utama ICP
             $icp = Icp::create([
@@ -288,11 +305,14 @@ class IcpController extends Controller
                 ]);
             }
 
+            DB::commit();
             return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil ditambahkan.');
         } catch (\Exception $e) {
+            DB::rollBack();
             return redirect()->back()->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
         }
     }
+    
     public function show($employee_id)
     {
         $employee = Employee::with('icp')->find($employee_id);

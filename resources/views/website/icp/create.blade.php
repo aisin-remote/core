@@ -7,7 +7,7 @@
 @section('main')
     @if (session()->has('success'))
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
+            document.addEventListener("DOMContentLoaded", function () {
                 Swal.fire({
                     title: "Sukses!",
                     text: "{{ session('success') }}",
@@ -19,7 +19,7 @@
     @endif
     @if (session()->has('error'))
         <script>
-            document.addEventListener("DOMContentLoaded", function() {
+            document.addEventListener("DOMContentLoaded", function () {
                 Swal.fire({
                     title: "Error!",
                     text: "{{ session('error') }}",
@@ -42,46 +42,19 @@
                             <h3 class="text-center fw-bold mb-4">Individual Career Plan</h3>
 
                             <div class="mb-3">
-                                @php
-                                    $selectedEmployeeId = request()->query('employee_id');
-                                    $selectedEmployee = $employees->firstWhere('id', $selectedEmployeeId);
-                                @endphp
-
-                                @if ($selectedEmployeeId)
                                     <!-- Tampilkan sebagai teks dan kunci ID-nya -->
                                     <div class="mb-3">
                                         <label class="form-label">Employee</label>
-                                        <input type="text" class="form-control" value="{{ $selectedEmployee?->name }}"
-                                            readonly>
-                                        <input type="hidden" name="employee_id" value="{{ $selectedEmployeeId }}">
+                                    <input type="text" class="form-control" value="{{ $employee->name }}" disabled>
+                                    <input type="hidden" name="employee_id" value="{{ $employee->id }}">
                                     </div>
-                                @else
-                                    <!-- Dropdown jika tidak dari tombol Add -->
-                                    <div class="mb-3">
-                                        <label for="employee_id" class="form-label">Employee</label>
-                                        <select id="employee_id" name="employee_id" class="form-select" required>
-                                            <option value="">-- Select Employee --</option>
-                                            @foreach ($employees as $employee)
-                                                <option value="{{ $employee->id }}"
-                                                    data-position="{{ $employee->position }}"
-                                                    {{ old('employee_id') == $employee->id ? 'selected' : '' }}>
-                                                    {{ $employee->name }} - {{ $employee->company_name }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                @endif
-
-
                             </div>
 
 
                             <div class="mb-3">
                                 <label class="form-label">Aspiration</label>
-                                <textarea name="aspiration"
-                                    placeholder="Target karir yang ditentukan oleh Atasan berdasarkan kemampuan technical & non-technical competency kryawn ybs.)  & kebutuhan organisasi
-"
-                                    class="form-control" rows="4" required>{{ old('aspiration') }}</textarea>
+                                <textarea name="aspiration" placeholder="Target karir yang ditentukan oleh Atasan berdasarkan kemampuan technical & non-technical competency kryawn ybs.)  & kebutuhan organisasi
+        " class="form-control" rows="4" required>{{ old('aspiration') }}</textarea>
                             </div>
 
 
@@ -93,75 +66,27 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Date</label>
-                                <input type="date" name="date" class="form-control" value="{{ old('date') }}"
-                                    required>
+                                <input type="date" name="date" class="form-control" value="{{ old('date') }}" required>
                             </div>
                             <div class="mb-3">
                                 <label class="form-label fw-bold fs-6">Job Function</label>
-                                <select name="job_function" id="job-function-select"
-                                    class="form-select form-select-sm fw-semibold" data-control="select2" required>
-                                    <option value="">Select Job Function</option>
-                                    @foreach ($departments as $department)
-                                        <option value="{{ $department->name }}"
-                                            {{ old('job_function', $employee->job_function ?? '') == $department->name ? 'selected' : '' }}>
-                                            {{ $department->name }} - {{ $department->company }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('job_function')
-                                    <div class="text-danger">{{ $message }}</div>
-                                @enderror
+                                <input type="text" class="form-control" value="{{ $employee->bagian }}" disabled>
+                                <input type="hidden" name="job_function" value="{{ $employee->bagian }}">
                             </div>
 
 
                             <div class="mb-3">
                                 <label class="form-label fw-bold fs-6">Position</label>
-                                <select name="position" id="position-select" class="form-select form-select-sm fw-semibold"
-                                    data-control="select2">
-                                    <option value="">Select Position</option>
-                                    @php
-                                        $positions = [
-                                            'GM' => 'General Manager',
-                                            'Act GM' => 'Act General Manager',
-                                            'Manager' => 'Manager',
-                                            'Act Manager' => 'Act Manager',
-                                            'Coordinator' => 'Coordinator',
-                                            'Act Coordinator' => 'Act Coordinator',
-                                            'Section Head' => 'Section Head',
-                                            'Act Section Head' => 'Act Section Head',
-                                            'Supervisor' => 'Supervisor',
-                                            'Act Supervisor' => 'Act Supervisor',
-                                            'Act Leader' => 'Act Leader',
-                                            'Act JP' => 'Act JP',
-                                            'Operator' => 'Operator',
-                                            'Direktur' => 'Direktur',
-                                        ];
-                                    @endphp
-                                    @foreach ($positions as $value => $label)
-                                        <option value="{{ $value }}"
-                                            {{ old('position', $employee->position ?? '') == $value ? 'selected' : '' }}>
-                                            {{ $label }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('position')
-                                    <div class="text-danger">{{ $message }}</div>
-                                @enderror
+                                <input type="text" class="form-control" value="{{ $employee->position }}" disabled>
+                                <input type="hidden" name="position" value="{{ $employee->position }}">
                             </div>
 
 
 
                             <div class="mb-3">
                                 <label class="form-label">Level</label>
-                                <select name="level" class="form-select" required>
-                                    <option value="">-- Select Level --</option>
-                                    @foreach ($grades as $grade)
-                                        <option value="{{ $grade->aisin_grade }}"
-                                            {{ old('level') == $grade->aisin_grade ? 'selected' : '' }}>
-                                            {{ $grade->aisin_grade }}
-                                        </option>
-                                    @endforeach
-                                </select>
+                                <input type="text" class="form-control" value="{{ $employee->grade }}" disabled>
+                                <input type="hidden" name="level" value="{{ $employee->grade }}">
                             </div>
 
 
@@ -247,7 +172,7 @@
         button.closest(".education-entry").remove();
     }
 
-    $(document).ready(function() {
+    $(document).ready(function () {
         $('#position-select').select2();
     });
 </script>

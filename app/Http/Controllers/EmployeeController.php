@@ -1173,18 +1173,23 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             // Simpan data appraisal
-            PerformanceAppraisalHistory::create([
+            $appraisal = PerformanceAppraisalHistory::create([
                 'employee_id' => $request->employee_id,
                 'score' => $validatedData['score'],
                 'description' => $validatedData['description'] ?? null,
                 'date' => Carbon::parse($validatedData['date']),
             ]);
 
+            // Get year hav terakhir
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
+
+            // Update HAV Quadran
+            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
+
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil ditambahkan.');
         } catch (\Throwable $th) {
             DB::rollback();
-            dd($th);
             return redirect()->back()->with('error', 'Performance appraisal gagal ditambahkan : ' . $th->getMessage());
         }
     }
@@ -1195,7 +1200,6 @@ class EmployeeController extends Controller
 
         $validatedData = $request->validate([
             'score' => 'required',
-            // 'description' => 'required',
             'date' => 'required|date',
         ]);
 
@@ -1209,9 +1213,11 @@ class EmployeeController extends Controller
                 'date' => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
             ]);
 
+            // Get year hav terakhir
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
+
             // Update HAV Quadran
-            $year = Carbon::parse($appraisal['date'])->year;
-            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, $year);
+            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil diperbarui.');
@@ -1229,6 +1235,12 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $appraisal->delete();
+
+            // Get year hav terakhir
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
+
+            // Update HAV Quadran
+            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil dihapus.');
