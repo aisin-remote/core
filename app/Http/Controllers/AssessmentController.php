@@ -836,6 +836,14 @@ class AssessmentController extends Controller
             return; //Tidak ada hav untuk diupdate
         }
 
+        if ($latestHav->created_at === $assessment->created_at->format('Y-m-d H:i:s')) {
+            DB::table('havs')
+                ->where('id', $latestHav->id)
+                ->update([
+                    'assessment_id' => $assessment->id,
+                ]);
+        }
+
         // Load template HAV
         $templatePath = public_path('assets/file/Import-HAV.xls');
         $spreadsheet = IOFactory::load($templatePath);
