@@ -304,9 +304,11 @@ class Employee extends Model
             $subordinateIds = $managerIds->merge($gmIds)->unique();
         } elseif ($normalizedPosition === 'president') {
             $managerIds = Department::pluck('manager_id')->filter()->unique();
-            $divisionIds = Division::pluck('gm_id')->filter()->unique();
+            $divisionGmIds = Division::pluck('gm_id')->filter()->unique();
 
-            $subordinateIds = $managerIds->merge($divisionIds)->unique();
+            $subordinateIds = $managerIds->isNotEmpty()
+                ? $managerIds->merge($divisionGmIds)->unique()
+                : $divisionGmIds;
         }
 
 
@@ -519,7 +521,7 @@ class Employee extends Model
             Str::contains($position, 'gm') => $this->leadingDivision->name ?? 'Tidak Ada Divisi',
             Str::contains($position, 'manager') => $this->leadingDepartment->name ?? 'Tidak Ada Departemen',
             default => $this->department->name
-                ?? 'Tidak Ada Departemen',
+            ?? 'Tidak Ada Departemen',
         };
     }
 

@@ -104,6 +104,7 @@ class IdpController extends Controller
         $employee = $user->employee;
         $npk = $request->query('npk');
         $search = $request->query('search');
+
         $alcs = [
             1 => 'Vision & Business Sense',
             2 => 'Customer Focus',
@@ -115,140 +116,32 @@ class IdpController extends Controller
             8 => 'Drive & Courage'
         ];
 
-        // Ambil assessment terbaru berdasarkan created_at
-        if ($user->isHRDorDireksi()) {
-            $assessments = Hav::with(['details.idp', 'employee'])
-                ->when($company, function ($query) use ($company) {
-                    $query->whereHas('employee', function ($q) use ($company) {
-                        $q->where('company_name', $company);
-                    });
-                })
-                ->when($npk, function ($query) use ($npk) {
-                    $query->whereHas('employee', function ($q) use ($npk) {
-                        $q->where('npk', $npk);
-                    });
-                })
-                ->when($search, function ($query) use ($search) {
-                    $query->whereHas('employee', function ($q) use ($search) {
-                        $q->where('name', 'like', '%' . $search . '%')
-                            ->orWhere('npk', 'like', '%' . $search . '%');
-                    });
-                })
-                ->whereIn('id', function ($query) {
-                    $query->selectRaw('MAX(id)')
-                        ->from('havs')
-                        ->groupBy('employee_id');
-                })
-                ->orderByDesc('created_at') // tambahkan ini jika tetap ingin urut terbaru
-                ->paginate(10); // sesuaikan jika perlu pagination
+        // Get assessments based on user role
+        $assessments = $this->getAssessments($user, $company, $npk, $search);
 
-        } else {
-            // Ambil employee berdasarkan user login
-            $emp = Employee::where('user_id', $user->id)->first();
+        // Process assessments data
+        $processedData = $this->processAssessments($assessments, $alcs);
 
+        // Get job positions for tabs
+        $jobPositions = $this->getJobPositions($assessments);
 
-            if (!$emp) {
-                $assessments = collect(); // Kosong jika tidak ada employee
-            } else {
-
-                // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-                $viewLevel = $emp->getCreateAuth();
-                $subordinates = $emp->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
-                // dd($subordinates);
-
-                // Ambil assessment terbaru hanya milik bawahannya
-                $assessments = Hav::with(['details.idp', 'employee', 'details.alc'])
-                    ->whereHas('employee', function ($query) use ($subordinates) {
-                        $query->whereIn('id', $subordinates);
-                    })
-                    ->when(
-                        $company,
-                        fn($query) =>
-                        $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
-                    )
-                    ->when(
-                        $npk,
-                        fn($query) =>
-                        $query->whereHas('employee', fn($q) => $q->where('npk', $npk))
-                    )
-                    ->when(
-                        $search,
-                        fn($query) =>
-                        $query->whereHas('employee', function ($q) use ($search) {
-                            $q->where('name', 'like', '%' . $search . '%')
-                                ->orWhere('npk', 'like', '%' . $search . '%');
-                        })
-                    )
-                    ->whereIn('id', function ($query) {
-                        $query->selectRaw('MAX(id)')
-                            ->from('havs')
-                            ->groupBy('employee_id');
-                    })
-                    ->get();
-            }
-        }
-
-        // Ambil semua karyawan
+        // Other data
         $employees = Employee::all();
-
-        // Ambil IDP
         $idps = Idp::with('hav', 'employee', 'commentHistory')->get();
-
-        // Daftar program
-        $programs = [
-            'Superior (DGM & GM) + DIC PUR + BOD Member',
-            'Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)',
-            'To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team --> Sharing Success Tips',
-            'Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project  (CAPACITY UP) & (AIIA) EV Project',
-            'SR Project (Structural Reform -->DM & SCM)',
-            'PEOPLE Development Program of Team members (ICT, IDP)',
-            '(Leadership) --> Courageously & Situational Leadership',
-            '(Developing Sub Ordinate) --> Coaching Skill / Developing Talents'
-        ];
-
+        $programs = $this->getDevelopmentPrograms();
         $details = DevelopmentOne::all();
         $mid = Development::all();
 
-        foreach ($assessments as $assessment) {
-            foreach ($assessment->details as $detail) {
-                // Ambil semua program IDP yang tersimpan
-                $savedPrograms = $detail->idp->where('status', 3)->map(function ($idp) {
-                    return [
-                        'program' => $idp->development_program,
-                        'date' => $idp->date, // Gantilah 'due_date' menjadi 'date' sesuai dengan database
-                    ];
-                });
-
-                // Pisahkan berdasarkan due date
-                $midYearPrograms = [];
-                $oneYearPrograms = [];
-                $currentDate = Carbon::now();
-
-                foreach ($savedPrograms as $program) {
-                    $dueDate = Carbon::parse($program['date']);
-
-                    if ($dueDate->isBefore(now()->addMonths(6))) {
-                        $midYearPrograms[] = $program;
-                    } else {
-                        $oneYearPrograms[] = $program;
-                    }
-                }
-
-                // Simpan ke objek detail agar bisa diakses di Blade
-                $detail->recommendedProgramsMidYear = $midYearPrograms;
-                $detail->recommendedProgramsOneYear = $oneYearPrograms;
-            }
-        }
-
         return view('website.idp.index', compact(
             'employees',
-            'assessments',
+            'processedData',
             'alcs',
             'programs',
             'details',
             'mid',
             'idps',
             'company',
+            'jobPositions'
         ));
     }
 
@@ -370,7 +263,7 @@ class IdpController extends Controller
 
         $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
-        $groupedAssessments= $assessments->groupBy(function($item){
+        $groupedAssessments = $assessments->groupBy(function ($item) {
             return optional(optional($item->hav)->hav)->employee->id;
         });
 
@@ -961,5 +854,252 @@ class IdpController extends Controller
         Idp::where('assessment_id', $id)->delete();
 
         return redirect()->back()->with('success', 'IDP deleted successfully.');
+    }
+
+
+    // PRIVATE FUNCTION
+    private function getAssessments($user, $company, $npk, $search)
+    {
+        if ($user->isHRDorDireksi()) {
+            return Hav::with(['details.idp', 'employee', 'details.alc'])
+                ->when($company, function ($query) use ($company) {
+                    $query->whereHas('employee', fn($q) => $q->where('company_name', $company));
+                })
+                ->when($npk, function ($query) use ($npk) {
+                    $query->whereHas('employee', fn($q) => $q->where('npk', $npk));
+                })
+                ->when($search, function ($query) use ($search) {
+                    $query->whereHas('employee', function ($q) use ($search) {
+                        $q->where('name', 'like', '%' . $search . '%')
+                            ->orWhere('npk', 'like', '%' . $search . '%');
+                    });
+                })
+                ->whereIn('id', function ($query) {
+                    $query->selectRaw('MAX(id)')
+                        ->from('havs')
+                        ->groupBy('employee_id');
+                })
+                ->orderByDesc('created_at')
+                ->paginate(10);
+        }
+
+        $emp = Employee::where('user_id', $user->id)->first();
+        if (!$emp) {
+            return collect();
+        }
+
+        $viewLevel = $emp->getCreateAuth();
+        $subordinates = $emp->getSubordinatesByLevel($viewLevel)->pluck('id')->toArray();
+
+        return Hav::with(['details.idp', 'employee', 'details.alc'])
+            ->whereHas('employee', fn($query) => $query->whereIn('id', $subordinates))
+            ->when($company, fn($query) => $query->whereHas('employee', fn($q) => $q->where('company_name', $company)))
+            ->when($npk, fn($query) => $query->whereHas('employee', fn($q) => $q->where('npk', $npk)))
+            ->when($search, fn($query) => $query->whereHas('employee', function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                    ->orWhere('npk', 'like', '%' . $search . '%');
+            }))
+            ->whereIn('id', function ($query) {
+                $query->selectRaw('MAX(id)')
+                    ->from('havs')
+                    ->groupBy('employee_id');
+            })
+            ->get();
+    }
+
+    private function processAssessments($assessments, $alcs)
+    {
+        $badges = [
+            'no_approval_needed' => ['text' => '-', 'class' => 'light-primary'],
+            'not_created' => ['text' => 'Not Created', 'class' => 'light-dark'],
+            'draft' => ['text' => 'Need Submit', 'class' => 'light-secondary'],
+            'waiting' => ['text' => 'Waiting', 'class' => 'light-warning'],
+            'checked' => ['text' => 'Checked', 'class' => 'light-info'],
+            'approved' => ['text' => 'Approved', 'class' => 'light-success'],
+            'revise' => ['text' => 'Need Revise', 'class' => 'light-danger'],
+            'unknown' => ['text' => 'Unknown', 'class' => 'light-secondary'],
+        ];
+
+        return $assessments->map(function ($assessment) use ($alcs, $badges) {
+            $assessment->has_score = $assessment->details->contains(function ($detail) {
+                return !is_null($detail->score);
+            });
+
+            foreach ($assessment->details as $detail) {
+                $detail->status = $this->determineIdpStatus($detail);
+                $detail->badge = $badges[$detail->status] ?? $badges['not_created'];
+                $detail->badge_class = $this->getBadgeClass($detail);
+                $detail->show_icon = $this->shouldShowIcon($detail);
+            }
+
+            $assessment->overall_status = $this->getOverallStatus($assessment);
+            $assessment->overall_badge = $badges[$assessment->overall_status] ?? $badges['not_created'];
+
+            return $assessment;
+        });
+    }
+
+    private function determineIdpStatus($detail)
+    {
+        if ($detail->score >= 3 && $detail->suggestion_development === null) {
+            return 'no_approval_needed';
+        }
+
+        $idp = $detail->idp->first();
+        $employee = $idp->assessment->employee ?? null;
+        $normalized = $employee?->getNormalizedPosition();
+
+        if (!$idp) {
+            return 'not_created';
+        }
+
+        // Logika khusus untuk manager
+        if ($normalized === 'manager') {
+            switch ($idp->status) {
+                case 0:
+                    return 'draft';
+                case 1:
+                    return 'waiting';
+                case 2:
+                    return 'checked';
+                case 3:
+                    return 'checked';  // Khusus manager, status 3 dianggap checked
+                case 4:
+                    return 'approved'; // Khusus manager, status 4 adalah approved
+                case -1:
+                    return 'revise';
+                default:
+                    return 'unknown';
+            }
+        }
+
+        // Logika normal untuk non-manager
+        switch ($idp->status) {
+            case 0:
+                return 'draft';
+            case 1:
+                return 'waiting';
+            case 2:
+                return 'checked';
+            case 3:
+                return 'approved';
+            case -1:
+                return 'revise';
+            default:
+                return 'unknown';
+        }
+    }
+
+    private function getApproverName($detail)
+    {
+        try {
+            $employee = $detail->hav->employee;
+
+            if ($employee) {
+                $createLevel = $employee->getCreateAuth();
+                $getSuperior = $employee->getSuperiorsByLevel($createLevel);
+
+                // Pastikan ada superior dan memiliki nama
+                if (!empty($getSuperior)) {
+                    return $getSuperior[0]['name'] ?? null;
+                }
+            }
+        } catch (\Exception $e) {
+            // Tangani error jika ada
+            logger()->error('Error getting approver name: ' . $e->getMessage());
+        }
+
+        return null;
+    }
+
+    private function getBadgeClass($detail)
+    {
+        $class = 'badge-lg d-block w-100 ';
+
+        if ($detail->status === 'revise') {
+            return $class . 'badge-light-danger';
+        }
+
+        if ($detail->score < 3) {
+            return $class . 'badge-danger';
+        }
+
+        if ($detail->suggestion_development !== null) {
+            return $class . 'badge-warning';
+        }
+
+        return $class . 'badge-success';
+    }
+
+    private function shouldShowIcon($detail)
+    {
+        if ($detail->score < 3) {
+            return true;
+        }
+
+        if ($detail->suggestion_development !== null && !$detail->idp->isEmpty()) {
+            return true;
+        }
+
+        return !$detail->idp->isEmpty();
+    }
+
+    private function getOverallStatus($assessment)
+    {
+        $statuses = [];
+
+        foreach ($assessment->details as $detail) {
+            if ($detail->score <= 3 || $detail->suggestion_development !== null) {
+                if ($detail->score >= 3 && $detail->suggestion_development === null) {
+                    continue;
+                }
+                $statuses[] = $detail->status;
+            }
+        }
+
+        if (empty($statuses)) {
+            return 'no_approval_needed';
+        }
+
+        if (in_array('not_created', $statuses)) {
+            return 'not_created';
+        }
+
+        $priority = ['revise', 'draft', 'waiting', 'checked', 'approved', 'unknown'];
+        foreach ($priority as $status) {
+            if (in_array($status, $statuses)) {
+                return $status;
+            }
+        }
+
+        return 'unknown';
+    }
+
+    private function getJobPositions($assessments)
+    {
+        $positions = $assessments->pluck('employee.position')
+            ->unique()
+            ->filter()
+            ->sort()
+            ->values()
+            ->toArray();
+
+        array_unshift($positions, 'Show All');
+
+        return $positions;
+    }
+
+    private function getDevelopmentPrograms()
+    {
+        return [
+            'Superior (DGM & GM) + DIC PUR + BOD Member',
+            'Book Reading / Journal Business and BEST PRACTICES (Asia Pasific Region)',
+            'To find "FIGURE LEADER" with Strong in Drive and Courage in Their Team --> Sharing Success Tips',
+            'Team Leader of TASK FORCE with MULTY FUNCTION --> (AII) HYBRID DUMPER Project  (CAPACITY UP) & (AIIA) EV Project',
+            'SR Project (Structural Reform -->DM & SCM)',
+            'PEOPLE Development Program of Team members (ICT, IDP)',
+            '(Leadership) --> Courageously & Situational Leadership',
+            '(Developing Sub Ordinate) --> Coaching Skill / Developing Talents'
+        ];
     }
 }

@@ -314,14 +314,14 @@ class EmployeeController extends Controller
                 'grade'            => 'nullable|string',
                 'photo'            => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
-                // Struktur organisasi
+                  // Struktur organisasi
                 'plant_id'       => 'nullable|exists:plants,id',
                 'division_id'    => 'nullable|exists:divisions,id',
                 'department_id'  => 'nullable|exists:departments,id',
                 'section_id'     => 'nullable|exists:sections,id',
                 'sub_section_id' => 'nullable|exists:sub_sections,id',
 
-                // Pendidikan
+                  // Pendidikan
                 'level'        => 'array',
                 'level.*'      => 'nullable|string|max:255',
                 'major.*'      => 'nullable|string|max:255',
@@ -329,7 +329,7 @@ class EmployeeController extends Controller
                 'start_date.*' => 'nullable|string|max:255',
                 'end_date.*'   => 'nullable|string|max:255',
 
-                // Pengalaman kerja
+                  // Pengalaman kerja
                 'company.*'         => 'nullable|string|max:255',
                 'work_position.*'   => 'nullable|string|max:255',
                 'work_start_date.*' => 'nullable|string|max:255',
@@ -899,7 +899,6 @@ class EmployeeController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            dd('Error saat logLateralMutation:', $e->getMessage(), $e->getTraceAsString());
         }
     }
     private function getApproximateEntryDate(int $employeeId, string $position)
