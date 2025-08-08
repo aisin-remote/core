@@ -13,6 +13,7 @@ use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
 use App\Models\Development;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\DevelopmentOne;
@@ -808,6 +809,7 @@ class IdpController extends Controller
             $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
         }
 
+
         // === Tahap 1: CHECK ===
         $checkIdps = Idp::with('hav.hav.employee', 'hav')
             ->where('status', 1)
@@ -852,7 +854,35 @@ class IdpController extends Controller
                 return in_array(2, $relatedStatuses) && !in_array(-1, $relatedStatuses);
             });
 
+        $approvePresidentIdps = Idp::with('hav.hav.employee', 'hav')
+            ->where('status', 3)
+            ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
+                $q->whereIn('employee_id', $subApprove);
+            })
+            ->whereNotIn('id', $checkIdpIds)
+            ->get()
+            ->filter(function ($idp) {
+                $havId = $idp->hav->hav_id ?? null;
+                if (!$havId)
+                    return false;
+
+                $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
+                    $q->where('hav_id', $havId);
+                })
+                    ->pluck('status')
+                    ->toArray();
+
+                // - Minimal satu status = 3
+                // - Tidak boleh ada status = -1
+                return in_array(3, $relatedStatuses) && !in_array(-1, $relatedStatuses);
+            });
+
+
         $idps = $checkIdps->merge($approveIdps);
+        if ($normalized === 'president') {
+            $idps = $idps->merge($approvePresidentIdps);
+        }
+
 
         return view('website.approval.idp.index', compact('idps'));
     }
@@ -879,11 +909,19 @@ class IdpController extends Controller
             ]);
         }
 
+        if ($idp->status == 3) {
+            $idp->status = 4;
+            $idp->save();
+
+            return response()->json([
+                'message' => 'IDP has been approved!'
+            ]);
+        }
+
         return response()->json([
             'message' => 'Something went wrong!'
         ], 400);
     }
-
 
     public function revise(Request $request)
     {

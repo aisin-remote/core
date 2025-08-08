@@ -303,8 +303,12 @@ class Employee extends Model
 
             $subordinateIds = $managerIds->merge($gmIds)->unique();
         } elseif ($normalizedPosition === 'president') {
-            $subordinateIds = Division::pluck('gm_id')->filter()->unique();
+            $managerIds = Department::pluck('manager_id')->filter()->unique();
+            $divisionIds = Division::pluck('gm_id')->filter()->unique();
+
+            $subordinateIds = $managerIds->merge($divisionIds)->unique();
         }
+
 
         // Lanjutkan ke kondisi biasa
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
