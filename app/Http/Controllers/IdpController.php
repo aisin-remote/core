@@ -831,13 +831,21 @@ class IdpController extends Controller
         $checkIdpIds = $checkIdps->pluck('id')->toArray();
 
         // === Tahap 2: APPROVE ===
-        $approveIdps = Idp::with('hav.hav.employee', 'hav')
+        $approveIdpsQuery = Idp::with('hav.hav.employee', 'hav')
             ->where('status', 2)
             ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
                 $q->whereIn('employee_id', $subApprove);
             })
-            ->whereNotIn('id', $checkIdpIds)
-            ->get()
+            ->whereNotIn('id', $checkIdpIds);
+
+        // Only exclude managers if logged in user is president
+        if ($normalized === 'president') {
+            $approveIdpsQuery->whereHas('hav.hav.employee', function ($q) {
+                $q->where('position', '!=', 'Manager');
+            });
+        }
+
+        $approveIdps = $approveIdpsQuery->get()
             ->filter(function ($idp) {
                 $havId = $idp->hav->hav_id ?? null;
                 if (!$havId)
@@ -845,38 +853,38 @@ class IdpController extends Controller
 
                 $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
                     $q->where('hav_id', $havId);
-                })
-                    ->pluck('status')
-                    ->toArray();
+                })->pluck('status')->toArray();
 
                 // - Minimal satu status = 2
                 // - Tidak boleh ada status = -1
                 return in_array(2, $relatedStatuses) && !in_array(-1, $relatedStatuses);
             });
 
-        $approvePresidentIdps = Idp::with('hav.hav.employee', 'hav')
-            ->where('status', 3)
-            ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
-                $q->whereIn('employee_id', $subApprove);
-            })
-            ->whereNotIn('id', $checkIdpIds)
-            ->get()
-            ->filter(function ($idp) {
-                $havId = $idp->hav->hav_id ?? null;
-                if (!$havId)
-                    return false;
-
-                $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
-                    $q->where('hav_id', $havId);
+        $approvePresidentIdps = collect();
+        if ($normalized === 'president') {
+            $approvePresidentIdps = Idp::with('hav.hav.employee', 'hav')
+                ->where('status', 3)
+                ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
+                    $q->whereIn('employee_id', $subApprove);
                 })
-                    ->pluck('status')
-                    ->toArray();
+                ->whereNotIn('id', $checkIdpIds)
+                ->get()
+                ->filter(function ($idp) {
+                    $havId = $idp->hav->hav_id ?? null;
+                    if (!$havId)
+                        return false;
 
-                // - Minimal satu status = 3
-                // - Tidak boleh ada status = -1
-                return in_array(3, $relatedStatuses) && !in_array(-1, $relatedStatuses);
-            });
+                    $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
+                        $q->where('hav_id', $havId);
+                    })->pluck('status')->toArray();
 
+                    // - Minimal satu status = 3
+                    // - Tidak boleh ada status = -1 atau 2
+                    return in_array(3, $relatedStatuses) &&
+                        !in_array(-1, $relatedStatuses) &&
+                        !in_array(2, $relatedStatuses);
+                });
+        }
 
         $idps = $checkIdps->merge($approveIdps);
         if ($normalized === 'president') {
