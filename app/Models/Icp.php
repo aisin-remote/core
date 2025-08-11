@@ -11,6 +11,9 @@ class Icp extends Model
 
     protected $table = 'icp';
     protected $guarded = ['id'];
+    protected $casts = [
+        'date' => 'date',
+    ];
 
     public function employee()
     {
@@ -21,7 +24,7 @@ class Icp extends Model
     {
         return $this->hasMany(IcpDetail::class, 'icp_id', 'id');
     }
-     public function latestIcp()
+    public function latestIcp()
     {
         return $this->hasOne(Icp::class)->latestOfMany();
     }
