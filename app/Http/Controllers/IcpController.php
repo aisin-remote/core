@@ -74,7 +74,7 @@ class IcpController extends Controller
         }
 
         if ($subordinateIds->isEmpty()) {
-            return Employee::whereRaw('1=0'); // tidak ada bawahan
+            return Employee::whereRaw('1=0');  // tidak ada bawahan
         }
 
         return Employee::whereIn('id', $subordinateIds);
@@ -118,7 +118,7 @@ class IcpController extends Controller
             // Ambil employee milik user
             $employee = $user->employee;
             if (!$employee) {
-                $icps = collect(); // Tidak punya bawahan
+                $icps = collect();  // Tidak punya bawahan
             } else {
                 // Ambil query bawahan
                 $subordinatesQuery = $this->getSubordinatesFromStructure($employee);
@@ -147,7 +147,7 @@ class IcpController extends Controller
                         ->paginate(10)
                         ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
                 } else {
-                    $icps = collect(); // Tidak valid atau tidak punya akses
+                    $icps = collect();  // Tidak valid atau tidak punya akses
                 }
             }
         }
@@ -213,10 +213,12 @@ class IcpController extends Controller
                 });
             })
             ->when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))
-            ->with(['icp' => function ($q) {
-                $q->orderByDesc('created_at') // urutkan biar first() dapat yang terbaru
-                    > with(['latestIcp.details']);
-            }])
+            ->with([
+                'icp' => function ($q) {
+                    $q->orderByDesc('created_at')  // urutkan biar first() dapat yang terbaru
+                        > with(['latestIcp.details']);
+                }
+            ])
             ->get();
 
 
@@ -245,37 +247,26 @@ class IcpController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'employee_id' => 'required',
-            'aspiration' => 'required',
-            'career_target' => 'required',
-            'date' => 'required',
-            'job_function' => 'required',
-            'position' => 'required',
-            'level' => 'required',
+            'employee_id'   => ['required', 'exists:employees,id'],
+            'aspiration'    => ['required', 'string'],
+            'career_target' => ['required', 'string'],
 
-            // Validasi array untuk detail
-            'details.*.current_technical' => 'required',
-            'details.*.current_nontechnical' => 'required',
-            'details.*.required_technical' => 'required',
-            'details.*.required_nontechnical' => 'required',
-            'details.*.development_technical' => 'required',
-            'details.*.development_nontechnical' => 'required',
+            'stages'                => ['required', 'array', 'min:1'],
+            'stages.*.plan_year'    => ['required', 'digits:4'],
+            'stages.*.job_function' => ['required', 'string'],
+            'stages.*.position'     => ['required', 'string'],
+            'stages.*.level'        => ['required', 'string'],
+
+            'stages.*.details'                            => ['required', 'array', 'min:1'],
+            'stages.*.details.*.current_technical'        => ['required', 'string'],
+            'stages.*.details.*.current_nontechnical'     => ['required', 'string'],
+            'stages.*.details.*.required_technical'       => ['required', 'string'],
+            'stages.*.details.*.required_nontechnical'    => ['required', 'string'],
+            'stages.*.details.*.development_technical'    => ['required', 'string'],
+            'stages.*.details.*.development_nontechnical' => ['required', 'string'],
         ], [
-            // Custom error messages
-            'employee_id.required' => 'Employee ID is required',
-            'aspiration.required' => 'Aspiration is required',
-            'career_target.required' => 'Career target is required',
-            'date.required' => 'Date is required',
-            'job_function.required' => 'Job function is required',
-            'position.required' => 'Position is required',
-            'level.required' => 'Level is required',
-
-            'details.*.current_technical.required' => 'Current technical skill is required',
-            'details.*.current_nontechnical.required' => 'Current non-technical skill is required',
-            'details.*.required_technical.required' => 'Required technical skill is required',
-            'details.*.required_nontechnical.required' => 'Required non-technical skill is required',
-            'details.*.development_technical.required' => 'Technical development plan is required',
-            'details.*.development_nontechnical.required' => 'Non-technical development plan is required',
+            'stages.required'           => 'Minimal 1 tahun harus ditambahkan',
+            'stages.*.plan_year.digits' => 'Plan year harus 4 digit (YYYY)',
         ]);
 
         DB::beginTransaction();
@@ -286,23 +277,34 @@ class IcpController extends Controller
                 'aspiration' => $request->aspiration,
                 'career_target' => $request->career_target,
                 'date' => $request->date,
-                'job_function' => $request->job_function,
-                'position' => $request->position,
-                'level' => $request->level,
                 'status' => '1',
             ]);
 
             // Loop semua detail dan simpan satu per satu
-            foreach ($request->details as $detail) {
-                IcpDetail::create([
-                    'icp_id' => $icp->id,
-                    'current_technical' => $detail['current_technical'],
-                    'current_nontechnical' => $detail['current_nontechnical'],
-                    'required_technical' => $detail['required_technical'],
-                    'required_nontechnical' => $detail['required_nontechnical'],
-                    'development_technical' => $detail['development_technical'],
-                    'development_nontechnical' => $detail['development_nontechnical'],
-                ]);
+            foreach ($request->stages as $stage) {
+                $year  = (int) $stage['plan_year'];
+                $job   = $stage['job_function'];
+                $pos   = $stage['position'];
+                $level = $stage['level'];
+
+                $rows = [];
+                foreach ($stage['details'] as $d) {
+                    $rows[] = [
+                        'icp_id'                   => $icp->id,
+                        'plan_year'                => $year,
+                        'job_function'             => $job,
+                        'position'                 => $pos,
+                        'level'                    => $level,
+                        'current_technical'        => $d['current_technical'],
+                        'current_nontechnical'     => $d['current_nontechnical'],
+                        'required_technical'       => $d['required_technical'],
+                        'required_nontechnical'    => $d['required_nontechnical'],
+                        'development_technical'    => $d['development_technical'],
+                        'development_nontechnical' => $d['development_nontechnical'],
+                    ];
+                }
+
+                $icp->details()->createMany($rows);
             }
 
             DB::commit();
@@ -312,7 +314,7 @@ class IcpController extends Controller
             return redirect()->back()->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
         }
     }
-    
+
     public function show($employee_id)
     {
         $employee = Employee::with('icp')->find($employee_id);
@@ -324,11 +326,13 @@ class IcpController extends Controller
         }
 
         $assessments = Icp::where('employee_id', $employee_id)
-            ->select('id', 'employee_id',  'aspiration', 'career_target', 'date', 'job_function', 'position', 'level')
+            ->select('id', 'employee_id', 'aspiration', 'career_target', 'date', 'job_function', 'position', 'level')
             ->orderBy('date', 'desc')
-            ->with(['details' => function ($query) {
-                $query->select('icp_id', 'current_technical', 'current_nontechnical', 'required_technical', 'required_nontechnical', 'development_technical', 'development_nontechnical');
-            }])
+            ->with([
+                'details' => function ($query) {
+                    $query->select('icp_id', 'current_technical', 'current_nontechnical', 'required_technical', 'required_nontechnical', 'development_technical', 'development_nontechnical');
+                }
+            ])
             ->get();
 
         return response()->json([
