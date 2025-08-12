@@ -25,7 +25,6 @@ use PhpOffice\PhpSpreadsheet\Cell\Coordinate;
 
 class IcpController extends Controller
 {
-
     private function getSubordinatesFromStructure(Employee $employee)
     {
         $subordinateIds = collect();
@@ -82,27 +81,23 @@ class IcpController extends Controller
 
         return Employee::whereIn('id', $subordinateIds);
     }
-
     private function collectSubordinates($models, $field, $subordinateIds)
     {
         $ids = $models->pluck($field)->filter();
         return $subordinateIds->merge($ids);
     }
-
     private function collectOperators($subSections, $subordinateIds)
     {
         $subSectionIds = $subSections->pluck('id');
         $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
     }
-
-    public function index(Request $request)
+    public function index(Request $request, $company = null)
     {
         $title = 'Employee ICP';
         $user = auth()->user();
         $search = $request->input('search');
         $filter = $request->input('filter', 'all');
-        $company = $request->input('company');
 
         if ($user->isHRDorDireksi()) {
             // HRD dan Direksi bisa melihat semua data ICP
@@ -208,7 +203,7 @@ class IcpController extends Controller
 
         // Ambil semua subordinate (filtered)
         $icps = Employee::whereIn('id', $subordinateIds)
-            ->when($company, fn($q) => $q->where('company_name', $company))
+            ->when($company, fn($q) => $q->where('company_name', $employee->company_name))
             ->when($filter && $filter !== 'all', function ($q) use ($filter) {
                 $q->where(function ($sub) use ($filter) {
                     $sub->where('position', $filter)
@@ -227,7 +222,6 @@ class IcpController extends Controller
 
         return view('website.icp.assign', compact('title', 'icps', 'filter', 'company', 'search', 'visiblePositions'));
     }
-
     public function create($employeeId)
     {
         $title = 'Add icp';
@@ -242,7 +236,6 @@ class IcpController extends Controller
 
         return view('website.icp.create', compact('title', 'employee', 'grades', 'departments', 'employees', 'technicalCompetencies'));
     }
-
     public function store(Request $request)
     {
         $request->validate([
@@ -315,7 +308,6 @@ class IcpController extends Controller
             return redirect()->back()->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
         }
     }
-
     public function show($employee_id)
     {
         $employee = Employee::with('icp')->find($employee_id);
@@ -341,7 +333,6 @@ class IcpController extends Controller
             'icp' => $assessments
         ]);
     }
-
     public function export($employee_id)
     {
         $employee = Employee::with([
@@ -547,7 +538,6 @@ class IcpController extends Controller
             'message' => 'Something went wrong!'
         ], 400);
     }
-
     public function revise(Request $request)
     {
         $idp = Icp::findOrFail($request->id);
@@ -706,7 +696,6 @@ class IcpController extends Controller
             'stages'
         ));
     }
-
     public function destroy($id)
     {
         $icp = Icp::find($id);
