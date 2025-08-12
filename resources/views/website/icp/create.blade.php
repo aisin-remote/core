@@ -39,50 +39,95 @@ document.addEventListener("DOMContentLoaded", function () {
 @endif
 
 <style>
-    .stage-card {
-        border: 1px solid #e9ecef;
-        border-radius: .75rem;
-        background: #fff
+    /* =========================
+   ICP Stage – Neutral High-Contrast
+   ========================= */
+    :root{
+    --stage-border: #3f4a5a;      /* abu-abu kebiruan gelap */
+    --stage-head-bg: #1f2937;     /* gray-800 */
+    --stage-head-fg: #ffffff;
+    --stage-accent: #111827;      /* gray-900 */
+    --detail-bg: #f3f4f6;         /* gray-100 */
+    --detail-border: #d1d5db;     /* gray-300 */
+    --shadow-inset: rgba(63,74,90,.20);
+    --shadow-card: rgba(0,0,0,.08);
+    --radius-card: 1rem;
+    --radius-detail: .65rem;
+    --space-card: 1.25rem;
     }
 
-    .stage-head {
-        border-bottom: 1px solid #e9ecef;
-        padding: .75rem 1rem;
-        background: #f8f9fa
+    /* Card utama */
+    .stage-card{
+    position: relative;
+    border: 2.5px solid var(--stage-border);
+    border-radius: var(--radius-card);
+    background: #fff;
+    overflow: hidden;
+    box-shadow: 0 6px 18px var(--shadow-card);
     }
 
-    .stage-body {
-        padding: 1rem
+    /* Header */
+    .stage-head{
+    display:flex; align-items:center; justify-content:space-between;
+    background: var(--stage-head-bg);
+    color: var(--stage-head-fg);
+    border-bottom: 2px solid var(--stage-border);
+    padding: 1rem 1.25rem;
+    font-weight: 700;
+    }
+    .stage-head strong{ font-size: 1.1rem; }
+
+    /* Body */
+    .stage-body{ padding: var(--space-card); }
+
+    /* Detail baris */
+    .detail-row{
+    background: var(--detail-bg);
+    border: 2px solid var(--detail-border);
+    border-radius: var(--radius-detail);
+    padding: 14px;
     }
 
-    .detail-row {
-        background: #f8f9fa;
-        border: 1px solid #e9ecef;
-        border-radius: .5rem;
-        padding: 12px
+    /* Samakan SEMUA tema ke palet netral di atas (biar tidak warna-warni) */
+    .stage-card.theme-blue,
+    .stage-card.theme-green,
+    .stage-card.theme-amber,
+    .stage-card.theme-purple,
+    .stage-card.theme-rose{
+    border-color: var(--stage-border);
+    box-shadow: 0 0 0 3px var(--shadow-inset) inset, 0 6px 18px var(--shadow-card);
+    }
+    .stage-card.theme-blue .stage-head,
+    .stage-card.theme-green .stage-head,
+    .stage-card.theme-amber .stage-head,
+    .stage-card.theme-purple .stage-head,
+    .stage-card.theme-rose .stage-head{
+    background: var(--stage-head-bg);
+    border-bottom-color: var(--stage-border);
+    color: var(--stage-head-fg);
+    }
+    .stage-card.theme-blue::before,
+    .stage-card.theme-green::before,
+    .stage-card.theme-amber::before,
+    .stage-card.theme-purple::before,
+    .stage-card.theme-rose::before{
+    background: var(--stage-accent);
     }
 
-    /* === Stage color themes === */
-    .stage-card.theme-blue   { border-color:#b6d8ff; box-shadow:0 0 0 2px rgba(182,216,255,.18) inset; }
-    .stage-card.theme-blue .stage-head   { background:#eef6ff; border-bottom-color:#b6d8ff; }
+    /* Aksesibilitas kecil: fokus jelas untuk tombol dalam card */
+    .stage-card :is(button, .btn, select, input, textarea):focus-visible{
+    outline: 3px solid #000; outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(0,0,0,.15);
+    }
 
-    .stage-card.theme-green  { border-color:#bce7c6; box-shadow:0 0 0 2px rgba(188,231,198,.18) inset; }
-    .stage-card.theme-green .stage-head  { background:#f1fbf3; border-bottom-color:#bce7c6; }
-
-    .stage-card.theme-amber  { border-color:#ffd79a; box-shadow:0 0 0 2px rgba(255,215,154,.18) inset; }
-    .stage-card.theme-amber .stage-head  { background:#fff7e8; border-bottom-color:#ffd79a; }
-
-    .stage-card.theme-purple { border-color:#d3c2ff; box-shadow:0 0 0 2px rgba(211,194,255,.18) inset; }
-    .stage-card.theme-purple .stage-head { background:#f4f0ff; border-bottom-color:#d3c2ff; }
-
-    .stage-card.theme-rose   { border-color:#ffb7c5; box-shadow:0 0 0 2px rgba(255,183,197,.18) inset; }
-    .stage-card.theme-rose .stage-head   { background:#fff0f3; border-bottom-color:#ffb7c5; }
-
-    /* optional: animasi saat add */
-    @keyframes popIn { from {transform:scale(.98);opacity:.0} to {transform:scale(1);opacity:1} }
+    /* Animasi masuk (opsional) */
+    @keyframes popIn { from {transform:scale(.97);opacity:0} to {transform:scale(1);opacity:1} }
     .stage-card.added { animation: popIn .22s ease-out both; }
 
-
+    /* Opsional: high-contrast mode (aktifkan dengan class .hc-mode pada container) */
+    .hc-mode .stage-head{ background:#000; }
+    .hc-mode .stage-card{ border-color:#000; }
+    .hc-mode .stage-card::before{ background:#000; }
 </style>
 
 <div id="kt_app_content" class="app-content flex-column-fluid">
@@ -127,7 +172,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Date</label>
+                        <label class="form-label">Date Target</label>
                         <input type="date" name="date" id="date" class="form-control form-select-sm">
                     </div>
                 </div>
@@ -172,7 +217,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 <strong>Stage Tahun</strong>
                 <input type="number" min="2000" max="2100" pattern="\d{4}" class="form-control form-control-sm" name="stages[__S__][plan_year]" placeholder="YYYY" style="width:110px" required>
             </div>
-            <button type="button" class="btn btn-outline-light btn-sm btn-remove-stage">Remove</button>
+            <button type="button" class="btn btn-danger btn-sm btn-remove-stage">Remove</button>
         </div>
 
         <div class="stage-body">
