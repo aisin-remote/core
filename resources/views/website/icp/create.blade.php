@@ -24,6 +24,19 @@
 
 </script>
 @endif
+@if ($errors->any())
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const errs = @json($errors->all());
+    Swal.fire({
+        title: "Validasi gagal",
+        html: errs.map(e => `<div style="text-align:left">• ${e}</div>`).join(""),
+        icon: "error",
+        confirmButtonText: "OK"
+    });
+});
+</script>
+@endif
 
 <style>
     .stage-card {
@@ -48,6 +61,27 @@
         border-radius: .5rem;
         padding: 12px
     }
+
+    /* === Stage color themes === */
+    .stage-card.theme-blue   { border-color:#b6d8ff; box-shadow:0 0 0 2px rgba(182,216,255,.18) inset; }
+    .stage-card.theme-blue .stage-head   { background:#eef6ff; border-bottom-color:#b6d8ff; }
+
+    .stage-card.theme-green  { border-color:#bce7c6; box-shadow:0 0 0 2px rgba(188,231,198,.18) inset; }
+    .stage-card.theme-green .stage-head  { background:#f1fbf3; border-bottom-color:#bce7c6; }
+
+    .stage-card.theme-amber  { border-color:#ffd79a; box-shadow:0 0 0 2px rgba(255,215,154,.18) inset; }
+    .stage-card.theme-amber .stage-head  { background:#fff7e8; border-bottom-color:#ffd79a; }
+
+    .stage-card.theme-purple { border-color:#d3c2ff; box-shadow:0 0 0 2px rgba(211,194,255,.18) inset; }
+    .stage-card.theme-purple .stage-head { background:#f4f0ff; border-bottom-color:#d3c2ff; }
+
+    .stage-card.theme-rose   { border-color:#ffb7c5; box-shadow:0 0 0 2px rgba(255,183,197,.18) inset; }
+    .stage-card.theme-rose .stage-head   { background:#fff0f3; border-bottom-color:#ffb7c5; }
+
+    /* optional: animasi saat add */
+    @keyframes popIn { from {transform:scale(.98);opacity:.0} to {transform:scale(1);opacity:1} }
+    .stage-card.added { animation: popIn .22s ease-out both; }
+
 
 </style>
 
@@ -79,10 +113,10 @@
                             <option value="">Select Position</option>
                             @php
                             $careerTarget = [
-                            'GM'=>'General Manager','Act GM'=>'Act General Manager','Manager'=>'Manager','Act Manager'=>'Act Manager',
-                            'Coordinator'=>'Coordinator','Act Coordinator'=>'Act Coordinator','Section Head'=>'Section Head','Act Section Head'=>'Act Section Head',
-                            'Supervisor'=>'Supervisor','Act Supervisor'=>'Act Supervisor','Act Leader'=>'Act Leader','Act JP'=>'Act JP',
-                            'Operator'=>'Operator','Direktur'=>'Direktur',
+                            'GM'          => 'General Manager', 'Act GM'          => 'Act General Manager', 'Manager'      => 'Manager',      'Act Manager'      => 'Act Manager',
+                            'Coordinator' => 'Coordinator',     'Act Coordinator' => 'Act Coordinator',     'Section Head' => 'Section Head', 'Act Section Head' => 'Act Section Head',
+                            'Supervisor'  => 'Supervisor',      'Act Supervisor'  => 'Act Supervisor',      'Act Leader'   => 'Act Leader',   'Act JP'           => 'Act JP',
+                            'Operator'    => 'Operator',        'Direktur'        => 'Direktur',
                             ];
                             @endphp
                             @foreach ($careerTarget as $value => $label)
@@ -136,9 +170,9 @@
         <div class="stage-head d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-3">
                 <strong>Stage Tahun</strong>
-                <input type="number" min="2000" max="2100" class="form-control form-control-sm" name="stages[__S__][plan_year]" placeholder="YYYY" style="width:110px" required>
+                <input type="number" min="2000" max="2100" pattern="\d{4}" class="form-control form-control-sm" name="stages[__S__][plan_year]" placeholder="YYYY" style="width:110px" required>
             </div>
-            <button type="button" class="btn btn-light btn-sm btn-remove-stage">Remove</button>
+            <button type="button" class="btn btn-outline-light btn-sm btn-remove-stage">Remove</button>
         </div>
 
         <div class="stage-body">
@@ -170,7 +204,7 @@
 
             <div class="d-flex align-items-center justify-content-between mb-2">
                 <strong>Details</strong>
-                <button type="button" class="btn btn-outline-primary btn-sm btn-add-detail">
+                <button type="button" class="btn btn-warning btn-sm btn-add-detail">
                     <i class="bi bi-plus"></i> Add Detail
                 </button>
             </div>
@@ -216,7 +250,23 @@
 @endverbatim
 
 <script>
-// === helper isi opsi (tetap sama pun nggak masalah) ===
+/* ====== Data dari server (sekali) ====== */
+const DEPARTMENTS = @json($departments->map(fn($d)=>['v'=>$d->name,'t'=>$d->name.' — '.$d->company])->values());
+const GRADES      = @json($grades->pluck('aisin_grade'));
+const POSITIONS   = {
+  'GM':'General Manager','Act GM':'Act General Manager','Manager':'Manager','Act Manager':'Act Manager',
+  'Coordinator':'Coordinator','Act Coordinator':'Act Coordinator','Section Head':'Section Head','Act Section Head':'Act Section Head',
+  'Supervisor':'Supervisor','Act Supervisor':'Act Supervisor','Act Leader':'Act Leader','Act JP':'Act JP',
+  'Operator':'Operator','Direktur':'Direktur'
+};
+const DEFAULTS = {
+  plan_year: (new Date()).getFullYear(),
+  job_function: @json($employee->job_function ?? ''),
+  position:     @json($employee->position ?? ''),
+  level:        @json($employee->grade ?? '')
+};
+
+/* ====== Helpers isi opsi ====== */
 function fillOptions(selectEl, items, valueKey='v', textKey='t'){
   selectEl.innerHTML = '<option value="">Select</option>';
   items.forEach(it=>{
@@ -227,108 +277,172 @@ function fillOptions(selectEl, items, valueKey='v', textKey='t'){
   });
 }
 function fillPositions(selectEl){
-  const positions = {
-    'GM':'General Manager','Act GM':'Act General Manager','Manager':'Manager','Act Manager':'Act Manager',
-    'Coordinator':'Coordinator','Act Coordinator':'Act Coordinator','Section Head':'Section Head','Act Section Head':'Act Section Head',
-    'Supervisor':'Supervisor','Act Supervisor':'Act Supervisor','Act Leader':'Act Leader','Act JP':'Act JP',
-    'Operator':'Operator','Direktur':'Direktur'
-  };
   selectEl.innerHTML = '<option value="">Select Position</option>';
-  Object.entries(positions).forEach(([v,t])=>{
+  Object.entries(POSITIONS).forEach(([v,t])=>{
     const opt = document.createElement('option'); opt.value=v; opt.textContent=t; selectEl.appendChild(opt);
   });
 }
-function fillGrades(selectEl, grades){
+function fillGrades(selectEl){
   selectEl.innerHTML = '<option value="">-- Select Level --</option>';
-  grades.forEach(g=>{
-    const opt=document.createElement('option'); opt.value=g; opt.textContent=g; selectEl.appendChild(opt);
+  GRADES.forEach(g=>{
+    const opt = document.createElement('option'); opt.value=g; opt.textContent=g; selectEl.appendChild(opt);
   });
 }
 
-// === ADD STAGE ===
-function addStage(){
-  const container = document.getElementById('stages-container');
-  const tpl = document.getElementById('stage-template').innerHTML;
-  const idx = container.querySelectorAll('.stage-card').length;
+/* ====== Utils ====== */
+const getStageCards = () => [...document.querySelectorAll('.stage-card')];
+const getPlanYearInputs = () => [...document.querySelectorAll('input[name^="stages"][name$="[plan_year]"]')];
+const getPlanYears = () => getPlanYearInputs().map(i=>i.value.trim()).filter(Boolean);
+function updateAddBtn(){ document.getElementById('btn-add-stage').disabled = getStageCards().length >= 5; }
+function scrollToEl(el){ el?.scrollIntoView({behavior:'smooth', block:'center'}); }
 
-  // pasang template dengan placeholder __S__ sementara
-  const wrap = document.createElement('div');
-  wrap.innerHTML = tpl.replaceAll('__S__', idx).trim();
-  const stage = wrap.firstElementChild;
-
-  // simpan index di dataset dan APPEND DULU ke DOM!
-  stage.dataset.sIndex = String(idx);
-  container.appendChild(stage);
-
-  // inject options setelah append
-  const departments = @json($departments->map(fn($d)=>['v'=>$d->name,'t'=>$d->name.' — '.$d->company]));
-  const grades = @json($grades->pluck('aisin_grade'));
-  fillOptions(stage.querySelector('.stage-job'), departments);
-  fillPositions(stage.querySelector('.stage-position'));
-  fillGrades(stage.querySelector('.stage-level'), grades);
-
-  // bind tombol remove & add detail
-  stage.querySelector('.btn-remove-stage').addEventListener('click', ()=>{
-    stage.remove();
-    reindexStages();
-  });
-  stage.querySelector('.btn-add-detail').addEventListener('click', ()=> addDetail(stage));
-
-  // tambahkan 1 detail awal
-  addDetail(stage);
-}
-
-// === ADD DETAIL ===
-function addDetail(stageEl){
-  // Ambil index stage dari data, jangan cari lewat DOM indexOf
-  const sIndex = Number(stageEl.dataset.sIndex);
-  const detailsBox = stageEl.querySelector('.details-container');
-  const dIndex = detailsBox.querySelectorAll('.detail-row').length;
-
-  const tpl = document.getElementById('detail-template').innerHTML
-    .replaceAll('__S__', sIndex)
-    .replaceAll('__D__', dIndex);
-
-  const wrap = document.createElement('div');
-  wrap.innerHTML = tpl.trim();
-  const row = wrap.firstElementChild;
-
-  row.querySelector('.btn-remove-detail').addEventListener('click', ()=>{
-    row.remove();
-    reindexDetails(stageEl);
-  });
-
-  detailsBox.appendChild(row);
-}
-
-// === REINDEX SAAT HAPUS STAGE/DETAIL ===
-function reindexStages(){
-  document.querySelectorAll('.stage-card').forEach((stage, sIdx)=>{
-    stage.dataset.sIndex = String(sIdx);
-
-    // perbarui semua name yg dimiliki stage-level & detail
-    stage.querySelectorAll('[name^="stages["]').forEach(el=>{
-      el.name = el.name.replace(/stages\[\d+]/, `stages[${sIdx}]`);
-    });
-
-    reindexDetails(stage);
-  });
-}
-
+/* ====== Reindex ====== */
 function reindexDetails(stage){
   const sIdx = Number(stage.dataset.sIndex);
   const rows = stage.querySelectorAll('.details-container .detail-row');
   rows.forEach((row, dIdx)=>{
     row.querySelectorAll('[name*="[details]"]').forEach(el=>{
-      // ganti segmen stages[old][details][old] -> stages[sIdx][details][dIdx]
       el.name = el.name.replace(/stages\[\d+]\[details]\[\d+]/, `stages[${sIdx}][details][${dIdx}]`);
     });
   });
 }
+/* ====== Reindex (tambahkan applyTheme di akhir loop) ====== */
+function reindexStages(){
+  getStageCards().forEach((stage, sIdx)=>{
+    stage.dataset.sIndex = String(sIdx);
+    stage.querySelectorAll('[name^="stages["]').forEach(el=>{
+      el.name = el.name.replace(/stages\[\d+]/, `stages[${sIdx}]`);
+    });
+    reindexDetails(stage);
 
-// init
+    // terapkan tema sesuai index baru
+    applyTheme(stage, sIdx);
+  });
+  updateAddBtn();
+}
+
+/* ====== Add Detail ====== */
+function addDetail(stageEl){
+  const sIndex = Number(stageEl.dataset.sIndex);
+  const detailsBox = stageEl.querySelector('.details-container');
+  const dIndex = detailsBox.querySelectorAll('.detail-row').length;
+
+  const tpl = document.getElementById('detail-template').innerHTML
+    .replaceAll('__S__', sIndex).replaceAll('__D__', dIndex);
+
+  const wrap = document.createElement('div'); wrap.innerHTML = tpl.trim();
+  const row = wrap.firstElementChild;
+
+  row.querySelector('.btn-remove-detail').addEventListener('click', ()=>{
+    row.remove(); reindexDetails(stageEl);
+  });
+
+  detailsBox.appendChild(row);
+}
+
+/* ====== Themes ====== */
+const THEME_CLASSES = ['theme-blue','theme-green','theme-amber','theme-purple','theme-rose'];
+
+function applyTheme(stageEl, idx){
+  THEME_CLASSES.forEach(c => stageEl.classList.remove(c));
+  stageEl.classList.add(THEME_CLASSES[idx % THEME_CLASSES.length]);
+}
+
+function addStage(){
+  const container = document.getElementById('stages-container');
+  const idx = container.querySelectorAll('.stage-card').length;
+  if (idx >= 5) return;
+
+  const tpl = document.getElementById('stage-template').innerHTML.replaceAll('__S__', idx);
+  const wrap = document.createElement('div'); wrap.innerHTML = tpl.trim();
+  const stage = wrap.firstElementChild;
+
+  stage.dataset.sIndex = String(idx);
+  container.appendChild(stage);
+
+  /* (*) terapkan tema + animasi */
+  applyTheme(stage, idx);
+  stage.classList.add('added');
+  setTimeout(()=>stage.classList.remove('added'), 300);
+
+  // isi dropdown, tombol, guard, prefill, dll (tetap sama)
+  fillOptions(stage.querySelector('.stage-job'), DEPARTMENTS);
+  fillPositions(stage.querySelector('.stage-position'));
+  fillGrades(stage.querySelector('.stage-level'));
+
+  stage.querySelector('.btn-remove-stage').addEventListener('click', ()=>{
+    stage.remove(); reindexStages();
+  });
+  stage.querySelector('.btn-add-detail').addEventListener('click', ()=> addDetail(stage));
+
+  const yearInput = stage.querySelector(`[name="stages[${idx}][plan_year]"]`);
+  yearInput.addEventListener('change', ()=>{
+    const val = yearInput.value.trim();
+    if (!val) return;
+    const years = getPlanYears();
+    if (years.filter(y=>y===val).length > 1){
+      Swal.fire('Plan year duplikat', 'Tahun tersebut sudah dipakai pada stage lain.', 'warning');
+      yearInput.value = '';
+      yearInput.focus();
+    }
+  });
+
+  if (idx === 0){
+    yearInput.value = DEFAULTS.plan_year;
+    stage.querySelector(`[name="stages[${idx}][job_function]"]`).value = DEFAULTS.job_function || '';
+    stage.querySelector(`[name="stages[${idx}][position]"]`).value     = DEFAULTS.position || '';
+    stage.querySelector(`[name="stages[${idx}][level]"]`).value        = DEFAULTS.level || '';
+  }
+
+  addDetail(stage);
+  updateAddBtn();
+}
+
+/* ====== Init + submit guard ====== */
 document.addEventListener('DOMContentLoaded', ()=>{
+  // tombol add tahun
   document.getElementById('btn-add-stage').addEventListener('click', addStage);
+
+  // buat 1 stage saat load
+  addStage();
+
+  // defaultkan tanggal jika kosong
+  const dateEl = document.getElementById('date');
+  if (dateEl && !dateEl.value){
+    const d = new Date();
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
+  }
+
+  // sebelum submit: cek & sanitize
+  const form = document.querySelector('form[action="{{ route('icp.store') }}"]');
+  form.addEventListener('submit', (e)=>{
+    // sanitize
+    form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el=>{
+      el.value = (el.value || '').replace(/<[^>]*>/g,'').trim();
+    });
+
+    const stages = getStageCards();
+    if (stages.length === 0){
+      e.preventDefault(); Swal.fire('Oops','Minimal 1 tahun harus ditambahkan.','warning'); return;
+    }
+    const years = getPlanYears();
+    if (years.length !== stages.length){
+      e.preventDefault(); Swal.fire('Oops','Setiap Stage Tahun wajib diisi 4 digit.','warning'); return;
+    }
+    if (new Set(years).size !== years.length){
+      e.preventDefault(); Swal.fire('Oops','Plan year tidak boleh duplikat.','warning'); return;
+    }
+    for (const stage of stages){
+      const count = stage.querySelectorAll('.details-container .detail-row').length;
+      if (count === 0){
+        e.preventDefault();
+        Swal.fire('Oops','Setiap tahun minimal punya 1 detail.','warning');
+        scrollToEl(stage); return;
+      }
+    }
+  });
 });
 </script>
 

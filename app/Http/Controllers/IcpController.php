@@ -228,10 +228,6 @@ class IcpController extends Controller
         return view('website.icp.assign', compact('title', 'icps', 'filter', 'company', 'search', 'visiblePositions'));
     }
 
-
-
-
-
     public function create($employeeId)
     {
         $title = 'Add icp';
@@ -253,9 +249,10 @@ class IcpController extends Controller
             'employee_id'   => ['required', 'exists:employees,id'],
             'aspiration'    => ['required', 'string'],
             'career_target' => ['required', 'string'],
+            'date'          => ['required', 'date'],
 
             'stages'                => ['required', 'array', 'min:1'],
-            'stages.*.plan_year'    => ['required', 'digits:4'],
+            'stages.*.plan_year'    => ['required', 'digits:4', 'numeric', 'distinct'],
             'stages.*.job_function' => ['required', 'string'],
             'stages.*.position'     => ['required', 'string'],
             'stages.*.level'        => ['required', 'string'],
@@ -268,8 +265,9 @@ class IcpController extends Controller
             'stages.*.details.*.development_technical'    => ['required', 'string'],
             'stages.*.details.*.development_nontechnical' => ['required', 'string'],
         ], [
-            'stages.required'           => 'Minimal 1 tahun harus ditambahkan',
-            'stages.*.plan_year.digits' => 'Plan year harus 4 digit (YYYY)',
+            'stages.required'             => 'Minimal 1 tahun harus ditambahkan',
+            'stages.*.plan_year.digits'   => 'Plan year harus 4 digit (YYYY)',
+            'stages.*.plan_year.distinct' => 'Plan year tidak boleh sama antar stage.',
         ]);
 
         DB::beginTransaction();
