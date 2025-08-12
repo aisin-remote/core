@@ -477,7 +477,6 @@ class IcpController extends Controller
 
         return response()->download($path)->deleteFileAfterSend(true);
     }
-
     public function approval()
     {
         $user = auth()->user();
@@ -549,7 +548,6 @@ class IcpController extends Controller
         ], 400);
     }
 
-
     public function revise(Request $request)
     {
         $idp = Icp::findOrFail($request->id);
@@ -576,52 +574,70 @@ class IcpController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'employee_id' => 'required|exists:employees,id',
-            'aspiration' => 'required|string',
-            'career_target' => 'required|string',
-            'date' => 'required|date',
-            'job_function' => 'required|string',
-            'position' => 'required|string',
-            'level' => 'required|string',
+            'employee_id'   => ['required', 'exists:employees,id'],
+            'aspiration'    => ['required', 'string'],
+            'career_target' => ['required', 'string'],
+            'date'          => ['required', 'date'],
 
-            'details.*.current_technical' => 'required',
-            'details.*.current_nontechnical' => 'required',
-            'details.*.required_technical' => 'required',
-            'details.*.required_nontechnical' => 'required',
-            'details.*.development_technical' => 'required',
-            'details.*.development_nontechnical' => 'required',
+            'stages'                => ['required', 'array', 'min:1'],
+            'stages.*.plan_year'    => ['required', 'digits:4', 'numeric', 'distinct'],
+            'stages.*.job_function' => ['required', 'string'],
+            'stages.*.position'     => ['required', 'string'],
+            'stages.*.level'        => ['required', 'string'],
+            'stages.*.details'      => ['required', 'array', 'min:1'],
+
+            'stages.*.details.*.current_technical'        => ['required', 'string'],
+            'stages.*.details.*.current_nontechnical'     => ['required', 'string'],
+            'stages.*.details.*.required_technical'       => ['required', 'string'],
+            'stages.*.details.*.required_nontechnical'    => ['required', 'string'],
+            'stages.*.details.*.development_technical'    => ['required', 'string'],
+            'stages.*.details.*.development_nontechnical' => ['required', 'string'],
         ]);
+
+        // Update data utama ICP
+        $icp = Icp::findOrFail($id);
 
         try {
             DB::beginTransaction();
 
-            // Update data utama ICP
-            $icp = Icp::findOrFail($id);
             $icp->update([
-                'employee_id' => $request->employee_id,
-                'aspiration' => $request->aspiration,
+                'employee_id'   => $request->employee_id,
+                'aspiration'    => $request->aspiration,
                 'career_target' => $request->career_target,
-                'date' => $request->date,
-                'job_function' => $request->job_function,
-                'position' => $request->position,
-                'level' => $request->level,
-                'status' => "1",
+                'date'          => $request->date,
+                'status'        => "1",
             ]);
 
             // Hapus semua detail lama (bisa diubah kalau ingin granular update)
             $icp->details()->delete();
 
-            // Simpan ulang detail baru
-            foreach ($request->details as $detail) {
-                IcpDetail::create([
-                    'icp_id' => $icp->id,
-                    'current_technical' => $detail['current_technical'],
-                    'current_nontechnical' => $detail['current_nontechnical'],
-                    'required_technical' => $detail['required_technical'],
-                    'required_nontechnical' => $detail['required_nontechnical'],
-                    'development_technical' => $detail['development_technical'],
-                    'development_nontechnical' => $detail['development_nontechnical'],
-                ]);
+            // sanitasi ringan
+            $clean = fn($v, $max = 255) => mb_substr(trim(strip_tags((string) $v)), 0, $max);
+
+            foreach ($request->stages as $stage) {
+                $year = (int) $stage['plan_year'];
+                $job = $clean($stage['job_function'], 100);
+                $pos = $clean($stage['position'], 50);
+                $level = $clean($stage['level'], 30);
+
+                $rows = [];
+                // Simpan ulang detail baru
+                foreach ($stage['details'] as $d) {
+                    $rows[] = [
+                        'plan_year' => $year,
+                        'job_function' => $job,
+                        'position' => $pos,
+                        'level' => $level,
+                        'current_technical' => $clean($d['current_technical']),
+                        'current_nontechnical' => $clean($d['current_nontechnical']),
+                        'required_technical' => $clean($d['required_technical']),
+                        'required_nontechnical' => $clean($d['required_nontechnical']),
+                        'development_technical' => $clean($d['development_technical']),
+                        'development_nontechnical' => $clean($d['development_nontechnical']),
+                    ];
+                }
+
+                $icp->details()->createMany($rows);
             }
 
             DB::commit();
@@ -634,12 +650,13 @@ class IcpController extends Controller
     }
     public function edit($id)
     {
-        $title = 'Update ICP';
-        $departments = Department::all();
-        $employees = Employee::all();
-        $grades = GradeConversion::all();
+        $title                 = 'Update ICP';
+        $icp                   = Icp::with('details', 'employee')->findOrFail($id);
+        $employee              = Employee::findOrFail($icp->employee_id);
+        $departments           = Department::where('company', $employee->company_name)->get();
+        $employees             = Employee::where('company_name', $employee->company_name)->get();
+        $grades                = GradeConversion::all();
         $technicalCompetencies = MatrixCompetency::all();
-        $icp = Icp::with('details', 'employee')->findOrFail($id);
 
         // Tambahkan array posisi secara manual atau ambil dari konfigurasi/tabel
         $positions = [
@@ -654,6 +671,30 @@ class IcpController extends Controller
             'Operator' => 'Operator',
         ];
 
+        $now       = Carbon::now();
+        $icp->date = $now->format('Y-m-d');
+
+        $stages = $icp->details
+            ->groupBy('plan_year')
+            ->map(function ($g) {
+                $first = $g->first();
+                return [
+                    'plan_year'    => (int) $first->plan_year,
+                    'job_function' => (string) $first->job_function,
+                    'position'     => (string) $first->position,
+                    'level'        => (string) $first->level,
+                    'details'      => $g->map(fn($d) => [
+                        'current_technical'        => (string) $d->current_technical,
+                        'current_nontechnical'     => (string) $d->current_nontechnical,
+                        'required_technical'       => (string) $d->required_technical,
+                        'required_nontechnical'    => (string) $d->required_nontechnical,
+                        'development_technical'    => (string) $d->development_technical,
+                        'development_nontechnical' => (string) $d->development_nontechnical,
+                    ])->values()->all(),
+                ];
+            })
+            ->values();
+
         return view('website.icp.update', compact(
             'title',
             'grades',
@@ -661,7 +702,8 @@ class IcpController extends Controller
             'employees',
             'technicalCompetencies',
             'icp',
-            'positions'  // tambahkan ini
+            'positions',
+            'stages'
         ));
     }
 
