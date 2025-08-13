@@ -195,6 +195,24 @@ class IdpController extends Controller
                 $request->get('page', 1),
                 ['path' => $request->url(), 'query' => $request->query()]
             );
+
+            $assessments->setCollection(
+                $assessments->getCollection()->map(function ($idp) {
+                    // Ambil employee IDP
+                    $employee = optional(optional($idp->hav)->hav)->employee;
+
+                    // Cari atasan
+                    $creator = null;
+                    $assignLevel = $employee->getCreateAuth();
+                    $creator = $employee->getSuperiorsByLevel($assignLevel)->first();
+
+                    $idp->created_by = $creator;
+                    $idp->created_by_name = optional($creator)->name ?? null;
+                    $idp->created_by_id = optional($creator)->id ?? null;
+
+                    return $idp;
+                })
+            );
         } else {
             $emp = Employee::where('user_id', $user->id)->first();
 
@@ -233,6 +251,24 @@ class IdpController extends Controller
                     10,
                     $request->get('page', 1),
                     ['path' => $request->url(), 'query' => $request->query()]
+                );
+
+                $assessments->setCollection(
+                    $assessments->getCollection()->map(function ($idp) {
+                        // Ambil employee IDP
+                        $employee = optional(optional($idp->hav)->hav)->employee;
+
+                        // Cari atasan
+                        $creator = null;
+                        $assignLevel = $employee->getCreateAuth();
+                        $creator = $employee->getSuperiorsByLevel($assignLevel)->first();
+
+                        $idp->created_by = $creator;
+                        $idp->created_by_name = optional($creator)->name ?? null;
+                        $idp->created_by_id = optional($creator)->id ?? null;
+
+                        return $idp;
+                    })
                 );
             }
         }

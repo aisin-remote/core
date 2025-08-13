@@ -39,6 +39,12 @@
         width: 55px;
     }
 
+    .modal-header {
+        position: sticky;
+        top: 0;
+        background: #ffffff; /* supaya tidak transparan saat scroll */
+        z-index: 1055; /* lebih tinggi dari isi modal */
+    }
 </style>
 
 @section('main')
@@ -342,6 +348,8 @@ $employee = optional($data)->employee;
                                     <th>Development Program</th>
                                     <th>Development Target</th>
                                     <th>Due Date</th>
+                                    <th>Created By</th>
+                                    <th>Last Update</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -353,6 +361,13 @@ $employee = optional($data)->employee;
                                     <td>{{ $idp->development_target }}</td>
                                     <td>
                                         {{ optional($idp)->date ? \Carbon\Carbon::parse($idp->date)->format('d-m-Y') :
+                                        '-' }}
+                                    </td>
+                                    <td>
+                                        {{ $idp->created_by_name ?? null }}
+                                    </td>
+                                    <td>
+                                        {{ optional($idp)->updated_at ? \Carbon\Carbon::parse($idp->updated_at)->format('d-m-Y') :
                                         '-' }}
                                     </td>
                                 </tr>
