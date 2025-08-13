@@ -63,6 +63,24 @@
                         @enderror
                     </div>
 
+                    <div class="mb-4">
+                        <label for="purpose" class="form-label">Purpose</label>
+                        <select id="update_purpose" name="purpose" data-placeholder="Select Purpose..."
+                        class="form-select form-select-lg fw-semibold" required>
+                        <option value="">Select Purpose</option>
+                        <option value="AGMP">AGMP</option>
+                            <option value="AMMP">AMMP</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Recruitment">Recruitment</option>
+                            <option value="Promosi">Promosi</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="lembaga" class="form-label">Lembaga</label>
+                        <input type="text" id="update_lembaga" name="lembaga" class="form-control">
+                    </div>
+
                     <div class="mb-4" style="display: none;">
                         <label for="update_description" class="form-label">Description Assessment</label>
                         <input type="hidden" class="form-control" id="update_description" name="description" required>
