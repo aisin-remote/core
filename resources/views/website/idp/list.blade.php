@@ -214,14 +214,14 @@
                                 <div class="d-flex align-items-center">
                                     <span class="big me-2">Purpose</span>
                                     <span class="badge badge-warning" style="font-size: 1rem;">
-                                        {{ $assessment->purpose }}
+                                        {{ $assessment->purpose ?? 'N/A' }}
                                     </span>
                                 </div>
 
                                 <div class="d-flex align-items-center">
                                     <span class="big me-2">Lembaga</span>
                                     <span class="badge badge-primary" style="font-size: 1rem;">
-                                        {{ $assessment->lembaga }}
+                                        {{ $assessment->lembaga ?? 'N/A' }}
                                     </span>
                                 </div>
                             </div>
