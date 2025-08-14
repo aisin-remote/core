@@ -37,14 +37,23 @@ class Idp extends Model
         return $this->hasMany(IdpCommentHistory::class, 'idp_id');
     }
     public function developments()
-{
-    return $this->hasMany(Development::class, 'idp_id', 'id');
-}
+    {
+        return $this->hasMany(Development::class, 'idp_id', 'id');
+    }
 
-  public function developmentsones()
-{
-    return $this->hasMany(DevelopmentOne::class, 'idp_id', 'id');
-}
+    public function developmentsones()
+    {
+        return $this->hasMany(DevelopmentOne::class, 'idp_id', 'id');
+    }
 
+    public function backups()
+    {
+        return $this->hasMany(IdpBackup::class, 'idp_id');
+    }
 
+    public function lastBackup()
+    {
+        // versi terakhir per-IDP (berdasarkan kolom version)
+        return $this->hasOne(IdpBackup::class, 'idp_id')->latestOfMany('version');
+    }
 }

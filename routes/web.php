@@ -251,6 +251,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('idp')->group(function () {
+        // Manager all IDP for President
+        Route::get('/manage-all', [IdpController::class, 'manage'])->name('idp.manage.all');
         Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
         Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
@@ -269,6 +271,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
                 'employees' => $employee
             ]);
         });
+
+        Route::get('/edit/{id}', [IdpController::class, 'edit'])->name('idp.edit');
+        Route::put('/update/{idp}', [IdpController::class, 'update'])->name('idp.update');
     });
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])

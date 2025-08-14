@@ -20,6 +20,7 @@ use App\Models\DevelopmentOne;
 use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\IdpBackup;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -402,7 +403,6 @@ class IdpController extends Controller
         }
     }
 
-
     public function storeMidYear(Request $request, $employee_id)
     {
         $request->validate([
@@ -640,7 +640,6 @@ class IdpController extends Controller
         return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 
-
     public function getData(Request $request)
     {
         $assessmentId = $request->input('assessment_id');
@@ -720,7 +719,6 @@ class IdpController extends Controller
             ], 500);
         }
     }
-
     public function approval()
     {
         $user = auth()->user();
@@ -859,7 +857,6 @@ class IdpController extends Controller
             'message' => 'Something went wrong!'
         ], 400);
     }
-
     public function revise(Request $request)
     {
         $idp = Idp::findOrFail($request->id);
@@ -890,6 +887,134 @@ class IdpController extends Controller
         Idp::where('assessment_id', $id)->delete();
 
         return redirect()->back()->with('success', 'IDP deleted successfully.');
+    }
+
+    public function manage(Request $request)
+    {
+        $company   = (string) $request->query('company', '');
+        $positions = $request->query('positions', []);
+        if (!is_array($positions)) $positions = [$positions];
+
+        $synonymMap = [
+            'President'  => ['President'],
+            'VPD'        => ['VPD'],
+            'Direktur'   => ['Direktur', 'Director'],
+            'GM'         => ['GM', 'Act GM'],
+            'Manager'    => ['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'],
+            'Supervisor' => ['Supervisor', 'Section Head', 'Act Section Head'],
+            'Leader'     => ['Leader', 'Staff', 'Act Leader'],
+            'JP'         => ['JP', 'Act JP'],
+            'Operator'   => ['Operator'],
+        ];
+
+        $companyNorm = Str::of($company)->lower()->trim()->toString();
+
+        $posNorms = collect($positions)->filter()->map(fn($p) => Str::of($p)->trim()->toString());
+        $posAlts  = $posNorms
+            ->flatMap(fn($p) => $synonymMap[$p] ?? [$p])
+            ->map(fn($s) => Str::of($s)->lower()->trim()->toString())
+            ->unique()->values();
+
+        $query = Idp::query()
+            ->select(
+                'idp.*',
+                'employees.name as employee_name',
+                'employees.company_name as employee_company_name',
+                'employees.position as employee_position'
+            )
+            ->join('assessments', 'assessments.id', '=', 'idp.assessment_id')
+            ->join('employees', 'employees.id', '=', 'assessments.employee_id')
+            ->when($companyNorm !== '', function ($q) use ($companyNorm) {
+                $q->whereRaw('LOWER(TRIM(employees.company_name)) = ?', [$companyNorm]);
+                // atau partial match:
+                // $q->whereRaw('LOWER(TRIM(employees.company_name)) LIKE ?', ["%{$companyNorm}%"]);
+            })
+            ->when($posAlts->isNotEmpty(), function ($q) use ($posAlts) {
+                $q->whereIn(DB::raw('LOWER(TRIM(employees.position))'), $posAlts->all());
+            })
+            ->withCount('backups')
+            ->with([
+                'lastBackup' => function ($q) {
+                    $q->select(
+                        'id',
+                        'version',
+                        'status',
+                        'changed_at',
+                        'changed_by',
+                        'category',
+                        'alc_id',
+                        'development_program',
+                        'date'
+                    );
+                }
+            ]);
+
+        $idps = $query->get();
+
+        // dropdowns
+        $companies = Employee::query()
+            ->whereNotNull('company_name')
+            ->select('company_name')
+            ->distinct()
+            ->orderBy('company_name')
+            ->pluck('company_name');
+
+        $allPositions = array_keys($synonymMap);
+
+        return view('website.idp.manage.index', compact(
+            'idps',
+            'companies',
+            'allPositions',
+            'company',
+            'positions'
+        ));
+    }
+
+    public function edit($id)
+    {
+        $idp = Idp::findOrFail($id);
+        return view('website.idp.manage.edit', compact('idp'));
+    }
+
+    public function update(Request $request, Idp $idp)
+    {
+        $data = $request->validate([
+            'category'             => ['required', 'string', 'max:100'],
+            'alc_id'               => ['required', 'integer'],
+            'development_program'  => ['required', 'string', 'max:160'],
+            'development_target'   => ['required', 'string', 'max:1200'],
+            'date'                 => ['required', 'date'],
+            'status'               => ['nullable', 'integer', 'in:0,1,2,3,4'],
+        ]);
+
+        $data['alc_id'] = (int) $data['alc_id'];
+        $data['status'] = (int) $data['status'];
+
+        DB::transaction(function () use ($idp, $data) {
+            $fields = ['hav_detail_id', 'assessment_id', 'alc_id', 'category', 'development_program', 'development_target', 'date', 'status'];
+
+            $nextVersion = (int) $idp->backups()->max('version') + 1;
+
+            IdpBackup::create([
+                'idp_id'              => $idp->id,
+                'assessment_id'       => $idp->assessment_id,
+                'alc_id'              => $idp->alc_id,
+                'hav_detail_id'       => $idp->hav_detail_id,
+                'category'            => $idp->category,
+                'development_program' => $idp->development_program,
+                'development_target'  => $idp->development_target,
+                'date'                => $idp->date,
+                'status'              => $idp->status,
+                'version'             => $nextVersion,
+                'changed_by'          => auth()->id(),
+                'changed_at'          => now(),
+            ]);
+
+            $idp->update($data);
+        });
+
+        return redirect()->route('idp.manage.all')
+            ->with('success', 'IDP berhasil diperbarui.');
     }
 
 
@@ -963,16 +1088,83 @@ class IdpController extends Controller
 
             foreach ($assessment->details as $detail) {
                 $detail->status = $this->determineIdpStatus($detail);
-                $detail->badge = $badges[$detail->status] ?? $badges['not_created'];
+
+                $approverName = $this->getApproverName($detail);
+                $badgeText = $badges[$detail->status]['text'];
+
+                // Tambahkan nama approver untuk status approved
+                if ($detail->status === 'approved' && $approverName) {
+                    $badgeText = 'Approved by ' . $approverName;
+                }
+
+                $detail->badge = [
+                    'text' => $badgeText,
+                    'class' => $badges[$detail->status]['class']
+                ];
+
                 $detail->badge_class = $this->getBadgeClass($detail);
                 $detail->show_icon = $this->shouldShowIcon($detail);
             }
 
-            $assessment->overall_status = $this->getOverallStatus($assessment);
-            $assessment->overall_badge = $badges[$assessment->overall_status] ?? $badges['not_created'];
+            // Get overall status
+            $overallStatus = $this->getOverallStatus($assessment);
+            $assessment->overall_status = $overallStatus['status'];
+
+            switch ($overallStatus['status']) {
+                case 'approved':
+                    $overallBadgeText = $overallStatus['approver']
+                        ? 'Approved by ' . $overallStatus['approver']
+                        : $badges['approved']['text'];
+                    break;
+
+                case 'waiting':
+                    $overallBadgeText = $overallStatus['approver']
+                        ? 'Waiting by ' . $overallStatus['approver']
+                        : $badges['waiting']['text'];
+                    break;
+
+                case 'checked':
+                    $overallBadgeText = $overallStatus['approver']
+                        ? 'Checked by ' . $overallStatus['approver'] // (untuk manager status=3 otomatis nama step-2)
+                        : $badges['checked']['text'];
+                    break;
+
+                default:
+                    $overallBadgeText = $badges[$overallStatus['status']]['text'];
+            }
+
+            $assessment->overall_badge = [
+                'text' => $overallBadgeText,
+                'class' => $badges[$overallStatus['status']]['class']
+            ];
 
             return $assessment;
         });
+    }
+
+    private function getApproverName($detail)
+    {
+        try {
+            $employee = $detail->hav->employee ?? null;
+            if (!$employee)
+                return null;
+
+            // kalau detail approved → pakai final approval; selain itu → first approval
+            $level = ($detail->status ?? null) === 'approved'
+                ? (int) $employee->getFinalApproval()
+                : (int) $employee->getFirstApproval();
+
+            if ($level <= 0)
+                return null;
+
+            $chain = $employee->getSuperiorsByLevel($level); // Collection<Employee>
+            $finalSuperior = $chain->last();
+
+            return $finalSuperior->name ?? null;
+        } catch (\Throwable $e) {
+            logger()->error('Error getting approver name: ' . $e->getMessage());
+            return null;
+        }
     }
 
     private function determineIdpStatus($detail)
@@ -1026,28 +1218,6 @@ class IdpController extends Controller
         }
     }
 
-    private function getApproverName($detail)
-    {
-        try {
-            $employee = $detail->hav->employee;
-
-            if ($employee) {
-                $createLevel = $employee->getCreateAuth();
-                $getSuperior = $employee->getSuperiorsByLevel($createLevel);
-
-                // Pastikan ada superior dan memiliki nama
-                if (!empty($getSuperior)) {
-                    return $getSuperior[0]['name'] ?? null;
-                }
-            }
-        } catch (\Exception $e) {
-            // Tangani error jika ada
-            logger()->error('Error getting approver name: ' . $e->getMessage());
-        }
-
-        return null;
-    }
-
     private function getBadgeClass($detail)
     {
         $class = 'badge-lg d-block w-100 ';
@@ -1083,32 +1253,86 @@ class IdpController extends Controller
     private function getOverallStatus($assessment)
     {
         $statuses = [];
+        $waitingBy = null;   // step-1
+        $checked1By = null;   // step-1
+        $checked2By = null;   // step-2
+        $approvedBy = null;   // step-3
 
         foreach ($assessment->details as $detail) {
             if ($detail->score <= 3 || $detail->suggestion_development !== null) {
-                if ($detail->score >= 3 && $detail->suggestion_development === null) {
+                if ($detail->score >= 3 && $detail->suggestion_development === null)
                     continue;
-                }
+
                 $statuses[] = $detail->status;
+
+                $employee = $assessment->employee ?? ($detail->hav->employee ?? null);
+                $idp = $detail->idp->first();
+
+                if (!$employee || !$idp)
+                    continue;
+
+                $normalized = $employee->getNormalizedPosition();
+
+                if ($normalized === 'manager') {
+                    // mapping manager: 1(waiting) → step1, 2(checked1) → step1, 3(checked2) → step2, 4(approved) → step3
+                    switch ((int) $idp->status) {
+                        case 1:
+                            if (!$waitingBy)
+                                $waitingBy = $this->getSuperiorNameAtStep($employee, 2);
+                            break;
+                        case 2:
+                            if (!$checked1By)
+                                $checked1By = $this->getSuperiorNameAtStep($employee, 2);
+                            break;
+                        case 3:
+                            if (!$checked2By)
+                                $checked2By = $this->getSuperiorNameAtStep($employee, 5);
+                            break;
+                        case 4:
+                            if (!$approvedBy)
+                                $approvedBy = $this->getSuperiorNameAtStep($employee, 5);
+                            break;
+                    }
+                } else {
+                    // non-manager: logika seperti sebelumnya
+                    if ($detail->status === 'waiting' && !$waitingBy)
+                        $waitingBy = $this->getApproverName($detail); // step-1
+                    if ($detail->status === 'checked' && !$checked1By)
+                        $checked1By = $this->getApproverName($detail); // step-1
+                    if ($detail->status === 'approved' && !$approvedBy)
+                        $approvedBy = $this->getApproverName($detail); // final
+                }
             }
         }
 
-        if (empty($statuses)) {
-            return 'no_approval_needed';
-        }
+        if (empty($statuses))
+            return ['status' => 'no_approval_needed', 'approver' => null];
+        if (in_array('not_created', $statuses, true))
+            return ['status' => 'not_created', 'approver' => null];
 
-        if (in_array('not_created', $statuses)) {
-            return 'not_created';
-        }
-
+        // urutan prioritas tetap
         $priority = ['revise', 'draft', 'waiting', 'checked', 'approved', 'unknown'];
         foreach ($priority as $status) {
-            if (in_array($status, $statuses)) {
-                return $status;
+            if (in_array($status, $statuses, true)) {
+                // untuk "checked", jika ada checked2 (status 3) tampilkan nama step-2; kalau tidak, pakai step-1
+                $approver = match ($status) {
+                    'waiting' => $waitingBy,
+                    'checked' => $checked2By ?: $checked1By,
+                    'approved' => $approvedBy,
+                    default => null,
+                };
+                return ['status' => $status, 'approver' => $approver];
             }
         }
 
-        return 'unknown';
+        return ['status' => 'unknown', 'approver' => null];
+    }
+
+    private function getSuperiorNameAtStep(Employee $employee, int $step): ?string
+    {
+        $chain = $employee->getSuperiorsByLevel(10);
+        $target = $chain->get($step - 1) ?? $chain->last();
+        return $target->name ?? null;
     }
 
     private function getJobPositions($assessments)
