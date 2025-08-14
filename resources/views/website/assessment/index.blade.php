@@ -174,12 +174,43 @@
                 z-index: 99999 !important;
             }
         </style>
+
+        <style>
+        /* Default: selama body BELUM .page-ready, history-btn mati total */
+        body:not(.page-ready) .history-btn,
+        body:not(.page-ready) a.history-btn.btn {
+            pointer-events: none !important;
+            opacity: .5;
+            cursor: not-allowed !important;
+        }
+        .history-btn .spinner-border{ vertical-align: -0.125em; }
+
+        /* Setelah siap (JS menambahkan .page-ready), tombol kembali normal */
+        body.page-ready .history-btn,
+        body.page-ready a.history-btn.btn {
+            pointer-events: auto !important;
+            opacity: 1;
+            cursor: pointer !important;
+        }
+        </style>
     @endpush
 
     @push('scripts')
         <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="{{ asset('assets/plugins/custom/select2/js/select2.min.js') }}"></script>
+        <script>
+        window.addEventListener('load', function () {
+            document.body.classList.add('page-ready');
+        });
 
+        $(document).on('click', '.history-btn', function(e){
+            if (!document.body.classList.contains('page-ready')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            return false;
+            }
+        });
+        </script>
         <script>
             class ModalManager {
                 constructor() {
@@ -436,6 +467,8 @@
             }
 
             $(document).ready(function() {
+                $('.history-btn').prop('disabled', false).removeAttr('aria-disabled');
+
                 // History button click handler
                 $(document).on("click", ".history-btn", function(event) {
                     event.preventDefault();
@@ -475,6 +508,8 @@
                                 data-date="${assessment.date}"
                                 data-description="${safeEncode(assessment.description || '')}"
                                 data-targetposition="${assessment.target_position}"
+                                data-purpose="${assessment.purpose || ''}"
+                                data-lembaga="${safeEncode(assessment.lembaga) || ''}"
                                 data-upload="${assessment.upload || ''}"
                                 data-note="${safeEncode(assessment.note || '')}"
                                 data-scores='${btoa(JSON.stringify(assessment.details.map(d => d.score)))}'
@@ -545,6 +580,10 @@
                     let upload = $(this).data("upload");
                     let note = safeDecode($(this).data("note"));
                     let targetPosition = $(this).data("targetposition");
+                    let purpose = $(this).data("purpose");
+                    let lembaga = safeDecode($(this).data("lembaga"));
+                    console.log(purpose);
+
 
                     let scores = JSON.parse(atob($(this).attr("data-scores")));
                     let alcs = JSON.parse(atob($(this).attr("data-alcs")));
@@ -562,6 +601,8 @@
                     $("#update_upload").attr("href", `/storage/${upload}`).text("Lihat File");
                     $("#update_note").val(note);
                     $("#update_target").val(targetPosition);
+                    $("#update_purpose").val(purpose);
+                    $("#update_lembaga").val(lembaga);
 
                     scores.forEach((score, index) => {
                         let alcId = alcs[index];

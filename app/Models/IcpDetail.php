@@ -11,5 +11,11 @@ class IcpDetail extends Model
 
     protected $table = 'icp_details';
     protected $guarded = ['id'];
+    protected $casts = [
+        'plan_year' => 'integer',
+    ];
 
+    public function idp(){
+        return $this->belongsTo(Icp::class);
+    }
 }

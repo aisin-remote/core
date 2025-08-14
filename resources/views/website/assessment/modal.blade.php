@@ -88,7 +88,21 @@
                     </div>
 
                     <div class="mb-4">
-                        {{-- <input type="hidden" id="description" name="description"> --}}
+                        <label for="purpose" class="form-label">Purpose</label>
+                        <select id="purpose" name="purpose" data-placeholder="Select Purpose..."
+                        class="form-select form-select-lg fw-semibold" required>
+                        <option value="">Select Purpose</option>
+                        <option value="AGMP">AGMP</option>
+                            <option value="AMMP">AMMP</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Recruitment">Recruitment</option>
+                            <option value="Promosi">Promosi</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="lembaga" class="form-label">Lembaga</label>
+                        <input type="text" id="lembaga" name="lembaga" class="form-control">
                     </div>
 
                     <div class="mb-4">
@@ -355,6 +369,13 @@
             $('#target').select2({
                 dropdownParent: $('#addAssessmentModal'),
                 placeholder: "Pilih Employee",
+                allowClear: false,
+                width: '100%'
+            });
+
+            $('#purpose').select2({
+                dropdownParent: $('#addAssessmentModal'),
+                placeholder: "Pilih Purpose",
                 allowClear: false,
                 width: '100%'
             });

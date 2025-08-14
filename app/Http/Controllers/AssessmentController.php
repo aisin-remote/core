@@ -121,25 +121,41 @@ class AssessmentController extends Controller
             'leadingDepartment.division'
         )->findOrFail($assessment->employee_id);
 
-        $assessments = DetailAssessment::with('alc')
-            ->where('assessment_id', $assessment_id)
-            ->get();
+        $grade = $employee?->grade;
+        $gradeGroup = (int) filter_var($grade, FILTER_SANITIZE_NUMBER_INT); // Ambil angka dari grade, contoh: "4A" => 4
+
+        $assessmentsQuery = DetailAssessment::with('alc')
+            ->where('assessment_id', $assessment_id);
+
+
+        if ($gradeGroup >= 4 && $gradeGroup <= 6) {
+            $assessmentsQuery->whereNotIn('alc_id', [1, 2, 6]);
+        }
+
+        $assessments = $assessmentsQuery->get();
+
 
         if ($assessments->isEmpty()) {
             return back()->with('error', 'Tidak ada data assessment pada tanggal tersebut.');
         }
 
-        $details = DB::table('detail_assessments')
+        $detailsQuery = DB::table('detail_assessments')
             ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
             ->where('detail_assessments.assessment_id', $assessment_id)
             ->select(
                 'detail_assessments.*',
                 'alc.name as alc_name',
                 'detail_assessments.score'
-            )
-            ->get();
+            );
 
-        return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details'));
+
+        if ($gradeGroup >= 4 && $gradeGroup <= 6) {
+            $detailsQuery->whereNotIn('detail_assessments.alc_id', [1, 2, 6]);
+        }
+
+        $details = $detailsQuery->get();
+
+        return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details', 'assessment'));
     }
 
     /**
@@ -194,12 +210,15 @@ class AssessmentController extends Controller
             $this->validateAssessmentRequest($request);
             $filePath = $this->handleFileUpload($request);
 
+
             $assessment = Assessment::create([
-                'employee_id' => $request->employee_id,
-                'date' => $request->date,
+                'employee_id'     => $request->employee_id,
+                'date'            => $request->date,
                 'target_position' => $request->target,
-                'upload' => $filePath,
-                'note' => $request->note,
+                'upload'          => $filePath,
+                'note'            => $request->note,
+                'purpose'         => $request->purpose,
+                'lembaga'         => $request->lembaga
             ]);
 
             $this->storeAssessmentDetails($request, $assessment);
@@ -237,12 +256,14 @@ class AssessmentController extends Controller
         try {
             $assessment = Assessment::with('details.alc')->findOrFail($id);
             return response()->json([
-                'id' => $assessment->id,
+                'id'          => $assessment->id,
                 'employee_id' => $assessment->employee_id,
-                'date' => $assessment->date,
+                'date'        => $assessment->date,
                 'description' => $assessment->description,
-                'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null,
-                'details' => $assessment->details->map(fn($d) => [
+                'purpose'     => $assessment->purpose,
+                'lembaga'     => $assessment->lembaga,
+                'upload'      => $assessment->upload ? asset('storage/' . $assessment->upload) : null,
+                'details'     => $assessment->details->map(fn($d) => [
                     'alc_id' => $d->alc_id,
                     'score' => $d->score,
                     'strength' => $d->strength,
@@ -507,25 +528,27 @@ class AssessmentController extends Controller
     private function validateAssessmentRequest(Request $request, $isUpdate = false)
     {
         $rules = [
-            'employee_id' => 'required|exists:employees,id',
-            'date' => 'required|date',
-            'target' => 'required|string',
-            'upload' => 'nullable|file|mimes:pdf|max:2048',
-            'note' => 'nullable|string',
-            'description' => 'nullable|string',
-            'alc_ids' => 'required|array',
-            'alc_ids.*' => 'exists:alc,id',
-            'scores' => 'nullable|array',
-            'scores.*' => 'nullable|string|max:2',
-            'strength' => 'nullable|array',
-            'weakness' => 'nullable|array',
+            'employee_id'            => 'required|exists:employees,id',
+            'date'                   => 'required|date',
+            'target'                 => 'required|string',
+            'upload'                 => 'nullable|file|mimes:pdf|max:2048',
+            'note'                   => 'nullable|string',
+            'description'            => 'nullable|string',
+            'purpose'                => 'required|string',
+            'lembaga'                => 'required|string',
+            'alc_ids'                => 'required|array',
+            'alc_ids.*'              => 'exists:alc,id',
+            'scores'                 => 'nullable|array',
+            'scores.*'               => 'nullable|string|max:2',
+            'strength'               => 'nullable|array',
+            'weakness'               => 'nullable|array',
             'suggestion_development' => 'nullable|array',
         ];
 
         if ($isUpdate) {
             $rules['assessment_id'] = 'required|exists:assessments,id';
-            $rules['employee_id'] = 'nullable|exists:employees,id';
-            $rules['target'] = 'nullable|string';
+            $rules['employee_id']   = 'nullable|exists:employees,id';
+            $rules['target']        = 'nullable|string';
         }
 
         return $request->validate($rules);
@@ -763,10 +786,12 @@ class AssessmentController extends Controller
 
     private function updateAssessment($assessment, $request)
     {
-        $assessment->date = $request->date;
-        $assessment->description = $request->description;
-        $assessment->note = $request->note;
+        $assessment->date            = $request->date;
+        $assessment->description     = $request->description;
+        $assessment->note            = $request->note;
         $assessment->target_position = $request->target;
+        $assessment->purpose         = $request->purpose;
+        $assessment->lembaga         = $request->lembaga;
 
         if ($request->hasFile('upload')) {
             $path = $this->handleFileUpload($request, $assessment->upload);
@@ -818,6 +843,14 @@ class AssessmentController extends Controller
 
         if (!$latestHav) {
             return; //Tidak ada hav untuk diupdate
+        }
+
+        if ($latestHav->created_at === $assessment->created_at->format('Y-m-d H:i:s')) {
+            DB::table('havs')
+                ->where('id', $latestHav->id)
+                ->update([
+                    'assessment_id' => $assessment->id,
+                ]);
         }
 
         // Load template HAV

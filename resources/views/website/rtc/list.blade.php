@@ -39,6 +39,15 @@
                                 data-kt-menu-placement="bottom-end">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
+                            <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
+                                <i class="fas fa-plus"></i>
+                                Add
+                            </a>
+                            <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
+                                data-bs-target="#importModal">
+                                <i class="fas fa-upload"></i>
+                                Import
+                            </button>
                         </div>
                     </div>
                     <div class="card-body">

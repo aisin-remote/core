@@ -57,7 +57,7 @@
                             <div class="mb-3">
                                 <label class="form-label">Birthday Date</label>
                                 <input type="date" name="birthday_date" class="form-control"
-                                    value="{{ old('birthday_date') }}"required>
+                                    value="{{ old('birthday_date') }}">
                                 @error('birthday_date')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -65,14 +65,14 @@
                             <div class="mb-3">
                                 <label class="form-label">Phone Number</label>
                                 <input type="number" name="phone_number" id="phone_number" class="form-control"
-                                    value="{{ old('phone_number') }}" required>
+                                    value="{{ old('phone_number') }}">
                                 @error('phone_number')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Photo <small class="text-muted">(JPG, PNG, JPEG)</small></label>
-                                <input type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png" required>
+                                <input type="file" name="photo" class="form-control" accept=".jpg,.jpeg,.png">
                                 @error('photo')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -107,7 +107,7 @@
                             <div class="mb-3">
                                 <label class="form-label">Company Group</label>
                                 <input type="text" name="company_group" class="form-control"
-                                    value="{{ old('company_group') }}" required>
+                                    value="{{ old('company_group') }}">
                                 @error('company_group')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -115,7 +115,7 @@
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
                                 <input type="text" name="email" class="form-control"
-                                    value="{{ old('email') }}" placeholder="employe@example.com" required>
+                                    value="{{ old('email') }}" placeholder="employe@example.com">
                                 @error('email')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -185,7 +185,7 @@
                             @endif
                             <div class="mb-3">
                                 <label class="form-label">Grade</label>
-                                <select name="grade" class="form-control" required>
+                                <select name="grade" class="form-control">
                                     <option value="">-- Select Grade --</option>
                                     @foreach ($grade as $g)
                                         <option value="{{ $g->aisin_grade }}"
