@@ -264,27 +264,10 @@
                                         transform: translateY(0);
                                     }
                                 }
-
-                                .chart-wrapper {
-                                    width: 100%;
-                                    margin-inline: auto;
-                                }
-
-                                .chart-wrapper canvas {
-                                    width: 100% !important;
-                                    height: 300px !important;
-                                }
-
-                                @media (min-width: 1400px) {
-                                    .chart-wrapper {
-                                        max-width: 640px;
-                                    }
-                                }
                             </style>
                             <h4 class="text-center">Assessment Chart</h4>
-                            <div class="chart-wrapper">
-                                <canvas id="assessmentChart_{{ $employee->id }}"
-                                    data-employee-id="{{ $employee->id }}"></canvas>
+                            <div style="width: 100%; max-width: auto; margin: 0 auto; height: 400px;">
+                                <canvas id="assessmentChart" data-employee-id="{{ $employee->id }}"></canvas>
                             </div>
                         </div>
                         <form class="form">
