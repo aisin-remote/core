@@ -893,7 +893,10 @@ class IdpController extends Controller
     {
         $company   = (string) $request->query('company', '');
         $positions = $request->query('positions', []);
+        $backup    = $request->query('backup', []); // checkbox -> array
+
         if (!is_array($positions)) $positions = [$positions];
+        if (!is_array($backup))    $backup    = [$backup];
 
         $synonymMap = [
             'President'  => ['President'],
@@ -907,6 +910,7 @@ class IdpController extends Controller
             'Operator'   => ['Operator'],
         ];
 
+        // Normalisasi
         $companyNorm = Str::of($company)->lower()->trim()->toString();
 
         $posNorms = collect($positions)->filter()->map(fn($p) => Str::of($p)->trim()->toString());
@@ -915,6 +919,17 @@ class IdpController extends Controller
             ->map(fn($s) => Str::of($s)->lower()->trim()->toString())
             ->unique()->values();
 
+        // Backup filter: terapkan hanya jika tepat satu opsi dipilih
+        $backupSet = collect($backup)
+            ->map(fn($v) => Str::of($v)->lower()->trim()->toString())
+            ->filter(fn($v) => in_array($v, ['with', 'without'], true))
+            ->unique()
+            ->values();
+
+        $onlyWith    = $backupSet->contains('with') && !$backupSet->contains('without');
+        $onlyWithout = $backupSet->contains('without') && !$backupSet->contains('with');
+
+        // Query
         $query = Idp::query()
             ->select(
                 'idp.*',
@@ -932,26 +947,18 @@ class IdpController extends Controller
             ->when($posAlts->isNotEmpty(), function ($q) use ($posAlts) {
                 $q->whereIn(DB::raw('LOWER(TRIM(employees.position))'), $posAlts->all());
             })
-            ->withCount('backups')
-            ->with([
-                'lastBackup' => function ($q) {
-                    $q->select(
-                        'id',
-                        'version',
-                        'status',
-                        'changed_at',
-                        'changed_by',
-                        'category',
-                        'alc_id',
-                        'development_program',
-                        'date'
-                    );
-                }
-            ]);
+            // filter backup (checkbox)
+            ->when($onlyWith, function ($q) {
+                $q->has('backups');
+            })
+            ->when($onlyWithout, function ($q) {
+                $q->doesntHave('backups');
+            })
+            ->withCount('backups'); // untuk ikon centang di tabel
 
         $idps = $query->get();
 
-        // dropdowns
+        // Dropdown data
         $companies = Employee::query()
             ->whereNotNull('company_name')
             ->select('company_name')
@@ -966,7 +973,8 @@ class IdpController extends Controller
             'companies',
             'allPositions',
             'company',
-            'positions'
+            'positions',
+            'backup' // kirim ke view supaya checkbox tetap tercentang
         ));
     }
 
