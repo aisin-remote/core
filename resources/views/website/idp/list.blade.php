@@ -267,7 +267,6 @@
 
                                 .chart-wrapper {
                                     width: 100%;
-                                    max-width: 1080rem;
                                     margin-inline: auto;
                                 }
 
