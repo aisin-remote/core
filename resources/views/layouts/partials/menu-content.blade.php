@@ -6,7 +6,6 @@
 
             $role = strtoupper($user->role ?? '');
             $isHRD = $role === 'HRD';
-            $isPrsdn = $role === 'President';
             $isUserRole = $role === 'USER' && !in_array($position, ['President', 'VPD']);
             $isHRDorTop = $isHRD || in_array($position, ['President', 'VPD']);
         @endphp

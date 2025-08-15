@@ -1,10 +1,10 @@
 @extends('layouts.root.manage')
 
-@section('title', 'Daftar IDP')
+@section('title', 'IDP List')
 
 @section('toolbar')
     <div class="d-flex align-items-center gap-3">
-        <h1 class="mb-0 fw-semibold">Daftar Individual Development Plan</h1>
+        <h1 class="mb-0 fw-semibold">Individual Development Plan List</h1>
     </div>
 @endsection
 
@@ -15,18 +15,18 @@
             <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-3">
                 {{-- HEADER + FILTER --}}
                 <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center gap-2 gap-lg-3 w-100 p-4">
-                    {{-- Judul + badge filter aktif --}}
+                    {{-- Title + active filter badges --}}
                     <div class="me-lg-auto">
-                        <div class="fs-4 fw-semibold">Rekap IDP</div>
+                        <div class="fs-4 fw-semibold">IDP Summary</div>
                         @if (!empty($company) || !empty($positions))
                             <div class="text-muted small mt-1">
-                                Filter aktif:
+                                Active filters:
                                 @if (!empty($company))
                                     <span class="badge bg-secondary-subtle text-dark me-1">Company:
                                         {{ $company }}</span>
                                 @endif
                                 @if (!empty($positions))
-                                    <span class="badge bg-secondary-subtle text-dark">Posisi:
+                                    <span class="badge bg-secondary-subtle text-dark">Positions:
                                         {{ implode(', ', $positions) }}</span>
                                 @endif
                             </div>
@@ -41,7 +41,7 @@
                         <div class="min-w-200px">
                             <label for="company" class="form-label mb-1 small text-muted">Company</label>
                             <select id="company" name="company" class="form-select">
-                                <option value="">Semua</option>
+                                <option value="">All</option>
                                 @foreach ($companies as $c)
                                     <option value="{{ $c }}" @selected(($company ?? '') === $c)>{{ $c }}
                                     </option>
@@ -56,15 +56,15 @@
                                 <button class="btn btn-outline-secondary w-100 filter-control" type="button"
                                     id="posDropdownBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
                                     aria-expanded="false">
-                                    <span id="posDropdownLabel">Semua</span>
-                                    <i class="ms-2 ki-duotone ki-down fs-6 align-middle"></i>
+                                    <span id="posDropdownLabel">All</span>
+                                    <i class="ms-2 fa-solid fa-users fs-6 align-middle"></i>
                                 </button>
 
                                 <div class="dropdown-menu dropdown-menu-end p-3" aria-labelledby="posDropdownBtn"
                                     style="min-width:260px; max-height:280px; overflow:auto;">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <strong class="small text-muted">Pilih Posisi</strong>
-                                        <a href="#" class="small" id="clearPositions">Bersihkan</a>
+                                        <strong class="small text-muted">Select Positions</strong>
+                                        <a href="#" class="small" id="clearPositions">Clear</a>
                                     </div>
 
                                     @php $sel = collect($positions ?? []); @endphp
@@ -84,25 +84,25 @@
 
                         {{-- Actions --}}
                         <div class="d-flex gap-2">
-                            <button class="btn btn-primary" type="submit">Terapkan</button>
+                            <button class="btn btn-primary" type="submit">Apply</button>
                             <a href="{{ route('idp.manage.all') }}" class="btn btn-light">Reset</a>
                         </div>
                     </form>
                 </div>
 
-                {{-- TABEL --}}
+                {{-- TABLE --}}
                 <div class="table-responsive mt-3">
                     <table id="idpTable" class="table table-striped table-hover align-middle">
                         <thead class="table-light">
                             <tr>
                                 <th style="width:72px;">No</th>
-                                <th>Nama Karyawan</th>
-                                <th>Perusahaan</th>
-                                <th>Posisi</th>
-                                <th>Kategori</th>
+                                <th>Employee Name</th>
+                                <th>Company</th>
+                                <th>Position</th>
+                                <th>Category</th>
                                 <th>Program</th>
-                                <th>Tanggal</th>
-                                <th style="width:160px;">Aksi</th>
+                                <th>Date</th>
+                                <th style="width:160px;">Actions</th>
                                 <th class="text-center" style="width:100px;">Status</th>
                             </tr>
                         </thead>
@@ -110,7 +110,7 @@
                             @foreach ($idps as $idp)
                                 @php $hasBackup = (int)($idp->backups_count ?? 0) > 0; @endphp
                                 <tr>
-                                    {{-- kolom nomor (diisi DataTables) --}}
+                                    {{-- row number (auto-filled by DataTables) --}}
                                     <td data-row-index></td>
 
                                     <td class="fw-bold">{{ $idp->employee_name ?? '—' }}</td>
@@ -126,9 +126,9 @@
                                     <td class="text-nowrap" style="font-size:.9rem;">
                                         @php
                                             $d = $idp->date
-                                                ? \Illuminate\Support\Carbon::parse($idp->date)->translatedFormat(
-                                                    'd M Y',
-                                                )
+                                                ? \Illuminate\Support\Carbon::parse($idp->date)
+                                                    ->locale('en')
+                                                    ->translatedFormat('d M Y')
                                                 : '—';
                                         @endphp
                                         {{ $d }}
@@ -142,7 +142,7 @@
 
                                     <td class="text-center">
                                         <span data-bs-toggle="tooltip"
-                                            title="{{ $hasBackup ? 'Ada backup (versi sebelumnya)' : 'Belum ada backup' }}">
+                                            title="{{ $hasBackup ? 'Has backup (previous version)' : 'No backup yet' }}">
                                             @if ($hasBackup)
                                                 <i class="fa-solid fa-circle-check text-success"
                                                     style="font-size: 2rem;"></i>
@@ -178,20 +178,18 @@
                 lengthMenu: [10, 25, 50, 100],
                 order: [
                     [6, 'desc']
-                ], // kolom Tanggal
+                ], // Date column
                 fixedHeader: true,
-                language: {
-                    url: 'https://cdn.datatables.net/plug-ins/2.3.2/i18n/id.json'
-                },
+                // Default DataTables language is English; remove custom i18n.
                 columnDefs: [{
                         targets: 0,
                         orderable: false,
                         searchable: false
-                    }, // kolom No
+                    }, // row number
                 ]
             });
 
-            // Isi ulang nomor baris saat draw
+            // Re-number rows on each draw
             function renumber() {
                 const start = dt.page.info().start;
                 document.querySelectorAll('#idpTable tbody tr').forEach((tr, idx) => {
@@ -209,15 +207,15 @@
                 });
             });
 
-            // Label dropdown Position
+            // Position dropdown label
             function updatePosLabel() {
                 const checked = Array.from(document.querySelectorAll('input[name="positions[]"]:checked')).map(el =>
                     el.value);
                 const label = document.getElementById('posDropdownLabel');
                 if (!label) return;
-                if (checked.length === 0) label.textContent = 'Semua';
+                if (checked.length === 0) label.textContent = 'All';
                 else if (checked.length <= 2) label.textContent = checked.join(', ');
-                else label.textContent = `Dipilih: ${checked.length}`;
+                else label.textContent = `Selected: ${checked.length}`;
             }
             updatePosLabel();
             document.querySelectorAll('input[name="positions[]"]').forEach(el => el.addEventListener('change',
