@@ -995,14 +995,31 @@ class IdpController extends Controller
             'status'               => ['nullable', 'integer', 'in:0,1,2,3,4'],
         ]);
 
+        // Normalisasi input
         $data['alc_id'] = (int) $data['alc_id'];
-        $data['status'] = (int) $data['status'];
 
-        DB::transaction(function () use ($idp, $data) {
-            $fields = ['hav_detail_id', 'assessment_id', 'alc_id', 'category', 'development_program', 'development_target', 'date', 'status'];
+        // // Jika user memilih "Simpan sebagai Draft"
+        // if ($request->input('save_as') === 'draft') {
+        //     $data['status'] = 0;
+        // } elseif (!$request->filled('status')) {
+        //     // Jika field status tidak diisi, jangan overwrite nilai lama
+        //     unset($data['status']);
+        // } else {
+        //     $data['status'] = (int) $data['status'];
+        // }
 
-            $nextVersion = (int) $idp->backups()->max('version') + 1;
+        try {
+            DB::beginTransaction();
 
+            // Kunci baris backup IDP ini agar penomoran version aman secara konkuren
+            $currentMaxVersion = DB::table('idp_backups')
+                ->where('idp_id', $idp->id)
+                ->lockForUpdate()
+                ->max('version');
+
+            $nextVersion = ((int) $currentMaxVersion) + 1;
+
+            // Simpan snapshot ke tabel backup
             IdpBackup::create([
                 'idp_id'              => $idp->id,
                 'assessment_id'       => $idp->assessment_id,
@@ -1018,11 +1035,62 @@ class IdpController extends Controller
                 'changed_at'          => now(),
             ]);
 
+            // Update record utama
             $idp->update($data);
-        });
 
-        return redirect()->route('idp.manage.all')
-            ->with('success', 'IDP berhasil diperbarui.');
+            DB::commit();
+
+            return redirect()
+                ->route('idp.manage.all')
+                ->with('success', 'IDP updated successfully.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Failed to update IDP', [
+                'idp_id'  => $idp->id,
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('warning', 'Failed to update IDP. Please try again.');
+        }
+    }
+
+    public function deleteIdp($id)
+    {
+        try {
+            DB::beginTransaction();
+
+            $idp = Idp::findOrFail($id);
+
+            $idp->delete();
+
+            DB::commit();
+
+            return redirect()
+                ->route('idp.manage.all')
+                ->with('success', 'IDP deleted successfully.');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            DB::rollBack();
+
+            return redirect()
+                ->route('idp.manage.all')
+                ->with('warning', 'IDP not found.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Failed to delete IDP', [
+                'idp_id'  => $id,
+                'user_id' => auth()->id(),
+                'error'   => $e->getMessage(),
+            ]);
+
+            return back()
+                ->withInput()
+                ->with('warning', 'Failed to delete IDP. Please try again.');
+        }
     }
 
 
