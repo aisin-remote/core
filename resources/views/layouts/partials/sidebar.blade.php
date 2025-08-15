@@ -21,6 +21,7 @@
         left: 0;
         top: 0;
         height: 100vh;
+        /* width: 225px; */
         background: var(--sb-bg);
         color: var(--sb-fg);
         border-right: 1px solid var(--sb-sep);
@@ -55,7 +56,7 @@
 
     #kt_app_sidebar .app-sidebar-logo-minimize {
         display: none;
-        /* width: 40px; */
+        width: 40px;
         height: auto
     }
 
@@ -63,7 +64,7 @@
         display: block !important
     }
 
-    /* === MENU (selalu vertikal) === */
+    /* === MENU (vertikal) === */
     #kt_app_sidebar .menu {
         display: flex !important;
         flex-direction: column !important;
@@ -79,7 +80,7 @@
     #kt_app_sidebar .menu .menu-link {
         color: var(--sb-fg);
         border-radius: .625rem;
-        padding: .6rem .75rem;
+        padding: 1rem .75rem;
         gap: .5rem;
         display: flex !important;
         align-items: center;
@@ -137,7 +138,7 @@
     }
 
     #kt_app_sidebar .menu-sub.menu-sub-accordion .menu-link {
-        padding: .4rem .5rem;
+        padding: 1rem .5rem;
         font-size: .9rem
     }
 
@@ -170,7 +171,7 @@
 
     [data-kt-app-sidebar-minimize="on"] #kt_app_sidebar .menu .menu-link {
         justify-content: center;
-        padding: 0 !important;
+        padding: 1rem !important;
         height: 44px;
         border-radius: 12px;
         margin: 0;
@@ -200,21 +201,20 @@
         display: none;
         opacity: 0;
         transform: translateX(-10px);
-        /* hanya saat animasi masuk */
+        /* animasi masuk */
         transition: opacity .2s, transform .2s;
         max-height: calc(100vh - 16px);
         overflow-y: auto;
         overflow-x: hidden;
-        /* <-- hilangkan scroll horizontal */
+        /* no horizontal scroll */
         padding-right: 8px;
-        /* ruang untuk scrollbar vertikal */
     }
 
     #kt_app_sidebar .menu-sub.menu-sub-dropdown.show {
         display: block !important;
         opacity: 1;
         transform: none !important;
-        /* <-- kunci: jangan jadi containing block */
+        /* penting: jangan jadi containing block */
     }
 
     #kt_app_sidebar .menu-sub.menu-sub-dropdown .menu-item+.menu-item {
@@ -222,7 +222,7 @@
     }
 
     #kt_app_sidebar .menu-sub.menu-sub-dropdown .menu-link {
-        padding: .5rem .75rem;
+        padding: 1rem .75rem;
         border-radius: .5rem;
         font-size: .9rem;
         width: 100%;
@@ -395,6 +395,7 @@
         const sidebar = document.getElementById('kt_app_sidebar');
         const toggleBtn = document.getElementById('kt_app_sidebar_toggle');
         const toggleIcon = document.getElementById('sidebarToggleIcon');
+        const HIDE_DELAY = 200;
 
         const isMinimized = () => body.getAttribute('data-kt-app-sidebar-minimize') === 'on';
         const setMinimized = (on) => {
@@ -444,52 +445,73 @@
             });
         }
 
-        /* Flyouts (minimized) */
+        /* Flyouts (minimized) — pakai pointerenter/leave + relatedTarget supaya rantai hover stabil */
         function initFlyouts() {
             const accs = document.querySelectorAll('#kt_app_sidebar .menu-item.menu-accordion');
+
             accs.forEach(acc => {
                 const dd = acc.querySelector(':scope > .menu-sub.menu-sub-dropdown');
                 if (!dd) return;
 
-                let hideTimer, hovering = false;
-
-                acc.addEventListener('mouseenter', () => {
-                    if (!isMinimized()) return;
+                let hideTimer = null;
+                const scheduleHide = (el) => {
                     clearTimeout(hideTimer);
+                    hideTimer = setTimeout(() => hideFlyout(el), HIDE_DELAY);
+                };
+                const cancelHide = () => {
+                    clearTimeout(hideTimer);
+                    hideTimer = null;
+                };
+
+                acc.addEventListener('pointerenter', () => {
+                    if (!isMinimized()) return;
+                    cancelHide();
                     showFlyout(acc, dd);
                 });
-                acc.addEventListener('mouseleave', (e) => {
+                acc.addEventListener('pointerleave', (e) => {
                     if (!isMinimized()) return;
-                    const r = dd.getBoundingClientRect();
-                    if (e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e
-                        .clientY <= r.bottom) return;
-                    hideTimer = setTimeout(() => {
-                        if (!hovering) hideFlyout(dd);
-                    }, 120);
+                    const to = e.relatedTarget;
+                    if (to && dd.contains(to)) return; // pindah ke dropdown-nya
+                    scheduleHide(dd);
                 });
 
-                dd.addEventListener('mouseenter', () => {
-                    if (isMinimized()) {
-                        hovering = true;
-                        clearTimeout(hideTimer);
-                    }
+                dd.addEventListener('pointerenter', () => {
+                    if (isMinimized()) cancelHide();
                 });
-                dd.addEventListener('mouseleave', () => {
-                    if (isMinimized()) {
-                        hovering = false;
-                        hideTimer = setTimeout(() => hideFlyout(dd), 120);
-                    }
+                dd.addEventListener('pointerleave', (e) => {
+                    if (!isMinimized()) return;
+                    const to = e.relatedTarget;
+                    if (to && dd.contains(to)) return; // pindah ke child di dalam dd
+                    scheduleHide(dd);
                 });
 
-                // nested
-                dd.querySelectorAll('.menu-item.menu-accordion').forEach(nested => {
-                    const child = nested.querySelector(':scope > .menu-sub.menu-sub-dropdown');
-                    if (!child) return;
-                    nested.addEventListener('mouseenter', () => {
-                        if (isMinimized()) showFlyout(nested, child);
+                // nested accordions (child -> childDD)
+                dd.querySelectorAll('.menu-item.menu-accordion').forEach(childAcc => {
+                    const childDD = childAcc.querySelector(
+                        ':scope > .menu-sub.menu-sub-dropdown');
+                    if (!childDD) return;
+
+                    childAcc.addEventListener('pointerenter', () => {
+                        if (isMinimized()) {
+                            cancelHide();
+                            showFlyout(childAcc, childDD);
+                        }
                     });
-                    nested.addEventListener('mouseleave', () => {
-                        if (isMinimized()) setTimeout(() => hideFlyout(child), 120);
+                    childAcc.addEventListener('pointerleave', (e) => {
+                        if (!isMinimized()) return;
+                        const to = e.relatedTarget;
+                        if (to && (childDD.contains(to) || dd.contains(to)))
+                            return; // masih di rantai
+                        scheduleHide(childDD);
+                    });
+                    childDD.addEventListener('pointerenter', () => {
+                        if (isMinimized()) cancelHide();
+                    });
+                    childDD.addEventListener('pointerleave', (e) => {
+                        if (!isMinimized()) return;
+                        const to = e.relatedTarget;
+                        if (to && (childDD.contains(to) || dd.contains(to))) return;
+                        scheduleHide(childDD);
                     });
                 });
             });
@@ -521,13 +543,13 @@
             const baseRight = ancRect.right;
             const baseLeft = ancRect.left;
 
-            /* X: anchor ke tepi kanan dropdown induk */
+            /* X: anchor ke kanan induk, auto flip bila mentok */
             let left = baseRight + (isNested ? GAP_NESTED : GAP_ROOT);
             if (left + ddRect.width + 4 > window.innerWidth) {
-                left = baseLeft - ddRect.width - (isNested ? GAP_NESTED : GAP_ROOT); // flip ke kiri
+                left = baseLeft - ddRect.width - (isNested ? GAP_NESTED : GAP_ROOT);
             }
 
-            /* Y: sejajarkan dengan item; cegah overflow bawah */
+            /* Y: sejajar item; cegah overflow bawah */
             let top = clamp(linkRect.top, 8, window.innerHeight - ddRect.height - 8);
 
             dd.style.left = left + 'px';
