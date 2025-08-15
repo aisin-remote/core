@@ -42,9 +42,7 @@
         position: sticky;
         top: 0;
         background: #ffffff;
-        /* supaya tidak transparan saat scroll */
         z-index: 1055;
-        /* lebih tinggi dari isi modal */
     }
 </style>
 
@@ -208,20 +206,28 @@
                 <div class="modal-content">
                     <div class="modal-header align-items-start">
                         <div class="d-flex flex-column flex-grow-1">
-                            <h5 class="modal-title mb-2">Summary {{ $employee->name }}</h5>
+                            <h5 class="modal-title mb-2" style="font-size: 2rem; font-weight: bold;">
+                                Summary {{ $employee->name }}</h5>
 
-                            <div class="d-flex flex-wrap gap-3">
-                                <div class="d-flex align-items-center">
-                                    <span class="big me-2">Purpose</span>
-                                    <span class="badge badge-warning" style="font-size: 1rem;">
+                            <div class="d-flex flex-wrap gap-10" style="font-size: 1.3rem;">
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Assessment Purpose</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
                                         {{ $assessment->purpose ?? 'N/A' }}
                                     </span>
                                 </div>
 
-                                <div class="d-flex align-items-center">
-                                    <span class="big me-2">Lembaga</span>
-                                    <span class="badge badge-primary" style="font-size: 1rem;">
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Assessor</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
                                         {{ $assessment->lembaga ?? 'N/A' }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Assessment Date</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $assessment->created_at ? $assessment->created_at->timezone('Asia/Jakarta')->format('d M Y, H:i') : '-' }}
                                     </span>
                                 </div>
                             </div>
@@ -229,10 +235,6 @@
 
                         <!-- Right side: created_at + close -->
                         <div class="d-flex align-items-start gap-3 ms-3">
-                            <span class="text-muted small">
-                                Created:
-                                {{ $assessment->created_at ? $assessment->created_at->timezone('Asia/Jakarta')->format('d M Y, H:i') : '-' }}
-                            </span>
                             <button type="button" class="btn-close" data-bs-dismiss="modal"
                                 aria-label="Close"></button>
                         </div>
@@ -262,10 +264,28 @@
                                         transform: translateY(0);
                                     }
                                 }
+
+                                .chart-wrapper {
+                                    width: 100%;
+                                    max-width: 1080rem;
+                                    margin-inline: auto;
+                                }
+
+                                .chart-wrapper canvas {
+                                    width: 100% !important;
+                                    height: 300px !important;
+                                }
+
+                                @media (min-width: 1400px) {
+                                    .chart-wrapper {
+                                        max-width: 640px;
+                                    }
+                                }
                             </style>
                             <h4 class="text-center">Assessment Chart</h4>
-                            <div style="width: 100%; max-width: auto; margin: 0 auto;">
-                                <canvas id="assessmentChart" data-employee-id="{{ $employee->id }}"></canvas>
+                            <div class="chart-wrapper">
+                                <canvas id="assessmentChart_{{ $employee->id }}"
+                                    data-employee-id="{{ $employee->id }}"></canvas>
                             </div>
                         </div>
                         <form class="form">
