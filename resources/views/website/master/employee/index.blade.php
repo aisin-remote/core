@@ -165,7 +165,7 @@
     </div>
 
     <style>
-        <style>.nowrap {
+        .nowrap {
             white-space: nowrap;
         }
 
@@ -182,14 +182,14 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Pastikan jQuery tersedia
+            // Pastikan jQuery terpasang (DataTables butuh jQuery)
             if (typeof $ === 'undefined') {
                 console.error("jQuery not loaded. DataTable won't initialize.");
                 return;
             }
 
             // Inisialisasi DataTable
-            $('#kt_table_users').DataTable({
+            const dt = $('#kt_table_users').DataTable({
                 responsive: true,
                 language: {
                     search: "_INPUT_",
@@ -204,153 +204,77 @@
                 },
                 ordering: false
             });
-
             console.log("✅ DataTable Initialized Successfully");
-        });
-    </script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            console.log("✅ Script Loaded!");
 
-            var searchInput = document.getElementById("searchInput");
-            var filterItems = document.querySelectorAll(".filter-department");
-            var table = document.getElementById("kt_table_users");
+            // DELEGATION: klik Status
+            $('#kt_table_users').on('click', '.status-btn', function(e) {
+                e.preventDefault();
+                const $btn = $(this);
+                const employeeId = $btn.data('id');
+                const employeeName = $btn.data('name');
+                const newStatus = $btn.data('status');
 
-            if (!searchInput || !table) {
-                console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
-                return;
-            }
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: `Do you want to change the status of ${employeeName} to ${newStatus}?`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#28a745",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Yes, change it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `/employee/status/${employeeId}`;
 
-            var tbody = table.getElementsByTagName("tbody")[0];
-            var rows = tbody.getElementsByTagName("tr");
+                        const csrfToken = document.createElement('input');
+                        csrfToken.type = 'hidden';
+                        csrfToken.name = '_token';
+                        csrfToken.value = '{{ csrf_token() }}';
 
-            function filterTable(selectedDepartment = "") {
-                var searchValue = searchInput.value.toLowerCase();
-
-                for (var i = 0; i < rows.length; i++) {
-                    var cells = rows[i].getElementsByTagName("td");
-                    var match = false;
-
-                    if (cells.length >= 7) {
-                        var npk = cells[1].textContent.toLowerCase();
-                        var name = cells[2].textContent.toLowerCase();
-                        var company = cells[3].textContent.toLowerCase();
-                        var position = cells[4].textContent.toLowerCase();
-                        var functionName = cells[5].textContent.toLowerCase();
-                        var grade = cells[6].textContent.toLowerCase();
-                        var age = cells[7].textContent.toLowerCase();
-
-                        var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
-                            company.includes(searchValue) || position.includes(searchValue) ||
-                            functionName.includes(searchValue) || grade.includes(searchValue) ||
-                            age.includes(searchValue);
-
-                        var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
-
-                        if (searchMatch && departmentMatch) {
-                            match = true;
-                        }
+                        form.appendChild(csrfToken);
+                        document.body.appendChild(form);
+                        form.submit();
                     }
-
-                    rows[i].style.display = match ? "" : "none";
-                }
-            }
-
-            // Event Pencarian
-
-
-            // Event Filter Dropdown
-            filterItems.forEach(item => {
-                item.addEventListener("click", function(event) {
-                    event.preventDefault();
-                    var selectedDepartment = this.getAttribute("data-department").toLowerCase();
-                    console.log("🔍 Filter dipilih: ", selectedDepartment);
-                    filterTable(selectedDepartment);
                 });
             });
 
-            console.log("✅ Event Listeners Added Successfully");
+            // DELEGATION: klik Delete
+            $('#kt_table_users').on('click', '.delete-btn', function(e) {
+                e.preventDefault();
+                const employeeId = this.getAttribute('data-id');
 
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `/employee/${employeeId}`;
 
-            document.querySelectorAll('.status-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    let employeeId = this.getAttribute('data-id');
-                    let employeeName = this.getAttribute('data-name');
-                    let newStatus = this.getAttribute('data-status');
+                        const csrfToken = document.createElement('input');
+                        csrfToken.type = 'hidden';
+                        csrfToken.name = '_token';
+                        csrfToken.value = '{{ csrf_token() }}';
 
-                    Swal.fire({
-                        title: "Are you sure?",
-                        text: `Do you want to change the status of ${employeeName} to ${newStatus}?`,
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#28a745",
-                        cancelButtonColor: "#d33",
-                        confirmButtonText: "Yes, change it!"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            let form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = `/employee/status/${employeeId}`;
+                        const methodField = document.createElement('input');
+                        methodField.type = 'hidden';
+                        methodField.name = '_method';
+                        methodField.value = 'DELETE';
 
-                            let csrfToken = document.createElement('input');
-                            csrfToken.type = 'hidden';
-                            csrfToken.name = '_token';
-                            csrfToken.value = '{{ csrf_token() }}';
-
-                            form.appendChild(csrfToken);
-                            document.body.appendChild(form);
-                            form.submit();
-                        }
-                    });
+                        form.appendChild(csrfToken);
+                        form.appendChild(methodField);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
                 });
-            });
-
-
-            // SweetAlert untuk Delete Button
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    let employeeId = this.getAttribute('data-id');
-
-                    Swal.fire({
-                        title: "Are you sure?",
-                        text: "You won't be able to revert this!",
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#d33",
-                        cancelButtonColor: "#3085d6",
-                        confirmButtonText: "Yes, delete it!"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            let form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = `/employee/${employeeId}`;
-
-                            let csrfToken = document.createElement('input');
-                            csrfToken.type = 'hidden';
-                            csrfToken.name = '_token';
-                            csrfToken.value = '{{ csrf_token() }}';
-
-                            let methodField = document.createElement('input');
-                            methodField.type = 'hidden';
-                            methodField.name = '_method';
-                            methodField.value = 'DELETE';
-
-                            form.appendChild(csrfToken);
-                            form.appendChild(methodField);
-                            document.body.appendChild(form);
-                            form.submit();
-                        }
-                    });
-                });
-            });
-            document.getElementById('searchButton').addEventListener('click', function() {
-                const search = document.getElementById('searchInput').value;
-                const url = new URL(window.location.href);
-
-                url.searchParams.set('search', search);
-                url.searchParams.set('page', 1); // Reset to first page on new search
-
-                window.location.href = url.toString();
             });
         });
     </script>
