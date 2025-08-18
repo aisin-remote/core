@@ -55,7 +55,7 @@
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
                         <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
-                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
+                            href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
