@@ -154,14 +154,21 @@
                                 <th>Position</th>
                                 <th>Category</th>
                                 <th>Program</th>
-                                <th>Date</th>
-                                <th class="text-center" style="width:110px;">Status</th>
+                                <th>IDP Date</th>
+                                <th class="text-center" style="width:110px;">Sacho Revise</th>
+                                <th>Revised Date</th>
                                 <th style="width:160px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($idps as $idp)
-                                @php $hasBackup = (int)($idp->backups_count ?? 0) > 0; @endphp
+                                @php
+                                    $hasBackup = (int) ($idp->backups_count ?? 0) > 0;
+                                    $changedAtRaw = $idp->latest_backup_changed_at ?? null;
+                                    $changedAt = $changedAtRaw
+                                        ? \Illuminate\Support\Carbon::parse($changedAtRaw)
+                                        : null;
+                                @endphp
                                 <tr>
                                     <td class="text-center" data-row-index></td>
 
@@ -197,6 +204,10 @@
                                                 <span class="text-muted">—</span>
                                             @endif
                                         </span>
+                                    </td>
+
+                                    <td class="text-nowrap">
+                                        {{ $changedAt ? $changedAt->translatedFormat('d M Y') : '-' }}
                                     </td>
 
                                     <td>

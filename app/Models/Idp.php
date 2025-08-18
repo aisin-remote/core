@@ -53,7 +53,6 @@ class Idp extends Model
 
     public function lastBackup()
     {
-        // versi terakhir per-IDP (berdasarkan kolom version)
-        return $this->hasOne(IdpBackup::class, 'idp_id')->latestOfMany('version');
+        return $this->hasOne(IdpBackup::class, 'idp_id', 'idp_id')->latestOfMany('changed_at');
     }
 }
