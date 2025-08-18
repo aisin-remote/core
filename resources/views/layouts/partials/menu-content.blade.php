@@ -581,11 +581,13 @@
                                             href="/idp/list/aiia"><span class="menu-title">AIIA</span></a></div>
                                 </div>
                             </div>
-                            <div class="menu-item"><a
-                                    class="menu-link {{ request()->routeIs('idp.manage.all') ? 'active' : '' }}"
-                                    href="{{ route('idp.manage.all') }}"><span class="menu-title">Manage
-                                        IDP</span></a>
-                            </div>
+                            @if ($isPrsdn)
+                                <div class="menu-item"><a
+                                        class="menu-link {{ request()->routeIs('idp.manage.all') ? 'active' : '' }}"
+                                        href="{{ route('idp.manage.all') }}"><span class="menu-title">Manage
+                                            IDP</span></a>
+                                </div>
+                            @endif
                         </div>
                     </div>
                 @endif

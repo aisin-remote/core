@@ -8,6 +8,10 @@ class IdpBackup extends Model
 {
     protected $guarded = ['id'];
 
+    protected $cast = [
+        'changed_at' => 'datetime',
+    ];
+
     public function idp()
     {
         return $this->belongsTo(Idp::class);

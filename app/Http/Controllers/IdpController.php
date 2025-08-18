@@ -954,7 +954,8 @@ class IdpController extends Controller
             ->when($onlyWithout, function ($q) {
                 $q->doesntHave('backups');
             })
-            ->withCount('backups'); // untuk ikon centang di tabel
+            ->withCount('backups')
+            ->withMax('backups as latest_backup_changed_at', 'changed_at');
 
         $idps = $query->get();
 
