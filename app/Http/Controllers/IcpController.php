@@ -94,61 +94,80 @@ class IcpController extends Controller
     }
     public function index(Request $request, $company = null)
     {
-        $title = 'Employee ICP';
-        $user = auth()->user();
+        $title  = 'Employee ICP';
+        $user   = auth()->user();
         $search = $request->input('search');
         $filter = $request->input('filter', 'all');
 
         if ($user->isHRDorDireksi()) {
-            // HRD dan Direksi bisa melihat semua data ICP
+            // HRD & Direksi melihat semua, + FILTER posisi (jika ada)
             $icps = Icp::with('employee')
-                ->when($company, fn($q) => $q->whereHas('employee', fn($e) => $e->where('company_name', $company)))
-                ->when($search, function ($query, $search) {
-                    $query->whereHas('employee', function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('npk', 'like', "%{$search}%")
-                            ->orWhere('company_name', 'like', "%{$search}%");
+                ->when($company, function ($q) use ($company) {
+                    $q->whereHas('employee', fn($e) => $e->where('company_name', $company));
+                })
+                ->when($search, function ($q) use ($search) {
+                    $q->whereHas('employee', function ($e) use ($search) {
+                        $e->where(function ($qq) use ($search) {
+                            $qq->where('name', 'like', "%{$search}%")
+                                ->orWhere('npk', 'like', "%{$search}%")
+                                ->orWhere('company_name', 'like', "%{$search}%");
+                        });
+                    });
+                })
+                ->when($filter && $filter !== 'all', function ($q) use ($filter) {
+                    $q->whereHas('employee', function ($e) use ($filter) {
+                        // group: exact position ATAU "Act {position}"
+                        $e->where(function ($g) use ($filter) {
+                            $g->where('position', $filter)
+                                ->orWhere('position', 'like', "Act %{$filter}");
+                        });
                     });
                 })
                 ->paginate(10)
                 ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
         } else {
-            // Ambil employee milik user
+            // User non-HRD: hanya bawahan
             $employee = $user->employee;
+
             if (!$employee) {
-                $icps = collect();  // Tidak punya bawahan
+                $icps = collect();
             } else {
-                // Ambil query bawahan
                 $subordinatesQuery = $this->getSubordinatesFromStructure($employee);
+
                 if ($subordinatesQuery instanceof \Illuminate\Database\Eloquent\Builder) {
-                    // Ambil NPK/Nama yang dicari hanya dari bawahan
+                    // 💡 gunakan subquery, bukan pluck (lebih efisien dan tidak eager execute)
                     $icps = Icp::with('employee')
                         ->whereHas('employee', function ($q) use ($subordinatesQuery, $search, $filter, $company) {
-                            $q->whereIn('id', $subordinatesQuery->pluck('id'));
+                            $q->whereIn('id', $subordinatesQuery->select('id'));
 
                             if ($search) {
                                 $q->where(function ($q2) use ($search) {
                                     $q2->where('name', 'like', "%{$search}%")
-                                        ->orWhere('npk', 'like', "%{$search}%");
+                                        ->orWhere('npk', 'like', "%{$search}%")
+                                        ->orWhere('company_name', 'like', "%{$search}%");
                                 });
-                            }
-
-                            if ($filter && $filter !== 'all') {
-                                $q->where('position', $filter)
-                                    ->orWhere('position', 'like', "Act %{$filter}");
                             }
 
                             if ($company) {
                                 $q->where('company_name', $company);
                             }
+
+                            if ($filter && $filter !== 'all') {
+                                // group-kan kondisi posisi agar tidak "meng-OR" ke seluruh blok
+                                $q->where(function ($g) use ($filter) {
+                                    $g->where('position', $filter)
+                                        ->orWhere('position', 'like', "Act %{$filter}");
+                                });
+                            }
                         })
                         ->paginate(10)
                         ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
                 } else {
-                    $icps = collect();  // Tidak valid atau tidak punya akses
+                    $icps = collect();
                 }
             }
         }
+
         $allPositions = [
             'President',
             'Direktur',
@@ -163,25 +182,31 @@ class IcpController extends Controller
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
+        $currentPosition = \Illuminate\Support\Str::contains($rawPosition, 'Act ')
             ? trim(str_replace('Act', '', $rawPosition))
             : $rawPosition;
 
-        // Cari index posisi saat ini
         $positionIndex = array_search($currentPosition, $allPositions);
 
-        // Fallback jika tidak ditemukan
         if ($positionIndex === false) {
             $positionIndex = array_search('Operator', $allPositions);
         }
 
-        // Ambil posisi di bawahnya (tanpa posisi user)
+        // Posisi yang terlihat di tab (dari posisi user ke bawah)
         $visiblePositions = $positionIndex !== false
             ? array_slice($allPositions, $positionIndex)
             : [];
 
-        return view('website.icp.index', compact('icps', 'title', 'visiblePositions', 'search', 'filter', 'company'));
+        return view('website.icp.index', compact(
+            'icps',
+            'title',
+            'visiblePositions',
+            'search',
+            'filter',
+            'company'
+        ));
     }
+
     public function assign(Request $request, $company = null)
     {
         $title = 'Assign HAV';

@@ -25,36 +25,26 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">ICP List</h3>
                 <div class="d-flex align-items-center">
-                    {{-- <form method="GET" action="#" class="d-flex align-items-center">
-                        <input type="text" name="search" id="searchInput" class="form-control me-2"
-                            placeholder="Search Employee..." style="width: 200px;" value="{{ request('search') }}">
-
-                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-
-                    </form> --}}
                 </div>
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist" style="cursor:pointer">
+                <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
+                    style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4
-                            {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('icp.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                            Show All
+                            <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
 
-                    {{-- Tab Dinamis --}}
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('icp.list', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                {{ $position }}
+                                <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
                     @endforeach
