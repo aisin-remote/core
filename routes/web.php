@@ -274,6 +274,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::get('/edit/{id}', [IdpController::class, 'edit'])->name('idp.edit');
         Route::put('/update/{idp}', [IdpController::class, 'update'])->name('idp.update');
+        Route::delete('/delete/{idp}', [IdpController::class, 'deleteIdp'])->name('idp.delete');
     });
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
