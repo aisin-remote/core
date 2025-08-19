@@ -101,7 +101,9 @@
     #kt_app_sidebar .menu .menu-title {
         padding-left: .5rem;
         white-space: nowrap;
-        overflow: hidden
+        overflow: hidden;
+        font-weight: 500;
+        font-size: 1rem;
     }
 
     #kt_app_sidebar .menu .menu-arrow {
