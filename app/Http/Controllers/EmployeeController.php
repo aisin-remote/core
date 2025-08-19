@@ -40,40 +40,40 @@ class EmployeeController extends Controller
         $subordinateIds = collect();
 
         if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
-            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $divisions      = Division::where('plant_id', $employee->leadingPlant->id)->get();
             $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
 
-            $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
+            $departments    = Department::whereIn('division_id', $divisions->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
 
-            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $sections       = Section::whereIn('department_id', $departments->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
 
-            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subSections    = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
 
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
         } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
-            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $departments    = Department::where('division_id', $employee->leadingDivision->id)->get();
             $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
 
-            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $sections       = Section::whereIn('department_id', $departments->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
 
-            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subSections    = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
 
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
         } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
-            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $sections       = Section::where('department_id', $employee->leadingDepartment->id)->get();
             $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
 
-            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subSections    = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
 
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
         } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
-            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subSections    = SubSection::where('section_id', $employee->leadingSection->id)->get();
             $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
 
             $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
@@ -86,7 +86,7 @@ class EmployeeController extends Controller
         }
 
         if ($subordinateIds->isEmpty()) {
-            return Employee::whereRaw('1=0'); // tidak ada bawahan
+            return Employee::whereRaw('1=0');  // tidak ada bawahan
         }
 
         return Employee::whereIn('id', $subordinateIds);
@@ -101,16 +101,16 @@ class EmployeeController extends Controller
     private function collectOperators($subSections, $subordinateIds)
     {
         $subSectionIds = $subSections->pluck('id');
-        $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
+        $operatorIds   = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
     }
 
     public function index(Request $request, $company = null)
     {
-        $title = 'Employee';
-        $user = auth()->user();
-        $search = $request->input('search');
-        $filter = $request->input('filter', 'all'); // Menambahkan filter, default 'all'
+        $title        = 'Employee';
+        $user         = auth()->user();
+        $search       = $request->input('search');
+        $filter       = $request->input('filter', 'all');  // Menambahkan filter, default 'all'
         $allPositions = [
             'President',
             'VPD',
@@ -125,10 +125,10 @@ class EmployeeController extends Controller
             'Operator',
         ];
 
-        $rawPosition = $user->employee->position ?? 'Operator';
+        $rawPosition     = $user->employee->position ?? 'Operator';
         $currentPosition = Str::contains($rawPosition, 'Act ')
             ? trim(str_replace('Act', '', $rawPosition))
-            : $rawPosition;
+            :  $rawPosition;
 
         // Cari index posisi saat ini
         $positionIndex = array_search($currentPosition, $allPositions);
@@ -141,7 +141,7 @@ class EmployeeController extends Controller
         // Ambil posisi di bawahnya (tanpa posisi user)
         $visiblePositions = $positionIndex !== false
             ? array_slice($allPositions, $positionIndex)
-            : [];
+            :  [];
 
         if ($user->isHRDorDireksi()) {
             // HRD bisa mencari berdasarkan beberapa kolom, termasuk company_name
@@ -211,8 +211,8 @@ class EmployeeController extends Controller
 
                     // Paginate hasil
                     $employees = $query->paginate(10)->appends([
-                        'search' => $search,
-                        'filter' => $filter,
+                        'search'  => $search,
+                        'filter'  => $filter,
                         'company' => $company
                     ]);
                 } else {
@@ -234,10 +234,10 @@ class EmployeeController extends Controller
             'Operator',
         ];
 
-        $rawPosition = $user->employee->position ?? 'Operator';
+        $rawPosition     = $user->employee->position ?? 'Operator';
         $currentPosition = Str::contains($rawPosition, 'Act ')
             ? trim(str_replace('Act', '', $rawPosition))
-            : $rawPosition;
+            :  $rawPosition;
 
         // Cari index posisi saat ini
         $positionIndex = array_search($currentPosition, $allPositions);
@@ -250,14 +250,14 @@ class EmployeeController extends Controller
         // Ambil posisi di bawahnya (tanpa posisi user)
         $visiblePositions = $positionIndex !== false
             ? array_slice($allPositions, $positionIndex)
-            : [];
+            :  [];
 
         // Hilangkan 'Operator' jika posisi user ada 'President'
         if ($currentPosition === 'President') {
             $visiblePositions = array_filter($visiblePositions, function ($pos) {
                 return $pos !== 'Operator' && $pos !== 'President';
             });
-            $visiblePositions = array_values($visiblePositions); // reset index
+            $visiblePositions = array_values($visiblePositions);  // reset index
         }
 
         return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions'));
@@ -282,12 +282,12 @@ class EmployeeController extends Controller
      */
     public function create()
     {
-        $title = 'Add Employee';
+        $title       = 'Add Employee';
         $departments = Department::all();
-        $divisions = Division::all();
-        $plants = Plant::all();
-        $sections = Section::all();
-        $grade = GradeConversion::all();
+        $divisions   = Division::all();
+        $plants      = Plant::all();
+        $sections    = Section::all();
+        $grade       = GradeConversion::all();
         $subSections = SubSection::all();
         return view('website.employee.create', compact('title', 'departments', 'grade', 'divisions', 'plants', 'sections', 'subSections'));
     }
@@ -314,14 +314,14 @@ class EmployeeController extends Controller
                 'grade'            => 'nullable|string',
                 'photo'            => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
-                  // Struktur organisasi
+                // Struktur organisasi
                 'plant_id'       => 'nullable|exists:plants,id',
                 'division_id'    => 'nullable|exists:divisions,id',
                 'department_id'  => 'nullable|exists:departments,id',
                 'section_id'     => 'nullable|exists:sections,id',
                 'sub_section_id' => 'nullable|exists:sub_sections,id',
 
-                  // Pendidikan
+                // Pendidikan
                 'level'        => 'array',
                 'level.*'      => 'nullable|string|max:255',
                 'major.*'      => 'nullable|string|max:255',
@@ -329,7 +329,7 @@ class EmployeeController extends Controller
                 'start_date.*' => 'nullable|string|max:255',
                 'end_date.*'   => 'nullable|string|max:255',
 
-                  // Pengalaman kerja
+                // Pengalaman kerja
                 'company.*'         => 'nullable|string|max:255',
                 'work_position.*'   => 'nullable|string|max:255',
                 'work_start_date.*' => 'nullable|string|max:255',
@@ -366,12 +366,12 @@ class EmployeeController extends Controller
             foreach ($request->level ?? [] as $i => $level) {
                 if ($level) {
                     EducationalBackground::create([
-                        'employee_id' => $employee->id,
+                        'employee_id'       => $employee->id,
                         'educational_level' => $level,
-                        'major' => $request->major[$i] ?? null,
-                        'institute' => $request->institute[$i] ?? null,
-                        'start_date' => $request->start_date[$i] ?? null,
-                        'end_date' => $request->end_date[$i] ?? null,
+                        'major'             => $request->major[$i] ?? null,
+                        'institute'         => $request->institute[$i] ?? null,
+                        'start_date'        => $request->start_date[$i] ?? null,
+                        'end_date'          => $request->end_date[$i] ?? null,
                     ]);
                 }
             }
@@ -381,10 +381,10 @@ class EmployeeController extends Controller
                 if ($company) {
                     WorkingExperience::create([
                         'employee_id' => $employee->id,
-                        'company' => $company,
-                        'position' => $request->work_position[$i] ?? null,
-                        'start_date' => $request->work_start_date[$i] ?? null,
-                        'end_date' => $request->work_end_date[$i] ?? null,
+                        'company'     => $company,
+                        'position'    => $request->work_position[$i] ?? null,
+                        'start_date'  => $request->work_start_date[$i] ?? null,
+                        'end_date'    => $request->work_end_date[$i] ?? null,
                     ]);
                 }
             }
@@ -395,40 +395,40 @@ class EmployeeController extends Controller
             // Mapping posisi ke entitas dan kolom yang perlu diupdate
             $roleMappings = [
                 'sub_section' => [
-                    'roles' => ['act jp', 'operator', 'jp'],
-                    'update' => fn() => $employee->update([
+                    'roles'  => ['act jp', 'operator', 'jp'],
+                    'update' => fn()                         => $employee->update([
                         'sub_section_id' => $validatedData['sub_section_id'] ?? null,
                     ]),
                 ],
                 'sub_section_leader' => [
-                    'roles' => ['act leader', 'leader'],
-                    'update' => fn() => $validatedData['sub_section_id'] &&
+                    'roles'  => ['act leader', 'leader'],
+                    'update' => fn()                     => $validatedData['sub_section_id'] &&
                         DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                            ->update(['leader_id' => $employee->id]),
+                        ->update(['leader_id' => $employee->id]),
                 ],
                 'section' => [
-                    'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
-                    'update' => fn() => $validatedData['section_id'] &&
+                    'roles'  => ['act supervisor', 'act section head', 'supervisor', 'section head'],
+                    'update' => fn()                                                                 => $validatedData['section_id'] &&
                         DB::table('sections')->where('id', $validatedData['section_id'])
-                            ->update(['supervisor_id' => $employee->id]),
+                        ->update(['supervisor_id' => $employee->id]),
                 ],
                 'department' => [
-                    'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
-                    'update' => fn() => $validatedData['department_id'] &&
+                    'roles'  => ['act manager', 'act coordinator', 'manager', 'coordinator'],
+                    'update' => fn()                                                         => $validatedData['department_id'] &&
                         DB::table('departments')->where('id', $validatedData['department_id'])
-                            ->update(['manager_id' => $employee->id]),
+                        ->update(['manager_id' => $employee->id]),
                 ],
                 'division' => [
-                    'roles' => ['act gm', 'gm'],
-                    'update' => fn() => $validatedData['division_id'] &&
+                    'roles'  => ['act gm', 'gm'],
+                    'update' => fn()             => $validatedData['division_id'] &&
                         DB::table('divisions')->where('id', $validatedData['division_id'])
-                            ->update(['gm_id' => $employee->id]),
+                        ->update(['gm_id' => $employee->id]),
                 ],
                 'plant' => [
-                    'roles' => ['director'],
-                    'update' => fn() => $validatedData['plant_id'] &&
+                    'roles'  => ['director'],
+                    'update' => fn()         => $validatedData['plant_id'] &&
                         DB::table('plants')->where('id', $validatedData['plant_id'])
-                            ->update(['director_id' => $employee->id]),
+                        ->update(['director_id' => $employee->id]),
                 ],
             ];
 
@@ -456,10 +456,10 @@ class EmployeeController extends Controller
 
             if (in_array($pos, $userRoles)) {
                 $user = User::create([
-                    'name' => $validatedData['name'],
-                    'email' => $validatedData['email'],
-                    'password' => bcrypt('aiia'),
-                    'is_first_login' => true,
+                    'name'                => $validatedData['name'],
+                    'email'               => $validatedData['email'],
+                    'password'            => bcrypt('aiia'),
+                    'is_first_login'      => true,
                     'password_changed_at' => null
                 ]);
                 $employee->update(['user_id' => $user->id]);
@@ -478,11 +478,11 @@ class EmployeeController extends Controller
     private function findSupervisor($position, $departmentId)
     {
         $hierarchy = [
-            'GM' => null,
-            'Manager' => 'GM',
-            'Coordinator' => 'Manager',
+            'GM'           => null,
+            'Manager'      => 'GM',
+            'Coordinator'  => 'Manager',
             'Section Head' => 'Coordinator',
-            'Supervisor' => 'Section Head'
+            'Supervisor'   => 'Section Head'
         ];
 
         $supervisorPosition = $hierarchy[$position] ?? null;
@@ -506,19 +506,19 @@ class EmployeeController extends Controller
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('last_promotion_date', 'desc') // Urutkan dari yang terbaru
+            ->orderBy('last_promotion_date', 'desc')  // Urutkan dari yang terbaru
             ->get();
 
         $astraTrainings = AstraTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('date_end', 'desc') // Urut berdasarkan tanggal selesai terbaru
+            ->orderBy('date_end', 'desc')  // Urut berdasarkan tanggal selesai terbaru
             ->get();
 
-        $employee = Employee::where('npk', $npk)->firstOrFail();
+        $employee    = Employee::where('npk', $npk)->firstOrFail();
         $humanAssets = Hav::with('employee')
-            ->where('employee_id', $employee->id) // gunakan ID employee yang sesuai
+            ->where('employee_id', $employee->id)  // gunakan ID employee yang sesuai
             ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
             ->groupBy('quadrant', 'year')
             ->orderByDesc('year')
@@ -528,29 +528,29 @@ class EmployeeController extends Controller
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('date_end', 'desc') // Urut dari yang terbaru
+            ->orderBy('date_end', 'desc')  // Urut dari yang terbaru
             ->get();
 
         $educations = EducationalBackground::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+            ->orderBy('end_date', 'desc')  // Urutkan berdasarkan tanggal akhir terbaru
             ->get();
 
         $workExperiences = WorkingExperience::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderByRaw('ISNULL(end_date) DESC') // Prioritaskan null (masih aktif)
-            ->orderByDesc('end_date') // Lalu urutkan berdasarkan tanggal
+            ->orderByRaw('ISNULL(end_date) DESC')  // Prioritaskan null (masih aktif)
+            ->orderByDesc('end_date')              // Lalu urutkan berdasarkan tanggal
             ->get();
 
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
+            ->orderBy('date', 'desc')  // Urutkan berdasarkan tanggal terbaru
             ->get();
 
         $assessment = Assessment::with('details.alc', 'employee')
@@ -571,25 +571,24 @@ class EmployeeController extends Controller
             ->firstOrFail();
 
         $departments = Department::all();
-        $divisions = Division::where('company', $employee->company_name)->get();
-        $plants = Plant::all();
-        return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');
-        ;
+        $divisions   = Division::where('company', $employee->company_name)->get();
+        $plants      = Plant::all();
+        return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');;
     }
 
     public function edit($npk)
     {
-        $grade = GradeConversion::all();
+        $grade              = GradeConversion::all();
         $promotionHistories = PromotionHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('last_promotion_date', 'desc') // Urutkan dari yang terbaru
+            ->orderBy('last_promotion_date', 'desc')  // Urutkan dari yang terbaru
             ->get();
         $employee = Employee::where('npk', $npk)->firstOrFail();
 
         $humanAssets = Hav::with('employee')
-            ->where('employee_id', $employee->id) // gunakan ID employee yang sesuai
+            ->where('employee_id', $employee->id)  // gunakan ID employee yang sesuai
             ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
             ->groupBy('quadrant', 'year')
             ->orderByDesc('year')
@@ -600,36 +599,36 @@ class EmployeeController extends Controller
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('date_end', 'desc') // Urut berdasarkan tanggal selesai terbaru
+            ->orderBy('date_end', 'desc')  // Urut berdasarkan tanggal selesai terbaru
             ->get();
 
         $externalTrainings = ExternalTraining::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('date_end', 'desc') // Urut dari yang terbaru
+            ->orderBy('date_end', 'desc')  // Urut dari yang terbaru
             ->get();
 
         $educations = EducationalBackground::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('end_date', 'desc') // Urutkan berdasarkan tanggal akhir terbaru
+            ->orderBy('end_date', 'desc')  // Urutkan berdasarkan tanggal akhir terbaru
             ->get();
 
         $workExperiences = WorkingExperience::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderByRaw('ISNULL(end_date) DESC') // Prioritaskan null (masih aktif)
-            ->orderByDesc('end_date') // Lalu urutkan berdasarkan tanggal
+            ->orderByRaw('ISNULL(end_date) DESC')  // Prioritaskan null (masih aktif)
+            ->orderByDesc('end_date')              // Lalu urutkan berdasarkan tanggal
             ->get();
 
         $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
             ->whereHas('employee', function ($query) use ($npk) {
                 $query->where('npk', $npk);
             })
-            ->orderBy('date', 'desc') // Urutkan berdasarkan tanggal terbaru
+            ->orderBy('date', 'desc')  // Urutkan berdasarkan tanggal terbaru
             ->get();
 
         $assessment = Assessment::with('details.alc', 'employee')
@@ -652,11 +651,11 @@ class EmployeeController extends Controller
             ->where('npk', $npk)
             ->firstOrFail();
 
-        $positions = Employee::select('position')->distinct()->pluck('position');
-        $plants = Plant::all();
+        $positions   = Employee::select('position')->distinct()->pluck('position');
+        $plants      = Plant::all();
         $departments = Department::where('company', $employee->company_name)->get();
-        $divisions = Division::where('company', $employee->company_name)->get();
-        $sections = Section::where('company', $employee->company_name)->get();
+        $divisions   = Division::where('company', $employee->company_name)->get();
+        $sections    = Section::where('company', $employee->company_name)->get();
         $subSections = SubSection::with('section')
             ->whereHas('section', function ($query) use ($employee) {
                 $query->where('company', $employee->company_name);
@@ -671,12 +670,11 @@ class EmployeeController extends Controller
     {
         try {
             $employee = Employee::where('npk', $npk)->firstOrFail();
-
-            $oldGrade = $employee->grade;
+            $oldGrade    = $employee->grade;
             $oldPosition = $employee->position;
 
             $validatedData = $request->validate([
-                'npk'              => 'nullable|string|max:255|unique:employees,npk,' . $employee->id,
+                'npk'              => 'nullable|string|max:255' . $employee->id,
                 'name'             => 'nullable|string|max:255',
                 'birthday_date'    => 'nullable|date',
                 'gender'           => 'nullable|in:Male,Female',
@@ -703,7 +701,7 @@ class EmployeeController extends Controller
                     }
 
                     // simpan file baru
-                    $photoPath = $request->file('photo')->store('employee_photos', 'public');
+                    $photoPath              = $request->file('photo')->store('employee_photos', 'public');
                     $validatedData['photo'] = $photoPath;
                 }
 
@@ -727,24 +725,24 @@ class EmployeeController extends Controller
                 $employee->update($validatedData);
 
                 $positionAliasMap = [
-                    'section head' => 'supervisor',
+                    'section head'     => 'supervisor',
                     'act section head' => 'supervisor',
-                    'coordinator' => 'manager',
-                    'act coordinator' => 'manager',
-                    'act manager' => 'manager',
-                    'act supervisor' => 'supervisor',
-                    'act leader' => 'leader',
-                    'act jp' => 'jp',
-                    'act gm' => 'gm',
+                    'coordinator'      => 'manager',
+                    'act coordinator'  => 'manager',
+                    'act manager'      => 'manager',
+                    'act supervisor'   => 'supervisor',
+                    'act leader'       => 'leader',
+                    'act jp'           => 'jp',
+                    'act gm'           => 'gm',
                 ];
 
                 $promotionPaths = [
-                    'operator' => ['leader' => ['clear' => 'sub_section_id']],
-                    'jp' => ['leader' => ['clear' => 'sub_section_id']],
-                    'leader' => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
+                    'operator'   => ['leader' => ['clear' => 'sub_section_id']],
+                    'jp'         => ['leader' => ['clear' => 'sub_section_id']],
+                    'leader'     => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
                     'supervisor' => ['manager' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id']],
-                    'manager' => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
-                    'gm' => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
+                    'manager'    => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
+                    'gm'         => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
                 ];
 
                 $normalizePosition = function ($position) use ($positionAliasMap) {
@@ -774,40 +772,40 @@ class EmployeeController extends Controller
                 // Mapping posisi ke entitas dan kolom yang perlu diupdate
                 $roleMappings = [
                     'sub_section' => [
-                        'roles' => ['act jp', 'operator', 'jp'],
-                        'update' => fn() => $employee->update([
+                        'roles'  => ['act jp', 'operator', 'jp'],
+                        'update' => fn()                         => $employee->update([
                             'sub_section_id' => $validatedData['sub_section_id'] ?? null,
                         ]),
                     ],
                     'sub_section_leader' => [
-                        'roles' => ['act leader', 'leader'],
-                        'update' => fn() => $validatedData['sub_section_id'] &&
+                        'roles'  => ['act leader', 'leader'],
+                        'update' => fn()                     => $validatedData['sub_section_id'] &&
                             DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                                ->update(['leader_id' => $employee->id]),
+                            ->update(['leader_id' => $employee->id]),
                     ],
                     'section' => [
-                        'roles' => ['act supervisor', 'act section head', 'supervisor', 'section head'],
-                        'update' => fn() => $validatedData['section_id'] &&
+                        'roles'  => ['act supervisor', 'act section head', 'supervisor', 'section head'],
+                        'update' => fn()                                                                 => $validatedData['section_id'] &&
                             DB::table('sections')->where('id', $validatedData['section_id'])
-                                ->update(['supervisor_id' => $employee->id]),
+                            ->update(['supervisor_id' => $employee->id]),
                     ],
                     'department' => [
-                        'roles' => ['act manager', 'act coordinator', 'manager', 'coordinator'],
-                        'update' => fn() => $validatedData['department_id'] &&
+                        'roles'  => ['act manager', 'act coordinator', 'manager', 'coordinator'],
+                        'update' => fn()                                                         => $validatedData['department_id'] &&
                             DB::table('departments')->where('id', $validatedData['department_id'])
-                                ->update(['manager_id' => $employee->id]),
+                            ->update(['manager_id' => $employee->id]),
                     ],
                     'division' => [
-                        'roles' => ['act gm', 'gm'],
-                        'update' => fn() => $validatedData['division_id'] &&
+                        'roles'  => ['act gm', 'gm'],
+                        'update' => fn()             => $validatedData['division_id'] &&
                             DB::table('divisions')->where('id', $validatedData['division_id'])
-                                ->update(['gm_id' => $employee->id]),
+                            ->update(['gm_id' => $employee->id]),
                     ],
                     'plant' => [
-                        'roles' => ['director'],
-                        'update' => fn() => $validatedData['plant_id'] &&
+                        'roles'  => ['director'],
+                        'update' => fn()         => $validatedData['plant_id'] &&
                             DB::table('plants')->where('id', $validatedData['plant_id'])
-                                ->update(['director_id' => $employee->id]),
+                            ->update(['director_id' => $employee->id]),
                     ],
                 ];
 
@@ -820,11 +818,11 @@ class EmployeeController extends Controller
                 }
 
                 $positionFieldMap = [
-                    'leader' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id'],
+                    'leader'     => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id'],
                     'supervisor' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id'],
-                    'manager' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id'],
-                    'gm' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id'],
-                    'director' => ['table' => 'plants', 'column' => 'director_id', 'key' => 'plant_id'],
+                    'manager'    => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id'],
+                    'gm'         => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id'],
+                    'director'   => ['table' => 'plants', 'column' => 'director_id', 'key' => 'plant_id'],
                 ];
 
                 $oldPositionLower = $normalizePosition($oldPosition);
@@ -851,11 +849,11 @@ class EmployeeController extends Controller
                 // Simpan riwayat promosi jika ada perubahan
                 if ($oldGrade !== $validatedData['grade'] || $oldPosition !== $validatedData['position']) {
                     PromotionHistory::create([
-                        'employee_id' => $employee->id,
-                        'previous_grade' => $oldGrade,
-                        'previous_position' => $oldPosition,
-                        'current_grade' => $validatedData['grade'],
-                        'current_position' => $validatedData['position'],
+                        'employee_id'         => $employee->id,
+                        'previous_grade'      => $oldGrade,
+                        'previous_position'   => $oldPosition,
+                        'current_grade'       => $validatedData['grade'],
+                        'current_position'    => $validatedData['position'],
                         'last_promotion_date' => now(),
                     ]);
                 }
@@ -880,21 +878,21 @@ class EmployeeController extends Controller
             ->orderByDesc('mutation_date')
             ->first();
 
-        $startDate = $lastMutation->mutation_date ?? $this->getApproximateEntryDate($employeeId, $position);
+        $startDate      = $lastMutation->mutation_date ?? $this->getApproximateEntryDate($employeeId, $position);
         $durationMonths = Carbon::parse($startDate)->diffInMonths(now());
-        $durationText = $this->formatDuration($durationMonths);
+        $durationText   = $this->formatDuration($durationMonths);
         try {
             DB::beginTransaction();
 
             MutationHistory::create([
-                'employee_id' => $employeeId,
-                'position' => $position,
-                'structure_type' => $this->getStructureTypeFromKey($structureKey),
-                'from_id' => $fromId,
-                'to_id' => $toId,
-                'mutation_date' => now(),
+                'employee_id'                    => $employeeId,
+                'position'                       => $position,
+                'structure_type'                 => $this->getStructureTypeFromKey($structureKey),
+                'from_id'                        => $fromId,
+                'to_id'                          => $toId,
+                'mutation_date'                  => now(),
                 'duration_in_previous_structure' => $durationMonths,
-                'duration_text' => $durationText,
+                'duration_text'                  => $durationText,
             ]);
             DB::commit();
         } catch (\Exception $e) {
@@ -908,10 +906,10 @@ class EmployeeController extends Controller
 
     private function formatDuration($months)
     {
-        $years = floor($months / 12);
+        $years           = floor($months / 12);
         $remainingMonths = $months % 12;
 
-        $yearText = $years > 0 ? "$years tahun" : '';
+        $yearText  = $years > 0 ? "$years tahun" : '';
         $monthText = $remainingMonths > 0 ? "$remainingMonths bulan" : '';
 
         return trim("$yearText $monthText");
@@ -921,11 +919,11 @@ class EmployeeController extends Controller
     {
         return match ($key) {
             'sub_section_id' => 'sub_section',
-            'section_id' => 'section',
-            'department_id' => 'department',
-            'division_id' => 'division',
-            'plant_id' => 'plant',
-            default => 'unknown',
+            'section_id'     => 'section',
+            'department_id'  => 'department',
+            'division_id'    => 'division',
+            'plant_id'       => 'plant',
+            default          => 'unknown',
         };
     }
 
@@ -937,7 +935,7 @@ class EmployeeController extends Controller
             Storage::delete('public/' . $employee->photo);
         }
 
-        $employee->delete(); // otomatis hapus user juga via model
+        $employee->delete();  // otomatis hapus user juga via model
 
         return redirect()->route('employee.master.index')->with('success', 'Karyawan dan akun pengguna berhasil dihapus!');
     }
@@ -952,7 +950,7 @@ class EmployeeController extends Controller
     public function import(Request $request)
     {
         $request->validate([
-            'file' => 'required|mimes:xlsx', // hanya menerima .xlsx saja
+            'file' => 'required|mimes:xlsx',   // hanya menerima .xlsx saja
         ], [
             'file.mimes' => 'File harus berformat .xlsx sesuai template yang disediakan.',
         ]);
@@ -978,10 +976,10 @@ class EmployeeController extends Controller
         }
 
         $request->validate([
-            'position' => 'required|string|max:255',
-            'department' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'position'    => 'required|string|max:255',
+            'department'  => 'required|string|max:255',
+            'start_date'  => 'required|date',
+            'end_date'    => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string',
         ]);
 
@@ -990,10 +988,10 @@ class EmployeeController extends Controller
 
             WorkingExperience::create([
                 'employee_id' => $request->employee_id,
-                'position' => $request->position,
-                'department' => $request->department,
-                'start_date' => $request->start_date,
-                'end_date' => $request->end_date ?: null, // konversi kosong jadi null
+                'position'    => $request->position,
+                'department'  => $request->department,
+                'start_date'  => $request->start_date,
+                'end_date'    => $request->end_date ?: null,   // konversi kosong jadi null
                 'description' => $request->description,
             ]);
 
@@ -1012,10 +1010,10 @@ class EmployeeController extends Controller
         $experience = WorkingExperience::findOrFail($id);
 
         $request->validate([
-            'position' => 'required|string|max:255',
-            'department' => 'required|string|max:255',
-            'start_date' => 'required|date',
-            'end_date' => 'nullable|date|after_or_equal:start_date',
+            'position'    => 'required|string|max:255',
+            'department'  => 'required|string|max:255',
+            'start_date'  => 'required|date',
+            'end_date'    => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string',
         ]);
 
@@ -1024,10 +1022,10 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $experience->update([
-                'position' => $request->position,
-                'department' => $request->department,
-                'start_date' => $request->start_date ? Carbon::parse($request->start_date) : null,
-                'end_date' => $request->end_date ? Carbon::parse($request->end_date) : null,
+                'position'    => $request->position,
+                'department'  => $request->department,
+                'start_date'  => $request->start_date ? Carbon::parse($request->start_date) : null,
+                'end_date'    => $request->end_date ? Carbon::parse($request->end_date) : null,
                 'description' => $request->description,
             ]);
 
@@ -1066,11 +1064,11 @@ class EmployeeController extends Controller
             }
 
             $request->validate([
-                'level' => 'required',
-                'major' => 'required',
-                'institute' => 'required',
+                'level'      => 'required',
+                'major'      => 'required',
+                'institute'  => 'required',
                 'start_date' => 'nullable|date',
-                'end_date' => 'nullable|date',
+                'end_date'   => 'nullable|date',
             ]);
 
             // Debugging setelah validasi berhasil
@@ -1083,12 +1081,12 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             EducationalBackground::create([
-                'employee_id' => $request->employee_id,
+                'employee_id'       => $request->employee_id,
                 'educational_level' => $request->level,
-                'major' => $request->major,
-                'institute' => $request->institute,
-                'start_date' => $request->start_date ?: null,
-                'end_date' => $request->end_date ?: null,
+                'major'             => $request->major,
+                'institute'         => $request->institute,
+                'start_date'        => $request->start_date ?: null,
+                'end_date'          => $request->end_date ?: null,
             ]);
 
             DB::commit();
@@ -1104,11 +1102,11 @@ class EmployeeController extends Controller
         $education = EducationalBackground::findOrFail($id);
 
         $validatedData = $request->validate([
-            'level' => 'required',
-            'major' => 'required',
-            'institute' => 'required',
+            'level'      => 'required',
+            'major'      => 'required',
+            'institute'  => 'required',
             'start_date' => 'nullable|date',
-            'end_date' => 'nullable|date',
+            'end_date'   => 'nullable|date',
         ]);
 
         try {
@@ -1116,10 +1114,10 @@ class EmployeeController extends Controller
 
             $education->update([
                 'educational_level' => $validatedData['level'],
-                'major' => $validatedData['major'],
-                'institute' => $validatedData['institute'],
-                'start_date' => $validatedData['start_date'] ? Carbon::parse($validatedData['start_date']) : null,
-                'end_date' => $validatedData['end_date'] ? Carbon::parse($validatedData['end_date']) : null,
+                'major'             => $validatedData['major'],
+                'institute'         => $validatedData['institute'],
+                'start_date'        => $validatedData['start_date'] ? Carbon::parse($validatedData['start_date']) : null,
+                'end_date'          => $validatedData['end_date'] ? Carbon::parse($validatedData['end_date']) : null,
             ]);
 
             DB::commit();
@@ -1174,9 +1172,9 @@ class EmployeeController extends Controller
             // Simpan data appraisal
             $appraisal = PerformanceAppraisalHistory::create([
                 'employee_id' => $request->employee_id,
-                'score' => $validatedData['score'],
+                'score'       => $validatedData['score'],
                 'description' => $validatedData['description'] ?? null,
-                'date' => Carbon::parse($validatedData['date']),
+                'date'        => Carbon::parse($validatedData['date']),
             ]);
 
             // Get year hav terakhir
@@ -1199,7 +1197,7 @@ class EmployeeController extends Controller
 
         $validatedData = $request->validate([
             'score' => 'required',
-            'date' => 'required|date',
+            'date'  => 'required|date',
         ]);
 
         try {
@@ -1207,9 +1205,9 @@ class EmployeeController extends Controller
 
             // Update dengan field yang benar
             $appraisal->update([
-                'score' => $validatedData['score'],
+                'score'       => $validatedData['score'],
                 'description' => $validatedData['description'] ?? null,
-                'date' => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
+                'date'        => Carbon::parse($validatedData['date']),   // Pastikan format tanggal benar
             ]);
 
             // Get year hav terakhir
@@ -1252,10 +1250,10 @@ class EmployeeController extends Controller
     public function promotionStore(Request $request)
     {
         $request->validate([
-            'previous_grade' => 'required|string|max:255',
-            'previous_position' => 'required|string|max:255',
-            'current_grade' => 'required|string|max:255',
-            'current_position' => 'required|string|max:255',
+            'previous_grade'      => 'required|string|max:255',
+            'previous_position'   => 'required|string|max:255',
+            'current_grade'       => 'required|string|max:255',
+            'current_position'    => 'required|string|max:255',
             'last_promotion_date' => 'required|date',
         ]);
 
@@ -1263,11 +1261,11 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             PromotionHistory::create([
-                'employee_id' => $request->employee_id,
-                'previous_grade' => $request->previous_grade,
-                'previous_position' => $request->previous_position,
-                'current_grade' => $request->current_grade,
-                'current_position' => $request->current_position,
+                'employee_id'         => $request->employee_id,
+                'previous_grade'      => $request->previous_grade,
+                'previous_position'   => $request->previous_position,
+                'current_grade'       => $request->current_grade,
+                'current_position'    => $request->current_position,
                 'last_promotion_date' => $request->last_promotion_date,
             ]);
 
@@ -1284,10 +1282,10 @@ class EmployeeController extends Controller
         $experience = PromotionHistory::findOrFail($id);
 
         $request->validate([
-            'previous_grade' => 'required',
-            'previous_position' => 'required',
-            'current_grade' => 'required',
-            'current_position' => 'required',
+            'previous_grade'      => 'required',
+            'previous_position'   => 'required',
+            'current_grade'       => 'required',
+            'current_position'    => 'required',
             'last_promotion_date' => 'required',
         ]);
 
@@ -1295,10 +1293,10 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $experience->update([
-                'previous_grade' => $request->previous_grade,
-                'previous_position' => $request->previous_position,
-                'current_grade' => $request->current_grade,
-                'current_position' => $request->current_position,
+                'previous_grade'      => $request->previous_grade,
+                'previous_position'   => $request->previous_position,
+                'current_grade'       => $request->current_grade,
+                'current_position'    => $request->current_position,
                 'last_promotion_date' => $request->last_promotion_date,
             ]);
 
@@ -1321,7 +1319,7 @@ class EmployeeController extends Controller
 
             // Cari promotion history sebelumnya sebelum yang dihapus
             $lastPromotion = PromotionHistory::where('employee_id', $employee->id)
-                ->where('id', '<', $promotion->id) // Hanya cari promosi sebelum yang sedang dihapus
+                ->where('id', '<', $promotion->id)  // Hanya cari promosi sebelum yang sedang dihapus
                 ->orderBy('id', 'desc')
                 ->first();
 
@@ -1349,13 +1347,13 @@ class EmployeeController extends Controller
 
             // Validasi input
             $validatedData = $request->validate([
-                'program' => 'required|string|max:255',
-                'ict_score' => 'required',
+                'program'       => 'required|string|max:255',
+                'ict_score'     => 'required',
                 'project_score' => 'required',
-                'total_score' => 'required',
-                'date_start' => 'required',
-                'date_end' => 'required',
-                'institusi' => 'required',
+                'total_score'   => 'required',
+                'date_start'    => 'required',
+                'date_end'      => 'required',
+                'institusi'     => 'required',
 
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -1367,14 +1365,14 @@ class EmployeeController extends Controller
 
             // Simpan data ke AstraTraining
             AstraTraining::create([
-                'employee_id' => $request->employee_id,
-                'program' => $validatedData['program'],
-                'ict_score' => $validatedData['ict_score'],
+                'employee_id'   => $request->employee_id,
+                'program'       => $validatedData['program'],
+                'ict_score'     => $validatedData['ict_score'],
                 'project_score' => $validatedData['project_score'],
-                'total_score' => $validatedData['total_score'],
-                'date_start' => $validatedData['date_start'],
-                'date_end' => $validatedData['date_end'],
-                'institusi' => $validatedData['institusi'],
+                'total_score'   => $validatedData['total_score'],
+                'date_start'    => $validatedData['date_start'],
+                'date_end'      => $validatedData['date_end'],
+                'institusi'     => $validatedData['institusi'],
             ]);
 
             DB::commit();
@@ -1396,13 +1394,13 @@ class EmployeeController extends Controller
 
             // Validasi input
             $validatedData = $request->validate([
-                'date_start' => 'required',
-                'date_end' => 'required',
-                'program' => 'required|string|max:255',
-                'ict_score' => 'required',
+                'date_start'    => 'required',
+                'date_end'      => 'required',
+                'program'       => 'required|string|max:255',
+                'ict_score'     => 'required',
                 'project_score' => 'required',
-                'total_score' => 'required',
-                'institusi' => 'required',
+                'total_score'   => 'required',
+                'institusi'     => 'required',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
@@ -1413,13 +1411,13 @@ class EmployeeController extends Controller
 
             // Update data AstraTraining
             $astraTraining->update([
-                'date_start' => $validatedData['date_start'],
-                'date_end' => $validatedData['date_end'],
-                'institusi' => $validatedData['institusi'],
-                'program' => $validatedData['program'],
-                'ict_score' => $validatedData['ict_score'],
+                'date_start'    => $validatedData['date_start'],
+                'date_end'      => $validatedData['date_end'],
+                'institusi'     => $validatedData['institusi'],
+                'program'       => $validatedData['program'],
+                'ict_score'     => $validatedData['ict_score'],
                 'project_score' => $validatedData['project_score'],
-                'total_score' => $validatedData['total_score'],
+                'total_score'   => $validatedData['total_score'],
             ]);
 
             DB::commit();
@@ -1463,10 +1461,10 @@ class EmployeeController extends Controller
 
             // Validasi input
             $validatedData = $request->validate([
-                'program' => 'required|string|max:255',
-                'vendor' => 'required|string|max:255',
+                'program'    => 'required|string|max:255',
+                'vendor'     => 'required|string|max:255',
                 'date_start' => 'required',
-                'date_end' => 'required',
+                'date_end'   => 'required',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
@@ -1478,10 +1476,10 @@ class EmployeeController extends Controller
             // Simpan data ke ExternalTraining
             ExternalTraining::create([
                 'employee_id' => $request->employee_id,
-                'date_start' => $validatedData['date_start'],
-                'date_end' => $validatedData['date_end'],
-                'program' => $validatedData['program'],
-                'vendor' => $validatedData['vendor'],
+                'date_start'  => $validatedData['date_start'],
+                'date_end'    => $validatedData['date_end'],
+                'program'     => $validatedData['program'],
+                'vendor'      => $validatedData['vendor'],
             ]);
 
             DB::commit();
@@ -1500,10 +1498,10 @@ class EmployeeController extends Controller
 
             // Validasi input
             $validatedData = $request->validate([
-                'program' => 'required|string|max:255',
+                'program'    => 'required|string|max:255',
                 'date_start' => 'required',
-                'date_end' => 'required',
-                'vendor' => 'required|string|max:255',
+                'date_end'   => 'required',
+                'vendor'     => 'required|string|max:255',
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             return redirect()->back()->withErrors($e->validator)->withInput();
@@ -1515,9 +1513,9 @@ class EmployeeController extends Controller
             // Update data di database
             $externalTraining->update([
                 'date_start' => $validatedData['date_start'],
-                'date_end' => $validatedData['date_end'],
-                'program' => $validatedData['program'],
-                'vendor' => $validatedData['vendor'],
+                'date_end'   => $validatedData['date_end'],
+                'program'    => $validatedData['program'],
+                'vendor'     => $validatedData['vendor'],
             ]);
 
             DB::commit();
