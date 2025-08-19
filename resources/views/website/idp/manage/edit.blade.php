@@ -141,21 +141,6 @@
                                 @enderror
                             </div>
 
-                            {{-- Status --}}
-                            <div class="mb-3">
-                                <label class="form-label">Status</label>
-                                <select name="status" class="form-select">
-                                    @foreach ($statusMap as $val => $label)
-                                        <option value="{{ $val }}" @selected((int) old('status', $idp->status) === (int) $val)>
-                                            {{ $label }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                                @error('status')
-                                    <div class="text-danger small mt-1">{{ $message }}</div>
-                                @enderror
-                            </div>
-
                         </div>
                         <div class="card-footer d-flex justify-content-between">
                             <a href="{{ url()->previous() }}" class="btn btn-light">Cancel</a>
@@ -199,11 +184,9 @@
                 {{-- Delete --}}
                 <div class="card mt-4 border-danger-subtle">
                     <div class="card-header bg-white d-flex align-items-center justify-content-between">
-                        <div class="fs-3 fw-semibold text-danger mb-0">Delete</div>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-muted mb-3">This action cannot be undone.</p>
-
+                        <div class="p-0">
+                            <p class="text-muted m-0">This action cannot be undone.</p>
+                        </div>
                         {{-- NOTE: make sure your route expects the primary key ($idp->id) --}}
                         <form id="delete-idp-form" method="POST" action="{{ route('idp.destroy', $idp->id) }}">
                             @csrf

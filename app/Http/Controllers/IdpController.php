@@ -1010,7 +1010,6 @@ class IdpController extends Controller
             'development_program'  => ['required', 'string', 'max:160'],
             'development_target'   => ['required', 'string', 'max:1200'],
             'date'                 => ['required', 'date'],
-            'status'               => ['nullable', 'integer', 'in:0,1,2,3,4'],
         ]);
 
         // Normalisasi input
