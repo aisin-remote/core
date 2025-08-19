@@ -223,6 +223,8 @@
                                                                 'Act JP' => 'Act JP',
                                                                 'Operator' => 'Operator',
                                                                 'Direktur' => 'Direktur',
+                                                                'VPD' => 'VPD',
+                                                                'President' => 'President',
                                                             ];
                                                         @endphp
                                                         @foreach ($positions as $value => $label)
