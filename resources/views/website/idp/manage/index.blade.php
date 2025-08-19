@@ -173,9 +173,6 @@
 
                                 {{-- Actions (Apply hidden saat JS aktif; Reset tetap) --}}
                                 <div class="col-12 col-lg-auto ms-lg-auto d-flex gap-2">
-                                    <button class="btn btn-primary btn-apply" type="submit">
-                                        <i class="fa-solid fa-check me-2"></i>Apply
-                                    </button>
                                     <a href="{{ route('idp.manage.all') }}" class="btn btn-light">
                                         <i class="fa-solid fa-rotate-left me-2"></i>Reset
                                     </a>
