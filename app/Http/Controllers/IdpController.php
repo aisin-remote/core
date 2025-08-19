@@ -20,6 +20,7 @@ use App\Models\DevelopmentOne;
 use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
+use App\Models\Alc;
 use App\Models\IdpBackup;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -894,9 +895,11 @@ class IdpController extends Controller
         $company   = (string) $request->query('company', '');
         $positions = $request->query('positions', []);
         $backup    = $request->query('backup', []); // checkbox -> array
+        $alcsSel = $request->query('alcs', []);
 
         if (!is_array($positions)) $positions = [$positions];
         if (!is_array($backup))    $backup    = [$backup];
+        if (!is_array($alcsSel)) $alcsSel      = [$alcsSel];
 
         $synonymMap = [
             'President'  => ['President'],
@@ -909,6 +912,12 @@ class IdpController extends Controller
             'JP'         => ['JP', 'Act JP'],
             'Operator'   => ['Operator'],
         ];
+
+        $alcIds = collect($alcsSel)
+            ->map(fn($v) => (int) $v)
+            ->filter()
+            ->values()
+            ->all();
 
         // Normalisasi
         $companyNorm = Str::of($company)->lower()->trim()->toString();
@@ -954,11 +963,16 @@ class IdpController extends Controller
             ->when($onlyWithout, function ($q) {
                 $q->doesntHave('backups');
             })
+            ->when(!empty($alcIds), function ($q) use ($alcIds) {
+                // asumsikan kolom foreign key: idp.alc_id
+                // $q->whereIn('idp.alc_id', $alcIds);
+                // kalau kamu mau via relasi:
+                $q->whereHas('alc', fn($w) => $w->whereIn('id', $alcIds));
+            })
             ->withCount('backups')
             ->withMax('backups as latest_backup_changed_at', 'changed_at');
 
         $idps = $query->get();
-
         // Dropdown data
         $companies = Employee::query()
             ->whereNotNull('company_name')
@@ -968,6 +982,7 @@ class IdpController extends Controller
             ->pluck('company_name');
 
         $allPositions = array_keys($synonymMap);
+        $allAlcs = Alc::orderBy('name')->get(['id', 'name']);
 
         return view('website.idp.manage.index', compact(
             'idps',
@@ -975,7 +990,9 @@ class IdpController extends Controller
             'allPositions',
             'company',
             'positions',
-            'backup' // kirim ke view supaya checkbox tetap tercentang
+            'backup',
+            'alcsSel',
+            'allAlcs',
         ));
     }
 

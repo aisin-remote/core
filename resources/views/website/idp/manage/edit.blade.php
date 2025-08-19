@@ -199,7 +199,7 @@
                 {{-- Delete --}}
                 <div class="card mt-4 border-danger-subtle">
                     <div class="card-header bg-white d-flex align-items-center justify-content-between">
-                        <div class="fs-6 fw-semibold text-danger mb-0">Delete IDP</div>
+                        <div class="fs-3 fw-semibold text-danger mb-0">Delete</div>
                     </div>
                     <div class="card-body">
                         <p class="text-muted mb-3">This action cannot be undone.</p>
@@ -208,7 +208,7 @@
                         <form id="delete-idp-form" method="POST" action="{{ route('idp.destroy', $idp->id) }}">
                             @csrf
                             @method('DELETE')
-                            <button type="button" id="btn-delete-idp" class="btn btn-outline-danger w-100">
+                            <button type="button" id="btn-delete-idp" class="btn btn-danger w-100">
                                 Delete IDP
                             </button>
                         </form>

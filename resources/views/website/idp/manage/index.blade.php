@@ -14,10 +14,17 @@
         // Guards to avoid undefined notices on first load
         $company = $company ?? '';
         $positions = $positions ?? [];
-        $backup = $backup ?? []; // ['with'], ['without'], ['with','without'], []
+        $backup = $backup ?? [];
+        $alcsSel = $alcsSel ?? [];
 
         $selWith = collect($backup)->contains('with');
         $selWithout = collect($backup)->contains('without');
+
+        $selectedAlcNames = collect($allAlcs ?? [])
+            ->whereIn('id', $alcsSel)
+            ->pluck('name')
+            ->values()
+            ->all();
     @endphp
 
     <div class="app-container container-fluid">
@@ -28,7 +35,7 @@
                 <div class="d-flex flex-wrap align-items-center gap-2 gap-sm-3">
                     <div class="me-auto">
                         <div class="fs-4 fw-semibold">IDP Overview</div>
-                        @if (!empty($company) || !empty($positions) || ($selWith xor $selWithout))
+                        @if (!empty($company) || !empty($positions) || ($selWith xor $selWithout) || !empty($selectedAlcNames))
                             <div class="mt-1 d-flex flex-wrap gap-2">
                                 @if (!empty($company))
                                     <span class="badge bg-secondary-subtle text-dark fw-normal">Company:
@@ -41,6 +48,11 @@
                                 @if ($selWith xor $selWithout)
                                     <span class="badge bg-secondary-subtle text-dark fw-normal">Backup:
                                         {{ $selWith ? 'Available' : 'Not available' }}</span>
+                                @endif
+                                @if (!empty($selectedAlcNames))
+                                    <span class="badge bg-secondary-subtle text-dark fw-normal">
+                                        ALC: {{ implode(', ', $selectedAlcNames) }}
+                                    </span>
                                 @endif
                             </div>
                         @endif
@@ -105,6 +117,38 @@
                                     </div>
                                 </div>
 
+                                {{--  ALC (multi) --}}
+                                <div class="col-12 col-md-6 col-lg-auto">
+                                    <label class="form-label small text-muted mb-1 d-block">ALC</label>
+                                    <div class="dropdown">
+                                        <button class="btn btn-outline-secondary w-100 filter-control" type="button"
+                                            id="alcDropdownBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                            aria-expanded="false" aria-haspopup="true">
+                                            <span id="alcDropdownLabel">All</span>
+                                            <i class="ms-2 fa-solid fa-caret-down"></i>
+                                        </button>
+
+                                        <div class="dropdown-menu dropdown-menu-end p-3" aria-labelledby="alcDropdownBtn"
+                                            style="min-width:260px; max-height:280px; overflow:auto;">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <strong class="small text-muted">Select ALC</strong>
+                                                <a href="#" class="small" id="clearAlcs">Clear all</a>
+                                            </div>
+
+                                            @foreach ($allAlcs as $alc)
+                                                @php $id = 'alc_'. $alc->id; @endphp
+                                                <div class="form-check mb-1">
+                                                    <input class="form-check-input form-check-lg" type="checkbox"
+                                                        name="alcs[]" value="{{ $alc->id }}"
+                                                        id="{{ $id }}" @checked(in_array($alc->id, $alcsSel ?? []))>
+                                                    <label class="form-check-label"
+                                                        for="{{ $id }}">{{ $alc->name }}</label>
+                                                </div>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                </div>
+
                                 {{-- Backup (checkbox) --}}
                                 <div class="col-12 col-md-6 col-lg-auto">
                                     <label class="form-label small text-muted mb-1 d-block">Backup Status</label>
@@ -150,6 +194,7 @@
                             <tr>
                                 <th class="text-center" style="width:72px;">No.</th>
                                 <th class="w-30">Employee</th>
+                                <th class="w-60">ALC</th>
                                 <th>Company</th>
                                 <th>Position</th>
                                 <th>Category</th>
@@ -173,6 +218,7 @@
                                     <td class="text-center" data-row-index></td>
 
                                     <td class="fw-semibold">{{ $idp->employee_name ?? '—' }}</td>
+                                    <td>{{ $idp->alc->name ?? '—' }}</td>
                                     <td>{{ $idp->employee_company_name ?? '—' }}</td>
                                     <td>{{ $idp->employee_position ?? '—' }}</td>
                                     <td>{{ $idp->category }}</td>
@@ -361,10 +407,24 @@
             }
             updatePosLabel();
 
+            function updateAlcLabel() {
+                const checked = Array.from(document.querySelectorAll('input[name="alcs[]"]:checked'))
+                    .map(el => el.nextElementSibling?.textContent?.trim() || el.value);
+                const label = document.getElementById('alcDropdownLabel');
+                if (!label) return;
+                if (checked.length === 0) label.textContent = 'All';
+                else if (checked.length <= 2) label.textContent = checked.join(', ');
+                else label.textContent = `Selected: ${checked.length}`;
+            }
+            updateAlcLabel();
+
             // === Auto-submit on filter change ===
             const form = document.getElementById('filterForm');
-            const ddBtn = document.getElementById('posDropdownBtn');
-            const ddInst = ddBtn ? bootstrap.Dropdown.getOrCreateInstance(ddBtn) : null;
+            const ddBtnPos = document.getElementById('posDropdownBtn');
+            const ddInstPos = ddBtnPos ? bootstrap.Dropdown.getOrCreateInstance(ddBtnPos) : null;
+
+            const ddBtnAlc = document.getElementById('alcDropdownBtn');
+            const ddInstAlc = ddBtnAlc ? bootstrap.Dropdown.getOrCreateInstance(ddBtnAlc) : null;
 
             // Simple debounce to avoid multiple quick submits
             let submitTimer = null;
@@ -373,7 +433,9 @@
                 clearTimeout(submitTimer);
                 submitTimer = setTimeout(() => {
                     // close positions dropdown (nicer UX)
-                    ddInst?.hide();
+                    ddInstPos?.hide();
+                    ddInstAlc?.hide();
+
                     // submit
                     if (form?.requestSubmit) form.requestSubmit();
                     else form?.submit();
@@ -396,6 +458,22 @@
                 e.preventDefault();
                 document.querySelectorAll('input[name="positions[]"]').forEach(el => el.checked = false);
                 updatePosLabel();
+                autoSubmit();
+            });
+
+            // listen ALC changes
+            document.querySelectorAll('input[name="alcs[]"]').forEach(el => {
+                el.addEventListener('change', () => {
+                    updateAlcLabel();
+                    autoSubmit();
+                });
+            });
+
+            // Clear alcs
+            document.getElementById('clearAlcs')?.addEventListener('click', e => {
+                e.preventDefault();
+                document.querySelectorAll('input[name="alcs[]"]').forEach(el => (el.checked = false));
+                updateAlcLabel();
                 autoSubmit();
             });
 
