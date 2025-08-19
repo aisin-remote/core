@@ -139,6 +139,8 @@
         overflow: hidden
     }
 
+    /* Sidebar onminimize */
+
     #kt_app_sidebar .menu-sub.menu-sub-accordion .menu-link {
         padding: 1rem .5rem;
         font-size: .9rem
