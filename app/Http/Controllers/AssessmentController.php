@@ -121,25 +121,41 @@ class AssessmentController extends Controller
             'leadingDepartment.division'
         )->findOrFail($assessment->employee_id);
 
-        $assessments = DetailAssessment::with('alc')
-            ->where('assessment_id', $assessment_id)
-            ->get();
+        $grade = $employee?->grade;
+        $gradeGroup = (int) filter_var($grade, FILTER_SANITIZE_NUMBER_INT); // Ambil angka dari grade, contoh: "4A" => 4
+
+        $assessmentsQuery = DetailAssessment::with('alc')
+            ->where('assessment_id', $assessment_id);
+
+
+        if ($gradeGroup >= 4 && $gradeGroup <= 6) {
+            $assessmentsQuery->whereNotIn('alc_id', [1, 2, 6]);
+        }
+
+        $assessments = $assessmentsQuery->get();
+
 
         if ($assessments->isEmpty()) {
             return back()->with('error', 'Tidak ada data assessment pada tanggal tersebut.');
         }
 
-        $details = DB::table('detail_assessments')
+        $detailsQuery = DB::table('detail_assessments')
             ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
             ->where('detail_assessments.assessment_id', $assessment_id)
             ->select(
                 'detail_assessments.*',
                 'alc.name as alc_name',
                 'detail_assessments.score'
-            )
-            ->get();
+            );
 
-        return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details'));
+
+        if ($gradeGroup >= 4 && $gradeGroup <= 6) {
+            $detailsQuery->whereNotIn('detail_assessments.alc_id', [1, 2, 6]);
+        }
+
+        $details = $detailsQuery->get();
+
+        return view('website.assessment.detail', compact('employee', 'assessments', 'date', 'details', 'assessment'));
     }
 
     /**
@@ -188,26 +204,49 @@ class AssessmentController extends Controller
      */
     public function store(Request $request)
     {
-        $validated = $this->validateAssessmentRequest($request);
-        $filePath = $this->handleFileUpload($request);
+        DB::beginTransaction();
 
-        $assessment = Assessment::create([
-            'employee_id' => $request->employee_id,
-            'date' => $request->date,
-            'target_position' => $request->target,
-            'upload' => $filePath,
-            'note' => $request->note,
-        ]);
+        try {
+            $this->validateAssessmentRequest($request);
+            $filePath = $this->handleFileUpload($request);
 
-        $this->storeAssessmentDetails($request, $assessment);
-        $this->processHav($request, $assessment);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Data assessment dan HAV berhasil disimpan.',
-            'assessment' => $assessment,
-        ]);
+            $assessment = Assessment::create([
+                'employee_id'     => $request->employee_id,
+                'date'            => $request->date,
+                'target_position' => $request->target,
+                'upload'          => $filePath,
+                'note'            => $request->note,
+                'purpose'         => $request->purpose,
+                'lembaga'         => $request->lembaga
+            ]);
+
+            $this->storeAssessmentDetails($request, $assessment);
+            $this->processHav($request, $assessment);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Data assessment dan HAV berhasil disimpan.',
+                'assessment' => $assessment,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            // Log error jika perlu
+            Log::error('Gagal menyimpan data assessment', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Gagal menyimpan data. ' . $e->getMessage(),
+            ], 500);
+        }
     }
+
 
     /**
      * Edit assessment form
@@ -217,12 +256,14 @@ class AssessmentController extends Controller
         try {
             $assessment = Assessment::with('details.alc')->findOrFail($id);
             return response()->json([
-                'id' => $assessment->id,
+                'id'          => $assessment->id,
                 'employee_id' => $assessment->employee_id,
-                'date' => $assessment->date,
+                'date'        => $assessment->date,
                 'description' => $assessment->description,
-                'upload' => $assessment->upload ? asset('storage/' . $assessment->upload) : null,
-                'details' => $assessment->details->map(fn($d) => [
+                'purpose'     => $assessment->purpose,
+                'lembaga'     => $assessment->lembaga,
+                'upload'      => $assessment->upload ? asset('storage/' . $assessment->upload) : null,
+                'details'     => $assessment->details->map(fn($d) => [
                     'alc_id' => $d->alc_id,
                     'score' => $d->score,
                     'strength' => $d->strength,
@@ -278,8 +319,13 @@ class AssessmentController extends Controller
             // Hapus detail assessment
             DetailAssessment::where('assessment_id', $id)->delete();
 
+            // Log sebelum menghapus data HAV
+            Log::info('Menghapus data HAV untuk assessment_id: ' . $id . ' dan created_at: ' . $assessment->created_at);
+
             // Hapus data HAV
-            Hav::where('assessment_id', $id)->delete();
+            Hav::where('assessment_id', $id)
+                ->orWhere('created_at', $assessment->created_at)
+                ->delete();
 
             // Hapus file upload jika ada
             if ($assessment->upload) {
@@ -361,7 +407,7 @@ class AssessmentController extends Controller
         }
 
         if ($subordinateIds->isEmpty()) {
-            return Employee::whereRaw('1=0');
+            return collect(); // Return koleksi kosong, bukan query builder
         }
 
         return Employee::whereIn('id', $subordinateIds)->get();
@@ -482,25 +528,27 @@ class AssessmentController extends Controller
     private function validateAssessmentRequest(Request $request, $isUpdate = false)
     {
         $rules = [
-            'employee_id' => 'required|exists:employees,id',
-            'date' => 'required|date',
-            'target' => 'required|string',
-            'upload' => 'nullable|file|mimes:pdf|max:2048',
-            'note' => 'nullable|string',
-            'description' => 'nullable|string',
-            'alc_ids' => 'required|array',
-            'alc_ids.*' => 'exists:alc,id',
-            'scores' => 'nullable|array',
-            'scores.*' => 'nullable|string|max:2',
-            'strength' => 'nullable|array',
-            'weakness' => 'nullable|array',
+            'employee_id'            => 'required|exists:employees,id',
+            'date'                   => 'required|date',
+            'target'                 => 'required|string',
+            'upload'                 => 'nullable|file|mimes:pdf|max:2048',
+            'note'                   => 'nullable|string',
+            'description'            => 'nullable|string',
+            'purpose'                => 'required|string',
+            'lembaga'                => 'required|string',
+            'alc_ids'                => 'required|array',
+            'alc_ids.*'              => 'exists:alc,id',
+            'scores'                 => 'nullable|array',
+            'scores.*'               => 'nullable|string|max:2',
+            'strength'               => 'nullable|array',
+            'weakness'               => 'nullable|array',
             'suggestion_development' => 'nullable|array',
         ];
 
         if ($isUpdate) {
             $rules['assessment_id'] = 'required|exists:assessments,id';
-            $rules['employee_id'] = 'nullable|exists:employees,id';
-            $rules['target'] = 'nullable|string';
+            $rules['employee_id']   = 'nullable|exists:employees,id';
+            $rules['target']        = 'nullable|string';
         }
 
         return $request->validate($rules);
@@ -560,6 +608,7 @@ class AssessmentController extends Controller
             'year' => now()->year,
             'quadrant' => $latestHav->quadrant ?? null,
             'status' => '0',
+            'assessment_id' => $assessment->id,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -633,7 +682,6 @@ class AssessmentController extends Controller
 
         foreach ($request->alc_ids as $alc_id) {
             $score = $request->scores[$alc_id] ?? "0";
-            dd($score);
         }
     }
 
@@ -738,9 +786,12 @@ class AssessmentController extends Controller
 
     private function updateAssessment($assessment, $request)
     {
-        $assessment->date = $request->date;
-        $assessment->description = $request->description;
-        $assessment->note = $request->note;
+        $assessment->date            = $request->date;
+        $assessment->description     = $request->description;
+        $assessment->note            = $request->note;
+        $assessment->target_position = $request->target;
+        $assessment->purpose         = $request->purpose;
+        $assessment->lembaga         = $request->lembaga;
 
         if ($request->hasFile('upload')) {
             $path = $this->handleFileUpload($request, $assessment->upload);
@@ -754,11 +805,13 @@ class AssessmentController extends Controller
     {
         DetailAssessment::where('assessment_id', $assessment->id)->delete();
 
-        foreach ($request->scores as $alc_id => $score) {
+        foreach ($request->alc_ids as $alc_id) {
+            $alc_id = (int) $alc_id;
+
             DetailAssessment::create([
                 'assessment_id' => $assessment->id,
                 'alc_id' => $alc_id,
-                'score' => $score,
+                'score' => $request->scores[$alc_id] ?? 0, // default ke 0 jika tidak ada score
                 'strength' => $request->strength[$alc_id] ?? null,
                 'weakness' => $request->weakness[$alc_id] ?? null,
                 'suggestion_development' => $request->suggestion_development[$alc_id] ?? null
@@ -790,6 +843,14 @@ class AssessmentController extends Controller
 
         if (!$latestHav) {
             return; //Tidak ada hav untuk diupdate
+        }
+
+        if ($latestHav->created_at === $assessment->created_at->format('Y-m-d H:i:s')) {
+            DB::table('havs')
+                ->where('id', $latestHav->id)
+                ->update([
+                    'assessment_id' => $assessment->id,
+                ]);
         }
 
         // Load template HAV

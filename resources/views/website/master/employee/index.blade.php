@@ -38,11 +38,6 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;" value="{{ request('search') }}">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
                     <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
                         <i class="fas fa-plus"></i>
                         Add
@@ -55,39 +50,38 @@
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist" style="cursor:pointer">
+                <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
+                    style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4
-                            {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                            Show All
+                            <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
 
-                    {{-- Tab Dinamis --}}
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                {{ $position }}
+                                <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
                     @endforeach
                 </ul>
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
-                            <th>Photo</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Company</th>
-                            <th>Position</th>
-                            <th>Department</th>
-                            <th>Grade</th>
-                            <th>Age</th>
+                            <th class="text-center">No</th>
+                            <th class="text-center">Photo</th>
+                            <th class="text-center">NPK</th>
+                            <th class="text-center">Employee Name</th>
+                            <th class="text-center">Company</th>
+                            <th class="text-center">Position</th>
+                            <th class="text-center">Department</th>
+                            <th class="text-center">Grade</th>
+                            <th class="text-center">Age</th>
                             <th class="text-center nowrap" style="min-width: 120px;">Actions</th>
                             <th class="text-center nowrap" style="min-width: 120px;">Status</th>
                         </tr>
@@ -96,7 +90,7 @@
                     <tbody>
                         @forelse ($employee as $index => $employees)
                             <tr>
-                                <td>{{ $employee->firstItem() + $index }}</td>
+                                <td class="text-center">{{ $loop->iteration }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employees->photo ? asset('storage/' . $employees->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                         alt="Employee Photo" class="rounded" width="40" height="40"
@@ -141,10 +135,6 @@
                         @endforelse
                     </tbody>
                 </table>
-                <div class="d-flex justify-content-end mt-3">
-                    {{ $employee->links('pagination::bootstrap-5') }}
-                </div>
-
             </div>
         </div>
     </div>
@@ -175,7 +165,7 @@
     </div>
 
     <style>
-        <style>.nowrap {
+        .nowrap {
             white-space: nowrap;
         }
 
@@ -192,147 +182,99 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("✅ Script Loaded!");
-
-            var searchInput = document.getElementById("searchInput");
-            var filterItems = document.querySelectorAll(".filter-department");
-            var table = document.getElementById("kt_table_users");
-
-            if (!searchInput || !table) {
-                console.error("⚠️ Elemen pencarian atau tabel tidak ditemukan!");
+            // Pastikan jQuery terpasang (DataTables butuh jQuery)
+            if (typeof $ === 'undefined') {
+                console.error("jQuery not loaded. DataTable won't initialize.");
                 return;
             }
 
-            var tbody = table.getElementsByTagName("tbody")[0];
-            var rows = tbody.getElementsByTagName("tr");
-
-            function filterTable(selectedDepartment = "") {
-                var searchValue = searchInput.value.toLowerCase();
-
-                for (var i = 0; i < rows.length; i++) {
-                    var cells = rows[i].getElementsByTagName("td");
-                    var match = false;
-
-                    if (cells.length >= 7) {
-                        var npk = cells[1].textContent.toLowerCase();
-                        var name = cells[2].textContent.toLowerCase();
-                        var company = cells[3].textContent.toLowerCase();
-                        var position = cells[4].textContent.toLowerCase();
-                        var functionName = cells[5].textContent.toLowerCase();
-                        var grade = cells[6].textContent.toLowerCase();
-                        var age = cells[7].textContent.toLowerCase();
-
-                        var searchMatch = npk.includes(searchValue) || name.includes(searchValue) ||
-                            company.includes(searchValue) || position.includes(searchValue) ||
-                            functionName.includes(searchValue) || grade.includes(searchValue) ||
-                            age.includes(searchValue);
-
-                        var departmentMatch = selectedDepartment === "" || functionName === selectedDepartment;
-
-                        if (searchMatch && departmentMatch) {
-                            match = true;
-                        }
+            // Inisialisasi DataTable
+            const dt = $('#kt_table_users').DataTable({
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    zeroRecords: "No matching records found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
                     }
+                },
+                ordering: false
+            });
+            console.log("✅ DataTable Initialized Successfully");
 
-                    rows[i].style.display = match ? "" : "none";
-                }
-            }
+            // DELEGATION: klik Status
+            $('#kt_table_users').on('click', '.status-btn', function(e) {
+                e.preventDefault();
+                const $btn = $(this);
+                const employeeId = $btn.data('id');
+                const employeeName = $btn.data('name');
+                const newStatus = $btn.data('status');
 
-            // Event Pencarian
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: `Do you want to change the status of ${employeeName} to ${newStatus}?`,
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#28a745",
+                    cancelButtonColor: "#d33",
+                    confirmButtonText: "Yes, change it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `/employee/status/${employeeId}`;
 
+                        const csrfToken = document.createElement('input');
+                        csrfToken.type = 'hidden';
+                        csrfToken.name = '_token';
+                        csrfToken.value = '{{ csrf_token() }}';
 
-            // Event Filter Dropdown
-            filterItems.forEach(item => {
-                item.addEventListener("click", function(event) {
-                    event.preventDefault();
-                    var selectedDepartment = this.getAttribute("data-department").toLowerCase();
-                    console.log("🔍 Filter dipilih: ", selectedDepartment);
-                    filterTable(selectedDepartment);
+                        form.appendChild(csrfToken);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
                 });
             });
 
-            console.log("✅ Event Listeners Added Successfully");
+            // DELEGATION: klik Delete
+            $('#kt_table_users').on('click', '.delete-btn', function(e) {
+                e.preventDefault();
+                const employeeId = this.getAttribute('data-id');
 
+                Swal.fire({
+                    title: "Are you sure?",
+                    text: "You won't be able to revert this!",
+                    icon: "warning",
+                    showCancelButton: true,
+                    confirmButtonColor: "#d33",
+                    cancelButtonColor: "#3085d6",
+                    confirmButtonText: "Yes, delete it!"
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = `/employee/${employeeId}`;
 
-            document.querySelectorAll('.status-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    let employeeId = this.getAttribute('data-id');
-                    let employeeName = this.getAttribute('data-name');
-                    let newStatus = this.getAttribute('data-status');
+                        const csrfToken = document.createElement('input');
+                        csrfToken.type = 'hidden';
+                        csrfToken.name = '_token';
+                        csrfToken.value = '{{ csrf_token() }}';
 
-                    Swal.fire({
-                        title: "Are you sure?",
-                        text: `Do you want to change the status of ${employeeName} to ${newStatus}?`,
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#28a745",
-                        cancelButtonColor: "#d33",
-                        confirmButtonText: "Yes, change it!"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            let form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = `/employee/status/${employeeId}`;
+                        const methodField = document.createElement('input');
+                        methodField.type = 'hidden';
+                        methodField.name = '_method';
+                        methodField.value = 'DELETE';
 
-                            let csrfToken = document.createElement('input');
-                            csrfToken.type = 'hidden';
-                            csrfToken.name = '_token';
-                            csrfToken.value = '{{ csrf_token() }}';
-
-                            form.appendChild(csrfToken);
-                            document.body.appendChild(form);
-                            form.submit();
-                        }
-                    });
+                        form.appendChild(csrfToken);
+                        form.appendChild(methodField);
+                        document.body.appendChild(form);
+                        form.submit();
+                    }
                 });
-            });
-
-
-            // SweetAlert untuk Delete Button
-            document.querySelectorAll('.delete-btn').forEach(button => {
-                button.addEventListener('click', function() {
-                    let employeeId = this.getAttribute('data-id');
-
-                    Swal.fire({
-                        title: "Are you sure?",
-                        text: "You won't be able to revert this!",
-                        icon: "warning",
-                        showCancelButton: true,
-                        confirmButtonColor: "#d33",
-                        cancelButtonColor: "#3085d6",
-                        confirmButtonText: "Yes, delete it!"
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            let form = document.createElement('form');
-                            form.method = 'POST';
-                            form.action = `/employee/${employeeId}`;
-
-                            let csrfToken = document.createElement('input');
-                            csrfToken.type = 'hidden';
-                            csrfToken.name = '_token';
-                            csrfToken.value = '{{ csrf_token() }}';
-
-                            let methodField = document.createElement('input');
-                            methodField.type = 'hidden';
-                            methodField.name = '_method';
-                            methodField.value = 'DELETE';
-
-                            form.appendChild(csrfToken);
-                            form.appendChild(methodField);
-                            document.body.appendChild(form);
-                            form.submit();
-                        }
-                    });
-                });
-            });
-            document.getElementById('searchButton').addEventListener('click', function() {
-                const search = document.getElementById('searchInput').value;
-                const url = new URL(window.location.href);
-
-                url.searchParams.set('search', search);
-                url.searchParams.set('page', 1); // Reset to first page on new search
-
-                window.location.href = url.toString();
             });
         });
     </script>

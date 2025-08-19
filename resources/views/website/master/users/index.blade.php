@@ -38,17 +38,10 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">User List</h3>
-                <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search User..."
-                        style="width: 200px;" value="{{ request('search') }}">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                </div>
             </div>
 
             <div class="card-body">
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-user">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
@@ -56,20 +49,21 @@
                             <th>Name</th>
                             <th>Email</th>
                             <th>Role</th>
-                            <th class="text-center nowrap" style="min-width: 120px;">Actions</th>
+                            <th class="text-center" style="min-width: 120px;">Actions</th>
                         </tr>
                     </thead>
 
                     <tbody>
                         @forelse ($users as $index => $user)
                             <tr>
-                                <td>{{ $users->firstItem() + $index }}</td>
+                                <td>{{ $loop->iteration }}</td>
                                 <td>{{ $user->id }}</td>
                                 <td>{{ $user->name }}</td>
                                 <td>{{ $user->email }}</td>
                                 <td>{{ $user->role }}</td>
                                 <td class="text-center nowrap" style="min-width: 120px;">
-                                    <a href="{{ route('users.master.edit', $user->id) }}" class="btn btn-warning btn-sm text-center">
+                                    <a href="{{ route('users.master.edit', $user->id) }}"
+                                        class="btn btn-warning btn-sm text-center">
                                         Edit
                                     </a>
                                     {{-- <button type="button" class="btn btn-danger btn-sm delete-btn"
@@ -80,14 +74,11 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center text-muted">No users found</td>
+                                <td colspan="9" class="text-center text-muted">No data found</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
-                <div class="d-flex justify-content-end mt-3">
-                    {{ $users->links('pagination::bootstrap-5') }}
-                </div>
             </div>
         </div>
     </div>
@@ -104,20 +95,36 @@
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Search functionality
-            document.getElementById('searchButton').addEventListener('click', function() {
-                const search = document.getElementById('searchInput').value;
-                const url = new URL(window.location.href);
+            // Pastikan jQuery tersedia
+            if (typeof $ === 'undefined') {
+                console.error("jQuery not loaded. DataTable won't initialize.");
+                return;
+            }
 
-                url.searchParams.set('search', search);
-                url.searchParams.set('page', 1);
-
-                window.location.href = url.toString();
+            // Inisialisasi DataTable
+            $('#table-user').DataTable({
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    zeroRecords: "No matching records found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                },
+                ordering: false
             });
 
+            console.log("✅ DataTable Initialized Successfully");
+        });
+    </script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
             // Delete confirmation
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', function() {

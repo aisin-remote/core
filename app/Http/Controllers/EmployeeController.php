@@ -171,8 +171,7 @@ class EmployeeController extends Controller
                     });
                 })
 
-                ->paginate(10)
-                ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
+                ->get();
         } else {
             // Untuk user biasa (misalnya Supervisor), pencarian hanya berlaku untuk 'company_name' yang terkait
             $employee = Employee::with([
@@ -253,6 +252,14 @@ class EmployeeController extends Controller
             ? array_slice($allPositions, $positionIndex)
             : [];
 
+        // Hilangkan 'Operator' jika posisi user ada 'President'
+        if ($currentPosition === 'President') {
+            $visiblePositions = array_filter($visiblePositions, function ($pos) {
+                return $pos !== 'Operator' && $pos !== 'President';
+            });
+            $visiblePositions = array_values($visiblePositions); // reset index
+        }
+
         return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions'));
     }
 
@@ -290,43 +297,43 @@ class EmployeeController extends Controller
      */
     public function store(Request $request)
     {
-        DB::beginTransaction();
-
         try {
+            DB::beginTransaction();
             // Validasi
             $validatedData = $request->validate([
-                'npk' => 'required|string|max:255|unique:employees,npk',
-                'name' => 'required|string|max:255',
-                'birthday_date' => 'required|date',
-                'gender' => 'required|in:Male,Female',
-                'company_name' => 'required|string',
-                'phone_number' => 'nullable|string|max:14',
+                'npk'              => 'required|string|max:255|unique:employees,npk',
+                'name'             => 'required|string|max:255',
+                'birthday_date'    => 'nullable|date',
+                'gender'           => 'required|in:Male,Female',
+                'company_name'     => 'required|string',
+                'phone_number'     => 'nullable|string|max:14',
                 'aisin_entry_date' => 'required|date',
-                'company_group' => 'required|string',
-                'position' => 'required|string',
-                'grade' => 'required|string',
-                'photo' => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                'company_group'    => 'nullable|string',
+                'email'            => 'nullable|email',
+                'position'         => 'required|string',
+                'grade'            => 'nullable|string',
+                'photo'            => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
 
-                // Struktur organisasi
-                'plant_id' => 'nullable|exists:plants,id',
-                'division_id' => 'nullable|exists:divisions,id',
-                'department_id' => 'nullable|exists:departments,id',
-                'section_id' => 'nullable|exists:sections,id',
+                  // Struktur organisasi
+                'plant_id'       => 'nullable|exists:plants,id',
+                'division_id'    => 'nullable|exists:divisions,id',
+                'department_id'  => 'nullable|exists:departments,id',
+                'section_id'     => 'nullable|exists:sections,id',
                 'sub_section_id' => 'nullable|exists:sub_sections,id',
 
-                // Pendidikan
-                'level' => 'array',
-                'level.*' => 'nullable|string|max:255',
-                'major.*' => 'nullable|string|max:255',
-                'institute.*' => 'nullable|string|max:255',
+                  // Pendidikan
+                'level'        => 'array',
+                'level.*'      => 'nullable|string|max:255',
+                'major.*'      => 'nullable|string|max:255',
+                'institute.*'  => 'nullable|string|max:255',
                 'start_date.*' => 'nullable|string|max:255',
-                'end_date.*' => 'nullable|string|max:255',
+                'end_date.*'   => 'nullable|string|max:255',
 
-                // Pengalaman kerja
-                'company.*' => 'nullable|string|max:255',
-                'work_position.*' => 'nullable|string|max:255',
+                  // Pengalaman kerja
+                'company.*'         => 'nullable|string|max:255',
+                'work_position.*'   => 'nullable|string|max:255',
                 'work_start_date.*' => 'nullable|string|max:255',
-                'work_end_date.*' => 'nullable|string|max:255',
+                'work_end_date.*'   => 'nullable|string|max:255',
             ]);
 
             if ($request->hasFile('photo')) {
@@ -443,13 +450,14 @@ class EmployeeController extends Controller
                 'section head',
                 'act gm',
                 'gm',
-                'director'
+                'director',
+                'operator'
             ];
 
             if (in_array($pos, $userRoles)) {
                 $user = User::create([
                     'name' => $validatedData['name'],
-                    'email' => strtolower(strtok($validatedData['name'], ' ')) . '@aiia.co.id',
+                    'email' => $validatedData['email'],
                     'password' => bcrypt('aiia'),
                     'is_first_login' => true,
                     'password_changed_at' => null
@@ -561,8 +569,9 @@ class EmployeeController extends Controller
         $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
             ->where('npk', $npk)
             ->firstOrFail();
+
         $departments = Department::all();
-        $divisions = Division::all();
+        $divisions = Division::where('company', $employee->company_name)->get();
         $plants = Plant::all();
         return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');
         ;
@@ -643,12 +652,16 @@ class EmployeeController extends Controller
             ->where('npk', $npk)
             ->firstOrFail();
 
-        $departments = Department::all();
         $positions = Employee::select('position')->distinct()->pluck('position');
-        $divisions = Division::all();
         $plants = Plant::all();
-        $sections = Section::all();
-        $subSections = SubSection::all();
+        $departments = Department::where('company', $employee->company_name)->get();
+        $divisions = Division::where('company', $employee->company_name)->get();
+        $sections = Section::where('company', $employee->company_name)->get();
+        $subSections = SubSection::with('section')
+            ->whereHas('section', function ($query) use ($employee) {
+                $query->where('company', $employee->company_name);
+            })
+            ->get();
         $scores = PerformanceMaster::select('code')->distinct()->pluck('code');
 
         return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants', 'sections', 'subSections', 'scores'))->with('mode', 'edit');
@@ -872,7 +885,6 @@ class EmployeeController extends Controller
         $durationText = $this->formatDuration($durationMonths);
         try {
             DB::beginTransaction();
-            // dd($durationText);
 
             MutationHistory::create([
                 'employee_id' => $employeeId,
@@ -887,7 +899,6 @@ class EmployeeController extends Controller
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
-            dd('Error saat logLateralMutation:', $e->getMessage(), $e->getTraceAsString());
         }
     }
     private function getApproximateEntryDate(int $employeeId, string $position)
@@ -1161,18 +1172,23 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             // Simpan data appraisal
-            PerformanceAppraisalHistory::create([
+            $appraisal = PerformanceAppraisalHistory::create([
                 'employee_id' => $request->employee_id,
                 'score' => $validatedData['score'],
                 'description' => $validatedData['description'] ?? null,
                 'date' => Carbon::parse($validatedData['date']),
             ]);
 
+            // Get year hav terakhir
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
+
+            // Update HAV Quadran
+            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
+
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil ditambahkan.');
         } catch (\Throwable $th) {
             DB::rollback();
-            dd($th);
             return redirect()->back()->with('error', 'Performance appraisal gagal ditambahkan : ' . $th->getMessage());
         }
     }
@@ -1183,7 +1199,6 @@ class EmployeeController extends Controller
 
         $validatedData = $request->validate([
             'score' => 'required',
-            // 'description' => 'required',
             'date' => 'required|date',
         ]);
 
@@ -1197,9 +1212,11 @@ class EmployeeController extends Controller
                 'date' => Carbon::parse($validatedData['date']), // Pastikan format tanggal benar
             ]);
 
+            // Get year hav terakhir
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
+
             // Update HAV Quadran
-            $year = Carbon::parse($appraisal['date'])->year;
-            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, $year);
+            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil diperbarui.');
@@ -1217,6 +1234,12 @@ class EmployeeController extends Controller
             DB::beginTransaction();
 
             $appraisal->delete();
+
+            // Get year hav terakhir
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
+
+            // Update HAV Quadran
+            (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil dihapus.');

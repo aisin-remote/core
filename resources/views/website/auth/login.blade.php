@@ -62,16 +62,15 @@
                         </div>
 
                         <!--end::Input group--->
-                        <div class="fv-row mb-3">
-                            <!--begin::Password-->
-                            <input type="password" placeholder="Password" name="password" autocomplete="off"
-                                class="form-control bg-transparent @error('password') is-invalid @enderror"" required />
-                            <!--end::Password-->
-                            @error('password')
-                                <div class="invalid-feedback">
-                                    {{ $message }}
-                                </div>
-                            @enderror
+                        <div class="form-group" style="position: relative;">
+                            <input type="password" id="password" name="password" placeholder="Password"
+                                class="form-control bg-transparent pr-5 @error('password') is-invalid @enderror"
+                                autocomplete="off" required />
+
+                            <span id="toggle-password"
+                                style="position: absolute; top: 50%; right: 15px; transform: translateY(-50%); cursor: pointer;">
+                                <i class="fa fa-eye" id="icon-eye"></i>
+                            </span>
                         </div>
                         <!--end::Input group--->
 
@@ -120,3 +119,20 @@
     </div>
     <!--end::Body-->
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const togglePassword = document.getElementById("toggle-password");
+            const passwordInput = document.getElementById("password");
+            const icon = document.getElementById("icon-eye");
+
+            togglePassword.addEventListener("click", function() {
+                const isPassword = passwordInput.type === "password";
+                passwordInput.type = isPassword ? "text" : "password";
+                icon.classList.toggle("fa-eye");
+                icon.classList.toggle("fa-eye-slash");
+            });
+        });
+    </script>
+@endpush

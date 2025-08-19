@@ -37,6 +37,13 @@
     .score {
         width: 55px;
     }
+
+    .modal-header {
+        position: sticky;
+        top: 0;
+        background: #ffffff;
+        z-index: 1055;
+    }
 </style>
 
 @section('main')
@@ -96,6 +103,7 @@
                             $grouped = $assessments->groupBy(
                                 fn($item) => optional(optional($item->hav)->hav)->employee->id,
                             );
+
                         @endphp
 
                         @forelse ($grouped as $employeeId => $group)
@@ -138,6 +146,8 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal Detail Assessment -->
     <div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
         aria-hidden="true">
         <div class="modal-dialog modal-xl">
@@ -180,23 +190,86 @@
             </div>
         </div>
     </div>
+    <!-- Modal Detail Assessment -->
+
 
     @foreach ($grouped as $employeeId => $group)
         @php
             $firstAssessment = $group->first();
             $data = $firstAssessment->hav->hav;
+            $assessment = $firstAssessment->assessment;
             $employee = optional($data)->employee;
         @endphp
 
         <div class="modal fade" id="notes_{{ $employee->id }}" tabindex="-1" aria-modal="true" role="dialog">
             <div class="modal-dialog modal-dialog-centered" style="max-width: 1200px;">
                 <div class="modal-content">
-                    <div class="modal-header">
-                        <h2 class="fw-bold">Summary {{ $employee->name }}</h2>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <div class="modal-header align-items-start">
+                        <div class="d-flex flex-column flex-grow-1">
+                            <h5 class="modal-title mb-2" style="font-size: 2rem; font-weight: bold;">
+                                Summary {{ $employee->name }}</h5>
+
+                            <div class="d-flex flex-wrap gap-10" style="font-size: 1.3rem;">
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Assessment Purpose</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $assessment->purpose ?? 'N/A' }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Assessor</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $assessment->lembaga ?? 'N/A' }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Assessment Date</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $assessment->created_at ? $assessment->created_at->timezone('Asia/Jakarta')->format('d M Y, H:i') : '-' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right side: created_at + close -->
+                        <div class="d-flex align-items-start gap-3 ms-3">
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
                     </div>
 
                     <div class="modal-body scroll-y mx-2">
+                        <div class="card mt-4 p-3">
+                            <style>
+                                .chart-container {
+                                    position: relative;
+                                    width: 100%;
+                                    min-height: 400px;
+                                }
+
+                                .modal .chart-container canvas {
+                                    animation: fadeIn 0.5s ease-in-out;
+                                }
+
+                                @keyframes fadeIn {
+                                    from {
+                                        opacity: 0;
+                                        transform: translateY(20px);
+                                    }
+
+                                    to {
+                                        opacity: 1;
+                                        transform: translateY(0);
+                                    }
+                                }
+                            </style>
+                            <h4 class="text-center">Assessment Chart</h4>
+                            <div style="width: 100%; max-width: auto; margin: 0 auto; height: 400px;">
+                                <canvas id="assessmentChart" data-employee-id="{{ $employee->id }}"></canvas>
+                            </div>
+                        </div>
                         <form class="form">
                             <style>
                                 .section-title {
@@ -313,6 +386,8 @@
                                             <th>Development Program</th>
                                             <th>Development Target</th>
                                             <th>Due Date</th>
+                                            <th>Created By</th>
+                                            <th>Last Update</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -324,6 +399,12 @@
                                                 <td>{{ $idp->development_target }}</td>
                                                 <td>
                                                     {{ optional($idp)->date ? \Carbon\Carbon::parse($idp->date)->format('d-m-Y') : '-' }}
+                                                </td>
+                                                <td>
+                                                    {{ $idp->created_by_name ?? null }}
+                                                </td>
+                                                <td>
+                                                    {{ optional($idp)->updated_at ? \Carbon\Carbon::parse($idp->updated_at)->format('d-m-Y') : '-' }}
                                                 </td>
                                             </tr>
                                         @empty
@@ -485,10 +566,7 @@
 
         function initModals() {
             const modals = [
-                'detailAssessmentModal',
-                'updateAssessmentModal',
-                'noteAssessmentModal',
-                'addAssessmentModal'
+                'detailAssessmentModal', 'updateAssessmentModal', 'noteAssessmentModal', 'addAssessmentModal'
             ];
 
             modals.forEach(modalId => {
@@ -537,80 +615,79 @@
 
                         if (grouped && Object.keys(grouped).length > 0) {
                             Object.entries(grouped).forEach(([assessmentId, assessments]) => {
-                                assessments.forEach((assessment) => {
-                                    const createdAt = new Date(assessment
-                                        .created_at);
-                                    const year = createdAt.getFullYear();
+                                const first = assessments[0];
+                                const createdAt = new Date(first.created_at);
+                                const year = createdAt.getFullYear();
 
-                                    let status = assessment.status;
-                                    switch (status) {
-                                        case 0:
-                                            status = "draft";
-                                            break;
-                                        case 1:
-                                            status = "waiting";
-                                            break;
-                                        case 2:
-                                            status = "checked";
-                                            break;
-                                        case 3:
-                                            status = "approved";
-                                            break;
-                                        case -1:
-                                            status = "revise";
-                                            break;
-                                        default:
-                                            status = "unknown";
-                                            break;
-                                    }
 
-                                    const badges = {
-                                        no_approval_needed: {
-                                            text: "-",
-                                            class: "bg-light text-dark",
-                                        },
-                                        not_created: {
-                                            text: "Not Created",
-                                            class: "bg-dark",
-                                        },
-                                        draft: {
-                                            text: "Need Submit",
-                                            class: "bg-secondary",
-                                        },
-                                        waiting: {
-                                            text: "Waiting",
-                                            class: "bg-warning",
-                                        },
-                                        checked: {
-                                            text: "Checked",
-                                            class: "bg-info",
-                                        },
-                                        approved: {
-                                            text: "Approved",
-                                            class: "bg-success",
-                                        },
-                                        revise: {
-                                            text: "Need Revise",
-                                            class: "bg-danger",
-                                        },
-                                        unknown: {
-                                            text: "Unknown",
-                                            class: "bg-secondary",
-                                        },
-                                    };
-                                    const badge = badges[status] || badges
-                                        .unknown;
+                                let status = first.status;
+                                switch (status) {
+                                    case 0:
+                                        status = "draft";
+                                        break;
+                                    case 1:
+                                        status = "waiting";
+                                        break;
+                                    case 2:
+                                        status = "checked";
+                                        break;
+                                    case 3:
+                                        status = "approved";
+                                        break;
+                                    case -1:
+                                        status = "revise";
+                                        break;
+                                    default:
+                                        status = "unknown";
+                                        break;
+                                }
 
-                                    let deleteButton = "";
-                                    if (currentUserRole === "HRD") {
-                                        deleteButton = `
+                                const badges = {
+                                    no_approval_needed: {
+                                        text: "-",
+                                        class: "badge-light text-dark",
+                                    },
+                                    not_created: {
+                                        text: "Not Created",
+                                        class: "badge-dark",
+                                    },
+                                    draft: {
+                                        text: "Need Submit",
+                                        class: "badge-secondary",
+                                    },
+                                    waiting: {
+                                        text: "Waiting",
+                                        class: "badge-warning",
+                                    },
+                                    checked: {
+                                        text: "Checked",
+                                        class: "badge-info",
+                                    },
+                                    approved: {
+                                        text: "Approved",
+                                        class: "badge-success",
+                                    },
+                                    revise: {
+                                        text: "Need Revise",
+                                        class: "badge-danger",
+                                    },
+                                    unknown: {
+                                        text: "Unknown",
+                                        class: "badge-secondary",
+                                    },
+                                };
+                                const badge = badges[status] || badges.unknown;
+
+                                let deleteButton = "";
+                                if (currentUserRole === "HRD") {
+                                    deleteButton = `
                                         <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}" data-employee-id="${employeeId}">
                                             Delete
                                         </button>
                                     `;
-                                    }
+                                }
 
-                                    const row = `
+                                const row = `
                                     <tr>
                                         <td class="text-center">${index++}</td>
                                         <td class="text-center">${year}</td>
@@ -629,15 +706,14 @@
                                         </span>
                                         </td>
                                         <td class="text-center">
-                                            <button class="btn btn-info btn-sm btn-idp-detail" data-modal-id="notes_${assessment.hav.hav.employee.id}">
+                                            <button class="btn btn-info btn-sm btn-idp-detail" data-modal-id="notes_${first.hav.hav.employee.id}" data-employee-id="${employeeId}">
                                                 Detail
                                             </button>
                                             ${deleteButton}
                                         </td>
                                     </tr>
                                 `;
-                                    tbody.append(row);
-                                })
+                                tbody.append(row);
                             });
                         } else {
                             tbody.append(`
@@ -656,11 +732,150 @@
                 });
             });
 
-            // Buka modal detail dari tombol dinamis
+            // Function to initialize assessment chart
+            function initAssessmentChart(modalId, employeeId) {
+                const modal = document.getElementById(modalId);
+                if (!modal) return;
+
+                // Wait for modal to be fully shown
+                $(modal).one('shown.bs.modal', function() {
+                    const canvas = modal.querySelector(`canvas[data-employee-id="${employeeId}"]`);
+                    if (!canvas) return;
+
+                    // Destroy previous chart if exists
+                    if (canvas.chart) {
+                        canvas.chart.destroy();
+                    }
+
+                    // Get data from PHP
+                    const groupedAssessments = @json($groupedAssessments ?? []);
+                    console.log('Grouped assessments:', groupedAssessments);
+
+                    const employeeAssessments = groupedAssessments[employeeId];
+
+                    if (!employeeAssessments || !employeeAssessments.length) {
+                        console.warn(`No assessment data for employee ${employeeId}`);
+                        return;
+                    }
+
+                    // Find first assessment with details
+                    let assessmentWithDetails = null;
+                    for (const assessment of employeeAssessments) {
+                        if (assessment.assessment?.details) {
+                            assessmentWithDetails = assessment.assessment;
+                            break;
+                        }
+                    }
+
+                    if (!assessmentWithDetails || !assessmentWithDetails.details) {
+                        console.warn(`No assessment details for employee ${employeeId}`);
+                        return;
+                    }
+
+                    // Prepare chart data
+                    const labels = [];
+                    const scores = [];
+                    const alcNames = @json($alcs ?? []);
+
+                    // Sort details by ALC ID to maintain consistent order
+                    const sortedDetails = assessmentWithDetails.details.sort((a, b) => a.alc_id - b.alc_id);
+
+                    sortedDetails.forEach(detail => {
+                        if (detail.alc_id) {
+                            labels.push(alcNames[detail.alc_id] || `ALC ${detail.alc_id}`);
+                            scores.push(parseInt(detail.score) || 0);
+                        }
+                    });
+
+                    console.log('Chart data:', {
+                        labels,
+                        scores
+                    });
+
+                    // Create chart
+                    const ctx = canvas.getContext('2d');
+                    canvas.chart = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Assessment Scores',
+                                data: scores,
+                                backgroundColor: scores.map(score =>
+                                    score < 3 ? 'rgba(255, 99, 132, 0.8)' :
+                                    'rgba(75, 192, 192, 0.8)'),
+                                borderColor: scores.map(score =>
+                                    score < 3 ? 'rgba(255, 99, 132, 1)' :
+                                    'rgba(75, 192, 192, 1)'),
+                                borderWidth: 1,
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    display: false
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            return `Score: ${context.raw}`;
+                                        }
+                                    }
+                                }
+                            },
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    suggestedMax: 5,
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                }
+                            },
+                            animation: {
+                                duration: 1000,
+                                easing: 'easeOutQuart'
+                            }
+                        }
+                    });
+                });
+            }
+
+            // Handle detail button click
             $(document).on("click", ".btn-idp-detail", function(e) {
                 e.preventDefault();
                 const modalId = $(this).data("modal-id");
-                modalManager.openModal(modalId);
+                const employeeId = $(this).data("employee-id");
+
+                // Tutup modal saat ini terlebih dahulu
+                $('#detailAssessmentModal').modal('hide');
+
+                // Buka modal baru setelah yang sebelumnya tertutup
+                setTimeout(() => {
+                    const modal = new bootstrap.Modal(document.getElementById(modalId));
+                    modal.show();
+                    initAssessmentChart(modalId, employeeId);
+                }, 500);
+            });
+
+            $(document).on('shown.bs.modal', '.modal', function(e) {
+                const modalId = $(this).attr('id');
+                const employeeId = $(this).find('canvas').data('employee-id');
+
+                if (employeeId) {
+                    initAssessmentChart(modalId, employeeId);
+                }
+            });
+
+            $(document).on('hidden.bs.modal', '.modal', function() {
+                const canvas = this.querySelector('canvas');
+                if (canvas && canvas.chart) {
+                    canvas.chart.destroy();
+                    canvas.chart = null;
+                }
             });
 
             // Saat modal notes ditutup, tampilkan modal sebelumnya

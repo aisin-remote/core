@@ -76,7 +76,13 @@
                                                 <i class="fa fa-times fs-2"></i>
                                             </span>
                                         </div>
-                                        <div class="form-text">Tipe file yang diizinkan: png, jpg, jpeg.</div>
+                                        <div class="form-text text-warning">
+                                            <i class="bi bi-info-circle"></i> Format yang diizinkan: PNG, JPG, JPEG.
+                                        </div>
+                                        <div class="form-text text-warning">
+                                            <i class="bi bi-info-circle"></i> Ukuran maksimal file: 2 MB.
+                                        </div>
+
                                         @error('photo')
                                             <div class="text-danger">{{ $message }}</div>
                                         @enderror
@@ -241,7 +247,8 @@
                                                         @foreach ($subSections as $subSection)
                                                             <option value="{{ $subSection->id }}"
                                                                 {{ old('sub_section_id', $employee->subSection->id ?? '') == $subSection->id ? 'selected' : '' }}>
-                                                                {{ $subSection->name }}
+                                                                {{ $subSection->name }} -
+                                                                {{ $subSection->section->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -260,7 +267,7 @@
                                                         @foreach ($sections as $section)
                                                             <option value="{{ $section->id }}"
                                                                 {{ old('section_id', (int) $employee->leadingSection?->id ?? '') == (int) $section->id ? 'selected' : '' }}>
-                                                                {{ $section->name }}
+                                                                {{ $section->name }} - {{ $section->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -279,7 +286,7 @@
                                                         @foreach ($departments as $department)
                                                             <option value="{{ $department->id }}"
                                                                 {{ old('department_id', (int) $employee->leadingDepartment?->id ?? '') == (int) $department->id ? 'selected' : '' }}>
-                                                                {{ $department->name }}
+                                                                {{ $department->name }} - {{ $department->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -298,7 +305,7 @@
                                                         @foreach ($divisions as $division)
                                                             <option value="{{ $division->id }}"
                                                                 {{ old('division_id', $employee->leadingDivision?->id ?? '') == $division->id ? 'selected' : '' }}>
-                                                                {{ $division->name }}
+                                                                {{ $division->name }} - {{ $division->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -316,7 +323,7 @@
                                                         @foreach ($plants as $plant)
                                                             <option value="{{ $plant->id }}"
                                                                 {{ old('plant_id', $employee->plant->id ?? '') == $plant->id ? 'selected' : '' }}>
-                                                                {{ $plant->name }}
+                                                                {{ $plant->name }} - {{ $plant->company }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -332,7 +339,7 @@
                                                         <option value="">-- Select Grade --</option>
                                                         @foreach ($grade as $g)
                                                             <option value="{{ $g->aisin_grade }}"
-                                                                {{ old('grade', $promotionHistories->first()->current_grade ?? '') == $g->aisin_grade ? 'selected' : '' }}>
+                                                                {{ old('grade', $employee->grade ?? '') == $g->aisin_grade ? 'selected' : '' }}>
                                                                 {{ $g->aisin_grade }}
                                                             </option>
                                                         @endforeach
@@ -1165,120 +1172,122 @@
 @endsection
 
 @push('scripts')
-    <style>
-        .modal-backdrop.modal-stack {
-            z-index: 1060 !important;
-        }
-
-        .modal.modal-stack {
-            z-index: 1070 !important;
-        }
-    </style>
-    <!-- Tambahkan SweetAlert -->
+    <!-- SweetAlert (kalau belum dimuat di layout) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <script>
-        $(document).ready(function() {
-            $('input[name="aisin_entry_date"]').on('change', function() {
-                var joinDate = new Date($(this).val());
-                var currentDate = new Date();
-
-                if (!isNaN(joinDate.getTime())) { // Check if valid date
-                    var yearsDiff = currentDate.getFullYear() - joinDate.getFullYear();
-
-                    // Adjust if the current date is before the join date anniversary this year
-                    var currentMonthDay = (currentDate.getMonth() * 100) + currentDate.getDate();
-                    var joinMonthDay = (joinDate.getMonth() * 100) + joinDate.getDate();
-                    if (currentMonthDay < joinMonthDay) {
-                        yearsDiff--;
-                    }
-
-                    $('input[name="working_period"]').val(Math.max(yearsDiff, 0));
-                } else {
-                    $('input[name="working_period"]').val(0);
-                }
-            });
-
-            $(".show-more").click(function() {
-                var textContainer = $(this).siblings(".text-content");
-                var fullText = textContainer.attr("data-fulltext");
-
-                textContainer.html(fullText);
-                $(this).addClass("d-none");
-                $(this).siblings(".show-less").removeClass("d-none");
-            });
-
-            $(".show-less").click(function() {
-                var textContainer = $(this).siblings(".text-content");
-                var shortText = textContainer.text().substring(0, 200) + "...";
-
-                textContainer.html(shortText);
-                $(this).addClass("d-none");
-                $(this).siblings(".show-more").removeClass("d-none");
-            });
-
-            function toggleHierarchySelects(position) {
-                $('#subsection-group, #section-group, #department-group, #division-group, #plant-group').addClass(
-                    'd-none');
-
-                console.log(position);
-
-                if (['Operator', 'Act JP', 'Act Leader', 'Leader'].includes(position)) {
-                    $('#subsection-group').removeClass('d-none');
-                } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(
-                        position)) {
-                    $('#section-group').removeClass('d-none');
-                } else if (['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'].includes(position)) {
-                    $('#department-group').removeClass('d-none');
-                } else if (['GM', 'Act GM']) {
-                    $('#division-group').removeClass('d-none');
-                } else if (['Direktur']) {
-                    $('#plant-group').removeClass('d-none');
-                }
+        (function() {
+            // Helper: jalankan saat DOM siap
+            function onReady(fn) {
+                if (document.readyState !== 'loading') fn();
+                else document.addEventListener('DOMContentLoaded', fn);
             }
 
-            // Saat halaman pertama kali dimuat
-            toggleHierarchySelects($('#position-select').val());
+            onReady(function() {
+                // === Hitung Working Period dari aisin_entry_date ===
+                const joinInput = document.querySelector('input[name="aisin_entry_date"]');
+                const periodInput = document.querySelector('input[name="working_period"]');
+                if (joinInput && periodInput) {
+                    joinInput.addEventListener('change', function() {
+                        const joinDate = new Date(this.value);
+                        const now = new Date();
 
-            // Saat pilihan posisi berubah
-            $('#position-select').on('change', function() {
-                const selectedPosition = $(this).val();
-                toggleHierarchySelects(selectedPosition);
-            });
-            let modalLevel = 0;
-
-            $(document).on('show.bs.modal', '.modal', function() {
-                let zIndex = 1050 + (10 * modalLevel);
-                $(this).css('z-index', zIndex);
-                setTimeout(() => {
-                    $('.modal-backdrop').not('.modal-stack')
-                        .css('z-index', zIndex - 1)
-                        .addClass('modal-stack');
-                }, 0);
-                modalLevel++;
-            });
-
-            $(document).on('hidden.bs.modal', '.modal', function() {
-                modalLevel = Math.max(0, modalLevel - 1);
-                if ($('.modal.show').length > 0) {
-                    $('body').addClass('modal-open');
+                        if (!isNaN(joinDate.getTime())) {
+                            let years = now.getFullYear() - joinDate.getFullYear();
+                            const nowMD = (now.getMonth() * 100) + now.getDate();
+                            const joinMD = (joinDate.getMonth() * 100) + joinDate.getDate();
+                            if (nowMD < joinMD) years--;
+                            periodInput.value = Math.max(years, 0);
+                        } else {
+                            periodInput.value = 0;
+                        }
+                    });
                 }
-            });
 
-        });
-        document.addEventListener("DOMContentLoaded", function() {
-            const phoneInput = document.getElementById('phone_number');
+                // === Show more / less (tanpa jQuery) ===
+                document.querySelectorAll('.show-more').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const textContainer = this.parentElement.querySelector('.text-content');
+                        const full = textContainer?.getAttribute('data-fulltext') || '';
+                        textContainer.innerHTML = full;
+                        this.classList.add('d-none');
+                        const less = this.parentElement.querySelector('.show-less');
+                        if (less) less.classList.remove('d-none');
+                    });
+                });
 
-            if (phoneInput) {
-                phoneInput.addEventListener('input', function() {
-                    // Hilangkan karakter non-digit, jika user pakai copy-paste
-                    this.value = this.value.replace(/\D/g, '');
+                document.querySelectorAll('.show-less').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        const textContainer = this.parentElement.querySelector('.text-content');
+                        const plain = textContainer?.textContent || '';
+                        const shortText = plain.length > 200 ? plain.substring(0, 200) + '...' :
+                            plain;
+                        textContainer.textContent = shortText;
+                        this.classList.add('d-none');
+                        const more = this.parentElement.querySelector('.show-more');
+                        if (more) more.classList.remove('d-none');
+                    });
+                });
 
-                    // Batasi maksimal 14 digit
-                    if (this.value.length > 14) {
-                        this.value = this.value.slice(0, 14);
+                // === Toggle select hirarki berdasarkan Position ===
+                function toggleHierarchySelects(position) {
+                    ['subsection-group', 'section-group', 'department-group', 'division-group', 'plant-group']
+                    .forEach(id => document.getElementById(id)?.classList.add('d-none'));
+
+                    if (['Operator', 'Act JP', 'Act Leader', 'Leader'].includes(position)) {
+                        document.getElementById('subsection-group')?.classList.remove('d-none');
+                    } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(
+                            position)) {
+                        document.getElementById('section-group')?.classList.remove('d-none');
+                    } else if (['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'].includes(
+                            position)) {
+                        document.getElementById('department-group')?.classList.remove('d-none');
+                    } else if (['GM', 'Act GM'].includes(position)) {
+                        document.getElementById('division-group')?.classList.remove('d-none');
+                    } else if (['Direktur'].includes(position)) {
+                        document.getElementById('plant-group')?.classList.remove('d-none');
+                    }
+                }
+
+                const posSelect = document.getElementById('position-select');
+                if (posSelect) {
+                    toggleHierarchySelects(posSelect.value || '');
+                    posSelect.addEventListener('change', function() {
+                        toggleHierarchySelects(this.value);
+                    });
+                }
+
+                // === Stacking multiple Bootstrap 5 modals (tanpa jQuery) ===
+                let modalLevel = 0;
+                document.addEventListener('show.bs.modal', function(ev) {
+                    const modal = ev.target;
+                    const z = 1050 + (10 * modalLevel);
+                    modal.style.zIndex = z;
+                    setTimeout(() => {
+                        document.querySelectorAll('.modal-backdrop:not(.modal-stack)').forEach(
+                            el => {
+                                el.style.zIndex = z - 1;
+                                el.classList.add('modal-stack');
+                            });
+                    }, 0);
+                    modalLevel++;
+                });
+
+                document.addEventListener('hidden.bs.modal', function() {
+                    modalLevel = Math.max(0, modalLevel - 1);
+                    if (document.querySelectorAll('.modal.show').length > 0) {
+                        document.body.classList.add('modal-open');
                     }
                 });
-            }
-        });
+
+                // === Batasan input nomor telp ===
+                const phoneInput = document.getElementById('phone_number');
+                if (phoneInput) {
+                    phoneInput.addEventListener('input', function() {
+                        this.value = this.value.replace(/\D/g, '').slice(0, 14);
+                    });
+                }
+            });
+        })();
     </script>
 @endpush

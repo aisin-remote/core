@@ -19,9 +19,14 @@
     .is-invalid {
         border-color: red !important;
     }
+
+    .modal .btn-close {
+        pointer-events: auto !important;
+    }
 </style>
 
-<div class="modal fade" id="addAssessmentModal" tabindex="-1" aria-labelledby="addAssessmentModalLabel" aria-hidden="true">
+<div class="modal fade" id="addAssessmentModal" tabindex="-1" aria-labelledby="addAssessmentModalLabel" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
@@ -83,7 +88,21 @@
                     </div>
 
                     <div class="mb-4">
-                        {{-- <input type="hidden" id="description" name="description"> --}}
+                        <label for="purpose" class="form-label">Purpose</label>
+                        <select id="purpose" name="purpose" data-placeholder="Select Purpose..."
+                        class="form-select form-select-lg fw-semibold" required>
+                        <option value="">Select Purpose</option>
+                        <option value="AGMP">AGMP</option>
+                            <option value="AMMP">AMMP</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Recruitment">Recruitment</option>
+                            <option value="Promosi">Promosi</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="lembaga" class="form-label">Lembaga</label>
+                        <input type="text" id="lembaga" name="lembaga" class="form-control">
                     </div>
 
                     <div class="mb-4">
@@ -139,48 +158,54 @@
     </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            function updateDescriptionName(selectElement, type) {
+                const card = selectElement.closest('.assessment-card');
+                const textarea = card.querySelector(`.${type}-textarea`);
+                const alcId = selectElement.value;
 
-        function updateDescriptionName(selectElement, type) {
-            const card = selectElement.closest('.assessment-card');
-            const textarea = card.querySelector(`.${type}-textarea`);
-            const alcId = selectElement.value;
-
-            if (alcId) {
-                textarea.setAttribute('name', `${type}[${alcId}]`);
-            } else {
-                textarea.removeAttribute('name');
+                if (alcId) {
+                    textarea.setAttribute('name', `${type}[${alcId}]`);
+                } else {
+                    textarea.removeAttribute('name');
+                }
             }
-        }
 
-        function updateDropdownOptions() {
-            const selectedStrengths = new Set();
-            const selectedWeaknesses = new Set();
+            function updateDropdownOptions() {
+                const selectedStrengths = new Set();
+                const selectedWeaknesses = new Set();
 
-            document.querySelectorAll('#strength-container .alc-dropdown').forEach(select => {
-                if (select.value) selectedStrengths.add(select.value);
-            });
-
-            document.querySelectorAll('#weakness-container .alc-dropdown').forEach(select => {
-                if (select.value) selectedWeaknesses.add(select.value);
-            });
-
-            document.querySelectorAll('.alc-dropdown').forEach(select => {
-                const currentValue = select.value;
-                select.querySelectorAll('option').forEach(option => {
-                    option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
-                        .has(option.value)) && option.value !== currentValue;
+                document.querySelectorAll('#strength-container .alc-dropdown').forEach(select => {
+                    if (select.value) selectedStrengths.add(select.value);
                 });
-            });
-        }
 
-        function createAssessmentCard(type, alcId, alcName) {
-            const container = document.getElementById(`${type}-container`);
-            const card = document.createElement('div');
-            card.classList.add('card', 'p-3', 'mb-3', 'assessment-card', `${type}-card`);
+                document.querySelectorAll('#weakness-container .alc-dropdown').forEach(select => {
+                    if (select.value) selectedWeaknesses.add(select.value);
+                });
 
-            card.innerHTML = `
+                document.querySelectorAll('.alc-dropdown').forEach(select => {
+                    const currentValue = select.value;
+                    select.querySelectorAll('option').forEach(option => {
+                        option.hidden = (selectedStrengths.has(option.value) || selectedWeaknesses
+                            .has(option.value)) && option.value !== currentValue;
+                    });
+                });
+            }
+
+            function createAssessmentCard(type, alcId, alcName) {
+                const container = document.getElementById(`${type}-container`);
+
+                // cegah duplikasi
+                const exits = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
+                    .value === alcId);
+                if (exits) return;
+
+                const card = document.createElement('div');
+                card.classList.add('card', 'p-3', 'mb-3', 'assessment-card', `${type}-card`);
+
+                card.innerHTML = `
                 <div class="mb-3">
                     <label>ALC</label>
                     <select class="form-control alc-dropdown" name="${type}_alc_ids[]">
@@ -197,153 +222,171 @@
                 </div>
             `;
 
-            container.appendChild(card);
+                container.appendChild(card);
 
-            const dropdown = card.querySelector('.alc-dropdown');
-            dropdown.addEventListener('change', function() {
-                updateDescriptionName(this, type);
+                const dropdown = card.querySelector('.alc-dropdown');
+                dropdown.addEventListener('change', function() {
+                    updateDescriptionName(this, type);
+                    updateDropdownOptions();
+                });
+
+                updateDropdownOptions();
+            }
+
+            function renderInitialWeaknessCard() {
+                @foreach ($alcs as $alc)
+                    createAssessmentCard('weakness', '{{ $alc->id }}', '{{ $alc->name }}');
+                @endforeach
+            }
+
+            function handleAutoWeakness(alcId, alcName, score) {
+                const container = document.getElementById('weakness-container');
+                const exits = Array.from(container.querySelectorAll('.alc-dropdown'))
+                    .some(select => select.value === alcId);
+
+                if (!exits) {
+                    createAssessmentCard('weakness', alcId, alcName);
+                }
+
+                removeStrengthIfExists(alcId);
+            }
+
+            function handleAutoStrength(alcId, alcName, score) {
+                const container = document.getElementById('strength-container');
+                const existing = Array.from(container.querySelectorAll('.alc-dropdown'))
+                    .some(select => select.value === alcId);
+
+                if (!existing) createAssessmentCard('strength', alcId, alcName);
+
+                // Hapus dari Weakness jika masuk ke Strength
+                removeWeaknessIfExists(alcId);
+            }
+
+            function removeWeaknessIfExists(alcId) {
+                document.querySelectorAll('#weakness-container .weakness-card').forEach(card => {
+                    const select = card.querySelector('.alc-dropdown');
+                    if (select && select.value === alcId) card.remove();
+                });
+                updateDropdownOptions();
+            }
+
+            function removeStrengthIfExists(alcId) {
+                document.querySelectorAll('#strength-container .strength-card').forEach(card => {
+                    const select = card.querySelector('.alc-dropdown');
+                    if (select && select.value === alcId) card.remove();
+                });
+                updateDropdownOptions();
+            }
+
+            // Saat user memilih skor
+            document.querySelectorAll('input[type=radio][name^="scores"]').forEach(radio => {
+                radio.addEventListener('change', function() {
+                    const match = this.name.match(/scores\[(\d+)\]/);
+                    if (match) {
+                        const alcId = match[1];
+                        const score = parseInt(this.value);
+                        const alcName = document.querySelector(
+                                `input[name="alc_ids[]"][value="${alcId}"]`)?.closest('.card')
+                            ?.querySelector('h6')?.innerText;
+
+                        if (alcName) {
+                            if (score < 3) {
+                                handleAutoWeakness(alcId, alcName, score);
+                            } else {
+                                handleAutoStrength(alcId, alcName, score);
+                            }
+                        }
+                    }
+                });
+            });
+
+            // Reset modal saat ditutup
+            document.getElementById('addAssessmentModal').addEventListener('hidden.bs.modal', function() {
+                document.getElementById('assessmentForm').reset();
+
+                ['strength', 'weakness'].forEach(type => {
+                    const container = document.getElementById(`${type}-container`);
+                    container.innerHTML = '';
+                });
+
+                document.querySelectorAll('input[type="radio"]').forEach(radio => {
+                    radio.checked = false;
+                });
+
+                document.getElementById('upload').value = '';
+                document.getElementById('assessment_id').value = '';
+                $('#employee_id').val(null).trigger('change');
+                $('#description').val('');
+
                 updateDropdownOptions();
             });
 
-            updateDropdownOptions();
-        }
+            // Validasi sebelum submit
+            document.getElementById('assessmentForm').addEventListener('submit', function(e) {
+                let isValid = true;
+                const strengthDropdowns = document.querySelectorAll('#strength-container .alc-dropdown');
+                const weaknessDropdowns = document.querySelectorAll('#weakness-container .alc-dropdown');
+                const strengthDescriptions = document.querySelectorAll('#strength-container textarea');
+                const weaknessDescriptions = document.querySelectorAll('#weakness-container textarea');
 
-        function handleAutoWeakness(alcId, alcName, score) {
-            if (score < 3) {
-                const container = document.getElementById('weakness-container');
-                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
-                    .value === alcId);
-                if (!existing) createAssessmentCard('weakness', alcId, alcName);
-                removeStrengthIfExists(alcId);
-            }
-        }
-
-        function handleAutoStrength(alcId, alcName, score) {
-            if (score >= 3) {
-                const container = document.getElementById('strength-container');
-                const existing = Array.from(container.querySelectorAll('.alc-dropdown')).some(select => select
-                    .value === alcId);
-                if (!existing) createAssessmentCard('strength', alcId, alcName);
-                removeWeaknessIfExists(alcId);
-            }
-        }
-
-        function removeWeaknessIfExists(alcId) {
-            document.querySelectorAll('#weakness-container .weakness-card').forEach(card => {
-                const select = card.querySelector('.alc-dropdown');
-                if (select && select.value === alcId) card.remove();
-            });
-            updateDropdownOptions();
-        }
-
-        function removeStrengthIfExists(alcId) {
-            document.querySelectorAll('#strength-container .strength-card').forEach(card => {
-                const select = card.querySelector('.alc-dropdown');
-                if (select && select.value === alcId) card.remove();
-            });
-            updateDropdownOptions();
-        }
-
-        // Saat user memilih skor
-        document.querySelectorAll('input[type=radio][name^="scores"]').forEach(radio => {
-            radio.addEventListener('change', function() {
-                const match = this.name.match(/scores\[(\d+)\]/);
-                if (match) {
-                    const alcId = match[1];
-                    const score = parseInt(this.value);
-                    const alcName = document.querySelector(
-                            `input[name="alc_ids[]"][value="${alcId}"]`)?.closest('.card')
-                        ?.querySelector('h6')?.innerText;
-
-                    if (alcName) {
-                        if (score < 3) {
-                            handleAutoWeakness(alcId, alcName, score);
-                        } else {
-                            handleAutoStrength(alcId, alcName, score);
-                        }
+                strengthDropdowns.forEach(select => {
+                    if (!select.value) {
+                        isValid = false;
+                        select.classList.add('is-invalid');
+                    } else {
+                        select.classList.remove('is-invalid');
                     }
-                }
-            });
-        });
+                });
 
-        // Reset modal saat ditutup
-        document.getElementById('addAssessmentModal').addEventListener('hidden.bs.modal', function() {
-            document.getElementById('assessmentForm').reset();
+                weaknessDropdowns.forEach(select => {
+                    if (!select.value) {
+                        isValid = false;
+                        select.classList.add('is-invalid');
+                    } else {
+                        select.classList.remove('is-invalid');
+                    }
+                });
 
-            ['strength', 'weakness'].forEach(type => {
-                const container = document.getElementById(`${type}-container`);
-                container.innerHTML = '';
-            });
 
-            document.querySelectorAll('input[type="radio"]').forEach(radio => {
-                radio.checked = false;
             });
 
-            document.getElementById('upload').value = '';
-            document.getElementById('assessment_id').value = '';
-            $('#employee_id').val(null).trigger('change');
-            $('#description').val('');
-
+            renderInitialWeaknessCard();
             updateDropdownOptions();
         });
-
-        // Validasi sebelum submit
-        document.getElementById('assessmentForm').addEventListener('submit', function(e) {
-            let isValid = true;
-            const strengthDropdowns = document.querySelectorAll('#strength-container .alc-dropdown');
-            const weaknessDropdowns = document.querySelectorAll('#weakness-container .alc-dropdown');
-            const strengthDescriptions = document.querySelectorAll('#strength-container textarea');
-            const weaknessDescriptions = document.querySelectorAll('#weakness-container textarea');
-
-            strengthDropdowns.forEach(select => {
-                if (!select.value) {
-                    isValid = false;
-                    select.classList.add('is-invalid');
-                } else {
-                    select.classList.remove('is-invalid');
-                }
+        $(document).ready(function() {
+            $('#employee_id').select2({
+                dropdownParent: $('#addAssessmentModal'),
+                placeholder: "Pilih Employee",
+                allowClear: false,
+                width: '100%'
+            });
+            $('#employee_id').on('change', function() {
+                const selectedOption = $(this).find('option:selected');
+                const position = selectedOption.data('position') || '';
+                $('#description').val(position);
             });
 
-            weaknessDropdowns.forEach(select => {
-                if (!select.value) {
-                    isValid = false;
-                    select.classList.add('is-invalid');
-                } else {
-                    select.classList.remove('is-invalid');
-                }
+            $('#target').select2({
+                dropdownParent: $('#addAssessmentModal'),
+                placeholder: "Pilih Employee",
+                allowClear: false,
+                width: '100%'
             });
 
+            $('#purpose').select2({
+                dropdownParent: $('#addAssessmentModal'),
+                placeholder: "Pilih Purpose",
+                allowClear: false,
+                width: '100%'
+            });
 
-        });
+            $('.interlock-form').on('submit', function() {
+                const $btn = $(this).find('.interlock-submit');
 
-        updateDropdownOptions();
-    });
-    $(document).ready(function() {
-        $('#employee_id').select2({
-            dropdownParent: $('#addAssessmentModal'),
-            placeholder: "Pilih Employee",
-            allowClear: false,
-            width: '100%'
+                $btn.prop('disabled', true); // Disable button
+                $btn.find('.spinner-border').removeClass('d-none'); // Show spinner
+                $btn.find('.btn-text').addClass('d-none'); // Hide text
+            });
         });
-        $('#employee_id').on('change', function() {
-            const selectedOption = $(this).find('option:selected');
-            const position = selectedOption.data('position') || '';
-            $('#description').val(position);
-        });
-
-        $('#target').select2({
-            dropdownParent: $('#addAssessmentModal'),
-            placeholder: "Pilih Employee",
-            allowClear: false,
-            width: '100%'
-        });
-
-        $('.interlock-form').on('submit', function() {
-            const $btn = $(this).find('.interlock-submit');
-
-            $btn.prop('disabled', true); // Disable button
-            $btn.find('.spinner-border').removeClass('d-none'); // Show spinner
-            $btn.find('.btn-text').addClass('d-none'); // Hide text
-        });
-    });
-</script>
+    </script>
+@endpush

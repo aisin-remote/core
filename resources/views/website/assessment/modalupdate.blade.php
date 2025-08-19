@@ -25,6 +25,62 @@
                         <label for="update_date" class="form-label">Date Assessment</label>
                         <input type="date" class="form-control" id="update_date" name="date" required>
                     </div>
+
+                    <div class="mb-4">
+                        <label for="update_target" class="form-label">Target Position</label>
+                        <select id="update_target" name="target" data-placeholder="Select Position..."
+                            class="form-select form-select-lg fw-semibold" required>
+                            <option value="">Select Position</option>
+                            @php
+                                $positions = [
+                                    'GM' => 'General Manager',
+                                    'Act GM' => 'Act General Manager',
+                                    'Manager' => 'Manager',
+                                    'Act Manager' => 'Act Manager',
+                                    'Coordinator' => 'Coordinator',
+                                    'Act Coordinator' => 'Act Coordinator',
+                                    'Section Head' => 'Section Head',
+                                    'Act Section Head' => 'Act Section Head',
+                                    'Supervisor' => 'Supervisor',
+                                    'Act Supervisor' => 'Act Supervisor',
+                                    'Act Leader' => 'Act Leader',
+                                    'Leader' => 'Leader',
+                                    'Staff' => 'Staff',
+                                    'Act JP' => 'Act JP',
+                                    'Operator' => 'Operator',
+                                    'Direktur' => 'Direktur',
+                                ];
+                            @endphp
+                            @foreach ($positions as $value => $label)
+                                <option value="{{ $value }}"
+                                    {{ old('position', $employee->position ?? '') == $value ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('position')
+                            <div class="text-danger">{{ $message }}</div>
+                        @enderror
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="purpose" class="form-label">Purpose</label>
+                        <select id="update_purpose" name="purpose" data-placeholder="Select Purpose..."
+                        class="form-select form-select-lg fw-semibold" required>
+                        <option value="">Select Purpose</option>
+                        <option value="AGMP">AGMP</option>
+                            <option value="AMMP">AMMP</option>
+                            <option value="Regular">Regular</option>
+                            <option value="Recruitment">Recruitment</option>
+                            <option value="Promosi">Promosi</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="lembaga" class="form-label">Lembaga</label>
+                        <input type="text" id="update_lembaga" name="lembaga" class="form-control">
+                    </div>
+
                     <div class="mb-4" style="display: none;">
                         <label for="update_description" class="form-label">Description Assessment</label>
                         <input type="hidden" class="form-control" id="update_description" name="description" required>
@@ -76,7 +132,6 @@
             </form>
         </div>
     </div>
-</div>
 </div>
 
 <script>
@@ -313,10 +368,6 @@
 
             updateDropdownOptions();
         });
-
-
-
-
 
         function updateDropdownOptions() {
             let selectedStrengths = new Set();
