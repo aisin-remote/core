@@ -519,6 +519,40 @@
             });
         }
 
+        // Buka trail menu yg aktif saat page load
+        function expandActiveMenus() {
+            const sidebar = document.getElementById('kt_app_sidebar');
+            const container = sidebar.querySelector('.flex-grow-1'); // area scroll
+            const actives = sidebar.querySelectorAll('.menu-link.active');
+
+            if (!actives.length) return;
+
+            actives.forEach(link => {
+                // Naik ke atas: setiap kali ketemu .menu-sub -> temukan induk .menu-item.menu-accordion lalu .show
+                let sub = link.closest('.menu-sub');
+                while (sub) {
+                    const acc = sub.closest('.menu-item.menu-accordion');
+                    if (!acc) break;
+                    acc.classList.add('show');
+
+                    // (opsional) aksesibilitas
+                    const accLink = acc.querySelector(':scope > .menu-link');
+                    if (accLink) accLink.setAttribute('aria-expanded', 'true');
+
+                    sub = acc.closest('.menu-sub');
+                }
+            });
+
+            // Scroll agar item aktif terlihat (opsional)
+            try {
+                const first = actives[0];
+                const cRect = container.getBoundingClientRect();
+                const iRect = first.getBoundingClientRect();
+                const offset = iRect.top - cRect.top - 24;
+                container.scrollTop += offset;
+            } catch (e) {}
+        }
+
         function clamp(v, min, max) {
             return Math.min(Math.max(v, min), max);
         }
@@ -589,5 +623,6 @@
         updateToggleIcon();
         initAccordions();
         initFlyouts();
+        expandActiveMenus();
     });
 </script>
