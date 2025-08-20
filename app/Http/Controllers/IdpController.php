@@ -320,7 +320,7 @@ class IdpController extends Controller
     }
     public function show($employee_id)
     {
-        $employee = Employee::with('assessments')->find($employee_id);
+        $employee = Employee::find($employee_id);
 
         if (!$employee) {
             return response()->json([
@@ -328,19 +328,101 @@ class IdpController extends Controller
             ], 404);
         }
 
-        $assessments = Idp::with('hav.hav.employee')
-            ->whereHas('hav.hav.employee', function ($q) use ($employee) {
-                $q->where('id', $employee->id);
-            })
-            ->get()
-            ->groupBy('assessment_id') // Grouping berdasarkan assessment_id
-            ->map(function ($group) {
-                return $group->values(); // Reset key supaya array numerik
-            });
+        $idps = Idp::with([
+            'hav.hav.employee',
+            'hav.alc',
+            'assessment'
+        ])
+            ->whereHas('hav.hav.employee', fn($q) => $q->where('id', $employee->id))
+            ->orderByDesc('created_at')
+            ->get();
+
+        $normalized = $employee->getNormalizedPosition();
+        $badges = [
+            'no_approval_needed' => ['text' => '-',            'class' => 'light-primary'],
+            'not_created'        => ['text' => 'Not Created',  'class' => 'light-dark'],
+            'draft'              => ['text' => 'Need Submit',  'class' => 'light-secondary'],
+            'waiting'            => ['text' => 'Waiting',      'class' => 'light-warning'],
+            'checked'            => ['text' => 'Checked',      'class' => 'light-info'],
+            'approved'           => ['text' => 'Approved',     'class' => 'light-success'],
+            'revise'             => ['text' => 'Need Revise',  'class' => 'light-danger'],
+            'unknown'            => ['text' => 'Unknown',      'class' => 'light-secondary'],
+        ];
+
+        // Proses setiap IDP -> hitung status & approver (jabatan) + badge
+        $processed = $idps->map(function (Idp $idp) use ($employee, $normalized, $badges) {
+            // Konversi status angka ke label (khusus manager : 3 dianggap "checking")
+            $status = match (true) {
+                $normalized === 'manager' => match ($idp->status) {
+                    0 => 'draft',
+                    1 => 'waiting',
+                    2 => 'checked',
+                    3 => 'checked',
+                    4 => 'approved',
+                    -1 => 'revise',
+                    default => 'unknown',
+                },
+                default => match ($idp->status) {
+                    0 => 'draft',
+                    1 => 'waiting',
+                    2 => 'checked',
+                    3 => 'approved',
+                    -1 => 'revise',
+                    default => 'unknown',
+                },
+            };
+
+            // Tentukan approver (jabatan) + phrase
+            $approver = null;
+            $phrase = null;
+
+            if ($normalized === 'manager') {
+                $m        = $this->resolveApproverForManager($employee, (int) $idp->status);
+                $status   = $m['status'];
+                $approver = $m['position'] ?? null;
+                $phrase   = $m['phrase'] ?? null;
+            } else {
+                $level = match ($status) {
+                    'waiting'  => (int) $employee->getCreateAuth() + 1,
+                    'checked'  => (int) $employee->getFirstApproval() + 1,
+                    'approved' => (int) $employee->getFinalApproval(),
+                    default    => 0,
+                };
+                if ($level > 0) {
+                    $sup = $employee->getSuperiorsByLevel($level)->last();
+                    $approver = $sup->position ?? null;
+                    $phrase   = $status === 'approved' ? 'Approved by ' : 'Checking by ';
+                }
+            }
+            // Susun badge text
+            $badgeText = $badges[$status]['text'] ?? 'unknown';
+            if (in_array($status, ['waiting', 'checked', 'approved'], true) && $approver) {
+                $badgeText = ($phrase ?? ($status === 'approved' ? 'Approved by ' : 'Checking by ')) . $approver;
+            }
+            return [
+                'idp_id'              => $idp->id,
+                'assessment_id'       => $idp->assessment_id,
+                'alc_id'              => $idp->alc_id,
+                'alc_name'            => optional($idp->hav->alc)->name,
+                'category'            => $idp->category,
+                'development_program' => $idp->development_program,
+                'development_target'  => $idp->development_target,
+                'date'                => $idp->date,
+                'status'              => $status,                            // waiting/checked/approved/dll
+                'approver'            => $approver,                          // jabatan approver (bisa null)
+                'badge'               => [
+                    'text'  => $badgeText,
+                    'class' => $badges[$status]['class'],
+                ],
+            ];
+        })
+            ->groupBy('assessment_id')
+            ->map(fn($g) => $g->values());
+
 
         return response()->json([
             'employee' => $employee,
-            'grouped_assessments' => $assessments,
+            'grouped_assessments' => $processed,
         ]);
     }
 
