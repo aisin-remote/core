@@ -483,7 +483,38 @@
                                 <div class="d-flex flex-column align-items-start">
                                     <span style="font-size: 1rem;">Assessment Date</span>
                                     <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
-                                        {{ $assessment->created_at ? $assessment->created_at->timezone('Asia/Jakarta')->format('d M Y, H:i') : '-' }}
+                                        {{ $assessment->created_at ? $assessment->created_at->timezone('Asia/Jakarta')->format('d M Y') : '-' }}
+                                    </span>
+                                </div>
+
+                                @php
+                                    // Ambil dari koleksi IDP hasil mapping controller (paling ringan)
+                                    $creatorName =
+                                        $group->first()->created_by_name ??
+                                        // Fallback kalau belum diset
+                                        (optional(
+                                            optional($employee)
+                                                ->getSuperiorsByLevel(optional($employee)->getCreateAuth() ?? 0)
+                                                ->first(),
+                                        )->name ??
+                                            '-');
+
+                                    $latestUpdatedAt = optional($group->sortByDesc('updated_at')->first())->updated_at;
+                                    $idpCreatedAtText = $latestUpdatedAt
+                                        ? $latestUpdatedAt->timezone('Asia/Jakarta')->format('d M Y')
+                                        : '-';
+                                @endphp
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">IDP Created By</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $creatorName }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">IDP Created At</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $idpCreatedAtText }}
                                     </span>
                                 </div>
                             </div>
@@ -522,7 +553,7 @@
                                 }
                             </style>
                             <h4 class="text-center">Assessment Chart</h4>
-                            <div style="width: 100%; max-width: auto; margin: 0 auto; height: 400px;">
+                            <div style="width: 90%; margin: 0 auto; height: 400px;">
                                 <canvas id="assessmentChart" data-employee-id="{{ $employee->id }}"></canvas>
                             </div>
                         </div>
