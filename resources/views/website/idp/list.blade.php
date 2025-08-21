@@ -105,10 +105,10 @@
     }
 
     .status-chip[data-status="checked"] {
-        --bg: #eff6ff;
-        --fg: #1e40af;
-        --bd: #bfdbfe;
-        --dot: #3b82f6
+        --bg: #fffbeb;
+        --fg: #92400e;
+        --bd: #fde68a;
+        --dot: #f59e0b
     }
 
     .status-chip[data-status="waiting"] {
@@ -231,7 +231,8 @@
     }
 
     .status-chip[data-status="checked"] i {
-        animation: popIn .5s ease both
+        animation: tilt 1.4s ease-in-out infinite;
+        transform-origin: 50% 60%
     }
 
     /* Draft: shimmer halus */
@@ -359,7 +360,6 @@
                             $grouped = $assessments->groupBy(
                                 fn($item) => optional(optional($item->hav)->hav)->employee->id,
                             );
-
                         @endphp
 
                         @forelse ($grouped as $employeeId => $group)
@@ -477,6 +477,13 @@
                                     <span style="font-size: 1rem;">Assessor</span>
                                     <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
                                         {{ $assessment->lembaga ?? 'N/A' }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Target Position</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $assessment->target_position ?? 'N/A' }}
                                     </span>
                                 </div>
 
@@ -981,7 +988,7 @@
                         return 'waiting';
                     case 'checked':
                         return 'checked';
-                    case 'approved':
+                    case 'checked':
                         return isMgr ? 'checked' : 'approved';
                     case 'approved':
                         return 'approved';
@@ -1005,7 +1012,7 @@
             function renderStatusChip(statusKey, labelText, idx) {
                 const iconMap = {
                     approved: 'fa-circle-check',
-                    checked: 'fa-clipboard-check',
+                    checked: 'fa-hourglass-half',
                     waiting: 'fa-hourglass-half',
                     draft: 'fa-pen',
                     revise: 'fa-rotate-left',
