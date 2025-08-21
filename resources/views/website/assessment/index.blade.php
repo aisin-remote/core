@@ -15,17 +15,6 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h3 class="card-title">Assessment List</h3>
                     <div class="d-flex align-items-center">
-                        <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                            style="width: 200px;" value="{{ request('search') }}">
-                        <button type="button" class="btn btn-primary me-3" id="searchButton">
-                            <i class="fas fa-search"></i> Search
-                        </button>
-                        {{-- <select id="departmentFilter" class="form-select me-2" style="width: 200px;">
-                            <option value="">All Department</option>
-                            @foreach ($departments as $department)
-                                <option value="{{ $department }}">{{ $department }}</option>
-                            @endforeach
-                        </select> --}}
                         @if (auth()->user()->role == 'HRD' && auth()->user()->employee->position != 'President')
                             <a href="#" class="btn btn-primary" data-bs-toggle="modal"
                                 data-bs-target="#addAssessmentModal">Add</a>
@@ -33,31 +22,28 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                        role="tablist" style="cursor:pointer ">
-                        {{-- Tab Show All --}}
+                    <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
+                        style="cursor:pointer">
                         {{-- Tab Show All --}}
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4
-        {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                            <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                                 href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                                Show All
+                                <i class="fas fa-list me-2"></i>Show All
                             </a>
                         </li>
 
-                        {{-- Tab Dinamis --}}
+                        {{-- Tab Dinamis Berdasarkan Posisi --}}
                         @foreach ($visiblePositions as $position)
                             <li class="nav-item" role="presentation">
-                                <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                                <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                     href="{{ route('assessments.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                    {{ $position }}
+                                    <i class="fas fa-user-tag me-2"></i>{{ $position }}
                                 </a>
                             </li>
                         @endforeach
                     </ul>
-
                     <div class="card-body">
-                        <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+                        <table class="table align-middle table-row-dashed fs-6 gy-5" id="kt_table_users">
                             <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
@@ -83,7 +69,7 @@
                                             ->date;
                                     @endphp
                                     <tr data-position="{{ $employee->position ?? '-' }}">
-                                        <td>{{ $assessments->firstItem() + $index }}</td>
+                                        <td>{{ $loop->iteration }}</td>
                                         <td class="text-center">
                                             <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
                                                 alt="Employee Photo" class="rounded" width="40" height="40"
@@ -110,13 +96,7 @@
                                     </tr>
                                 @endforeach
                             </tbody>
-
-
                         </table>
-                        <div class="d-flex justify-content-end mt-4">
-                            {{ $assessments->links('pagination::bootstrap-5') }}
-                        </div>
-
                     </div>
                     <div class="d-flex justify-content-between">
                         <small class="text-muted fw-bold">
@@ -176,40 +156,69 @@
         </style>
 
         <style>
-        /* Default: selama body BELUM .page-ready, history-btn mati total */
-        body:not(.page-ready) .history-btn,
-        body:not(.page-ready) a.history-btn.btn {
-            pointer-events: none !important;
-            opacity: .5;
-            cursor: not-allowed !important;
-        }
-        .history-btn .spinner-border{ vertical-align: -0.125em; }
+            /* Default: selama body BELUM .page-ready, history-btn mati total */
+            body:not(.page-ready) .history-btn,
+            body:not(.page-ready) a.history-btn.btn {
+                pointer-events: none !important;
+                opacity: .5;
+                cursor: not-allowed !important;
+            }
 
-        /* Setelah siap (JS menambahkan .page-ready), tombol kembali normal */
-        body.page-ready .history-btn,
-        body.page-ready a.history-btn.btn {
-            pointer-events: auto !important;
-            opacity: 1;
-            cursor: pointer !important;
-        }
+            .history-btn .spinner-border {
+                vertical-align: -0.125em;
+            }
+
+            /* Setelah siap (JS menambahkan .page-ready), tombol kembali normal */
+            body.page-ready .history-btn,
+            body.page-ready a.history-btn.btn {
+                pointer-events: auto !important;
+                opacity: 1;
+                cursor: pointer !important;
+            }
         </style>
     @endpush
 
     @push('scripts')
-        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
         <script src="{{ asset('assets/plugins/custom/select2/js/select2.min.js') }}"></script>
         <script>
-        window.addEventListener('load', function () {
-            document.body.classList.add('page-ready');
-        });
+            document.addEventListener("DOMContentLoaded", function() {
+                // Pastikan jQuery terpasang (DataTables butuh jQuery)
+                if (typeof $ === 'undefined') {
+                    console.error("jQuery not loaded. DataTable won't initialize.");
+                    return;
+                }
 
-        $(document).on('click', '.history-btn', function(e){
-            if (!document.body.classList.contains('page-ready')) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
-            return false;
-            }
-        });
+                // Inisialisasi DataTable
+                const dt = $('#kt_table_users').DataTable({
+                    responsive: true,
+                    language: {
+                        search: "_INPUT_",
+                        searchPlaceholder: "Search...",
+                        lengthMenu: "Show _MENU_ entries",
+                        zeroRecords: "No matching records found",
+                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                        paginate: {
+                            next: "Next",
+                            previous: "Previous"
+                        }
+                    },
+                    ordering: false
+                });
+                console.log("✅ DataTable Initialized Successfully");
+            });
+        </script>
+        <script>
+            window.addEventListener('load', function() {
+                document.body.classList.add('page-ready');
+            });
+
+            $(document).on('click', '.history-btn', function(e) {
+                if (!document.body.classList.contains('page-ready')) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            });
         </script>
         <script>
             class ModalManager {
@@ -798,7 +807,7 @@
                     if (card.length === 0) {
                         console.log(
                             `[INFO] Card ALC ${alcId} not found in newType container, creating new in ${newType}`
-                            );
+                        );
                         addAssessmentCard(newType, containerMap[newType].substring(1), alcId, description,
                             alcName, suggestion);
                         card = $(`#assessment_card_${alcId}`);
@@ -874,7 +883,7 @@
                                 npk.includes(searchValue) || age.includes(searchValue);
 
                             var departmentMatch = selectedDepartment === "" || department ===
-                            selectedDepartment;
+                                selectedDepartment;
 
                             if (searchMatch && departmentMatch) {
                                 row.show();

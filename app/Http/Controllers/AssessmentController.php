@@ -67,6 +67,7 @@ class AssessmentController extends Controller
         $employeesWithAssessments = $employees->filter(fn($emp) => $emp->assessments()->exists());
         $alcs = Alc::all();
 
+
         return view('website.assessment.index', compact(
             'assessments',
             'employees',
@@ -443,7 +444,7 @@ class AssessmentController extends Controller
                     ->from('assessments')
                     ->groupBy('employee_id');
             })
-            ->paginate(10);
+            ->get();
     }
 
     private function getCurrentPosition($rawPosition)
