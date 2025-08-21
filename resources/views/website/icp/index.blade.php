@@ -121,8 +121,6 @@
                     </small>
                 </div>
             </div>
-
-
         </div>
     </div>
     <div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"

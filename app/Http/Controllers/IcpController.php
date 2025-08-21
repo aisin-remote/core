@@ -128,19 +128,21 @@ class IcpController extends Controller
         } else {
             // User non-HRD: hanya bawahan
             $employee = $user->employee;
-
+            $cpm = $employee->company_name;
             if (!$employee) {
                 $icps = collect();
             } else {
                 $subordinatesQuery = $this->getSubordinatesFromStructure($employee);
 
                 if ($subordinatesQuery instanceof \Illuminate\Database\Eloquent\Builder) {
-                    // 💡 gunakan subquery, bukan pluck (lebih efisien dan tidak eager execute)
-                    $icps = Icp::with('employee')
-                        ->whereHas('employee', function ($q) use ($subordinatesQuery, $search, $filter, $company) {
+                    $icps = Icp::with(['employee:id,name,npk,company_name,position'])
+                        ->whereHas('employee', function ($q) use ($subordinatesQuery, $search, $filter, $employee, $company) {
                             $q->whereIn('id', $subordinatesQuery->select('id'));
 
-                            if ($search) {
+                            $q->where('company_name', $company ?: $employee->company_name);
+
+                            // search
+                            if (!empty($search)) {
                                 $q->where(function ($q2) use ($search) {
                                     $q2->where('name', 'like', "%{$search}%")
                                         ->orWhere('npk', 'like', "%{$search}%")
@@ -148,18 +150,15 @@ class IcpController extends Controller
                                 });
                             }
 
-                            if ($company) {
-                                $q->where('company_name', $company);
-                            }
-
-                            if ($filter && $filter !== 'all') {
-                                // group-kan kondisi posisi agar tidak "meng-OR" ke seluruh blok
+                            // filter posisi (exact atau "Act {posisi}")
+                            if (!empty($filter) && $filter !== 'all') {
                                 $q->where(function ($g) use ($filter) {
                                     $g->where('position', $filter)
                                         ->orWhere('position', 'like', "Act %{$filter}");
                                 });
                             }
                         })
+                        ->orderByDesc('created_at')
                         ->paginate(10)
                         ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
                 } else {
@@ -228,21 +227,21 @@ class IcpController extends Controller
 
         // Ambil semua subordinate (filtered)
         $icps = Employee::whereIn('id', $subordinateIds)
-            ->when($company, fn($q) => $q->where('company_name', $employee->company_name))
+            ->where('company_name', $employee->company_name)
             ->when($filter && $filter !== 'all', function ($q) use ($filter) {
                 $q->where(function ($sub) use ($filter) {
                     $sub->where('position', $filter)
                         ->orWhere('position', 'like', "Act %{$filter}");
                 });
             })
-            ->when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
             ->with([
                 'icp' => function ($q) {
-                    $q->orderByDesc('created_at')  // urutkan biar first() dapat yang terbaru
-                        > with(['latestIcp.details']);
-                }
+                    $q->orderByDesc('created_at')->with('details');
+                },
             ])
             ->get();
+
 
 
         return view('website.icp.assign', compact('title', 'icps', 'filter', 'company', 'search', 'visiblePositions'));
