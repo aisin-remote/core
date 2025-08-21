@@ -8,6 +8,57 @@
     {{ $title ?? 'Employee' }}
 @endsection
 
+@push('custom-css')
+    <style>
+        /* Page enter */
+        .page-enter {
+            opacity: 0;
+            transform: translateY(8px)
+        }
+
+        .page-enter.page-in {
+            animation: pageFadeIn .55s cubic-bezier(.21, 1, .21, 1) forwards
+        }
+
+        @keyframes pageFadeIn {
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        /* Stagger item/kartu */
+        .stagger {
+            opacity: 0;
+            transform: translateY(10px)
+        }
+
+        .stagger.show {
+            animation: cardIn .55s cubic-bezier(.21, 1, .21, 1) forwards;
+            animation-delay: var(--d, 0ms)
+        }
+
+        @keyframes cardIn {
+            to {
+                opacity: 1;
+                transform: none
+            }
+        }
+
+        /* Aksesibilitas: hormati preferensi reduce motion */
+        @media (prefers-reduced-motion: reduce) {
+
+            .page-enter,
+            .stagger {
+                opacity: 1;
+                transform: none;
+                animation: none
+            }
+        }
+    </style>
+@endpush
+
+
 @section('main')
     @if (session()->has('success'))
         <script>
@@ -33,7 +84,7 @@
             });
         </script>
     @endif
-    <div id="kt_app_content_container" class="app-container container-fluid">
+    <div id="kt_app_content_container" class="app-container container-fluid page-enter">
         <div class="row">
 
             {{-- IDP --}}
@@ -333,4 +384,27 @@
 @push('scripts')
     <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+@endpush
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('kt_app_content_container');
+            if (container) container.classList.add('page-in');
+
+            const headerCards = document.querySelectorAll('.row > .col-4 .card.shadow-sm');
+            headerCards.forEach((card, i) => {
+                card.classList.add('stagger');
+                card.style.setProperty('--d', (i * 120) + 'ms');
+                requestAnimationFrame(() => card.classList.add('show'));
+            });
+
+            const listItems = document.querySelectorAll('.card-body .row.g-3 > .col-md-12');
+            listItems.forEach((el, idx) => {
+                el.classList.add('stagger');
+                el.style.setProperty('--d', (idx * 40) + 'ms');
+                requestAnimationFrame(() => el.classList.add('show'));
+            });
+        });
+    </script>
 @endpush
