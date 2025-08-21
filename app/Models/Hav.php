@@ -60,4 +60,9 @@ class Hav extends Model
 
         return $statusList[$this->quadrant] ?? 'Unknown';
     }
+
+    public function assessment()
+    {
+        return $this->belongsTo(Assessment::class, 'assessment_id', 'id');
+    }
 }

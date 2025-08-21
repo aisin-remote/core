@@ -399,6 +399,7 @@ class IdpController extends Controller
             if (in_array($status, ['waiting', 'checked', 'approved'], true) && $approver) {
                 $badgeText = ($phrase ?? ($status === 'approved' ? 'Approved by ' : 'Checking by ')) . $approver;
             }
+
             return [
                 'idp_id'              => $idp->id,
                 'assessment_id'       => $idp->assessment_id,
