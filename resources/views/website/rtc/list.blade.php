@@ -39,15 +39,6 @@
                                 data-kt-menu-placement="bottom-end">
                                 <i class="fas fa-filter"></i> Filter
                             </button>
-                            <a href="{{ route('employee.create') }}" class="btn btn-primary me-3">
-                                <i class="fas fa-plus"></i>
-                                Add
-                            </a>
-                            <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
-                                data-bs-target="#importModal">
-                                <i class="fas fa-upload"></i>
-                                Import
-                            </button>
                         </div>
                     </div>
                     <div class="card-body">
@@ -165,7 +156,6 @@
 @endsection
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         $(document).ready(function() {
             function loadTable(filter = 'Supervisor') {
@@ -177,6 +167,7 @@
                         division_id: @json($divisionId)
                     },
                     success: function(res) {
+                        console.log('Response', res);
                         $('#kt_table_users tbody').html(res);
                     }
                 });
@@ -261,30 +252,12 @@
             //     window.location.replace(url);
             // });
 
-            $(document).on('click', '.btn-view', function() {
+            $(document).on('click', '.btn-view', function(e) {
+                e.preventDefault();
                 const id = $(this).data('id');
                 const filter = currentFilter;
 
-                $('#viewDetailModal').modal('show');
-                $('#viewDetailContent').html(
-                    '<div class="text-center py-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-3">Loading data...</p></div>'
-                );
-
-                $.ajax({
-                    url: '{{ route('rtc.detail') }}',
-                    type: 'GET',
-                    data: {
-                        id: id,
-                        filter: filter
-                    },
-                    success: function(response) {
-                        $('#viewDetailContent').html(response);
-                    },
-                    error: function() {
-                        $('#viewDetailContent').html(
-                            '<p class="text-danger text-center">Failed to load data.</p>');
-                    }
-                });
+                window.location.href = `{{ route('rtc.summary') }}?id=${id}&filter=${filter}`;
             });
 
             $('#addPlanForm').on('submit', function(e) {
@@ -312,11 +285,15 @@
                         window.location.reload()
                     },
                     error: function(xhr) {
-                        iziToast.error({
-                            title: 'Error',
-                            message: xhr.responseJSON?.message ||
-                                'Failed to update plan'
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'error',
+                            title: 'Terjadi kesalahan!',
+                            showConfirmButton: false,
+                            timer: 2000
                         });
+                        console.error("Error: " + xhr.responseText);
                     }
                 });
             });

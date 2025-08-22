@@ -19,16 +19,28 @@ class Rtc extends Model
 
     public function department()
     {
-        return $this->belongsTo(Department::class, 'area_id')->where('id', 'department');
+        return $this->belongsTo(Department::class, 'area_id');
     }
 
     public function section()
     {
-        return $this->belongsTo(Section::class, 'area_id')->where('id', 'section');
+        return $this->belongsTo(Section::class, 'area_id');
     }
 
     public function subsection()
     {
-        return $this->belongsTo(SubSection::class, 'area_id')->where('id', 'sub_section');
+        return $this->belongsTo(SubSection::class, 'area_id');
+    }
+    public function scopeArea($q, string $area)
+    {
+        return $q->where('area', $area);
+    }
+    public function scopeAreaId($q, int $id)
+    {
+        return $q->where('area_id', $id);
+    }
+    public function scopeTerm($q, string $term)
+    {
+        return $q->where('term', $term);
     }
 }
