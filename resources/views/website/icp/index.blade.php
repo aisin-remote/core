@@ -121,8 +121,6 @@
                     </small>
                 </div>
             </div>
-
-
         </div>
     </div>
     <div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
@@ -173,6 +171,33 @@
     </div>
 @endsection
 @push('scripts')
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Pastikan jQuery terpasang (DataTables butuh jQuery)
+            if (typeof $ === 'undefined') {
+                console.error("jQuery not loaded. DataTable won't initialize.");
+                return;
+            }
+
+            // Inisialisasi DataTable
+            const dt = $('#kt_table_users').DataTable({
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    zeroRecords: "No matching records found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                },
+                ordering: false
+            });
+            console.log("✅ DataTable Initialized Successfully");
+        });
+    </script>
     <script>
         $(document).on("click", ".history-btn", function(event) {
             event.preventDefault();

@@ -45,6 +45,263 @@
         z-index: 1055;
     }
 </style>
+<style>
+    /* === STATUS CHIP (base) === */
+    .status-chip {
+        --bg: #eef2ff;
+        --fg: #312e81;
+        --bd: #c7d2fe;
+        --dot: #6366f1;
+        display: inline-flex;
+        align-items: center;
+        gap: .5rem;
+        padding: .5rem .9rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: .9rem;
+        line-height: 1;
+        border: 1px solid var(--bd);
+        background: var(--bg);
+        color: var(--fg);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+        max-width: 280px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        position: relative;
+        transition: transform .18s ease, box-shadow .18s ease;
+
+        /* animasi masuk (stagger via --idx) */
+        animation: chipIn .35s cubic-bezier(.2, .7, .2, 1) both;
+        animation-delay: calc(var(--idx, 0) * .04s);
+    }
+
+    .status-chip:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 6px 18px rgba(0, 0, 0, .12)
+    }
+
+    .status-chip i {
+        font-size: 1rem;
+        opacity: .95
+    }
+
+    /* Dot/pulse kiri */
+    .status-chip::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--dot);
+        box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot) 20%, transparent);
+    }
+
+    /* Variasi warna */
+    .status-chip[data-status="approved"] {
+        --bg: #ecfdf5;
+        --fg: #065f46;
+        --bd: #a7f3d0;
+        --dot: #10b981
+    }
+
+    .status-chip[data-status="checked"] {
+        --bg: #fffbeb;
+        --fg: #92400e;
+        --bd: #fde68a;
+        --dot: #f59e0b
+    }
+
+    .status-chip[data-status="waiting"] {
+        --bg: #fffbeb;
+        --fg: #92400e;
+        --bd: #fde68a;
+        --dot: #f59e0b
+    }
+
+    .status-chip[data-status="draft"] {
+        --bg: #f8fafc;
+        --fg: #334155;
+        --bd: #e2e8f0;
+        --dot: #94a3b8
+    }
+
+    .status-chip[data-status="revise"] {
+        --bg: #fef2f2;
+        --fg: #7f1d1d;
+        --bd: #fecaca;
+        --dot: #ef4444
+    }
+
+    .status-chip[data-status="not_created"],
+    .status-chip[data-status="unknown"] {
+        --bg: #f4f4f5;
+        --fg: #27272a;
+        --bd: #e4e4e7;
+        --dot: #a1a1aa
+    }
+
+    /* Animasi masuk */
+    @keyframes chipIn {
+        from {
+            opacity: 0;
+            transform: translateY(4px) scale(.98)
+        }
+
+        to {
+            opacity: 1;
+            transform: none
+        }
+    }
+
+    /* Waiting: dot pulse + wiggle icon */
+    @keyframes pulseDot {
+        0% {
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 30%, transparent)
+        }
+
+        70% {
+            box-shadow: 0 0 0 8px color-mix(in srgb, var(--dot) 0%, transparent)
+        }
+
+        100% {
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent)
+        }
+    }
+
+    .status-chip[data-status="waiting"]::before {
+        animation: pulseDot 1.25s infinite
+    }
+
+    @keyframes tilt {
+
+        0%,
+        100% {
+            transform: rotate(0)
+        }
+
+        40% {
+            transform: rotate(-8deg)
+        }
+
+        60% {
+            transform: rotate(8deg)
+        }
+    }
+
+    .status-chip[data-status="waiting"] i {
+        animation: tilt 1.4s ease-in-out infinite;
+        transform-origin: 50% 60%
+    }
+
+    /* Approved: breathing glow */
+    @keyframes breathe {
+
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent)
+        }
+
+        50% {
+            box-shadow: 0 0 0 6px color-mix(in srgb, var(--dot) 18%, transparent)
+        }
+    }
+
+    .status-chip[data-status="approved"] {
+        animation-name: chipIn, breathe;
+        animation-duration: .35s, 2.4s;
+        animation-timing-function: cubic-bezier(.2, .7, .2, 1), ease-in-out;
+        animation-iteration-count: 1, infinite
+    }
+
+    /* Checked: pop icon sekali */
+    @keyframes popIn {
+        0% {
+            transform: scale(.6);
+            opacity: 0
+        }
+
+        60% {
+            transform: scale(1.15)
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1
+        }
+    }
+
+    .status-chip[data-status="checked"] i {
+        animation: tilt 1.4s ease-in-out infinite;
+        transform-origin: 50% 60%
+    }
+
+    /* Draft: shimmer halus */
+    @keyframes shimmer {
+        0% {
+            transform: translateX(-120%)
+        }
+
+        100% {
+            transform: translateX(120%)
+        }
+    }
+
+    .status-chip[data-status="draft"]::after {
+        content: "";
+        position: absolute;
+        inset: -1px;
+        border-radius: inherit;
+        background: linear-gradient(120deg, transparent 0%, rgba(255, 255, 255, .25) 20%, transparent 40%);
+        transform: translateX(-120%);
+        animation: shimmer 2.2s ease-in-out infinite;
+        pointer-events: none;
+    }
+
+    /* Revise: buzz lembut berulang */
+    @keyframes buzz {
+
+        0%,
+        100% {
+            transform: translateX(0)
+        }
+
+        20% {
+            transform: translateX(-1px)
+        }
+
+        40% {
+            transform: translateX(1px)
+        }
+
+        60% {
+            transform: translateX(-1px)
+        }
+
+        80% {
+            transform: translateX(1px)
+        }
+    }
+
+    .status-chip[data-status="revise"] {
+        animation-name: chipIn, buzz;
+        animation-duration: .35s, 1.6s;
+        animation-timing-function: cubic-bezier(.2, .7, .2, 1), ease-in-out;
+        animation-iteration-count: 1, infinite
+    }
+
+    /* Reduce motion */
+    @media (prefers-reduced-motion: reduce) {
+
+        .status-chip,
+        .status-chip::after,
+        .status-chip i {
+            animation: none !important;
+            transition: none !important;
+            /* ← tambahkan ; */
+        }
+    }
+</style>
+
 
 @section('main')
     <div id="kt_app_content_container" class="app-container container-fluid">
@@ -103,7 +360,6 @@
                             $grouped = $assessments->groupBy(
                                 fn($item) => optional(optional($item->hav)->hav)->employee->id,
                             );
-
                         @endphp
 
                         @forelse ($grouped as $employeeId => $group)
@@ -225,9 +481,47 @@
                                 </div>
 
                                 <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">Target Position</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $assessment->target_position ?? 'N/A' }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column align-items-start">
                                     <span style="font-size: 1rem;">Assessment Date</span>
                                     <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
-                                        {{ $assessment->created_at ? $assessment->created_at->timezone('Asia/Jakarta')->format('d M Y, H:i') : '-' }}
+                                        {{ $assessment->created_at ? $assessment->created_at->timezone('Asia/Jakarta')->format('d M Y') : '-' }}
+                                    </span>
+                                </div>
+
+                                @php
+                                    // Ambil dari koleksi IDP hasil mapping controller (paling ringan)
+                                    $creatorName =
+                                        $group->first()->created_by_name ??
+                                        // Fallback kalau belum diset
+                                        (optional(
+                                            optional($employee)
+                                                ->getSuperiorsByLevel(optional($employee)->getCreateAuth() ?? 0)
+                                                ->first(),
+                                        )->name ??
+                                            '-');
+
+                                    $latestUpdatedAt = optional($group->sortByDesc('updated_at')->first())->updated_at;
+                                    $idpCreatedAtText = $latestUpdatedAt
+                                        ? $latestUpdatedAt->timezone('Asia/Jakarta')->format('d M Y')
+                                        : '-';
+                                @endphp
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">IDP Created By</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $creatorName }}
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-column align-items-start">
+                                    <span style="font-size: 1rem;">IDP Created At</span>
+                                    <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                        {{ $idpCreatedAtText }}
                                     </span>
                                 </div>
                             </div>
@@ -266,7 +560,7 @@
                                 }
                             </style>
                             <h4 class="text-center">Assessment Chart</h4>
-                            <div style="width: 100%; max-width: auto; margin: 0 auto; height: 400px;">
+                            <div style="width: 90%; margin: 0 auto; height: 400px;">
                                 <canvas id="assessmentChart" data-employee-id="{{ $employee->id }}"></canvas>
                             </div>
                         </div>
@@ -585,8 +879,6 @@
                 event.preventDefault();
 
                 let employeeId = $(this).data("employee-id");
-                console.log("Fetching history for Employee ID:", employeeId);
-
                 $("#npkText").text("-");
                 $("#positionText").text("-");
                 $("#kt_table_assessments tbody").empty();
@@ -595,132 +887,73 @@
                     url: `/idp/history/${employeeId}`,
                     type: "GET",
                     success: function(response) {
-                        console.log("Response received:", response);
-
-                        if (!response.employee) {
-                            console.error("Employee data not found in response!");
+                        const emp = response.employee;
+                        if (!emp) {
                             alert("Employee not found!");
                             return;
                         }
 
-                        $("#npkText").text(response.employee.npk);
-                        $("#positionText").text(response.employee.position);
+                        $("#npkText").text(emp.npk || "-");
+                        $("#positionText").text(emp.position || "-");
 
-                        const tbody = $("#kt_table_assessments tbody");
-                        tbody.empty();
-
-                        const grouped = response.grouped_assessments;
+                        const tbody = $("#kt_table_assessments tbody").empty();
+                        const grouped = response.grouped_assessments || {};
                         const currentUserRole = "{{ auth()->user()->role }}";
                         let index = 1;
 
-                        if (grouped && Object.keys(grouped).length > 0) {
-                            Object.entries(grouped).forEach(([assessmentId, assessments]) => {
-                                const first = assessments[0];
-                                const createdAt = new Date(first.created_at);
-                                const year = createdAt.getFullYear();
+                        if (Object.keys(grouped).length === 0) {
+                            tbody.append(`
+                                <tr>
+                                <td colspan="4" class="text-center text-muted">No IDP found</td>
+                                </tr>
+                            `);
+                        } else {
+                            const isMgr = isManagerPosition(emp.position);
 
+                            Object.entries(grouped).forEach(([assessmentId, items]) => {
+                                const first = items?.[0] || {};
 
-                                let status = first.status;
-                                switch (status) {
-                                    case 0:
-                                        status = "draft";
-                                        break;
-                                    case 1:
-                                        status = "waiting";
-                                        break;
-                                    case 2:
-                                        status = "checked";
-                                        break;
-                                    case 3:
-                                        status = "approved";
-                                        break;
-                                    case -1:
-                                        status = "revise";
-                                        break;
-                                    default:
-                                        status = "unknown";
-                                        break;
-                                }
+                                let year = "-";
+                                const getYear = (d) => (d && !isNaN(Date.parse(d))) ?
+                                    new Date(d).getFullYear() : null;
+                                year = getYear(first.date) ?? getYear(first
+                                    .created_at) ?? "-";
 
-                                const badges = {
-                                    no_approval_needed: {
-                                        text: "-",
-                                        class: "badge-light text-dark",
-                                    },
-                                    not_created: {
-                                        text: "Not Created",
-                                        class: "badge-dark",
-                                    },
-                                    draft: {
-                                        text: "Need Submit",
-                                        class: "badge-secondary",
-                                    },
-                                    waiting: {
-                                        text: "Waiting",
-                                        class: "badge-warning",
-                                    },
-                                    checked: {
-                                        text: "Checked",
-                                        class: "badge-info",
-                                    },
-                                    approved: {
-                                        text: "Approved",
-                                        class: "badge-success",
-                                    },
-                                    revise: {
-                                        text: "Need Revise",
-                                        class: "badge-danger",
-                                    },
-                                    unknown: {
-                                        text: "Unknown",
-                                        class: "badge-secondary",
-                                    },
-                                };
-                                const badge = badges[status] || badges.unknown;
+                                const statusKey = overallStatusFrom(items, isMgr);
+                                console.log(statusKey);
 
-                                let deleteButton = "";
-                                if (currentUserRole === "HRD") {
-                                    deleteButton = `
-                                        <button type="button" class="btn btn-danger btn-sm btn-delete" data-id="${assessmentId}" data-employee-id="${employeeId}">
-                                            Delete
-                                        </button>
-                                    `;
-                                }
+                                const labelFromServer = (first.badge && first.badge
+                                    .text) ? first.badge.text : null;
+
+                                const statusHtml = renderStatusChip(statusKey,
+                                    labelFromServer, index);
+
+                                // tombol delete hanya untuk HRD
+                                const deleteButton = (currentUserRole === "HRD") ?
+                                    `<button type="button" class="btn btn-danger btn-sm btn-delete"
+                                            data-id="${assessmentId}"
+                                            data-employee-id="${emp.id}">
+                                    Delete
+                                    </button>` :
+                                    "";
 
                                 const row = `
-                                    <tr>
-                                        <td class="text-center">${index++}</td>
-                                        <td class="text-center">${year}</td>
-                                        <td class="text-center">
-                                            <span class="badge ${badge.class}"
-                                            style="
-                                                display: inline-block;
-                                                padding: 0.75rem;
-                                                text-align: center;
-                                                font-size: 0.85rem;
-                                                font-weight: 600;
-                                                border-radius: 0.375rem;
-                                                white-space: nowrap;
-                                            ">
-                                            ${badge.text}
-                                        </span>
-                                        </td>
-                                        <td class="text-center">
-                                            <button class="btn btn-info btn-sm btn-idp-detail" data-modal-id="notes_${first.hav.hav.employee.id}" data-employee-id="${employeeId}">
-                                                Detail
-                                            </button>
-                                            ${deleteButton}
-                                        </td>
-                                    </tr>
+                                <tr>
+                                    <td class="text-center">${index++}</td>
+                                    <td class="text-center">${year}</td>
+                                    <td class="text-center">${statusHtml}</td>
+                                    <td class="text-center">
+                                    <button class="btn btn-info btn-sm btn-idp-detail"
+                                            data-modal-id="notes_${emp.id}"
+                                            data-employee-id="${emp.id}">
+                                        Detail
+                                    </button>
+                                    ${deleteButton}
+                                    </td>
+                                </tr>
                                 `;
                                 tbody.append(row);
                             });
-                        } else {
-                            tbody.append(`
-                                <tr>
-                                    <td colspan="3" class="text-center text-muted">No IDP found</td>
-                                </tr>
-                            `);
                         }
 
                         modalManager.openModal("detailAssessmentModal");
@@ -731,6 +964,81 @@
                     }
                 });
             });
+
+            // Helper: deteksi posisi Manager (termasuk Act Manager / Coordinator)
+            function isManagerPosition(pos) {
+                if (!pos) return false;
+                const p = String(pos).toLowerCase();
+                // Hindari GM, tapi anggap "Act Manager" & "Coordinator" sebagai manager
+                const isMgr = p === 'manager' || p.includes('act manager') || p.includes('coordinator');
+                const isGm = /\bgm\b/.test(p);
+                return isMgr && !isGm;
+            }
+
+            // Helper: mapping status angka → key tampilan (dengan aturan khusus manager)
+            function mapStatusForDisplay(raw, isMgr) {
+                console.log('Mapping status:', raw, 'isMgr:', isMgr);
+
+                switch (raw) {
+                    case 'revise':
+                        return 'revise';
+                    case 'draft':
+                        return 'draft';
+                    case 'waiting':
+                        return 'waiting';
+                    case 'checked':
+                        return 'checked';
+                    case 'checked':
+                        return isMgr ? 'checked' : 'approved';
+                    case 'approved':
+                        return 'approved';
+                    default:
+                        return 'unknown';
+                }
+            }
+
+            function overallStatusFrom(items, isMgr) {
+                if (!Array.isArray(items) || items.length === 0) return 'unknown';
+                const keys = items.map(it => mapStatusForDisplay(it?.status, isMgr));
+                console.log('Status keys:', keys, 'items:', items);
+
+                const priority = ['revise', 'draft', 'waiting', 'checked', 'approved', 'unknown'];
+                for (const s of priority)
+                    if (keys.includes(s)) return s;
+                return 'unknown';
+            }
+
+            // Status chip renderer (tetap sama seperti punyamu)
+            function renderStatusChip(statusKey, labelText, idx) {
+                const iconMap = {
+                    approved: 'fa-circle-check',
+                    checked: 'fa-hourglass-half',
+                    waiting: 'fa-hourglass-half',
+                    draft: 'fa-pen',
+                    revise: 'fa-rotate-left',
+                    not_created: 'fa-file-circle-xmark',
+                    no_approval_needed: 'fa-minus',
+                    unknown: 'fa-circle-question',
+                };
+                const defaults = {
+                    approved: 'Approved',
+                    checked: 'Checked',
+                    waiting: 'Waiting',
+                    draft: 'Need Submit',
+                    revise: 'Need Revise',
+                    not_created: 'Not Created',
+                    no_approval_needed: '-',
+                    unknown: 'Unknown',
+                };
+                const icon = iconMap[statusKey] || iconMap.unknown;
+                const label = labelText || defaults[statusKey] || defaults.unknown;
+                return `
+                    <span class="status-chip" data-status="${statusKey}" style="--idx:${idx||0}">
+                        <i class="fas ${icon}"></i>
+                        <span>${label}</span>
+                    </span>
+                `;
+            }
 
             // Function to initialize assessment chart
             function initAssessmentChart(modalId, employeeId) {

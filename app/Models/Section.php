@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Rtc;
 
 class Section extends Model
 {
@@ -14,18 +15,10 @@ class Section extends Model
     {
         return $this->belongsTo(Department::class);
     }
-
-    /**
-     * Section has one Supervisor (Employee)
-     */
     public function supervisor()
     {
         return $this->belongsTo(Employee::class, 'supervisor_id');
     }
-
-    /**
-     * Section has many SubSections
-     */
     public function subSections()
     {
         return $this->hasMany(SubSection::class);
@@ -42,5 +35,27 @@ class Section extends Model
     public function long()
     {
         return $this->belongsTo(Employee::class, 'long_term');
+    }
+
+    // RTC terbaru per-term (area = 'section')
+    public function rtcShortLatest()
+    {
+        return $this->hasOne(Rtc::class, 'area_id')
+            ->where('area', 'section')->where('term', 'short')
+            ->latestOfMany('created_at');
+    }
+
+    public function rtcMidLatest()
+    {
+        return $this->hasOne(Rtc::class, 'area_id')
+            ->where('area', 'section')->where('term', 'mid')
+            ->latestOfMany('created_at');
+    }
+
+    public function rtcLongLatest()
+    {
+        return $this->hasOne(Rtc::class, 'area_id')
+            ->where('area', 'section')->where('term', 'long')
+            ->latestOfMany('created_at');
     }
 }

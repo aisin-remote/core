@@ -167,115 +167,226 @@ class RtcController extends Controller
 
     public function summary(Request $request)
     {
-        $filter = strtolower($request->query('filter'));
-        $id = (int) $request->query('id');
-        $data = null;
+        $filter = strtolower($request->query('filter', 'department'));
+        $id     = (int) $request->query('id');
 
-        $departmentIds = [$id];
-        $managerIds = collect();
+        $main = [];
+        $managers = [];
+        $title = '-';
 
-        if ($filter === 'division') {
-            $data = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
-            $departments = Department::where('division_id', $data->id)->get();
-            $departmentIds = $departments->pluck('id');
-            $managerIds = $departments->pluck('manager_id')->filter()->unique();
-        } else {
-            $data = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
-            $managerIds = collect([$data->manager_id])->filter();
-        }
-
-        $sections = Section::whereIn('department_id', $departmentIds)->get();
-        $supervisorIds = $sections->pluck('supervisor_id')->filter()->unique();
-
-        $employeeIds = $managerIds->merge($supervisorIds)->unique();
-        $bawahans = Employee::whereIn('id', $employeeIds)->get();
-
-        // Generate color mapping
-        $colors = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5', 'color-6', 'color-7'];
-        $assignedColors = [];
-        $colorIndex = 0;
-
-        // Current main card
-        $field = match ($filter) {
-            'division' => 'gm',
-            'department' => 'manager',
-            default => null,
-        };
-
-        $main = [
-            'title' => $data->name ?? '-',
-            'person' => RtcHelper::formatPerson($data->{$field} ?? null),
-            'shortTerm' => RtcHelper::formatCandidate($data->short ?? null),
-            'midTerm' => RtcHelper::formatCandidate($data->mid ?? null),
-            'longTerm' => RtcHelper::formatCandidate($data->long ?? null),
+        // Palet warna panjang; tambahkan lagi jika perlu
+        $palette = [
+            'color-1',
+            'color-2',
+            'color-3',
+            'color-4',
+            'color-5',
+            'color-6',
+            'color-7',
+            'color-8',
+            'color-9',
+            'color-10',
+            'color-11',
+            'color-12',
+            'color-13',
+            'color-14'
         ];
 
-        $managers = [];
+        // Helper pilih warna deterministik (fallback jika suatu hari perlu)
+        $pickColor = fn(string $key) => $palette[crc32($key) % count($palette)];
 
-        foreach ($departmentIds as $departmentId) {
-            $department = Department::with(['manager', 'short', 'mid', 'long'])
-                ->find($departmentId);
+        switch ($filter) {
+            // ============================= DIVISION =============================
+            case 'division': {
+                    $div   = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
+                    $title = $div->name ?? 'Division';
 
-            if (!$department)
-                continue;
+                    // Warna root khusus
+                    $mainColor = $pickColor("division-root-{$div->id}");
 
-            if (!isset($assignedColors[$departmentId])) {
-                $assignedColors[$departmentId] = $colors[$colorIndex++ % count($colors)];
-            }
+                    RtcHelper::setAreaContext('Division', $div->id);
+                    $main = [
+                        'title'      => $div->name ?? '-',
+                        'person'     => RtcHelper::formatPerson($div->gm),
+                        'shortTerm'  => RtcHelper::formatCandidate($div->short, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate($div->mid,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate($div->long,  'long'),
+                        'colorClass' => $mainColor,
+                    ];
 
-            $managerPerson = RtcHelper::formatPerson($department->manager);
-            $isManagerSameAsMain = RtcHelper::isSamePerson($main['person'], $managerPerson);
+                    $depts = Department::with(['manager', 'short', 'mid', 'long'])
+                        ->where('division_id', $div->id)
+                        ->orderBy('name')
+                        ->get();
 
-            // Collect supervisors first
-            $supervisors = [];
-            $relatedSections = Section::where('department_id', $departmentId)
-                ->with(['supervisor', 'short', 'mid', 'long'])
-                ->get();
+                    // Daftar warna untuk dept = semua palet KECUALI warna root
+                    $deptPalette  = array_values(array_filter($palette, fn($c) => $c !== $mainColor));
+                    $deptIdx = 0;
 
-            foreach ($relatedSections as $section) {
-                if (!$section->supervisor)
-                    continue;
+                    foreach ($depts as $d) {
+                        // Setiap department dapat warna berbeda (berurutan)
+                        $deptColor = $deptPalette[$deptIdx % count($deptPalette)];
+                        $deptIdx++;
 
-                $supervisorPerson = RtcHelper::formatPerson($section->supervisor);
+                        RtcHelper::setAreaContext('department', $d->id);
 
-                // Skip if supervisor is same as main person or manager
-                if (
-                    RtcHelper::isSamePerson($main['person'], $supervisorPerson) ||
-                    RtcHelper::isSamePerson($managerPerson, $supervisorPerson)
-                ) {
-                    continue;
+                        $node = [
+                            'title'           => $d->name,
+                            'person'          => RtcHelper::formatPerson($d->manager),
+                            'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
+                            'colorClass'      => $deptColor,   // unik per dept
+                            'supervisors'     => [],
+                            'skipManagerNode' => false,
+                        ];
+
+                        $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                            ->where('department_id', $d->id)
+                            ->orderBy('name')
+                            ->get();
+
+                        foreach ($secs as $s) {
+                            RtcHelper::setAreaContext('section', $s->id);
+                            $node['supervisors'][] = [
+                                'title'      => $s->name,
+                                'person'     => RtcHelper::formatPerson($s->supervisor),
+                                'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
+                                'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
+                                'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                                'colorClass' => $deptColor,       // mewarisi warna dept
+                            ];
+                        }
+
+                        $managers[] = $node;
+                    }
+                    break;
                 }
 
-                $supervisors[] = [
-                    'title' => $section->name,
-                    'person' => $supervisorPerson,
-                    'shortTerm' => RtcHelper::formatCandidate($section->short),
-                    'midTerm' => RtcHelper::formatCandidate($section->mid),
-                    'longTerm' => RtcHelper::formatCandidate($section->long),
-                    'colorClass' => $assignedColors[$departmentId],
-                ];
-            }
+                // ============================ DEPARTMENT ============================
+            case 'department': {
+                    $d = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
+                    $title = $d->name ?? 'Department';
 
-            // Only add manager if it's different from main OR if it has supervisors
-            if (!$isManagerSameAsMain || count($supervisors) > 0) {
-                $managers[$departmentId] = [
-                    'title' => $department->name,
-                    'person' => $managerPerson,
-                    'shortTerm' => RtcHelper::formatCandidate($department->short),
-                    'midTerm' => RtcHelper::formatCandidate($department->mid),
-                    'longTerm' => RtcHelper::formatCandidate($department->long),
-                    'colorClass' => $assignedColors[$departmentId],
-                    'supervisors' => $supervisors,
-                    'skipManagerNode' => $isManagerSameAsMain, // Flag untuk frontend
-                ];
-            }
+                    $mainColor = $pickColor("department-root-{$d->id}");
+
+                    RtcHelper::setAreaContext('department', $d->id);
+                    $main = [
+                        'title'      => $d->name ?? '-',
+                        'person'     => RtcHelper::formatPerson($d->manager),
+                        'shortTerm'  => RtcHelper::formatCandidate($d->short, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate($d->mid,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate($d->long,  'long'),
+                        'colorClass' => $mainColor,
+                    ];
+
+                    // Root = manager; anak2 section mewarisi warna root
+                    $container = [
+                        'title'           => $d->name,
+                        'person'          => RtcHelper::formatPerson($d->manager),
+                        'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
+                        'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
+                        'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
+                        'colorClass'      => $mainColor,
+                        'supervisors'     => [],
+                        'skipManagerNode' => true, // tidak render node manager duplikat
+                    ];
+
+                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                        ->where('department_id', $d->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    foreach ($secs as $s) {
+                        RtcHelper::setAreaContext('section', $s->id);
+                        $container['supervisors'][] = [
+                            'title'      => $s->name,
+                            'person'     => RtcHelper::formatPerson($s->supervisor),
+                            'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
+                            'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
+                            'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                            'colorClass' => $mainColor, // ikut root
+                        ];
+                    }
+
+                    $managers[] = $container;
+                    break;
+                }
+
+                // ============================== SECTION =============================
+            case 'section': {
+                    $s = Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
+                    $title = $s->name ?? 'Section';
+
+                    $mainColor = $pickColor("section-root-{$s->id}");
+
+                    RtcHelper::setAreaContext('section', $s->id);
+                    $main = [
+                        'title'      => $s->name ?? '-',
+                        'person'     => RtcHelper::formatPerson($s->supervisor),
+                        'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                        'colorClass' => $mainColor,
+                    ];
+
+                    $container = [
+                        'title'           => $s->name,
+                        'person'          => RtcHelper::formatPerson($s->supervisor),
+                        'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
+                        'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
+                        'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                        'colorClass'      => $mainColor,
+                        'supervisors'     => [],
+                        'skipManagerNode' => true,
+                    ];
+
+                    $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                        ->where('section_id', $s->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    foreach ($subs as $sub) {
+                        RtcHelper::setAreaContext('sub_section', $sub->id);
+                        $container['supervisors'][] = [
+                            'title'      => $sub->name,
+                            'person'     => RtcHelper::formatPerson($sub->leader),
+                            'shortTerm'  => RtcHelper::formatCandidate($sub->short, 'short'),
+                            'midTerm'    => RtcHelper::formatCandidate($sub->mid,   'mid'),
+                            'longTerm'   => RtcHelper::formatCandidate($sub->long,  'long'),
+                            'colorClass' => $mainColor, // ikut root
+                        ];
+                    }
+
+                    $managers[] = $container;
+                    break;
+                }
+
+                // ============================ SUB SECTION ===========================
+            case 'sub_section': {
+                    $sub = SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
+                    $title = $sub->name ?? 'Sub Section';
+
+                    $mainColor = $pickColor("subsection-root-{$sub->id}");
+
+                    RtcHelper::setAreaContext('sub_section', $sub->id);
+                    $main = [
+                        'title'      => $sub->name ?? '-',
+                        'person'     => RtcHelper::formatPerson($sub->leader),
+                        'shortTerm'  => RtcHelper::formatCandidate($sub->short, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate($sub->mid,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate($sub->long,  'long'),
+                        'colorClass' => $mainColor,
+                    ];
+                    $managers = [];
+                    break;
+                }
+
+            default:
+                abort(404, 'Unsupported filter');
         }
 
-        return view('website.rtc.detail', [
-            'main' => $main,
-            'managers' => array_values($managers),
-            'title' => $data->name,
-        ]);
+        return view('website.rtc.detail', compact('main', 'managers', 'title'));
     }
 
     public function update(Request $request)

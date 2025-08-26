@@ -87,10 +87,10 @@
     }
 
     .status-chip[data-status="checked"] {
-        --bg: #eff6ff;
-        --fg: #1e40af;
-        --bd: #bfdbfe;
-        --dot: #3b82f6;
+        --bg: #fffbeb;
+        --fg: #92400e;
+        --bd: #fde68a;
+        --dot: #f59e0b;
     }
 
     .status-chip[data-status="waiting"] {
@@ -146,6 +146,13 @@
         .status-chip {
             max-width: 210px;
         }
+    }
+
+    .modal-header {
+        position: sticky;
+        top: 0;
+        background: #ffffff;
+        z-index: 1055;
     }
 </style>
 
@@ -288,7 +295,7 @@
                                                         // ikon per status
                                                         $statusIconMap = [
                                                             'approved' => 'fas fa-circle-check',
-                                                            'checked' => 'fas fa-check-double',
+                                                            'checked' => 'fas fa-hourglass-half',
                                                             'waiting' => 'fas fa-hourglass-half',
                                                             'draft' => 'fas fa-file-pen',
                                                             'revise' => 'fas fa-rotate-left',
@@ -826,14 +833,94 @@
 
             <!-- Modal -->
             @foreach ($filteredEmployees as $assessment)
+                @php
+                    $assmnt = $assessment->assessment;
+                @endphp
                 <div class="modal fade" id="notes_{{ $assessment->employee->id }}" tabindex="-1" aria-modal="true"
                     role="dialog">
                     <div class="modal-dialog modal-dialog-centered" style="max-width: 1200px;">
                         <div class="modal-content">
-                            <div class="modal-header">
-                                <h2 class="fw-bold">Summary {{ $assessment->employee->name }}</h2>
-                                <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                    aria-label="Close"></button>
+                            <div class="modal-header align-items-start">
+                                <div class="d-flex flex-column flex-grow-1">
+                                    <h5 class="modal-title mb-2" style="font-size: 2rem; font-weight: bold;">
+                                        Summary {{ $assmnt?->employee->name }}</h5>
+
+                                    <div class="d-flex flex-wrap gap-10" style="font-size: 1.3rem;">
+                                        <div class="d-flex flex-column align-items-start">
+                                            <span style="font-size: 1rem;">Assessment Purpose</span>
+                                            <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                                {{ $assmnt->purpose ?? 'N/A' }}
+                                            </span>
+                                        </div>
+
+                                        <div class="d-flex flex-column align-items-start">
+                                            <span style="font-size: 1rem;">Assessor</span>
+                                            <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                                {{ $assmnt->lembaga ?? 'N/A' }}
+                                            </span>
+                                        </div>
+                                        <div class="d-flex flex-column align-items-start">
+                                            <span style="font-size: 1rem;">Target Position</span>
+                                            <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                                {{ $assmnt->target_position ?? 'N/A' }}
+                                            </span>
+                                        </div>
+
+                                        <div class="d-flex flex-column align-items-start">
+                                            <span style="font-size: 1rem;">Assessment Date</span>
+                                            <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                                {{ $assmnt?->created_at ? $assmnt?->created_at->timezone('Asia/Jakarta')->format('d M Y') : '-' }}
+                                            </span>
+                                        </div>
+
+                                        @php
+                                            $group = $assessment->details
+                                                ->filter(fn($item) => $item->idp->isNotEmpty())
+                                                ->values();
+
+                                            $idps = $group->flatMap->idp;
+
+                                            $firstIdpForHeader = $idps->sortByDesc('updated_at')->first();
+
+                                            $creatorName = $firstIdpForHeader->created_by_name ?? null;
+                                            if (!$creatorName && isset($employee)) {
+                                                $assignLevel = (int) ($employee->getCreateAuth() ?? 0);
+                                                $fallbackCreator = $employee
+                                                    ->getSuperiorsByLevel($assignLevel)
+                                                    ->first();
+                                                $creatorName = $fallbackCreator->name ?? '-';
+                                            }
+                                            if (!$creatorName) {
+                                                $creatorName = '-';
+                                            }
+
+                                            $idpCreatedAtText = $firstIdpForHeader?->updated_at
+                                                ? \Illuminate\Support\Carbon::parse($firstIdpForHeader->updated_at)
+                                                    ->timezone('Asia/Jakarta')
+                                                    ->format('d M Y')
+                                                : '-';
+                                        @endphp
+
+
+                                        <div class="d-flex flex-column align-items-start">
+                                            <span style="font-size: 1rem;">IDP Created By</span>
+                                            <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                                {{ $creatorName ?? '-' }}
+                                            </span>
+                                        </div>
+
+                                        <div class="d-flex flex-column align-items-start">
+                                            <span style="font-size: 1rem;">IDP Created At</span>
+                                            <span style="font-size: 1.4rem; font-weight: bold; text-align: center;">
+                                                {{ $idpCreatedAtText ?? '-' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-start gap-3 ms-3">
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                        aria-label="Close"></button>
+                                </div>
                             </div>
 
                             <div class="modal-body scroll-y mx-2">
@@ -922,6 +1009,12 @@
                                         }
                                     @endphp
 
+                                    <h4 class="text-center">Assessment Chart</h4>
+                                    <div style="width: 90%; margin: 0 auto; height: 400px;">
+                                        <canvas data-chart="assessment"
+                                            data-employee-id="{{ $assessment->employee->id }}"></canvas>
+                                    </div>
+
                                     @if (count($strengthRows) || count($weaknessRows))
                                         <div class="section-title"><i class="bi bi-lightning-charge-fill"></i>Strength
                                             & Weakness</div>
@@ -987,25 +1080,62 @@
                                                 <tr>
                                                     <th>ALC</th>
                                                     <th>Category</th>
-                                                    <th>Program</th>
-                                                    <th>Target</th>
+                                                    <th>Development Program</th>
+                                                    <th>Development Target</th>
                                                     <th>Due Date</th>
+                                                    <th>Created By</th>
+                                                    <th>Last Update</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                @forelse ($assessment->details->filter(fn($item) => $item->idp->isNotEmpty()) as $idp)
+                                                @php
+                                                    $rows = $assessment->details->filter(
+                                                        fn($detail) => $detail->idp->isNotEmpty(),
+                                                    );
+                                                @endphp
+
+                                                @forelse ($rows as $detail)
+                                                    @php
+                                                        // IDP terbaru untuk baris ini
+                                                        $latest = $detail->idp->sortByDesc('updated_at')->first();
+
+                                                        // Created By (fallback ke atasan jika diperlukan)
+                                                        $creatorName = $latest->created_by_name ?? null;
+                                                        if (!$creatorName && isset($employee)) {
+                                                            $assignLevel = (int) ($employee->getCreateAuth() ?? 0);
+                                                            $fallbackCreator = $employee
+                                                                ->getSuperiorsByLevel($assignLevel)
+                                                                ->first();
+                                                            $creatorName = $fallbackCreator->name ?? null;
+                                                        }
+                                                        $creatorName = $creatorName ?: '-';
+
+                                                        // Tanggal
+                                                        $dueText = $latest?->date
+                                                            ? \Illuminate\Support\Carbon::parse($latest->date)
+                                                                ->timezone('Asia/Jakarta')
+                                                                ->format('d-m-Y')
+                                                            : '-';
+
+                                                        $updatedText = $latest?->updated_at
+                                                            ? \Illuminate\Support\Carbon::parse($latest->updated_at)
+                                                                ->timezone('Asia/Jakarta')
+                                                                ->format('d-m-Y')
+                                                            : '-';
+                                                    @endphp
+
                                                     <tr>
-                                                        <td>{{ $idp->alc->name ?? '-' }}</td>
-                                                        <td>{{ $idp->idp->first()?->category }}</td>
-                                                        <td>{{ $idp->idp->first()?->development_program }}</td>
-                                                        <td>{{ $idp->idp->first()?->development_target }}</td>
-                                                        <td>
-                                                            {{ optional($idp->idp->first())->date ? \Carbon\Carbon::parse($idp->idp->first()->date)->format('d-m-Y') : '-' }}
-                                                        </td>
+                                                        <td>{{ $detail->alc->name ?? '-' }}</td>
+                                                        <td>{{ $latest->category ?? '-' }}</td>
+                                                        <td>{{ $latest->development_program ?? '-' }}</td>
+                                                        <td>{{ $latest->development_target ?? '-' }}</td>
+                                                        <td>{{ $dueText }}</td>
+                                                        <td>{{ $creatorName }}</td>
+                                                        <td>{{ $updatedText }}</td>
                                                     </tr>
                                                 @empty
                                                     <tr>
-                                                        <td colspan="5" class="text-center text-muted">No data
+                                                        <td colspan="7" class="text-center text-muted">No data
                                                             available</td>
                                                     </tr>
                                                 @endforelse
@@ -1076,40 +1206,51 @@
     </div>
 @endsection
 
+@php
+    // Build map: employee_id => [ { alc_id, alc_name, score }, ... ]
+    $chartData = [];
+
+    foreach ($processedData as $hav) {
+        $eid = optional($hav->employee)->id;
+        if (!$eid) {
+            continue;
+        }
+
+        // Kalau 1 karyawan bisa muncul beberapa HAV, ambil satu saja yang pertama berisi detail
+        if (!empty($chartData[$eid]) && count($chartData[$eid])) {
+            continue;
+        }
+
+        $rows = [];
+        foreach ($hav->details as $d) {
+            $alcId = $d->alc_id;
+            $alcName = $d->alc->title ?? ($alcs[$alcId] ?? 'ALC ' . $alcId); // fallback
+            // score bisa '-', pastikan numerik
+            $score = is_numeric($d->score) ? (int) $d->score : 0;
+
+            $rows[] = [
+                'alc_id' => $alcId,
+                'alc_name' => $alcName,
+                'score' => $score,
+            ];
+        }
+
+        // urutkan biar konsisten
+        usort($rows, fn($a, $b) => $a['alc_id'] <=> $b['alc_id']);
+
+        $chartData[$eid] = $rows;
+    }
+@endphp
+
+<script>
+    window.IDP_CHART_DATA = @json($chartData);
+</script>
+
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
     <script>
-        // document.addEventListener("DOMContentLoaded", function() {
-        //     document.querySelectorAll('[data-bs-toggle="modal"]').forEach(function(button) {
-        //         button.addEventListener('click', function() {
-        //             var targetModalId = this.getAttribute('data-bs-target');
-        //             var title = this.getAttribute('data-title');
-        //             var alc = this.getAttribute('data-alc');
-
-        //             const modalAlcInput = document.querySelector(targetModalId +
-        //                 ' input[name=\"alc\"]');
-        //             if (modalAlcInput) {
-        //                 modalAlcInput.value = alc;
-        //             }
-
-        //             const modalTitle = document.querySelector(targetModalId + ' .modal-header h2');
-        //             if (modalAlcInput) {
-        //                 modalAlcInput.value = alc;
-        //             }
-        //             if (title && modalTitle) {
-        //                 modalTitle.textContent = title;
-        //             }
-
-        //             const alcInput = document.querySelector(
-        //                 `${targetModalId} input[name="alc_id"]`);
-        //             if (alcInput) {
-        //                 alcInput.value = alc;
-        //             }
-        //         });
-        //     });
-        // });
         document.addEventListener('DOMContentLoaded', function() {
             const modals = document.querySelectorAll('.modal');
 
@@ -1396,28 +1537,6 @@
                 });
             });
         });
-        // document.addEventListener("DOMContentLoaded", function() {
-        //     document.querySelectorAll("form").forEach(form => {
-        //         form.addEventListener("submit", function(e) {
-        //             let isValid = true;
-
-        //             // Cek apakah kategori dan program dipilih
-        //             const category = form.querySelector('select[name="category[]"]').value;
-        //             const program = form.querySelector('select[name="development_program[]"]')
-        //                 .value;
-        //             const dueDate = form.querySelector('input[name="due_date"]').value;
-
-        //             if (!category || !program || !dueDate) {
-        //                 isValid = false;
-        //                 alert("Semua bidang wajib diisi!");
-        //             }
-
-        //             if (!isValid) {
-        //                 e.preventDefault(); // Hentikan submit jika ada error
-        //             }
-        //         });
-        //     });
-        // });
 
         document.addEventListener("DOMContentLoaded", function() {
             // Fungsi pencarian
@@ -1435,24 +1554,6 @@
                 }
             });
 
-            // document.addEventListener("DOMContentLoaded", function() {
-            //     document.querySelectorAll(".score").forEach(function(badge) {
-            //         badge.addEventListener("click", function() {
-            //             var title = this.getAttribute("data-title");
-            //             var assessmentId = this.getAttribute("data-assessment");
-
-            //             if (assessmentId) {
-            //                 var modalTitle = document.querySelector("#modal-title-" +
-            //                     assessmentId);
-            //                 if (modalTitle) {
-            //                     modalTitle.textContent = title;
-            //                 }
-            //             }
-            //         });
-            //     });
-            // });
-
-
             document.addEventListener("DOMContentLoaded", function() {
                 document.querySelectorAll(".open-modal").forEach(button => {
                     button.addEventListener("click", function() {
@@ -1463,8 +1564,6 @@
                     });
                 });
             });
-
-
 
             // SweetAlert untuk tombol delete
             document.querySelectorAll('.delete-btn').forEach(button => {
@@ -1579,56 +1678,100 @@
                 }
             });
         }
+
         document.getElementById('searchInputEmployee').addEventListener('keydown', function(e) {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 document.getElementById('searchButton').click();
             }
         });
+    </script>
+    <script>
+        (() => {
+            function renderNotesChart(modalEl, employeeId) {
+                const canvas = modalEl.querySelector(
+                    `canvas[data-chart="assessment"][data-employee-id="${employeeId}"]`
+                );
+                if (!canvas) return;
 
-        // function approveAction() {
-        //     Swal.fire({
-        //         title: 'Setujui Data?',
-        //         icon: 'success',
-        //         text: 'Data ini akan disetujui dan diteruskan ke tahap selanjutnya.',
-        //         showCancelButton: true,
-        //         confirmButtonText: 'Ya, Setujui',
-        //         cancelButtonText: 'Batal'
-        //     }).then((result) => {
-        //         if (result.isConfirmed) {
-        //             Swal.fire('Disetujui!', 'Data berhasil disetujui.', 'success');
-        //             // TODO: Kirim ke server via AJAX atau redirect di sini
-        //         }
-        //     });
-        // }
+                const rows = (window.IDP_CHART_DATA && window.IDP_CHART_DATA[employeeId]) || [];
+                if (!rows.length) {
+                    console.warn('No chart data for employee', employeeId);
+                    return;
+                }
 
-        // function rejectAction() {
-        //     Swal.fire({
-        //         title: 'Revisi Data?',
-        //         input: 'textarea',
-        //         inputLabel: 'Alasan Revisi',
-        //         inputPlaceholder: 'Tuliskan catatan atau alasan revisi di sini...',
-        //         inputAttributes: {
-        //             'aria-label': 'Catatan Revisi'
-        //         },
-        //         showCancelButton: true,
-        //         confirmButtonText: 'Revisi',
-        //         cancelButtonText: 'Batal',
-        //         inputValidator: (value) => {
-        //             if (!value) {
-        //                 return 'Catatan wajib diisi untuk Revisi!';
-        //             }
-        //         }
-        //     }).then((result) => {
-        //         if (result.isConfirmed) {
-        //             Swal.fire(
-        //                 'Revisi!',
-        //                 'Note: ' + result.value,
-        //                 'error'
-        //             );
-        //             // TODO: Kirim data penolakan dan catatan via AJAX atau simpan ke server
-        //         }
-        //     });
-        // }
+                const labels = rows.map(r => r.alc_name);
+                const scores = rows.map(r => Number(r.score) || 0);
+
+                // destroy chart lama jika ada
+                if (canvas.chart) {
+                    try {
+                        canvas.chart.destroy();
+                    } catch (_) {}
+                }
+
+                const ctx = canvas.getContext('2d');
+                canvas.chart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Assessment Scores',
+                            data: scores,
+                            backgroundColor: scores.map(s => s < 3 ? 'rgba(255,99,132,0.8)' :
+                                'rgba(75,192,192,0.8)'),
+                            borderColor: scores.map(s => s < 3 ? 'rgba(255,99,132,1)' :
+                                'rgba(75,192,192,1)'),
+                            borderWidth: 1,
+                            borderRadius: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `Score: ${ctx.raw}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                suggestedMax: 5,
+                                ticks: {
+                                    stepSize: 1
+                                }
+                            }
+                        },
+                        animation: {
+                            duration: 800,
+                            easing: 'easeOutQuart'
+                        }
+                    }
+                });
+            }
+
+            // render saat modal notes dibuka
+            $(document).on('shown.bs.modal', 'div.modal[id^="notes_"]', function() {
+                const employeeId = this.id.replace('notes_', '');
+                renderNotesChart(this, employeeId);
+            });
+
+            // bersihkan saat modal ditutup
+            $(document).on('hidden.bs.modal', 'div.modal[id^="notes_"]', function() {
+                const canvas = this.querySelector('canvas[data-chart="assessment"]');
+                if (canvas?.chart) {
+                    try {
+                        canvas.chart.destroy();
+                    } catch (_) {}
+                    canvas.chart = null;
+                }
+            });
+        })();
     </script>
 @endpush

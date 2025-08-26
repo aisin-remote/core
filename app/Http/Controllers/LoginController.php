@@ -22,7 +22,7 @@ class LoginController extends Controller
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-            return redirect()->route('dashboard.index');
+            return redirect()->route('todolist.index');
         }
 
         return redirect()->back()->with('error', 'Email or password do not match our records!');
@@ -39,5 +39,4 @@ class LoginController extends Controller
         // Redirect ke halaman login sesuai prefix route
         return redirect()->route('login')->with('success', 'You have been logged out.');
     }
-
 }
