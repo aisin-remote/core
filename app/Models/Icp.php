@@ -29,4 +29,8 @@ class Icp extends Model
         return $this->hasOne(Icp::class)->latestOfMany();
     }
 
+    public function steps()
+    {
+        return $this->hasMany(IcpApprovalStep::class, 'icp_id');
+    }
 }

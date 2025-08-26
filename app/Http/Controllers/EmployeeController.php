@@ -309,7 +309,7 @@ class EmployeeController extends Controller
                 'phone_number'     => 'nullable|string|max:14',
                 'aisin_entry_date' => 'required|date',
                 'company_group'    => 'nullable|string',
-                'email'            => 'nullable|email',
+                'email'            => 'required|email',
                 'position'         => 'required|string',
                 'grade'            => 'nullable|string',
                 'photo'            => 'nullable|image|mimes:jpeg,png,jpg|max:2048',

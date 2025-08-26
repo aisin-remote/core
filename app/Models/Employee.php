@@ -42,7 +42,7 @@ class Employee extends Model
 
     public function latestIcp()
     {
-        return $this->hasOne(Icp::class)->latestOfMany();
+        return $this->hasOne(Icp::class, 'employee_id')->latestOfMany();
     }
 
 

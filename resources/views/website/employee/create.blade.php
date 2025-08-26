@@ -114,8 +114,8 @@
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
-                                <input type="text" name="email" class="form-control"
-                                    value="{{ old('email') }}" placeholder="employe@example.com">
+                                <input type="text" name="email" class="form-control" value="{{ old('email') }}"
+                                    placeholder="employe@example.com">
                                 @error('email')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -147,11 +147,12 @@
                                         <label class="form-label">Position</label>
                                     </label>
                                     <select name="position" aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Position..." class="form-select form-select-lg fw-semibold"
-                                        required>
+                                        data-placeholder="Select Position..."
+                                        class="form-select form-select-lg fw-semibold" required>
                                         <option value="">Select Position</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager
+                                        </option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Act GM">Act General Manager
                                         </option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Manager">Manager</option>

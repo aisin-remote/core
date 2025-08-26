@@ -470,48 +470,78 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        $filter = $request->filter;
-        $division_id = $request->division_id;
+        $filter      = $request->filter;
+        $division_id = (int) $request->division_id;
 
-        $user = auth()->user();
+        $user     = auth()->user();
         $employee = $user->employee;
+
+        $mapLatest = function ($items, string $area) {
+            return $items->map(function ($item) use ($area) {
+                $item->loadMissing([
+                    'rtcShortLatest.employee:id,name,grade,birthday_date',
+                    'rtcMidLatest.employee:id,name,grade,birthday_date',
+                    'rtcLongLatest.employee:id,name,grade,birthday_date',
+                ]);
+
+                $item->setRelation('short', optional($item->rtcShortLatest)->employee);
+                $item->setRelation('mid',   optional($item->rtcMidLatest)->employee);
+                $item->setRelation('long',  optional($item->rtcLongLatest)->employee);
+
+                return $item;
+            });
+        };
 
         if ($user->role === 'HRD' || $employee->position == 'Direktur') {
             switch ($filter) {
                 case 'department':
-                    $data = Department::with('short', 'mid', 'long')->where('division_id', $division_id)->get();
+                    $data = Department::where('division_id', $division_id)
+                        ->orderBy('name')
+                        ->get();
+                    $data = $mapLatest($data, 'department');
                     break;
 
                 case 'section':
-                    $data = Section::with('short', 'mid', 'long')->whereHas('department', function ($q) use ($division_id) {
+                    $data = Section::whereHas('department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
-                    })->get();
+                    })
+                        ->orderBy('name')
+                        ->get();
+                    $data = $mapLatest($data, 'section');
                     break;
 
                 case 'sub_section':
-                    $data = SubSection::with('short', 'mid', 'long')->whereHas('section.department', function ($q) use ($division_id) {
+                    $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
                         $q->where('division_id', $division_id);
-                    })->get();
+                    })
+                        ->orderBy('name')
+                        ->get();
+                    $data = $mapLatest($data, 'sub_section');
                     break;
 
                 default:
-                    $data = collect(); // kosong
-                    break;
+                    $data = collect();
             }
         } else {
             switch ($filter) {
                 case 'section':
-                    $data = Section::with('short', 'mid', 'long')->where('department_id', $division_id)->get();
+                    $data = Section::where('department_id', $division_id)
+                        ->orderBy('name')
+                        ->get();
+                    $data = $mapLatest($data, 'section');
                     break;
+
                 case 'sub_section':
-                    $data = SubSection::with('section', 'short', 'mid', 'long')->whereHas('section', function ($q) use ($division_id) {
+                    $data = SubSection::whereHas('section', function ($q) use ($division_id) {
                         $q->where('department_id', $division_id);
-                    })->get();
+                    })
+                        ->orderBy('name')
+                        ->get();
+                    $data = $mapLatest($data, 'sub_section');
                     break;
 
                 default:
-                    $data = collect(); // kosong
-                    break;
+                    $data = collect();
             }
         }
 
