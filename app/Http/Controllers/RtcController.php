@@ -58,60 +58,23 @@ class RtcController extends Controller
 
     public function list(Request $request)
     {
-        $user = auth()->user()->load('employee');
-        $divisionId = $request->query('id');
+        $user       = auth()->user()->load('employee');
+        $divisionId = (int) $request->query('id');
 
-        // Ambil semua employee dengan relasi yang diperlukan
-        $employees = Employee::with('leadingDepartment', 'leadingSection', 'leadingSubSection')
-            ->select('id', 'name', 'position')
-            ->get();
+        $employees = Employee::select('id', 'name', 'position')->get();
 
-        // Ambil data RTC dengan relasi yang sesuai
-        $rtcs = Rtc::with([
-            'employee',
-            'department',
-            'section',
-            'subsection'
-        ])->get();
-
-        // Tambahkan data area_object berdasarkan tipe area
-        $rtcs->each(function ($rtc) {
-            $rtc->area_object = null;
-            if ($rtc->area === 'department' && $rtc->department) {
-                $rtc->area_object = $rtc->department;
-            } elseif ($rtc->area === 'section' && $rtc->section) {
-                $rtc->area_object = $rtc->section;
-            } elseif ($rtc->area === 'sub_section' && $rtc->subsection) {
-                $rtc->area_object = $rtc->subsection;
-            }
-        });
-
-        // Jika request AJAX untuk filter
-        if ($request->ajax()) {
-            $filter = $request->filter;
-            $filteredRtc = $rtcs->filter(function ($rtc) use ($filter) {
-                return $rtc->area === $filter;
-            });
-
-            return view('website.rtc.partials.table', [
-                'rtcs' => $filteredRtc,
-                'employees' => $employees
-            ]);
-        }
-
-        // Tentukan filter default berdasarkan role user
-        $defaultFilter = (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Direktur')
+        $defaultFilter = ($user->role == 'HRD' || $user->employee->position == 'Direktur')
             ? 'department'
             : 'section';
 
         return view('website.rtc.list', [
-            'employees' => $employees,
-            'divisionId' => $divisionId,
-            'user' => $user,
-            'rtcs' => $rtcs->filter(fn($rtc) => $rtc->area === $defaultFilter),
-            'defaultFilter' => $defaultFilter
+            'employees'     => $employees,
+            'divisionId'    => $divisionId,
+            'user'          => $user,
+            'defaultFilter' => $defaultFilter,
         ]);
     }
+
 
     public function detail(Request $request)
     {
@@ -424,7 +387,6 @@ class RtcController extends Controller
                 'status' => 'success',
                 'message' => 'Plan updated successfully',
             ]);
-
         } catch (\Throwable $th) {
             return response()->json([
                 'status' => 'error',
