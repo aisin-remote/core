@@ -13,11 +13,14 @@ use App\Models\SubSection;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\GradeConversion;
+use App\Models\IcpApprovalStep;
+use App\Helpers\ApprovalHelper;
 use App\Models\MatrixCompetency;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Models\PerformanceAppraisalHistory;
+use App\Services\IcpApproval;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -135,7 +138,7 @@ class IcpController extends Controller
                 $subordinatesQuery = $this->getSubordinatesFromStructure($employee);
 
                 if ($subordinatesQuery instanceof \Illuminate\Database\Eloquent\Builder) {
-                    $icps = Icp::with(['employee:id,name,npk,company_name,position'])
+                    $icps = Icp::with(['employee:id,name,npk,company_name,position,grade'])
                         ->whereHas('employee', function ($q) use ($subordinatesQuery, $search, $filter, $employee, $company) {
                             $q->whereIn('id', $subordinatesQuery->select('id'));
 
@@ -181,7 +184,7 @@ class IcpController extends Controller
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = \Illuminate\Support\Str::contains($rawPosition, 'Act ')
+        $currentPosition = Str::contains($rawPosition, 'Act ')
             ? trim(str_replace('Act', '', $rawPosition))
             : $rawPosition;
 
@@ -208,44 +211,81 @@ class IcpController extends Controller
 
     public function assign(Request $request, $company = null)
     {
-        $title = 'Assign HAV';
-        $user = auth()->user();
-        $employee = $user->employee;
-        $filter = $request->input('filter', 'all');
-        $search = $request->input('search');
+        $title   = 'ICP Assign';
+        $user    = auth()->user();
+        $emp     = $user->employee;
 
-        // Posisi yang terlihat
+        $filter  = $request->input('filter', 'all');
+        $search  = $request->input('search');
+
+        // tab posisi yang terlihat (seperti sebelumnya)
         $allPositions = ['Direktur', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
-        $rawPosition = $employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ') ? trim(str_replace('Act', '', $rawPosition)) : $rawPosition;
-        $positionIndex = array_search($currentPosition, $allPositions);
-        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
+        $rawPosition  = $emp->position ?? 'Operator';
+        $currentPos   = Str::startsWith($rawPosition, 'Act ') ? trim(substr($rawPosition, 4)) : $rawPosition;
+        $posIdx       = array_search($currentPos, $allPositions);
+        $visiblePositions = $posIdx !== false ? array_slice($allPositions, $posIdx) : $allPositions;
 
-        // Ambil subordinate berdasarkan level otorisasi
-        $approvallevel = $employee->getCreateAuth();
-        $subordinateIds = $employee->getSubordinatesByLevel($approvallevel)->pluck('id')->toArray();
+        // bawahan yg boleh dibuat
+        $createLevel     = $emp->getCreateAuth();
+        $subordinateIds  = $emp->getSubordinatesByLevel($createLevel)->pluck('id');
 
-        // Ambil semua subordinate (filtered)
-        $icps = Employee::whereIn('id', $subordinateIds)
-            ->where('company_name', $employee->company_name)
+        $employees = Employee::with([
+            'departments:id,name',
+            'latestIcp.steps.actor',    // ambil steps + siapa check/approve
+        ])
+            ->whereIn('id', $subordinateIds)
+            ->when($company ?: $emp->company_name, fn($q, $c) => $q->where('company_name', $c))
             ->when($filter && $filter !== 'all', function ($q) use ($filter) {
-                $q->where(function ($sub) use ($filter) {
-                    $sub->where('position', $filter)
-                        ->orWhere('position', 'like', "Act %{$filter}");
-                });
+                $q->where(fn($x) => $x->where('position', $filter)->orWhere('position', 'like', "Act %{$filter}"));
             })
             ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
-            ->with([
-                'icp' => function ($q) {
-                    $q->orderByDesc('created_at')->with('details');
-                },
-            ])
+            ->orderBy('name')
             ->get();
 
+        // siapkan baris
+        $rows = $employees->map(function ($e) {
+            $icp   = $e->latestIcp; // bisa null
+            $steps = $icp?->steps?->sortBy('step_order') ?? collect();
 
+            // garis status selesai
+            $done = $steps->where('status', 'done')
+                ->map(fn($s) => "✓ {$s->label}" . ($s->actor ? " ({$s->actor->name}, " . $s->acted_at?->format('d/m/Y') . ")" : ""))
+                ->values()->all();
 
-        return view('website.icp.assign', compact('title', 'icps', 'filter', 'company', 'search', 'visiblePositions'));
+            // antrian berikutnya
+            $next = $steps->where('status', 'pending')->sortBy('step_order')->first();
+            $waiting = $next ? "⏳ Waiting: {$next->label}" : null;
+
+            // gunakan waktu approve terakhir untuk expiry (bukan created_at)
+            $lastApprovedStep = $steps->where('type', 'approve')->where('status', 'done')
+                ->sortByDesc('acted_at')->first();
+            $approvedAt = $lastApprovedStep?->acted_at;
+            $statusCode = $icp?->status ?? null;
+            $expired    = ($statusCode === 3 && $approvedAt)
+                ? \Carbon\Carbon::parse($approvedAt)->addYear()->isPast()
+                : false;
+
+            $badgeMap = [
+                null => ['No ICP', 'badge-light'],
+                0    => ['Revise', 'badge-light-danger'],
+                1    => ['Submitted', 'badge-light-primary'],
+                2    => ['Checked', 'badge-light-warning'],
+                3    => [$expired ? 'Approved (Expired)' : 'Approved', $expired ? 'badge-light-dark' : 'badge-light-success'],
+            ];
+            [$label, $badge] = $badgeMap[$statusCode] ?? ['-', 'badge-light'];
+
+            $actions = [
+                'add'    => (!$icp) || $expired,
+                'revise' => ($statusCode === 0 && $icp),
+                'export' => (bool) $icp,
+            ];
+
+            return compact('e', 'icp', 'done', 'waiting', 'label', 'badge', 'actions');
+        });
+
+        return view('website.icp.assign', compact('title', 'rows', 'filter', 'company', 'search', 'visiblePositions'));
     }
+
     public function create($employeeId)
     {
         $title = 'Add icp';
@@ -297,6 +337,7 @@ class IcpController extends Controller
                 'date' => $request->date,
                 'status' => '1',
             ]);
+            $this->seedStepsForIcp($icp);
 
             // Loop semua detail dan simpan satu per satu
             foreach ($request->stages as $stage) {
@@ -492,99 +533,111 @@ class IcpController extends Controller
 
         return response()->download($path)->deleteFileAfterSend(true);
     }
+
+    /* =================== APPROVAL LIST =================== */
     public function approval()
     {
-        $user = auth()->user();
-        $employee = $user->employee;
+        $me   = auth()->user()->employee;
+        $role = ApprovalHelper::roleKeyFor($me);
 
-        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-        $checkLevel = $employee->getFirstApproval();
-        $approveLevel = $employee->getFinalApproval();
+        $rolesToMatch = [$role];
+        // toleransi data lama
+        if ($role === 'director') $rolesToMatch[] = 'direktur';
+        if ($role === 'president') $rolesToMatch[] = 'presiden';
+        if ($role === 'gm') $rolesToMatch[] = 'general manager';
 
-
-        $normalized = $employee->getNormalizedPosition();
-
-        if ($normalized === 'vpd') {
-            // Jika VPD, filter GM untuk check dan Manager untuk approve
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
-        } else {
-            // Default (tidak filter posisi bawahannya)
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
-        }
-
-        $checkIdps = Icp::with('employee')
-            ->where('status', 1)
-            ->whereHas('employee', function ($q) use ($subCheck) {
-                $q->whereIn('employee_id', $subCheck);
+        $steps = IcpApprovalStep::with(['icp.employee', 'icp.steps'])
+            ->whereIn('role', $rolesToMatch)
+            ->where('status', 'pending')
+            ->orderBy('step_order')
+            ->get()
+            ->filter(function ($s) {
+                return $s->icp->steps->every(function ($x) use ($s) {
+                    return $x->step_order >= $s->step_order || $x->status === 'done';
+                });
             })
-            ->get();
+            ->values();
 
-        $checkIdpIds = $checkIdps->pluck('id')->toArray();
-
-        $approveIdps = Icp::with('employee')
-            ->where('status', 2)
-            ->whereHas('employee', function ($q) use ($subApprove) {
-                $q->whereIn('employee_id', $subApprove);
-            })
-            ->whereNotIn('id', $checkIdpIds)  // ← filter agar tidak muncul dua kali
-            ->get();
-
-        $idps = $checkIdps->merge($approveIdps);
-
-
-        return view('website.approval.icp.index', compact('idps'));
+        return view('website.approval.icp.index', ['steps' => $steps, 'title' => 'Approval ICP']);
     }
-    public function approve($id)
+
+    public function approve($icpId)
     {
-        $idp = Icp::findOrFail($id);
+        $me    = auth()->user()->employee;
+        $isHRD = auth()->user()->role === 'HRD';
+        $role  = ApprovalHelper::roleKeyFor($me);
 
-        if ($idp->status == 1) {
-            $idp->status = 2;
-            $idp->save();
+        $icp = Icp::with('steps')->findOrFail($icpId);
 
-            return response()->json([
-                'message' => 'ICP has been approved!'
-            ]);
+        // Ambil step pending saat ini (next in turn)
+        $pendingSorted = $icp->steps->where('status', 'pending')->sortBy('step_order');
+
+        $step = $isHRD
+            ? $pendingSorted->first()                             // HRD boleh eksekusi step berikutnya apa pun rolenya
+            : $pendingSorted->firstWhere('role', $role);          // Non-HRD hanya step utk rolenya
+
+        if (!$step) {
+            return response()->json(['message' => 'No actionable step for your role.'], 400);
         }
 
-        if ($idp->status == 2) {
-            $idp->status = 3;
-            $idp->save();
-
-            return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
+        // Pastikan semua step sebelumnya sudah 'done'
+        foreach ($icp->steps as $s) {
+            if ($s->step_order < $step->step_order && $s->status !== 'done') {
+                return response()->json(['message' => 'Previous steps are not completed yet.'], 400);
+            }
         }
 
-        return response()->json([
-            'message' => 'Something went wrong!'
-        ], 400);
+        DB::transaction(function () use ($icp, $step, $me) {
+            $step->update([
+                'status'   => 'done',
+                'actor_id' => $me->id,
+                'acted_at' => now(),
+            ]);
+
+            // Hitung status ringkas ICP
+            $remainingChecks   = $icp->steps->where('status', 'pending')->where('type', 'check')->count();
+            $hasApprovePending = $icp->steps->where('status', 'pending')->where('type', 'approve')->count() > 0;
+
+            if ($remainingChecks > 0) {
+                $icp->status = 1; // Submitted / masih proses cek
+            } elseif ($hasApprovePending) {
+                $icp->status = 2; // Semua check selesai → menunggu approve
+            } else {
+                $icp->status = 3; // Approve terakhir selesai
+            }
+            $icp->save();
+        });
+
+        return response()->json(['message' => 'Approved.']);
     }
+
+
     public function revise(Request $request)
     {
-        $idp = Icp::findOrFail($request->id);
+        $icp = Icp::with('steps')->findOrFail($request->id);
 
-        // Menyimpan status HAV sebagai disetujui
-        $idp->status = 0;  // Status disetujui
+        DB::transaction(function () use ($icp, $request) {
+            $icp->status = 0; // Revise
+            $icp->save();
 
+            // tandai step aktif sebagai revised (opsional):
+            $current = $icp->steps->where('status', 'pending')->sortBy('step_order')->first();
+            if ($current) {
+                $current->update(['status' => 'revised']);
+            }
 
-        $comment = $request->input('comment');
-        $employee = auth()->user()->employee;
-        // Menyimpan komentar ke dalam tabel hav_comment_history
-        if ($employee) {
-            $idp->commentHistory()->create([
-                'comment' => $comment,
-                'employee_id' => $employee->id  // Menyimpan siapa yang memberikan komentar
-            ]);
-        }
-        // Simpan perubahan status HAV
-        $idp->save();
+            // catat komentar (kalau punya tabel comment history ICP)
+            if ($emp = auth()->user()->employee) {
+                $icp->commentHistory()->create([
+                    'comment'     => (string) $request->input('comment', ''),
+                    'employee_id' => $emp->id,
+                ]);
+            }
+        });
 
-        // Kembalikan respons JSON
-        return response()->json(['message' => 'ICP has been revise.']);
+        return response()->json(['message' => 'ICP has been revised.']);
     }
+
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -621,6 +674,7 @@ class IcpController extends Controller
                 'date'          => $request->date,
                 'status'        => "1",
             ]);
+            $this->seedStepsForIcp($icp);
 
             // Hapus semua detail lama (bisa diubah kalau ingin granular update)
             $icp->details()->delete();
@@ -731,5 +785,26 @@ class IcpController extends Controller
         $icp->delete();
 
         return response()->json(['message' => 'ICP deleted successfully']);
+    }
+
+    private function seedStepsForIcp(Icp $icp)
+    {
+        $owner = $icp->employee()->first(); //pemilik icp
+        $chain = ApprovalHelper::expectedChainForEmployee($owner);
+
+        $icp->steps()->delete(); //reset jika update
+        foreach ($chain as $i => $s) {
+            IcpApprovalStep::create([
+                'icp_id' => $icp->id,
+                'step_order' => $i + 1,
+                'type' => $s['type'],
+                'role' => $s['role'],
+                'label' => $s['label']
+            ]);
+        }
+
+        //status awal "Submitted" (1) kalau masih ada step; kalau tidak ada -> langsung Approved (3)
+        $icp->status = empty($chain) ? 3 : 1;
+        $icp->save();
     }
 }

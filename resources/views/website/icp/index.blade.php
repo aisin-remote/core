@@ -60,7 +60,6 @@
                             <th>Position</th>
                             <th>Department</th> {{-- Tetap static --}}
                             <th>Grade</th>
-                            <th>Age</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
@@ -89,7 +88,6 @@
                                 <td>{{ $employee->position }}</td>
                                 <td>{{ $unit }}</td> {{-- Dinamis berdasarkan posisi --}}
                                 <td>{{ $employee->grade }}</td>
-                                <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                 {{-- @if (auth()->user()->role == 'HRD')
                                         <a href="{{ route('employee.edit', $employee->npk) }}"
                                             class="btn btn-warning btn-sm">
@@ -240,14 +238,23 @@
                                 `<a href="/icp/export/${employeeId}" class="btn btn-success btn-sm ms-2" target="_blank">Export</a>` :
                                 '';
 
+                            // Format date (contoh: dd-mm-yyyy)
+                            let formattedDate = '-';
+                            if (icp.date) {
+                                let d = new Date(icp.date);
+                                let day = String(d.getDate()).padStart(2, '0');
+                                let month = String(d.getMonth() + 1).padStart(2, '0');
+                                let year = d.getFullYear();
+                                formattedDate = `${day}-${month}-${year}`;
+                            }
+
                             let row = `
                         <tr>
                             <td class="text-center">${index + 1}</td>
                             <td class="text-center">${icp.aspiration || '-'}</td>
                             <td class="text-center">${icp.career_target}</td>
-                            <td class="text-center">${icp.date}</td>
+                            <td class="text-center">${formattedDate}</td>
                             <td class="text-center">
-                                ${deleteButton}
                                 ${exportButton}
                             </td>
                         </tr>

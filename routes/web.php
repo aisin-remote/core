@@ -111,19 +111,19 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('icp')->group(function () {
         // Pindahkan create di atas agar tidak tertabrak oleh {company}
 
-       Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
+        Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
 
         Route::get('/create/{employee_id}', [IcpController::class, 'create'])->name('icp.create');
         Route::post('/', [IcpController::class, 'store'])->name('icp.store');
-          Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
+        Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
 
         Route::get('/history/{id}', [IcpController::class, 'show'])->name('icp.show');
         Route::get('/export/{employee_id}', [IcpController::class, 'export'])->name('icp.export');
 
         Route::get('/edit/{id}', [IcpController::class, 'edit'])->name('icp.edit');
-       Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
+        Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
 
-       Route::post('/delete/{id}', [IcpController::class, 'destroy'])->name('icp.destroy');
+        Route::post('/delete/{id}', [IcpController::class, 'destroy'])->name('icp.destroy');
     });
 
     Route::prefix('hav')->group(function () {
