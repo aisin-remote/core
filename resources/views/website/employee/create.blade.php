@@ -5,30 +5,34 @@
 @section('breadcrumbs', $title ?? 'Employee')
 
 @section('main')
-    @if (session()->has('success'))
+    {{-- Success Alert --}}
+    @if ($message = session()->pull('success'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
-                    title: "success!",
-                    text: "{{ session('success') }}",
+                    title: "Success!",
+                    text: "{{ $message }}",
                     icon: "success",
                     confirmButtonText: "OK"
                 });
             });
         </script>
     @endif
-    @if (session()->has('error'))
+
+    {{-- Error Alert --}}
+    @if ($message = session()->pull('error'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
                     title: "Error!",
-                    text: "{{ session('error') }}",
+                    text: "{{ $message }}",
                     icon: "error",
                     confirmButtonText: "OK"
                 });
             });
         </script>
     @endif
+
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <div id="kt_app_content_container" class="app-container container-fluid">
             <form action="{{ route('employee.store') }}" method="POST" enctype="multipart/form-data">
@@ -115,7 +119,9 @@
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
                                 <input type="text" name="email" class="form-control" value="{{ old('email') }}"
-                                    placeholder="employe@example.com">
+                                    placeholder="employee@example.com">
+                                <input type="hidden" name="force_email_duplicate" id="force_email_duplicate"
+                                    value="0">
                                 @error('email')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -478,4 +484,119 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(function() {
+            const emailInput = $('[name="email"]');
+            const form = $('form[action="{{ route('employee.store') }}"]');
+            // kamu sebenarnya sudah tidak pakai forceFlag untuk kasus "wajib ganti email"
+            // tapi biarkan ada tidak masalah
+            const forceFlag = $('#force_email_duplicate');
+
+            let lastCheckedEmail = '';
+            let lastCheckResult = null;
+            let alertedEmail = null; // <=== email yang sudah pernah ditunjukkan alert (agar hanya sekali)
+            let blurTimer = null; // <=== untuk debounce
+
+            async function checkEmail(email) {
+                if (!email) return {
+                    exists: false
+                };
+                if (email === lastCheckedEmail && lastCheckResult !== null) return lastCheckResult;
+                const res = await fetch(
+                    `{{ route('employee.checkEmail') }}?email=${encodeURIComponent(email)}`);
+                const data = await res.json();
+                lastCheckedEmail = email;
+                lastCheckResult = data;
+                return data;
+            }
+
+            function markInvalid(input, message) {
+                input.addClass('is-invalid');
+                // jika kamu punya invalid-feedback di bawah input, bisa isi di situ juga
+                // atau biarkan SweetAlert saja yang tampil
+            }
+
+            function clearInvalid(input) {
+                input.removeClass('is-invalid');
+            }
+
+            // Cek saat BLUR — dengan debounce & guard
+            emailInput.on('input', () => {
+                // kalau user mengubah email -> reset guard dan invalid state
+                alertedEmail = null;
+                clearInvalid(emailInput);
+            });
+
+            emailInput.on('blur', function() {
+                clearTimeout(blurTimer);
+                blurTimer = setTimeout(async () => {
+                    const email = emailInput.val().trim();
+                    forceFlag.val(
+                        '0'); // tidak dipakai untuk mode "wajib ganti", tetap reset saja
+                    if (!email) return;
+
+                    // kalau email ini sudah pernah di-alert, jangan alert lagi sampai user mengubah value
+                    if (email === alertedEmail) return;
+
+                    let data;
+                    try {
+                        data = await checkEmail(email);
+                    } catch (e) {
+                        return; // gagal cek → diam
+                    }
+
+                    if (data.exists) {
+                        alertedEmail = email; // <=== tandai sudah di-alert
+                        markInvalid(emailInput);
+
+                        await Swal.fire({
+                            title: 'Email already used',
+                            html: 'This email is already used. Please enter a different email address.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+
+                        // Jangan .focus() yang bisa bikin siklus blur/focus aneh di beberapa browser/UI
+                        // Cukup select teks agar user langsung mengetik mengganti
+                        emailInput.trigger('select');
+                    }
+                }, 250);
+            });
+
+            // Intercept submit — stop & alert, tapi HANYA kalau belum pernah di-alert untuk value yang sama
+            form.on('submit', async function(e) {
+                const email = emailInput.val()?.trim();
+                if (!email) return; // biar validasi server/HTML yang jalan
+
+                let data;
+                try {
+                    data = await checkEmail(email);
+                } catch (err) {
+                    return; // kalau tidak bisa cek, biarkan server yang validasi
+                }
+
+                if (data.exists) {
+                    e.preventDefault();
+
+                    // kalau email sama & sudah di-alert, jangan spam alert kedua kalinya;
+                    // cukup biarkan user mengganti email.
+                    if (email !== alertedEmail) {
+                        alertedEmail = email;
+                        markInvalid(emailInput);
+
+                        await Swal.fire({
+                            title: 'Email already used',
+                            html: 'This email is already used. Please enter a different email address.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+
+                    // seleksi teks agar mudah diganti
+                    emailInput.trigger('select');
+                    return;
+                }
+            });
+        });
+    </script>
 @endpush

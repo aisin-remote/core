@@ -358,6 +358,18 @@ class EmployeeController extends Controller
 
             $validatedData['supervisor_id'] = $supervisorId;
 
+            $generatedEmail = $validatedData['email'];
+
+            // lakukan check email
+            $emailExistsInUser = User::where('email', $generatedEmail)->exists();
+
+            // kalau email sudah ada dipakai tapi user belum konfirmasi dari UI, kembalikan dengan error
+            if ($emailExistsInUser && !$request->boolean('force_email_duplicate')) {
+
+                return back()
+                    ->withInput()
+                    ->with('error', 'Email already used. If you still want to use it, please confirm');
+            }
 
             // Buat karyawan
             $employee = Employee::create($validatedData);
@@ -457,7 +469,7 @@ class EmployeeController extends Controller
             if (in_array($pos, $userRoles)) {
                 $user = User::create([
                     'name'                => $validatedData['name'],
-                    'email'               => $validatedData['email'],
+                    'email'               => $generatedEmail,
                     'password'            => bcrypt('aiia'),
                     'is_first_login'      => true,
                     'password_changed_at' => null
@@ -1544,5 +1556,18 @@ class EmployeeController extends Controller
             DB::rollback();
             return redirect()->back()->with('error', 'Gagal menghapus data External Training: ' . $th->getMessage());
         }
+    }
+
+    public function checkEmail(Request $request)
+    {
+        $email = trim($request->query('email', ''));
+
+        $existsInUsers     = User::where('email', $email)->exists();
+
+        return response()->json([
+            'email' => $email,
+            'exists_in_users'     => $existsInUsers,
+            'exists'              => $existsInUsers,
+        ]);
     }
 }
