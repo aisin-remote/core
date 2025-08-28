@@ -131,7 +131,7 @@
             min-width: 180px;
         }
 
-        /* ~3 cards per row on wide */
+        /* ~3 per row on wide */
 
         @media (max-width: 1200px) {
             .module-strip {
@@ -157,7 +157,7 @@
             /* 1 per row */
         }
 
-        /* High-contrast tabs for better visibility */
+        /* High-contrast tabs */
         .nav-tabs {
             border-bottom: 2px solid var(--ok-line);
             gap: .25rem;
@@ -185,6 +185,43 @@
             .nav-tabs .nav-link {
                 font-size: 1rem;
             }
+        }
+
+        /* ===== DataTables: hide info + compact pagination ===== */
+        /* Sembunyikan 'Showing 1 to 10 of ... entries' (guard CSS) */
+        div.dataTables_wrapper div.dataTables_info {
+            display: none !important;
+        }
+
+        /* Paginate compact */
+        div.dataTables_wrapper div.dataTables_paginate {
+            margin-top: .25rem;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button {
+            border: 1px solid var(--ok-line);
+            padding: .15rem;
+            margin: 0 .125rem;
+            border-radius: 10px;
+            font-size: .8rem;
+            color: var(--ok-navy) !important;
+            background: #fff;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+        .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
+            background: var(--ok-blue) !important;
+            color: #fff !important;
+            border-color: var(--ok-blue);
+        }
+
+        .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+            background: #E2E8F0;
+            color: var(--ok-navy) !important;
+        }
+
+        .dataTables_wrapper .dataTables_paginate .ellipsis {
+            padding: .2rem .3rem;
         }
     </style>
 @endpush
@@ -233,8 +270,7 @@
 
         {{-- TABS --}}
         <ul class="nav nav-tabs mb-4" role="tablist">
-            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-all" role="tab">All</a>
-            </li>
+            <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-all" role="tab">All</a></li>
             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-idp" role="tab">IDP</a></li>
             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-hav" role="tab">HAV</a></li>
             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-icp" role="tab">ICP</a></li>
@@ -248,33 +284,33 @@
                 <div class="row g-3 mb-4">
                     @php
                         $kpis = [
-                            ['label' => 'In Scope', 'id' => 'kpi-all-in-scope', 'icon' => 'bi-bullseye'],
+                            ['label' => 'Total Employees', 'id' => 'kpi-all-in-scope', 'icon' => 'bi-bullseye'],
                             [
-                                'label' => 'Completion',
+                                'label' => 'Total Completion',
                                 'id' => 'kpi-all-completion',
                                 'icon' => 'bi-clipboard2-check',
-                                'sub' => 'Approved / In scope',
+                                'sub' => 'Approved / Total employees',
                             ],
                             [
-                                'label' => 'Approved',
+                                'label' => 'Total Approved',
                                 'id' => 'kpi-all-approved',
                                 'icon' => 'bi-check2-circle',
                                 'class' => 'text-success',
                             ],
                             [
-                                'label' => 'In Progress',
+                                'label' => 'Total In Progress',
                                 'id' => 'kpi-all-progress',
                                 'icon' => 'bi-arrow-repeat',
                                 'class' => 'text-primary',
                             ],
                             [
-                                'label' => 'Revised',
+                                'label' => 'Total Revised',
                                 'id' => 'kpi-all-revised',
                                 'icon' => 'bi-pencil-square',
                                 'class' => 'text-warning',
                             ],
                             [
-                                'label' => 'Not Created',
+                                'label' => 'Total Not Created',
                                 'id' => 'kpi-all-not',
                                 'icon' => 'bi-dash-circle',
                                 'class' => 'text-gray-700',
@@ -330,7 +366,6 @@
 
             @foreach ($modules as $m)
                 <div class="tab-pane fade" id="tab-{{ $m['key'] }}" role="tabpanel">
-
                     {{-- One-row strip: Chart (left) + KPI row (right, wrapping) --}}
                     <div class="module-strip">
                         {{-- Chart (left) --}}
@@ -346,7 +381,7 @@
                         {{-- KPI row (right, wraps) --}}
                         <div class="module-kpis">
                             @php $k2 = $m['key']; @endphp
-                            @foreach ([['l' => 'In Scope', 'i' => 'kpi-' . $k2 . '-scope', 'ic' => 'bi-bullseye'], ['l' => 'Completion', 'i' => 'kpi-' . $k2 . '-completion', 'ic' => 'bi-clipboard2-check', 'sub' => 'Approved / In scope'], ['l' => 'Approved', 'i' => 'kpi-' . $k2 . '-appr', 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'In Progress', 'i' => 'kpi-' . $k2 . '-prog', 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Revised', 'i' => 'kpi-' . $k2 . '-rev', 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Not Created', 'i' => 'kpi-' . $k2 . '-not', 'ic' => 'bi-dash-circle']] as $card)
+                            @foreach ([['l' => 'Total Employees', 'i' => 'kpi-' . $k2 . '-scope', 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => 'kpi-' . $k2 . '-completion', 'ic' => 'bi-clipboard2-check', 'sub' => 'Approved / Total Employees'], ['l' => 'Total Approved', 'i' => 'kpi-' . $k2 . '-appr', 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => 'kpi-' . $k2 . '-prog', 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => 'kpi-' . $k2 . '-rev', 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => 'kpi-' . $k2 . '-not', 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -434,6 +469,7 @@
             if ($.fn.DataTable.isDataTable($table)) {
                 $table.DataTable().clear().destroy();
             }
+
             const rows = [...new Set(names)]
                 .filter(Boolean)
                 .sort((a, b) => a.localeCompare(b))
@@ -454,6 +490,18 @@
                 order: [
                     [0, 'asc']
                 ],
+
+                /* ==== MODIFIKASI UTAMA ==== */
+                info: false, // sembunyikan "Showing X to Y of Z entries"
+                dom: 'tp', // hanya table + pagination
+                pagingType: 'simple', // pagination simpel
+                language: {
+                    paginate: {
+                        previous: '‹',
+                        next: '›'
+                    }
+                }, // lebih ringkas
+
                 autoWidth: false,
                 destroy: true,
                 responsive: true
@@ -492,29 +540,23 @@
                     revised: 0,
                     not: 0
                 };
-                const total = (s.approved + s.progress + s.revised + s.not) || 1;
-
-                createOrUpdateChart(
-                    `all-pie-${mod}`,
-                    'doughnut',
-                    ctx(`chart-all-${mod}`), {
-                        labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
-                        datasets: [{
-                            data: [s.approved, s.progress, s.revised, s.not],
-                            backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress,
-                                STATUS_COLORS.revised, STATUS_COLORS.not
-                            ]
-                        }]
-                    }, {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            }
+                createOrUpdateChart(`all-pie-${mod}`, 'doughnut', ctx(`chart-all-${mod}`), {
+                    labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
+                    datasets: [{
+                        data: [s.approved, s.progress, s.revised, s.not],
+                        backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress,
+                            STATUS_COLORS.revised, STATUS_COLORS.not
+                        ]
+                    }]
+                }, {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
                         }
                     }
-                );
+                });
             });
         }
 
@@ -526,27 +568,23 @@
             setText(`kpi-${key}-not`, data?.not ?? 0);
             setText(`kpi-${key}-completion`, pct(data?.approved ?? 0, data?.scope ?? 0) + '%');
 
-            createOrUpdateChart(
-                `chart-${key}-doughnut`,
-                'doughnut',
-                ctx(`chart-${key}-doughnut`), {
-                    labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
-                    datasets: [{
-                        data: [data?.approved ?? 0, data?.progress ?? 0, data?.revised ?? 0, data?.not ?? 0],
-                        backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress, STATUS_COLORS.revised,
-                            STATUS_COLORS.not
-                        ]
-                    }]
-                }, {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
+            createOrUpdateChart(`chart-${key}-doughnut`, 'doughnut', ctx(`chart-${key}-doughnut`), {
+                labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
+                datasets: [{
+                    data: [data?.approved ?? 0, data?.progress ?? 0, data?.revised ?? 0, data?.not ?? 0],
+                    backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress, STATUS_COLORS.revised,
+                        STATUS_COLORS.not
+                    ]
+                }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
                     }
                 }
-            );
+            });
 
             // init empty tables
             ['approved', 'progress', 'revised', 'not'].forEach(status => {
@@ -592,7 +630,6 @@
                 localStorage.setItem('dash-filters', JSON.stringify(params));
 
                 const data = await fetchDashboard(params);
-
                 renderAllTab(data);
                 MODULES.forEach(k => renderModuleTab(k, data[k] || {}));
             } catch (e) {

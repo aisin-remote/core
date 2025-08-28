@@ -18,112 +18,146 @@ class DashboardController
     {
         $company = $request->query('company');
 
-        // ---- hitung per modul (per karyawan) ----
         $idp = $this->idpPerEmployeeBuckets($company);
+        $hav = $this->modulePerEmployeeBuckets((new Hav)->getTable(), 'status', $company, [
+            'approved' => [3],
+            'revised' => [-1],
+            'progress' => [1, 2],
+        ]);
+        $icp = $this->modulePerEmployeeBuckets((new Icp)->getTable(), 'status', $company, [
+            'approved' => [3],
+            'revised' => [-1],
+            'progress' => [1, 2],
+        ]);
+        $rtc = $this->modulePerEmployeeBuckets((new Rtc)->getTable(), 'status', $company, [
+            'approved' => [3],
+            'revised' => [-1],
+            'progress' => [1, 2],
+        ]);
 
-        $hav = $this->modulePerEmployeeBuckets(
-            table: (new Hav)->getTable(),        // "havs"
-            statusCol: 'status',
-            company: $company,
-            // mapping status numerik
-            map: [
-                'approved' => [3],
-                'revised'  => [-1],
-                'progress' => [1, 2],
-            ],
-            // HAV langsung punya employee_id
-            joinViaAssessment: false
-        );
-
-        $icp = $this->modulePerEmployeeBuckets(
-            table: (new Icp)->getTable(),        // "icp"
-            statusCol: 'status',
-            company: $company,
-            map: [
-                'approved' => [3],
-                'revised'  => [-1],
-                'progress' => [1, 2],
-            ],
-            joinViaAssessment: false
-        );
-
-        $rtc = $this->modulePerEmployeeBuckets(
-            table: (new Rtc)->getTable(),        // "rtc"
-            statusCol: 'status',
-            company: $company,
-            // sesuaikan kalau mapping RTC beda
-            map: [
-                'approved' => [3],
-                'revised'  => [-1],
-                'progress' => [1, 2],
-            ],
-            joinViaAssessment: false
-        );
-
-        // ---- ALL = penjumlahan antar modul (tiap karyawan dihitung 1x per modul) ----
-        $all = [
-            'scope'    => ($idp['scope'] + $hav['scope'] + $icp['scope'] + $rtc['scope']),
-            'approved' => ($idp['approved'] + $hav['approved'] + $icp['approved'] + $rtc['approved']),
-            'progress' => ($idp['progress'] + $hav['progress'] + $icp['progress'] + $rtc['progress']),
-            'revised'  => ($idp['revised']  + $hav['revised']  + $icp['revised']  + $rtc['revised']),
-            'not'      => ($idp['not']      + $hav['not']      + $icp['not']      + $rtc['not']),
-        ];
+        // >>> perbaikan: ALL dihitung per-karyawan (partisi unik)
+        $all = $this->allPerEmployeeBuckets($company);
 
         return response()->json(compact('idp', 'hav', 'icp', 'rtc', 'all'));
     }
 
+    private function allPerEmployeeBuckets(?string $company): array
+    {
+        // scope: semua karyawan pada company
+        $scopeIds = Employee::forCompany($company)->pluck('id');
+
+        // ---- APPROVED: ada approved di salah satu modul (IDP/HAV/ICP/RTC)
+        $approvedIds = Employee::forCompany($company)
+            ->where(function ($q) {
+                // IDP approved: manager {4}, non-manager {3,4}
+                $q->whereExists(function ($qq) {
+                    $qq->selectRaw(1)->from('idp')
+                        ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
+                        ->join('employees as e2', 'assessments.employee_id', '=', 'e2.id')
+                        ->whereColumn('assessments.employee_id', 'employees.id')
+                        ->where(function ($w) {
+                            $w->whereRaw("LOWER(e2.position) LIKE '%manager%' AND idp.status IN (4)")
+                                ->orWhereRaw("LOWER(e2.position) NOT LIKE '%manager%' AND idp.status IN (3,4)");
+                        });
+                })
+                    // HAV / ICP / RTC approved {3}
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('havs')->whereColumn('havs.employee_id', 'employees.id')->whereIn('havs.status', [3]))
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('icp')->whereColumn('icp.employee_id', 'employees.id')->whereIn('icp.status', [3]))
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('rtc')->whereColumn('rtc.employee_id', 'employees.id')->whereIn('rtc.status', [3]));
+            })
+            ->pluck('id')
+            ->unique();
+
+        // ---- REVISED: ada revised di salah satu modul, tetapi TIDAK termasuk approved
+        $revisedIds = Employee::forCompany($company)
+            ->whereNotIn('id', $approvedIds)
+            ->where(function ($q) {
+                $q->whereExists(function ($qq) {
+                    $qq->selectRaw(1)->from('idp')
+                        ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
+                        ->whereColumn('assessments.employee_id', 'employees.id')
+                        ->where('idp.status', -1);
+                })
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('havs')->whereColumn('havs.employee_id', 'employees.id')->where('havs.status', -1))
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('icp')->whereColumn('icp.employee_id', 'employees.id')->where('icp.status', -1))
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('rtc')->whereColumn('rtc.employee_id', 'employees.id')->where('rtc.status', -1));
+            })
+            ->pluck('id')
+            ->unique();
+
+        // ---- PROGRESS: ada progress di salah satu modul, tetapi bukan approved/revised
+        $progressIds = Employee::forCompany($company)
+            ->whereNotIn('id', $approvedIds)
+            ->whereNotIn('id', $revisedIds)
+            ->where(function ($q) {
+                // IDP progress: manager {1,2,3}, non-manager {1,2}
+                $q->whereExists(function ($qq) {
+                    $qq->selectRaw(1)->from('idp')
+                        ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
+                        ->join('employees as e2', 'assessments.employee_id', '=', 'e2.id')
+                        ->whereColumn('assessments.employee_id', 'employees.id')
+                        ->where(function ($w) {
+                            $w->whereRaw("LOWER(e2.position) LIKE '%manager%' AND idp.status IN (1,2,3)")
+                                ->orWhereRaw("LOWER(e2.position) NOT LIKE '%manager%' AND idp.status IN (1,2)");
+                        });
+                })
+                    // HAV/ICP/RTC progress {1,2}
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('havs')->whereColumn('havs.employee_id', 'employees.id')->whereIn('havs.status', [1, 2]))
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('icp')->whereColumn('icp.employee_id', 'employees.id')->whereIn('icp.status', [1, 2]))
+                    ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('rtc')->whereColumn('rtc.employee_id', 'employees.id')->whereIn('rtc.status', [1, 2]));
+            })
+            ->pluck('id')
+            ->unique();
+
+        $covered = $approvedIds->merge($revisedIds)->merge($progressIds)->unique();
+        $not     = $scopeIds->diff($covered)->count();
+
+        return [
+            'scope'    => $scopeIds->count(),
+            'approved' => $approvedIds->count(),
+            'revised'  => $revisedIds->count(),
+            'progress' => $progressIds->count(),
+            'not'      => $not,
+        ];
+    }
+
+
     /**
-     * IDP per-employee buckets dengan aturan khusus Manager:
-     *  Manager    : Approved {4}, Progress {1,2,3}, Revised {-1}
-     *  Non-Manager: Approved {3,4}, Progress {1,2},   Revised {-1}
+     * IDP per-employee buckets (aturan Manager / Non-Manager)
+     * Manager     : Approved {4}, Progress {1,2,3}, Revised {-1}
+     * Non-Manager : Approved {3,4}, Progress {1,2},   Revised {-1}
      */
     private function idpPerEmployeeBuckets(?string $company): array
     {
-        // scope = jumlah karyawan pada company
         $scope = Employee::forCompany($company)->count();
 
-        // base join: idp -> assessments -> employees
         $base = DB::table('idp')
             ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
             ->join('employees', 'assessments.employee_id', '=', 'employees.id')
             ->when($company, fn($q) => $q->where('employees.company_name', $company));
 
-        // karyawan yang punya minimal 1 IDP
         $distinctEmp = (clone $base)->distinct()->count('assessments.employee_id');
 
-        // subquery: 1 baris per employee_id + bucket final
         $perEmp = (clone $base)
             ->select([
                 'assessments.employee_id',
                 DB::raw("
-                    CASE
-                        /* Approved jika:
-                           - manager & ada status 4, atau
-                           - non-manager & ada status 3/4
-                        */
-                        WHEN
-                            SUM(CASE WHEN LOWER(employees.position) LIKE '%manager%' AND idp.status IN (4) THEN 1 ELSE 0 END) > 0
-                            OR
-                            SUM(CASE WHEN LOWER(employees.position) NOT LIKE '%manager%' AND idp.status IN (3) THEN 1 ELSE 0 END) > 0
-                        THEN 'approved'
-
-                        /* Revised jika ada -1 dan belum approved */
-                        WHEN SUM(CASE WHEN idp.status = -1 THEN 1 ELSE 0 END) > 0
-                        THEN 'revised'
-
-                        /* Progress jika:
-                           - manager & ada 1/2/3, atau
-                           - non-manager & ada 1/2
-                        */
-                        WHEN
-                            SUM(CASE WHEN LOWER(employees.position) LIKE '%manager%' AND idp.status IN (1,2,3) THEN 1 ELSE 0 END) > 0
-                            OR
-                            SUM(CASE WHEN LOWER(employees.position) NOT LIKE '%manager%' AND idp.status IN (1,2) THEN 1 ELSE 0 END) > 0
-                        THEN 'progress'
-
-                        ELSE 'progress'
-                    END AS bucket
-                "),
+                CASE
+                    WHEN
+                        SUM(CASE WHEN LOWER(employees.position) LIKE '%manager%'     AND idp.status IN (4)   THEN 1 ELSE 0 END) > 0
+                        OR
+                        SUM(CASE WHEN LOWER(employees.position) NOT LIKE '%manager%' AND idp.status IN (3,4) THEN 1 ELSE 0 END) > 0
+                    THEN 'approved'
+                    WHEN SUM(CASE WHEN idp.status = -1 THEN 1 ELSE 0 END) > 0
+                    THEN 'revised'
+                    WHEN
+                        SUM(CASE WHEN LOWER(employees.position) LIKE '%manager%'     AND idp.status IN (1,2,3) THEN 1 ELSE 0 END) > 0
+                        OR
+                        SUM(CASE WHEN LOWER(employees.position) NOT LIKE '%manager%' AND idp.status IN (1,2)   THEN 1 ELSE 0 END) > 0
+                    THEN 'progress'
+                    ELSE 'progress'
+                END AS bucket
+            "),
             ])
             ->groupBy('assessments.employee_id');
 
@@ -138,6 +172,34 @@ class DashboardController
         $not      = max($scope - $distinctEmp, 0);
 
         return compact('scope', 'approved', 'progress', 'revised', 'not');
+    }
+
+
+    /**
+     * Hitung berapa karyawan yang punya minimal 1 record
+     * di IDP/HAV/ICP/RTC (untuk ALL.not)
+     */
+    private function employeesWithAnyModule(?string $company): int
+    {
+        return Employee::forCompany($company)
+            ->where(function ($q) {
+                $q->whereExists(function ($qq) {
+                    $qq->selectRaw(1)
+                        ->from('idp')
+                        ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
+                        ->whereColumn('assessments.employee_id', 'employees.id');
+                })->orWhereExists(function ($qq) {
+                    $qq->selectRaw(1)->from('havs')
+                        ->whereColumn('havs.employee_id', 'employees.id');
+                })->orWhereExists(function ($qq) {
+                    $qq->selectRaw(1)->from('icp')
+                        ->whereColumn('icp.employee_id', 'employees.id');
+                })->orWhereExists(function ($qq) {
+                    $qq->selectRaw(1)->from('rtc')
+                        ->whereColumn('rtc.employee_id', 'employees.id');
+                });
+            })
+            ->count();
     }
 
     /**
