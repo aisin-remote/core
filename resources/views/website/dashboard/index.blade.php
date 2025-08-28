@@ -89,7 +89,6 @@
             background: #EEF2F7;
         }
 
-        /* Compact controls */
         .btn,
         .form-select,
         .form-control {
@@ -105,12 +104,10 @@
             padding: .2rem .45rem;
         }
 
-        /* Module layout: chart left, KPI row (wrapping) on the right */
         .module-strip {
             display: grid;
             gap: 12px;
             grid-template-columns: 5fr 7fr;
-            /* chart 5, kpis 7 */
             align-items: stretch;
         }
 
@@ -131,8 +128,6 @@
             min-width: 180px;
         }
 
-        /* ~3 per row on wide */
-
         @media (max-width: 1200px) {
             .module-strip {
                 grid-template-columns: 1fr;
@@ -145,19 +140,14 @@
             .module-kpis .kpi-card {
                 flex-basis: calc(50% - 12px);
             }
-
-            /* ~2 per row */
         }
 
         @media (max-width: 768px) {
             .module-kpis .kpi-card {
                 flex-basis: 100%;
             }
-
-            /* 1 per row */
         }
 
-        /* High-contrast tabs */
         .nav-tabs {
             border-bottom: 2px solid var(--ok-line);
             gap: .25rem;
@@ -187,13 +177,11 @@
             }
         }
 
-        /* ===== DataTables: hide info + compact pagination ===== */
-        /* Sembunyikan 'Showing 1 to 10 of ... entries' (guard CSS) */
+        /* DataTables compact */
         div.dataTables_wrapper div.dataTables_info {
             display: none !important;
         }
 
-        /* Paginate compact */
         div.dataTables_wrapper div.dataTables_paginate {
             margin-top: .25rem;
         }
@@ -236,19 +224,29 @@
             </div>
         </div>
 
-        {{-- FILTER BAR (Company only, compact & auto-apply) --}}
+        {{-- FILTER BAR --}}
         <div class="card mb-4">
             <div class="card-body py-3">
                 <div class="row g-2 align-items-end">
                     @php
-                        $isHRD = auth()->user()->role === 'HRD';
-                        $myCompany = optional(auth()->user()->employee)->company_name; // 'AII' atau 'AIIA'
+                        use Illuminate\Support\Str;
+
+                        $user = auth()->user();
+                        $isHRD = $user->role === 'HRD';
+                        $emp = optional($user->employee);
+                        $myCompany = $emp->company_name; // 'AII' / 'AIIA'
+                        $norm = method_exists($emp, 'getNormalizedPosition')
+                            ? Str::lower($emp->getNormalizedPosition())
+                            : Str::lower($emp->position ?? '');
+                        // HRD + President + VPD boleh pilih company:
+                        $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
                     @endphp
+
                     <div class="col-md-3 col-8">
                         <label class="form-label mb-1">Company</label>
                         <select id="filter-company" class="form-select form-select-sm" data-control="select2"
-                            aria-label="Filter Company" {{ $isHRD ? '' : 'disabled' }}>
-                            @if ($isHRD)
+                            aria-label="Filter Company" {{ $canPickCompany ? '' : 'disabled' }}>
+                            @if ($canPickCompany)
                                 <option value="">All Companies</option>
                                 <option value="AIIA">AIIA</option>
                                 <option value="AII">AII</option>
@@ -261,8 +259,9 @@
                     </div>
                     <div class="col-md-2 col-4">
                         <label class="form-label d-block mb-1">&nbsp;</label>
-                        <button id="btn-clear" class="btn btn-warning btn-sm w-100"><i class="bi bi-x-circle"></i>
-                            Clear</button>
+                        <button id="btn-clear" class="btn btn-warning btn-sm w-100">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
                     </div>
                 </div>
             </div>
@@ -278,9 +277,9 @@
         </ul>
 
         <div class="tab-content">
-            {{-- ================= TAB ALL ================= --}}
+            {{-- ============== TAB ALL ============== --}}
             <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
-                {{-- KPI CARDS --}}
+                {{-- KPI --}}
                 <div class="row g-3 mb-4">
                     @php
                         $kpis = [
@@ -326,9 +325,9 @@
                                         <i class="bi {{ $card['icon'] }}"></i>
                                     </div>
                                     <div class="value {{ $card['class'] ?? '' }}" id="{{ $card['id'] }}">0</div>
-                                    @if (isset($card['sub']))
+                                    @isset($card['sub'])
                                         <div class="kpi-sub">{{ $card['sub'] }}</div>
-                                    @endif
+                                    @endisset
                                 </div>
                             </div>
                         </div>
@@ -354,7 +353,7 @@
                 </div>
             </div>
 
-            {{-- ================= MODULE TABS ================= --}}
+            {{-- ============== MODULE TABS ============== --}}
             @php
                 $modules = [
                     ['key' => 'idp', 'label' => 'IDP'],
@@ -366,9 +365,8 @@
 
             @foreach ($modules as $m)
                 <div class="tab-pane fade" id="tab-{{ $m['key'] }}" role="tabpanel">
-                    {{-- One-row strip: Chart (left) + KPI row (right, wrapping) --}}
+                    {{-- Strip: Chart + KPIs --}}
                     <div class="module-strip">
-                        {{-- Chart (left) --}}
                         <div class="card chart-card module-chart">
                             <div class="card-header d-flex align-items-center gap-2">
                                 <h5 class="mb-0">{{ $m['label'] }} Status Share</h5>
@@ -378,10 +376,9 @@
                             </div>
                         </div>
 
-                        {{-- KPI row (right, wraps) --}}
                         <div class="module-kpis">
                             @php $k2 = $m['key']; @endphp
-                            @foreach ([['l' => 'Total Employees', 'i' => 'kpi-' . $k2 . '-scope', 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => 'kpi-' . $k2 . '-completion', 'ic' => 'bi-clipboard2-check', 'sub' => 'Approved / Total Employees'], ['l' => 'Total Approved', 'i' => 'kpi-' . $k2 . '-appr', 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => 'kpi-' . $k2 . '-prog', 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => 'kpi-' . $k2 . '-rev', 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => 'kpi-' . $k2 . '-not', 'ic' => 'bi-dash-circle']] as $card)
+                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check', 'sub' => 'Approved / Total Employees'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -389,16 +386,16 @@
                                             <i class="bi {{ $card['ic'] }}"></i>
                                         </div>
                                         <div class="value {{ $card['c'] ?? '' }}" id="{{ $card['i'] }}">0</div>
-                                        @if (isset($card['sub']))
+                                        @isset($card['sub'])
                                             <div class="kpi-sub">{{ $card['sub'] }}</div>
-                                        @endif
+                                        @endisset
                                     </div>
                                 </div>
                             @endforeach
                         </div>
                     </div>
 
-                    {{-- Tables --}}
+                    {{-- Tables per status --}}
                     <div class="row g-4 mt-1">
                         @foreach (['approved' => 'Approved', 'progress' => 'In Progress', 'not' => 'Not Created', 'revised' => 'Revised'] as $statusKey => $statusLabel)
                             <div class="col-lg-6">
@@ -432,7 +429,7 @@
 
 @push('scripts')
     <script>
-        /** Colors & constants */
+        /** Palette */
         const STATUS_COLORS = {
             approved: '#009E73',
             progress: '#0072B2',
@@ -440,17 +437,20 @@
             not: '#7F7F7F'
         };
         const MODULES = ['idp', 'hav', 'icp', 'rtc'];
+
+        /** Flags dari Blade */
         const IS_HRD = @json(auth()->user()->role === 'HRD');
+        const CAN_PICK_COMPANY = @json($canPickCompany);
         const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
 
         /** Helpers */
-        const ctx = (id) => document.getElementById(id)?.getContext('2d');
+        const ctx = id => document.getElementById(id)?.getContext('2d');
         const charts = {};
-        const setText = (id, text) => {
+        const setText = (id, txt) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = text;
+            if (el) el.textContent = txt;
         };
-        const pct = (num, den) => den ? Math.round(num / den * 100) : 0;
+        const pct = (a, b) => b ? Math.round((a / b) * 100) : 0;
 
         function createOrUpdateChart(key, type, elCtx, data, options = {}) {
             if (!elCtx) return;
@@ -463,19 +463,16 @@
             return charts[key];
         }
 
-        /** DataTable builder (single column: Employee) */
+        /** Table: single col Employee (compact) */
         function buildEmployeeTable($table, names = []) {
             if ($table.length === 0) return;
             if ($.fn.DataTable.isDataTable($table)) {
                 $table.DataTable().clear().destroy();
             }
 
-            const rows = [...new Set(names)]
-                .filter(Boolean)
-                .sort((a, b) => a.localeCompare(b))
-                .map(n => ({
-                    employee: n
-                }));
+            const rows = [...new Set(names)].filter(Boolean).sort((a, b) => a.localeCompare(b)).map(n => ({
+                employee: n
+            }));
 
             $table.DataTable({
                 data: rows,
@@ -490,18 +487,15 @@
                 order: [
                     [0, 'asc']
                 ],
-
-                /* ==== MODIFIKASI UTAMA ==== */
-                info: false, // sembunyikan "Showing X to Y of Z entries"
-                dom: 'tp', // hanya table + pagination
-                pagingType: 'simple', // pagination simpel
+                info: false,
+                dom: 'tp',
+                pagingType: 'simple',
                 language: {
                     paginate: {
                         previous: '‹',
                         next: '›'
                     }
-                }, // lebih ringkas
-
+                },
                 autoWidth: false,
                 destroy: true,
                 responsive: true
@@ -532,8 +526,7 @@
             setText('kpi-all-not', data.all?.not ?? 0);
             setText('kpi-all-completion', pct(data.all?.approved ?? 0, data.all?.scope ?? 0) + '%');
 
-            // pies per module
-            MODULES.forEach((mod) => {
+            MODULES.forEach(mod => {
                 const s = data[mod] || {
                     approved: 0,
                     progress: 0,
@@ -586,15 +579,13 @@
                 }
             });
 
-            // init empty tables
-            ['approved', 'progress', 'revised', 'not'].forEach(status => {
-                buildEmployeeTable($(`#tbl-${key}-${status}`), []);
-            });
+            // init empty tables first
+            ['approved', 'progress', 'revised', 'not'].forEach(s => buildEmployeeTable($(`#tbl-${key}-${s}`), []));
 
-            // load lists per status
+            // then fetch per-status list
             (async function loadModuleTables() {
                 let company = $('#filter-company').val();
-                if (!IS_HRD) company = MY_COMPANY;
+                if (!CAN_PICK_COMPANY) company = MY_COMPANY; // <<=== PENTING: pakai CAN_PICK_COMPANY
 
                 const base = {
                     company,
@@ -622,7 +613,7 @@
         async function loadDashboard() {
             try {
                 let company = $('#filter-company').val();
-                if (!IS_HRD) company = MY_COMPANY;
+                if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
                 const params = {
                     company
@@ -642,28 +633,35 @@
             }
         }
 
-        // Fix charts resize when switching tabs
+        // Tabs resize fix
         document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(el => {
             el.addEventListener('shown.bs.tab', () => {
                 Object.values(charts).forEach(c => c && c.resize());
             });
         });
 
-        // Select2 init
+        // Select2
         $('[data-control="select2"]').select2({
             allowClear: true,
             width: '100%'
         });
 
-        // Lock company for non-HRD
-        if (!IS_HRD) {
+        // Lock/enable company selector on load
+        if (!CAN_PICK_COMPANY) {
             $('#filter-company').val(MY_COMPANY).trigger('change').prop('disabled', true);
+        } else {
+            $('#filter-company').prop('disabled', false);
         }
 
-        // Auto-apply on change, clear
+        // Auto-apply on change & Clear
         $('#filter-company').on('change', loadDashboard);
         $('#btn-clear').on('click', function() {
-            if (IS_HRD) $('#filter-company').val('').trigger('change');
+            if (CAN_PICK_COMPANY) {
+                $('#filter-company').val('').trigger('change');
+            } else {
+                $('#filter-company').val(MY_COMPANY).trigger('change');
+            }
+            loadDashboard();
         });
 
         // Restore saved filter
