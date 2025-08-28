@@ -200,33 +200,36 @@
         </div>
 
         {{-- FILTER BAR (Company only, compact & auto-apply) --}}
-        @php
-            $isHRD = auth()->user()->role === 'HRD';
-            $myCompany = optional(auth()->user()->employee)->company_name; // 'AII' atau 'AIIA'
-        @endphp
-        @if ($isHRD)
-            <div class="card mb-4">
-                <div class="card-body py-3">
-                    <div class="row g-2 align-items-end">
-                        <div class="col-md-3 col-8">
-                            <label class="form-label mb-1">Company</label>
-                            <select id="filter-company" class="form-select form-select-sm" data-control="select2"
-                                aria-label="Filter Company" {{ $isHRD ? '' : 'disabled' }}>
+        <div class="card mb-4">
+            <div class="card-body py-3">
+                <div class="row g-2 align-items-end">
+                    @php
+                        $isHRD = auth()->user()->role === 'HRD';
+                        $myCompany = optional(auth()->user()->employee)->company_name; // 'AII' atau 'AIIA'
+                    @endphp
+                    <div class="col-md-3 col-8">
+                        <label class="form-label mb-1">Company</label>
+                        <select id="filter-company" class="form-select form-select-sm" data-control="select2"
+                            aria-label="Filter Company" {{ $isHRD ? '' : 'disabled' }}>
+                            @if ($isHRD)
                                 <option value="">All Companies</option>
                                 <option value="AIIA">AIIA</option>
                                 <option value="AII">AII</option>
-                                <option value="{{ $myCompany }}" selected>{{ $myCompany }}</option>
-                            </select>
-                        </div>
-                        <div class="col-md-2 col-4">
-                            <label class="form-label d-block mb-1">&nbsp;</label>
-                            <button id="btn-clear" class="btn btn-warning btn-sm w-100"><i class="bi bi-x-circle"></i>
-                                Clear</button>
-                        </div>
+                            @else
+                                @if ($myCompany)
+                                    <option value="{{ $myCompany }}" selected>{{ $myCompany }}</option>
+                                @endif
+                            @endif
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-4">
+                        <label class="form-label d-block mb-1">&nbsp;</label>
+                        <button id="btn-clear" class="btn btn-warning btn-sm w-100"><i class="bi bi-x-circle"></i>
+                            Clear</button>
                     </div>
                 </div>
             </div>
-        @endif
+        </div>
 
         {{-- TABS --}}
         <ul class="nav nav-tabs mb-4" role="tablist">
