@@ -73,6 +73,7 @@ class Kernel extends HttpKernel
         'throttle' => \Illuminate\Routing\Middleware\ThrottleRequests::class,
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'force.password.change' => \App\Http\Middleware\ForcePasswordChange::class,
-        'company.scope' => \App\Http\Middleware\EnforceCompanyScope::class
+        'company.scope' => \App\Http\Middleware\EnforceCompanyScope::class,
+        'redirect.if.cannot.dashboard' => \App\Http\Middleware\RedirectIfCannotViewDashboard::class,
     ];
 }

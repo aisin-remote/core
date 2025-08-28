@@ -93,7 +93,7 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'force.password.change'])->group(function () {
-    Route::middleware('company.scope')->group(function () {
+    Route::middleware(['company.scope', 'redirect.if.cannot.dashboard'])->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
         Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->name('dashboard.summary');
         Route::get('/dashboard/list', [DashboardController::class, 'list'])->name('dashboard.list');
