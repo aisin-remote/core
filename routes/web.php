@@ -21,6 +21,7 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -93,14 +94,21 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::middleware('company.scope')->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->name('dashboard.summary');
+        Route::get('/dashboard/list', [DashboardController::class, 'list'])->name('dashboard.list');
     });
 
+    Route::get('/schedule', function () {
+        return view('website.dashboard.schedule.index');
+    })->name('schedule.index');
+
     Route::get('/master_schedule', function () {
-        return view('website.dashboard.master');
+        return view('website.dashboard.schedule.master');
     })->name('master_schedule.index');
 
     Route::get('/people', function () {
-        return view('website.dashboard.people');
+        return view('website.dashboard.schedule.people');
     })->name('people.index');
 
     Route::prefix('todolist')->group(function () {
