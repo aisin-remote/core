@@ -21,13 +21,15 @@
 
             {{-- NORMAL (ACCORDION) --}}
             <div class="menu-sub menu-sub-accordion menu-active-bg">
-                {{-- Dashboard (Dashboard) --}}
-                <div class="menu-item">
-                    <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
-                        <span class="menu-icon"><i class="fas fa-chart-line"></i></span>
-                        <span class="menu-title">Dashboard</span>
-                    </a>
-                </div>
+                @can('view-dashboard')
+                    {{-- Dashboard (Dashboard) --}}
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
+                            <span class="menu-icon"><i class="fas fa-chart-line"></i></span>
+                            <span class="menu-title">Dashboard</span>
+                        </a>
+                    </div>
+                @endcan
                 {{-- To Do List --}}
                 <div class="menu-item">
                     <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
@@ -391,12 +393,14 @@
             {{-- FLYOUT (DROPDOWN) untuk mode minimized --}}
             <div class="menu-sub menu-sub-dropdown">
                 {{-- Item-item penting People Development ditampilkan ringkas; nested tetap didukung --}}
-                <div class="menu-item">
-                    <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
-                        <span class="menu-icon"><i class="fas fa-chart-line"></i></span>
-                        <span class="menu-title">Dashboard</span>
-                    </a>
-                </div>
+                @can('view-dashboard')
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('dashboard') ? 'active' : '' }}" href="/dashboard">
+                            <span class="menu-icon"><i class="fas fa-chart-line"></i></span>
+                            <span class="menu-title">Dashboard</span>
+                        </a>
+                    </div>
+                @endcan
                 <div class="menu-item">
                     <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
                         <span class="menu-icon"><i class="fas fa-clipboard-check"></i></span>
