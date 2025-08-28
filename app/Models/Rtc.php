@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CompanyScoped;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Rtc extends Model
 {
     use HasFactory;
+    use CompanyScoped;
+
     protected $table = 'rtc';
 
     protected $guarded = ['id'];

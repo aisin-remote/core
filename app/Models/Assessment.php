@@ -2,12 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CompanyScoped;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Assessment extends Model
 {
     use HasFactory;
+    use CompanyScoped;
+
     protected $table = 'assessments';
     protected $guarded = ['id'];
     // protected $fillable = ['employee_id', 'date', 'upload', 'alc_id'];
@@ -22,7 +25,7 @@ class Assessment extends Model
 
     public function details()
     {
-    return $this->hasMany(DetailAssessment::class, 'assessment_id', 'id');
+        return $this->hasMany(DetailAssessment::class, 'assessment_id', 'id');
     }
 
     public function idp()

@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CompanyScoped;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Icp extends Model
 {
     use HasFactory;
+    use CompanyScoped;
 
     protected $table = 'icp';
     protected $guarded = ['id'];

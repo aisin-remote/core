@@ -2,12 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CompanyScoped;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Idp extends Model
 {
     use HasFactory;
+    use CompanyScoped;
 
     protected $table = 'idp';
     protected $guarded = ['id'];
@@ -54,5 +56,11 @@ class Idp extends Model
     public function lastBackup()
     {
         return $this->hasOne(IdpBackup::class, 'idp_id', 'idp_id')->latestOfMany('changed_at');
+    }
+
+    public function scopeForCompany($q, ?string $company)
+    {
+        if (!$company) return $q; // HRD: lihat semua
+        return $q->whereHas('assessment.employee', fn($qq) => $qq->where('company_name', $company));
     }
 }

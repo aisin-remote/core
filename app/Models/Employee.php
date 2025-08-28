@@ -78,6 +78,12 @@ class Employee extends Model
         });
     }
 
+    public function scopeForCompany($query, ?string $company)
+    {
+        if (!$company) return $query; // HRD: lihat semua
+        return $query->where('company_name', $company);
+    }
+
     public function promotionHistory()
     {
         return $this->hasMany(PromotionHistory::class, 'employee_id', 'id');

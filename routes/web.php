@@ -21,6 +21,7 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
+use App\Http\Controllers\DashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -92,16 +93,22 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'force.password.change'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('website.dashboard.index');
-    })->name('dashboard.index');
+    Route::middleware(['company.scope', 'redirect.if.cannot.dashboard'])->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->name('dashboard.summary');
+        Route::get('/dashboard/list', [DashboardController::class, 'list'])->name('dashboard.list');
+    });
+
+    Route::get('/schedule', function () {
+        return view('website.dashboard.schedule.index');
+    })->name('schedule.index');
 
     Route::get('/master_schedule', function () {
-        return view('website.dashboard.master');
+        return view('website.dashboard.schedule.master');
     })->name('master_schedule.index');
 
     Route::get('/people', function () {
-        return view('website.dashboard.people');
+        return view('website.dashboard.schedule.people');
     })->name('people.index');
 
     Route::prefix('todolist')->group(function () {
@@ -167,7 +174,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     Route::prefix('employee')->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
-
+        Route::get('employee/check-email', [EmployeeController::class, 'checkEmail'])->name('employee.checkEmail');
         Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
         Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
         Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data

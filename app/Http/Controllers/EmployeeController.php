@@ -31,7 +31,7 @@ use App\Models\EducationalBackground;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PerformanceAppraisalHistory;
 use Illuminate\Pagination\LengthAwarePaginator;
-
+use Illuminate\Support\Facades\Validator;
 
 class EmployeeController extends Controller
 {
@@ -300,7 +300,7 @@ class EmployeeController extends Controller
         try {
             DB::beginTransaction();
             // Validasi
-            $validatedData = $request->validate([
+            $validator = Validator::make($request->all(), [
                 'npk'              => 'required|string|max:255|unique:employees,npk',
                 'name'             => 'required|string|max:255',
                 'birthday_date'    => 'nullable|date',
@@ -336,6 +336,15 @@ class EmployeeController extends Controller
                 'work_end_date.*'   => 'nullable|string|max:255',
             ]);
 
+            if ($validator->fails()) {
+                if ($request->ajax()) {
+                    return response()->json(['errors' => $validator->errors()], 422);
+                }
+                return back()->withErrors($validator)->withInput();
+            }
+
+            $validatedData = $validator->validate();
+
             if ($request->hasFile('photo')) {
                 $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
             }
@@ -358,6 +367,16 @@ class EmployeeController extends Controller
 
             $validatedData['supervisor_id'] = $supervisorId;
 
+            $inputEmail = $validatedData['email'];
+            if (User::where('email', $inputEmail)->exists()) {
+                // Balikkan error 422 khusus 'email'
+                if ($request->ajax()) {
+                    return response()->json([
+                        'errors' => ['email' => ['This email is already used. Please enter a different email address.']]
+                    ], 422);
+                }
+                return back()->withErrors(['email' => 'This email is already used.'])->withInput();
+            }
 
             // Buat karyawan
             $employee = Employee::create($validatedData);
@@ -457,7 +476,7 @@ class EmployeeController extends Controller
             if (in_array($pos, $userRoles)) {
                 $user = User::create([
                     'name'                => $validatedData['name'],
-                    'email'               => $validatedData['email'],
+                    'email'               => $inputEmail,
                     'password'            => bcrypt('aiia'),
                     'is_first_login'      => true,
                     'password_changed_at' => null
@@ -466,6 +485,14 @@ class EmployeeController extends Controller
             }
 
             DB::commit();
+            // Jika AJAX, balas JSON success (tanpa refresh)
+            if ($request->ajax()) {
+                return response()->json([
+                    'message'      => 'Employee added successfully!',
+                    'redirect_url' => route('employee.master.index', ['company' => $validatedData['company_name']]),
+                ], 200);
+            }
+
             return redirect()->route('employee.master.index', ['company' => $employee->company_name])
                 ->with('success', 'Employee added successfully!');
         } catch (\Exception $e) {
@@ -1544,5 +1571,18 @@ class EmployeeController extends Controller
             DB::rollback();
             return redirect()->back()->with('error', 'Gagal menghapus data External Training: ' . $th->getMessage());
         }
+    }
+
+    public function checkEmail(Request $request)
+    {
+        $email = trim($request->query('email', ''));
+
+        $existsInUsers     = User::where('email', $email)->exists();
+
+        return response()->json([
+            'email' => $email,
+            'exists_in_users'     => $existsInUsers,
+            'exists'              => $existsInUsers,
+        ]);
     }
 }

@@ -5,30 +5,34 @@
 @section('breadcrumbs', $title ?? 'Employee')
 
 @section('main')
-    @if (session()->has('success'))
+    {{-- Success Alert --}}
+    @if ($message = session()->pull('success'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
-                    title: "success!",
-                    text: "{{ session('success') }}",
+                    title: "Success!",
+                    text: "{{ $message }}",
                     icon: "success",
                     confirmButtonText: "OK"
                 });
             });
         </script>
     @endif
-    @if (session()->has('error'))
+
+    {{-- Error Alert --}}
+    @if ($message = session()->pull('error'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
                     title: "Error!",
-                    text: "{{ session('error') }}",
+                    text: "{{ $message }}",
                     icon: "error",
                     confirmButtonText: "OK"
                 });
             });
         </script>
     @endif
+
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <div id="kt_app_content_container" class="app-container container-fluid">
             <form action="{{ route('employee.store') }}" method="POST" enctype="multipart/form-data">
@@ -40,16 +44,14 @@
                             <h4 class="fw-bold mb-4">Personal Information</h4>
                             <div class="mb-3">
                                 <label class="form-label">NPK</label>
-                                <input type="text" name="npk" class="form-control" value="{{ old('npk') }}"
-                                    required>
+                                <input type="text" name="npk" class="form-control" value="{{ old('npk') }}">
                                 @error('npk')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Name</label>
-                                <input type="text" name="name" class="form-control" value="{{ old('name') }}"
-                                    required>
+                                <input type="text" name="name" class="form-control" value="{{ old('name') }}">
                                 @error('name')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -80,7 +82,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Gender</label>
-                                <select name="gender" class="form-select" required>
+                                <select name="gender" class="form-select">
                                     <option value="Male" {{ old('gender') == 'Male' ? 'selected' : '' }}>Male</option>
                                     <option value="Female" {{ old('gender') == 'Female' ? 'selected' : '' }}>Female
                                     </option>
@@ -99,7 +101,7 @@
                             <div class="mb-3">
                                 <label class="form-label">Join Date</label>
                                 <input type="date" name="aisin_entry_date" class="form-control"
-                                    value="{{ old('aisin_entry_date') }}" required>
+                                    value="{{ old('aisin_entry_date') }}">
                                 @error('aisin_entry_date')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -115,7 +117,9 @@
                             <div class="mb-3">
                                 <label class="form-label">Email</label>
                                 <input type="text" name="email" class="form-control" value="{{ old('email') }}"
-                                    placeholder="employe@example.com">
+                                    placeholder="employee@example.com">
+                                <input type="hidden" name="force_email_duplicate" id="force_email_duplicate"
+                                    value="0">
                                 @error('email')
                                     <div class="text-danger">{{ $message }}</div>
                                 @enderror
@@ -126,8 +130,7 @@
                                         <label class="form-label">Company</label>
                                     </label>
                                     <select name="company_name" aria-label="Select a Country" data-control="select2"
-                                        data-placeholder="Select Company..." class="form-select form-select-lg fw-semibold"
-                                        required>
+                                        data-placeholder="Select Company..." class="form-select form-select-lg fw-semibold">
                                         <option value="">Select Company</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="AIIA">
                                             Aisin Indonesia Automotive
@@ -148,7 +151,7 @@
                                     </label>
                                     <select name="position" aria-label="Select a Country" data-control="select2"
                                         data-placeholder="Select Position..."
-                                        class="form-select form-select-lg fw-semibold" required>
+                                        class="form-select form-select-lg fw-semibold">
                                         <option value="">Select Position</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager
@@ -478,4 +481,236 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        $(function() {
+            const emailInput = $('[name="email"]');
+            const form = $('form[action="{{ route('employee.store') }}"]');
+            // kamu sebenarnya sudah tidak pakai forceFlag untuk kasus "wajib ganti email"
+            // tapi biarkan ada tidak masalah
+            const forceFlag = $('#force_email_duplicate');
+
+            let lastCheckedEmail = '';
+            let lastCheckResult = null;
+            let alertedEmail = null; // <=== email yang sudah pernah ditunjukkan alert (agar hanya sekali)
+            let blurTimer = null; // <=== untuk debounce
+
+            async function checkEmail(email) {
+                if (!email) return {
+                    exists: false
+                };
+                if (email === lastCheckedEmail && lastCheckResult !== null) return lastCheckResult;
+                const res = await fetch(
+                    `{{ route('employee.checkEmail') }}?email=${encodeURIComponent(email)}`);
+                const data = await res.json();
+                lastCheckedEmail = email;
+                lastCheckResult = data;
+                return data;
+            }
+
+            function markInvalid(input, message) {
+                input.addClass('is-invalid');
+                // jika kamu punya invalid-feedback di bawah input, bisa isi di situ juga
+                // atau biarkan SweetAlert saja yang tampil
+            }
+
+            function clearInvalid(input) {
+                input.removeClass('is-invalid');
+            }
+
+            // Cek saat BLUR — dengan debounce & guard
+            emailInput.on('input', () => {
+                // kalau user mengubah email -> reset guard dan invalid state
+                alertedEmail = null;
+                clearInvalid(emailInput);
+            });
+
+            emailInput.on('blur', function() {
+                clearTimeout(blurTimer);
+                blurTimer = setTimeout(async () => {
+                    const email = emailInput.val().trim();
+                    forceFlag.val(
+                        '0'); // tidak dipakai untuk mode "wajib ganti", tetap reset saja
+                    if (!email) return;
+
+                    // kalau email ini sudah pernah di-alert, jangan alert lagi sampai user mengubah value
+                    if (email === alertedEmail) return;
+
+                    let data;
+                    try {
+                        data = await checkEmail(email);
+                    } catch (e) {
+                        return; // gagal cek → diam
+                    }
+
+                    if (data.exists) {
+                        alertedEmail = email; // <=== tandai sudah di-alert
+                        markInvalid(emailInput);
+
+                        await Swal.fire({
+                            title: 'Email already used',
+                            html: 'This email is already used. Please enter a different email address.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+
+                        // Jangan .focus() yang bisa bikin siklus blur/focus aneh di beberapa browser/UI
+                        // Cukup select teks agar user langsung mengetik mengganti
+                        emailInput.trigger('select');
+                    }
+                }, 250);
+            });
+
+            // Intercept submit — stop & alert, tapi HANYA kalau belum pernah di-alert untuk value yang sama
+            form.on('submit', async function(e) {
+                const email = emailInput.val()?.trim();
+                if (!email) return; // biar validasi server/HTML yang jalan
+
+                let data;
+                try {
+                    data = await checkEmail(email);
+                } catch (err) {
+                    return; // kalau tidak bisa cek, biarkan server yang validasi
+                }
+
+                if (data.exists) {
+                    e.preventDefault();
+
+                    // kalau email sama & sudah di-alert, jangan spam alert kedua kalinya;
+                    // cukup biarkan user mengganti email.
+                    if (email !== alertedEmail) {
+                        alertedEmail = email;
+                        markInvalid(emailInput);
+
+                        await Swal.fire({
+                            title: 'Email already used',
+                            html: 'This email is already used. Please enter a different email address.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+
+                    // seleksi teks agar mudah diganti
+                    emailInput.trigger('select');
+                    return;
+                }
+            });
+        });
+    </script>
+    <script>
+        $(function() {
+            const form = $('form[action="{{ route('employee.store') }}"]');
+            const submitBtn = form.find('button[type="submit"]');
+            const emailInput = $('[name="email"]');
+
+            function clearErrors() {
+                form.find('.is-invalid').removeClass('is-invalid');
+                form.find('.dynamic-error').remove(); // <div class="text-danger dynamic-error">...</div>
+            }
+
+            function placeError(fieldName, messages) {
+                // Cari elemen by name (dukungan untuk array: field.index → field[])
+                let input = form.find(`[name="${fieldName}"]`);
+                if (!input.length && fieldName.includes('.')) {
+                    const base = fieldName.split('.')[0];
+                    input = form.find(`[name="${base}[]"]`).eq(parseInt(fieldName.split('.')[1], 10));
+                }
+                if (!input.length) {
+                    // fallback: tampilkan di atas tombol submit
+                    submitBtn.before(`<div class="text-danger dynamic-error mb-2">${messages[0]}</div>`);
+                    return;
+                }
+                input.addClass('is-invalid');
+                const errorDiv = $(`<div class="text-danger dynamic-error mt-1">${messages[0]}</div>`);
+                if (input.next('.select2').length) {
+                    // jika select2, taruh setelah container select2
+                    input.next('.select2').after(errorDiv);
+                } else {
+                    input.after(errorDiv);
+                }
+            }
+
+            async function ajaxSubmit(e) {
+                e.preventDefault();
+                clearErrors();
+
+                // siapkan FormData & headers
+                const formData = new FormData(form[0]);
+                const token = form.find('input[name="_token"]').val();
+
+                // disable button + spinner
+                submitBtn.prop('disabled', true).data('orig', submitBtn.html());
+                submitBtn.html('<span class="spinner-border spinner-border-sm me-2"></span>Saving...');
+
+                try {
+                    const res = await fetch(form.attr('action'), {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-CSRF-TOKEN': token,
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        }
+                    });
+
+                    if (res.status === 422) {
+                        const json = await res.json(); // { errors: {field: [msg]} }
+                        const errs = json.errors || {};
+                        // tampilkan per-field
+                        Object.keys(errs).forEach(k => placeError(k, errs[k]));
+
+                        // scroll ke error pertama + swal
+                        const firstErr = form.find('.dynamic-error').first();
+                        if (firstErr.length) {
+                            $('html, body').animate({
+                                scrollTop: firstErr.offset().top - 120
+                            }, 250);
+                        }
+                        await Swal.fire({
+                            title: 'Validation error',
+                            text: 'Please fix the highlighted fields.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        return; // jangan refresh
+                    }
+
+                    if (!res.ok) {
+                        const json = await res.json().catch(() => ({}));
+                        await Swal.fire({
+                            title: 'Error',
+                            text: json.error || 'Something went wrong. Please try again.',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        return;
+                    }
+
+                    const json = await res.json(); // {message, redirect_url?}
+                    await Swal.fire({
+                        title: 'Success!',
+                        text: json.message || 'Saved.',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    });
+
+                    // OPSIONAL: redirect setelah OK (atau tetap di halaman tanpa refresh)
+                    if (json.redirect_url) {
+                        window.location.href = json.redirect_url;
+                    }
+                } catch (err) {
+                    await Swal.fire({
+                        title: 'Network error',
+                        text: 'Please check your connection and try again.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                } finally {
+                    // restore button
+                    submitBtn.prop('disabled', false).html(submitBtn.data('orig'));
+                }
+            }
+
+            form.on('submit', ajaxSubmit);
+        });
+    </script>
 @endpush

@@ -2,13 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\CompanyScoped;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Hav extends Model
 {
     use HasFactory;
-
+    use CompanyScoped;
 
     protected $guarded = ['id'];
 
