@@ -92,9 +92,8 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'force.password.change'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('website.dashboard.index');
-    })->name('dashboard.index');
+    Route::middleware('company.scope')->group(function () {
+    });
 
     Route::get('/master_schedule', function () {
         return view('website.dashboard.master');
