@@ -13,51 +13,51 @@
             --ok-navy: #0F172A;
             --ok-bg: #F8FAFC;
             --ok-line: #E5E7EB;
-            --radius-lg: 14px
+            --radius-lg: 14px;
         }
 
         body {
-            background: var(--ok-bg)
+            background: var(--ok-bg);
         }
 
         .card {
             border: 1px solid var(--ok-line);
-            border-radius: var(--radius-lg)
+            border-radius: var(--radius-lg);
         }
 
         .card-header {
             background: transparent;
-            border-bottom: 1px dashed var(--ok-line)
+            border-bottom: 1px dashed var(--ok-line);
         }
 
         .kpi-card .value {
             font-size: clamp(1.6rem, 2.8vw, 2.2rem);
-            font-weight: 800
+            font-weight: 800;
         }
 
         .kpi-card .kpi-sub {
             font-size: .9rem;
-            color: #64748B
+            color: #64748B;
         }
 
         .kpi-card .bi {
             font-size: 1.1rem;
-            opacity: .9
+            opacity: .9;
         }
 
         .chart-card {
-            min-height: 320px
+            min-height: 320px;
         }
 
         .chart-wrapper {
             position: relative;
-            height: 260px
+            height: 260px;
         }
 
         .table.clean {
             border-collapse: separate;
             border-spacing: 0;
-            width: 100%
+            width: 100%;
         }
 
         .table.clean thead th {
@@ -67,26 +67,26 @@
             background: #f8fafc;
             color: var(--ok-navy);
             font-weight: 800;
-            border-bottom: 1px solid var(--ok-line)
+            border-bottom: 1px solid var(--ok-line);
         }
 
         .table.clean tbody tr:nth-child(even) {
-            background: #fcfcfd
+            background: #fcfcfd;
         }
 
         .table.clean th,
         .table.clean td {
             padding: .7rem 1rem;
-            font-size: .92rem
+            font-size: .92rem;
         }
 
         .table.clean tbody td {
             font-weight: 600;
-            color: #1f2937
+            color: #1f2937;
         }
 
         .table.clean tr:hover td {
-            background: #EEF2F7
+            background: #EEF2F7;
         }
 
         .btn,
@@ -94,25 +94,25 @@
         .form-control {
             min-height: 32px;
             font-size: .85rem;
-            padding: .2rem .5rem
+            padding: .2rem .5rem;
         }
 
         .form-select-sm,
         .btn-sm {
             min-height: 30px;
             font-size: .8rem;
-            padding: .2rem .45rem
+            padding: .2rem .45rem;
         }
 
         .module-strip {
             display: grid;
             gap: 12px;
             grid-template-columns: 5fr 7fr;
-            align-items: stretch
+            align-items: stretch;
         }
 
         .module-strip .module-chart {
-            grid-column: 1 / span 1
+            grid-column: 1 / span 1;
         }
 
         .module-kpis {
@@ -120,37 +120,37 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            align-content: flex-start
+            align-content: flex-start;
         }
 
         .module-kpis .kpi-card {
             flex: 1 1 calc(33.333% - 12px);
-            min-width: 180px
+            min-width: 180px;
         }
 
-        @media (max-width:1200px) {
+        @media (max-width: 1200px) {
             .module-strip {
-                grid-template-columns: 1fr
+                grid-template-columns: 1fr;
             }
 
             .module-kpis {
-                grid-column: 1 / span 1
+                grid-column: 1 / span 1;
             }
 
             .module-kpis .kpi-card {
-                flex-basis: calc(50% - 12px)
+                flex-basis: calc(50% - 12px);
             }
         }
 
-        @media (max-width:768px) {
+        @media (max-width: 768px) {
             .module-kpis .kpi-card {
-                flex-basis: 100%
+                flex-basis: 100%;
             }
         }
 
         .nav-tabs {
             border-bottom: 2px solid var(--ok-line);
-            gap: .25rem
+            gap: .25rem;
         }
 
         .nav-tabs .nav-link {
@@ -158,25 +158,32 @@
             text-transform: uppercase;
             letter-spacing: .3px;
             color: var(--ok-navy);
-            background: #F1F5F9
+            background: #F1F5F9;
         }
 
         .nav-tabs .nav-link:hover {
             background: #E2E8F0;
-            color: var(--ok-navy)
+            color: var(--ok-navy);
         }
 
         .nav-tabs .nav-link.active {
             background: var(--ok-blue);
-            color: #fff !important
+            color: #fff !important;
         }
 
+        @media (min-width: 992px) {
+            .nav-tabs .nav-link {
+                font-size: 1rem;
+            }
+        }
+
+        /* DataTables compact */
         div.dataTables_wrapper div.dataTables_info {
-            display: none !important
+            display: none !important;
         }
 
         div.dataTables_wrapper div.dataTables_paginate {
-            margin-top: .25rem
+            margin-top: .25rem;
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button {
@@ -186,73 +193,23 @@
             border-radius: 10px;
             font-size: .8rem;
             color: var(--ok-navy) !important;
-            background: #fff
+            background: #fff;
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button.current,
         .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
             background: var(--ok-blue) !important;
             color: #fff !important;
-            border-color: var(--ok-blue)
+            border-color: var(--ok-blue);
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
             background: #E2E8F0;
-            color: var(--ok-navy) !important
+            color: var(--ok-navy) !important;
         }
 
-        /* mini counter (tetap untuk tab ALL) */
-        .status-mini {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-top: 10px
-        }
-
-        .status-mini .pill {
-            display: flex;
-            align-items: center;
-            gap: .45rem;
-            padding: .35rem .6rem;
-            border-radius: 9999px;
-            background: #F8FAFC;
-            border: 1px solid var(--ok-line);
-            font-weight: 700
-        }
-
-        .status-mini .lbl {
-            display: flex;
-            align-items: center;
-            gap: .35rem;
-            color: #64748B;
-            font-weight: 600
-        }
-
-        .status-mini .n {
-            color: #0F172A
-        }
-
-        .dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 9999px;
-            display: inline-block
-        }
-
-        .dot.approved {
-            background: #009E73
-        }
-
-        .dot.progress {
-            background: #0072B2
-        }
-
-        .dot.revised {
-            background: #E69F00
-        }
-
-        .dot.not {
-            background: #7F7F7F
+        .dataTables_wrapper .dataTables_paginate .ellipsis {
+            padding: .2rem .3rem;
         }
     </style>
 @endpush
@@ -273,15 +230,17 @@
                 <div class="row g-2 align-items-end">
                     @php
                         use Illuminate\Support\Str;
+
                         $user = auth()->user();
                         $isHRD = $user->role === 'HRD';
                         $emp = optional($user->employee);
-                        $myCompany = $emp->company_name;
+                        $myCompany = $emp->company_name; // 'AII' / 'AIIA'
                         $norm = method_exists($emp, 'getNormalizedPosition')
                             ? Str::lower($emp->getNormalizedPosition())
                             : Str::lower($emp->position ?? '');
+                        // HRD + President + VPD boleh pilih company:
                         $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
-                        // hak melihat kolom PIC
+                        // Role boleh lihat kolom PIC:
                         $canSeePic = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
                     @endphp
 
@@ -350,7 +309,12 @@
                                 'icon' => 'bi-pencil-square',
                                 'class' => 'text-warning',
                             ],
-                            ['label' => 'Total Not Created', 'id' => 'kpi-all-not', 'icon' => 'bi-dash-circle'],
+                            [
+                                'label' => 'Total Not Created',
+                                'id' => 'kpi-all-not',
+                                'icon' => 'bi-dash-circle',
+                                'class' => 'text-gray-700',
+                            ],
                         ];
                     @endphp
                     @foreach ($kpis as $card)
@@ -368,7 +332,7 @@
                     @endforeach
                 </div>
 
-                {{-- CHARTS + mini counters --}}
+                {{-- CHARTS per module --}}
                 <div class="row g-4">
                     @foreach (['idp' => 'IDP', 'hav' => 'HAV', 'icp' => 'ICP', 'rtc' => 'RTC'] as $k => $label)
                         <div class="col-lg-6 col-md-12">
@@ -377,8 +341,9 @@
                                     <h5 class="mb-0">{{ $label }}</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="chart-wrapper"><canvas id="chart-all-{{ $k }}"></canvas></div>
-                                    <div id="mini-all-{{ $k }}" class="status-mini"></div>
+                                    <div class="chart-wrapper">
+                                        <canvas id="chart-all-{{ $k }}"></canvas>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -425,7 +390,7 @@
                         </div>
                     </div>
 
-                    {{-- Tables per status (kolom PIC kondisional) --}}
+                    {{-- Tables per status --}}
                     <div class="row g-4 mt-1">
                         @foreach (['approved' => 'Approved', 'progress' => 'In Progress', 'not' => 'Not Created', 'revised' => 'Revised'] as $statusKey => $statusLabel)
                             <div class="col-lg-6">
@@ -439,10 +404,7 @@
                                                 class="table table-row-dashed align-middle clean">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th>Employee</th>
-                                                        @if ($canSeePic)
-                                                            <th>PIC</th>
-                                                        @endif
+                                                        <th>Employee</th> {{-- akan di-override JS sesuai modul/kolom --}}
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -462,6 +424,7 @@
 
 @push('scripts')
     <script>
+        /** Palette */
         const STATUS_COLORS = {
             approved: '#009E73',
             progress: '#0072B2',
@@ -469,11 +432,14 @@
             not: '#7F7F7F'
         };
         const MODULES = ['idp', 'hav', 'icp', 'rtc'];
-        const IS_HRD = @json(auth()->user()->role === 'HRD');
-        const CAN_PICK_COMPANY = @json($canPickCompany);
-        const CAN_SEE_PIC = @json($canSeePic); // <<=== penting
-        const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
 
+        /** Flags dari Blade */
+        const IS_HRD = @json(auth()->user()->role === 'HRD');
+        const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
+        const CAN_PICK_COMPANY = @json($canPickCompany);
+        const CAN_SEE_PIC = @json($canSeePic); // ← penting utk kolom PIC RTC
+
+        /** Helpers */
         const ctx = id => document.getElementById(id)?.getContext('2d');
         const charts = {};
         const setText = (id, txt) => {
@@ -493,46 +459,18 @@
             return charts[key];
         }
 
-        // mini counter (ALL)
-        function renderMini(containerId, s) {
-            const el = document.getElementById(containerId);
-            if (!el) return;
-            const x = s || {
-                approved: 0,
-                progress: 0,
-                revised: 0,
-                not: 0
-            };
-            el.innerHTML = `
-            <div class="pill"><span class="lbl"><span class="dot approved"></span>Approved</span><span class="n">${x.approved ?? 0}</span></div>
-            <div class="pill"><span class="lbl"><span class="dot progress"></span>In&nbsp;Progress</span><span class="n">${x.progress ?? 0}</span></div>
-            <div class="pill"><span class="lbl"><span class="dot revised"></span>Revised</span><span class="n">${x.revised ?? 0}</span></div>
-            <div class="pill"><span class="lbl"><span class="dot not"></span>Not&nbsp;Created</span><span class="n">${x.not ?? 0}</span></div>
-        `;
-        }
-
-        // DataTable builder: rows = [{employee, pic?}]
-        function buildEmployeeTable($table, rows = [], showPic = false) {
+        /** Builder tabel generik */
+        function buildModuleTable($table, rows = [], columns = []) {
             if ($table.length === 0) return;
             if ($.fn.DataTable.isDataTable($table)) $table.DataTable().clear().destroy();
 
-            const data = (rows || []).map(r => ({
-                employee: r.employee || '',
-                pic: r.pic || '-'
-            }));
-
-            const columns = [{
-                data: 'employee',
-                title: 'Employee'
-            }];
-            if (showPic) columns.push({
-                data: 'pic',
-                title: 'PIC'
-            });
+            // Rebuild header sesuai kolom
+            const thead = `<tr>${columns.map(c => `<th>${c.title}</th>`).join('')}</tr>`;
+            $table.find('thead').html(thead);
 
             $table.DataTable({
-                data,
-                columns,
+                data: rows,
+                columns: columns,
                 pageLength: 10,
                 lengthChange: false,
                 searching: false,
@@ -555,7 +493,7 @@
             });
         }
 
-        // API
+        /** API */
         async function fetchDashboard(params = {}) {
             const qs = new URLSearchParams();
             if (params.company !== undefined && params.company !== null) qs.set('company', params.company);
@@ -570,7 +508,7 @@
             return await res.json();
         }
 
-        // RENDER
+        /** Renderers */
         function renderAllTab(data) {
             setText('kpi-all-in-scope', data.all?.scope ?? 0);
             setText('kpi-all-approved', data.all?.approved ?? 0);
@@ -603,7 +541,6 @@
                         }
                     }
                 });
-                renderMini(`mini-all-${mod}`, s);
             });
         }
 
@@ -633,12 +570,33 @@
                 }
             });
 
-            // init kosong
+            // init kosong dgn kolom default
             ['approved', 'progress', 'revised', 'not'].forEach(s => {
-                buildEmployeeTable($(`#tbl-${key}-${s}`), [], CAN_SEE_PIC);
+                const columns = (key === 'rtc') ?
+                    (CAN_SEE_PIC ? [{
+                        data: 'label',
+                        title: 'Structure'
+                    }, {
+                        data: 'pic',
+                        title: 'PIC'
+                    }] : [{
+                        data: 'label',
+                        title: 'Structure'
+                    }]) :
+                    (CAN_SEE_PIC ? [{
+                        data: 'employee',
+                        title: 'Employee'
+                    }, {
+                        data: 'pic',
+                        title: 'PIC'
+                    }] : [{
+                        data: 'employee',
+                        title: 'Employee'
+                    }]);
+                buildModuleTable($(`#tbl-${key}-${s}`), [], columns);
             });
 
-            // fetch list per status
+            // fetch per status
             (async function loadModuleTables() {
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
@@ -659,24 +617,55 @@
                         }
                     });
                     const json = await res.json();
-                    const rows = json.rows || []; // [{employee, pic}]
-                    buildEmployeeTable($(`#tbl-${key}-${status}`), rows, CAN_SEE_PIC);
+
+                    let rows, columns;
+                    if (key === 'rtc') {
+                        // Backend: [{label, pic}]
+                        rows = (json.rows || []).map(r => ({
+                            label: r.label,
+                            pic: r.pic || '-'
+                        }));
+                        columns = CAN_SEE_PIC ? [{
+                            data: 'label',
+                            title: 'Structure'
+                        }, {
+                            data: 'pic',
+                            title: 'PIC'
+                        }] : [{
+                            data: 'label',
+                            title: 'Structure'
+                        }];
+                    } else {
+                        // Backend: [{employee, pic}]
+                        rows = (json.rows || []).map(r => ({
+                            employee: r.employee,
+                            pic: r.pic || '-'
+                        }));
+                        columns = CAN_SEE_PIC ? [{
+                            data: 'employee',
+                            title: 'Employee'
+                        }, {
+                            data: 'pic',
+                            title: 'PIC'
+                        }] : [{
+                            data: 'employee',
+                            title: 'Employee'
+                        }];
+                    }
+                    buildModuleTable($(`#tbl-${key}-${status}`), rows, columns);
                 }
             })();
         }
 
-        // LOAD & UI
+        /** Load & UI */
         async function loadDashboard() {
             try {
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
-                const params = {
+                const data = await fetchDashboard({
                     company
-                };
-                localStorage.setItem('dash-filters', JSON.stringify(params));
-
-                const data = await fetchDashboard(params);
+                });
                 renderAllTab(data);
                 MODULES.forEach(k => renderModuleTab(k, data[k] || {}));
             } catch (e) {
@@ -694,29 +683,24 @@
                 Object.values(charts).forEach(c => c && c.resize());
             });
         });
+
         $('[data-control="select2"]').select2({
             allowClear: true,
             width: '100%'
         });
+
         if (!CAN_PICK_COMPANY) {
             $('#filter-company').val(MY_COMPANY).trigger('change').prop('disabled', true);
         } else {
             $('#filter-company').prop('disabled', false);
         }
+
         $('#filter-company').on('change', loadDashboard);
         $('#btn-clear').on('click', function() {
             if (CAN_PICK_COMPANY) $('#filter-company').val('').trigger('change');
             else $('#filter-company').val(MY_COMPANY).trigger('change');
             loadDashboard();
         });
-
-        const saved = localStorage.getItem('dash-filters');
-        if (saved) {
-            try {
-                const f = JSON.parse(saved);
-                if (f.company != null) $('#filter-company').val(f.company).trigger('change');
-            } catch {}
-        }
 
         loadDashboard();
     </script>
