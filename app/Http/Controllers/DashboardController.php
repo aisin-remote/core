@@ -2,7 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\{Employee, Hav, Icp, Idp, Rtc, Division, Department, Section, SubSection};
+use App\Models\{
+    Employee,
+    Hav,
+    Icp,
+    Idp,
+    Rtc,
+    Division,
+    Department,
+    Section,
+    SubSection
+};
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -47,6 +57,116 @@ class DashboardController
         return response()->json(compact('idp', 'hav', 'icp', 'rtc', 'all'));
     }
 
+    /***********************************************************************
+     * ===== Helpers RTC (roll-up struktur) =====
+     ***********************************************************************/
+    /** Nama dipotong maks 2 kata */
+    private function shortName(?string $name): string
+    {
+        if (!$name) return '-';
+        $parts = preg_split('/\s+/', trim($name));
+        return implode(' ', array_slice($parts, 0, 2));
+    }
+
+    /** PIC RTC:
+     *  Division  -> Direktur (plant director)
+     *  Dept/Sec/SubSec -> GM dari division
+     */
+    private function rtcPicFor(string $area, $model): string
+    {
+        if ($area === 'division') {
+            $dirId = optional($model->plant)->director_id ?? null;
+            $dir   = $dirId ? Employee::find($dirId) : null;
+            return $this->shortName($dir?->name);
+        }
+        // Department/Section/SubSection → GM
+        $gmId = match ($area) {
+            'department' => optional($model->division)->gm_id ?? null,
+            'section'    => optional($model->department?->division)->gm_id ?? null,
+            'sub_section' => optional($model->section?->department?->division)->gm_id ?? null,
+            default      => null,
+        };
+        $gm = $gmId ? Employee::find($gmId) : null;
+        return $this->shortName($gm?->name);
+    }
+
+    /** Roll-up status 3 term:
+     *  - all 2 -> approved
+     *  - all -1 -> revised
+     *  - all 1 -> progress
+     *  - campur/ada 0/null -> revised
+     *  - tidak ada satupun -> not
+     */
+    private function rtcAggregateStatus(array $termStatuses): string
+    {
+        if (empty($termStatuses) || array_filter($termStatuses, fn($v) => $v !== null) === []) {
+            return 'not';
+        }
+        $norm = array_map(fn($s) => $s === null ? null : (int)$s, $termStatuses);
+        $vals = array_values(array_unique(array_filter($norm, fn($v) => $v !== null)));
+
+        if (count($vals) === 1) {
+            return match ($vals[0]) {
+                2   => 'approved',
+                -1  => 'revised',
+                1 => 'progress',
+                default => 'revised',
+            };
+        }
+        return 'revised';
+    }
+
+    /** List RTC per struktur sesuai status roll-up */
+    private function listRtcStructures(?string $company, string $statusWant): array
+    {
+        $rows = [];
+
+        $divs = Division::with('plant')
+            ->when($company, fn($q) => $q->where('company', $company))
+            ->orderBy('name')->get();
+
+        $depts = Department::with('division')
+            ->when($company, fn($q) => $q->whereHas('division', fn($qq) => $qq->where('company', $company)))
+            ->orderBy('name')->get();
+
+        $secs = Section::with('department.division')
+            ->when($company, fn($q) => $q->whereHas('department.division', fn($qq) => $qq->where('company', $company)))
+            ->orderBy('name')->get();
+
+        $subs = SubSection::with('section.department.division')
+            ->when($company, fn($q) => $q->whereHas('section.department.division', fn($qq) => $qq->where('company', $company)))
+            ->orderBy('name')->get();
+
+        $pushIf = function (string $label, string $pic, string $roll) use (&$rows, $statusWant) {
+            if ($roll === $statusWant) {
+                $rows[] = ['structure' => $label, 'pic' => $pic ?: '-'];
+            }
+        };
+
+        foreach ($divs as $d) {
+            $terms = Rtc::where('area', 'division')->where('area_id', $d->id)->pluck('status', 'term');
+            $roll  = $this->rtcAggregateStatus([$terms->get('short'), $terms->get('mid'), $terms->get('long')]);
+            $pushIf('Division - ' . ($d->name ?? '-'), $this->rtcPicFor('division', $d), $roll);
+        }
+        foreach ($depts as $dp) {
+            $terms = Rtc::where('area', 'department')->where('area_id', $dp->id)->pluck('status', 'term');
+            $roll  = $this->rtcAggregateStatus([$terms->get('short'), $terms->get('mid'), $terms->get('long')]);
+            $pushIf('Department - ' . ($dp->name ?? '-'), $this->rtcPicFor('department', $dp), $roll);
+        }
+        foreach ($secs as $sc) {
+            $terms = Rtc::where('area', 'section')->where('area_id', $sc->id)->pluck('status', 'term');
+            $roll  = $this->rtcAggregateStatus([$terms->get('short'), $terms->get('mid'), $terms->get('long')]);
+            $pushIf('Section - ' . ($sc->name ?? '-'), $this->rtcPicFor('section', $sc), $roll);
+        }
+        foreach ($subs as $sb) {
+            $terms = Rtc::where('area', 'sub_section')->where('area_id', $sb->id)->pluck('status', 'term');
+            $roll  = $this->rtcAggregateStatus([$terms->get('short'), $terms->get('mid'), $terms->get('long')]);
+            $pushIf('Sub Section - ' . ($sb->name ?? '-'), $this->rtcPicFor('sub_section', $sb), $roll);
+        }
+
+        usort($rows, fn($a, $b) => strcasecmp($a['structure'], $b['structure']));
+        return $rows;
+    }
     private function allPerEmployeeBuckets(?string $company): array
     {
         $scopeIds = Employee::forCompany($company)->pluck('id');
@@ -207,229 +327,5 @@ class DashboardController
         $not      = max($scope - $distinctEmp, 0);
 
         return compact('scope', 'approved', 'progress', 'revised', 'not');
-    }
-
-    /**************************************** LIST ****************************************/
-
-    public function list(Request $req)
-    {
-        $module     = $req->query('module');
-        $statusWant = $req->query('status');
-        $company    = $req->query('company');
-
-        if (!in_array($module, ['idp', 'hav', 'icp', 'rtc'], true)) return response()->json(['rows' => []]);
-        if (!in_array($statusWant, ['approved', 'progress', 'revised', 'not'], true)) return response()->json(['rows' => []]);
-
-        if ($module === 'rtc') {
-            $rows = $this->listRtcStructures($statusWant, $company);
-            return response()->json(['rows' => $rows]);
-        }
-
-        $empIds = Employee::query()->forCompany($company)->pluck('id');
-
-        switch ($module) {
-            case 'idp':
-                $rows = $this->listIdp($empIds, $statusWant, null, null, $company);
-                break;
-            case 'hav':
-                $rows = $this->listSimple(Employee::class, Hav::class, 'status', $empIds, $statusWant, null, null);
-                break;
-            case 'icp':
-                $rows = $this->listSimple(Employee::class, Icp::class, 'status', $empIds, $statusWant, null, null);
-                break;
-        }
-
-        return response()->json(['rows' => $rows]);
-    }
-
-    /** ===== Helpers ===== */
-
-    private function short2(?string $name): string
-    {
-        $name = trim((string)$name);
-        if ($name === '') return '-';
-        $parts = preg_split('/\s+/', $name);
-        return implode(' ', array_slice($parts, 0, 2));
-    }
-
-    /** Ambil PIC atasan langsung berbasis struktur; fallback supervisor relation */
-    private function picForEmployee(Employee $e): string
-    {
-        $sup = $e->getSuperiorsByLevel(1)->first(); // gunakan logika struktural dari model
-        if ($sup) return $this->short2($sup->name);
-
-        // fallback terakhir
-        if ($e->supervisor) return $this->short2($e->supervisor->name);
-
-        return '-';
-    }
-
-    /** HAV/ICP simple list (per karyawan) */
-    private function listSimple($empModel, $modelClass, string $statusCol, $empIds, string $statusWant, $start, $end)
-    {
-        $approved = [3, 4];
-        $revised  = [-1];
-
-        $q = $modelClass::query()->whereIn('employee_id', $empIds);
-        if ($start && $end) $q->whereBetween('updated_at', [$start, $end]);
-
-        if ($statusWant === 'approved') $q->whereIn($statusCol, $approved);
-        elseif ($statusWant === 'revised')  $q->whereIn($statusCol, $revised);
-        elseif ($statusWant === 'progress') $q->whereNotIn($statusCol, array_merge($approved, $revised));
-        else {
-            // NOT CREATED
-            $has = $modelClass::query()->whereIn('employee_id', $empIds)->pluck('employee_id')->unique();
-            $noRecordIds = collect($empIds)->diff($has)->values();
-
-            return Employee::whereIn('id', $noRecordIds)
-                ->orderBy('name')
-                ->get()
-                ->map(fn($e) => [
-                    'employee' => $this->short2($e->name),
-                    'pic'      => $this->picForEmployee($e),
-                ])->values()->all();
-        }
-
-        $matchedEmpIds = $q->pluck('employee_id')->unique()->values();
-
-        return Employee::whereIn('id', $matchedEmpIds)
-            ->orderBy('name')
-            ->get()
-            ->map(fn($e) => [
-                'employee' => $this->short2($e->name),
-                'pic'      => $this->picForEmployee($e),
-            ])->values()->all();
-    }
-
-    /** IDP list (per karyawan) */
-    private function listIdp($empIds, string $statusWant, $start, $end, ?string $company)
-    {
-        $base = Idp::query()
-            ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
-            ->join('employees',   'assessments.employee_id', '=', 'employees.id')
-            ->whereIn('employees.id', $empIds)
-            ->selectRaw('employees.id as emp_id, idp.updated_at');
-
-        if ($start && $end) $base->whereBetween('idp.updated_at', [$start, $end]);
-
-        $mgr = (clone $base)->whereRaw('LOWER(employees.position) LIKE ?', ['%manager%']);
-        $non = (clone $base)->whereRaw('LOWER(employees.position) NOT LIKE ?', ['%manager%']);
-
-        if ($statusWant === 'approved') {
-            $mgr->whereIn('idp.status', [4]);
-            $non->whereIn('idp.status', [3, 4]);
-            $q = $mgr->unionAll($non);
-        } elseif ($statusWant === 'revised') {
-            $q = $base->where('idp.status', -1);
-        } elseif ($statusWant === 'progress') {
-            $mgr->whereIn('idp.status', [1, 2, 3]);
-            $non->whereIn('idp.status', [1, 2]);
-            $q = $mgr->unionAll($non);
-        } else {
-            // NOT CREATED
-            $hasIdpEmp = Idp::query()
-                ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
-                ->whereIn('assessments.employee_id', $empIds)
-                ->distinct()->pluck('assessments.employee_id');
-
-            $noIdpEmpIds = collect($empIds)->diff($hasIdpEmp)->values();
-
-            return Employee::whereIn('id', $noIdpEmpIds)
-                ->orderBy('name')
-                ->get()
-                ->map(fn($e) => [
-                    'employee' => $this->short2($e->name),
-                    'pic'      => $this->picForEmployee($e),
-                ])->values()->all();
-        }
-
-        $matchedEmpIds = DB::query()->fromSub($q, 't')->distinct()->pluck('emp_id');
-
-        return Employee::whereIn('id', $matchedEmpIds)
-            ->orderBy('name')
-            ->get()
-            ->map(fn($e) => [
-                'employee' => $this->short2($e->name),
-                'pic'      => $this->picForEmployee($e),
-            ])->values()->all();
-    }
-
-    /** RTC struktur list (Division/Department/Section/Sub Section) */
-    private function listRtcStructures(string $status, ?string $company): array
-    {
-        $divs = Division::with(['plant.director', 'gm'])
-            ->when($company, fn($q) => $q->where('company', $company))
-            ->get();
-
-        if ($divs->isEmpty()) return [];
-
-        $divIds  = $divs->pluck('id');
-        $depts   = Department::with(['division.gm'])->whereIn('division_id', $divIds)->get();
-        $deptIds = $depts->pluck('id');
-
-        $secs    = Section::with(['department.division.gm'])->whereIn('department_id', $deptIds)->get();
-        $secIds  = $secs->pluck('id');
-
-        $subs    = SubSection::with(['section.department.division.gm'])->whereIn('section_id', $secIds)->get();
-        $subIds  = $subs->pluck('id');
-
-        $statusMap = [
-            'approved' => [2],
-            'progress' => [0, 1],
-            'revised'  => [-1],
-        ];
-
-        $idsWith = function (string $area, $ids, array $statuses) {
-            if (empty($ids)) return collect();
-            return Rtc::where('area', $area)->whereIn('area_id', $ids)->whereIn('status', $statuses)->distinct()->pluck('area_id');
-        };
-
-        $idsWithoutAny = function (string $area, $ids) {
-            if (empty($ids)) return collect($ids);
-            $has = Rtc::where('area', $area)->whereIn('area_id', $ids)->distinct()->pluck('area_id');
-            return collect($ids)->diff($has)->values();
-        };
-
-        $rows = [];
-        $short = fn($s) => $this->short2($s);
-
-        // Division → PIC Director
-        $pick = $status === 'not' ? $idsWithoutAny('division', $divIds) : $idsWith('division', $divIds, $statusMap[$status] ?? []);
-        foreach ($divs->whereIn('id', $pick) as $d) {
-            $rows[] = [
-                'structure' => 'Division - ' . ($d->name ?? '-'),
-                'pic'       => $short(optional($d->plant)->director?->name),
-            ];
-        }
-
-        // Department → PIC GM
-        $pick = $status === 'not' ? $idsWithoutAny('department', $deptIds) : $idsWith('department', $deptIds, $statusMap[$status] ?? []);
-        foreach ($depts->whereIn('id', $pick) as $dept) {
-            $rows[] = [
-                'structure' => 'Department - ' . ($dept->name ?? '-'),
-                'pic'       => $short(optional($dept->division)->gm?->name),
-            ];
-        }
-
-        // Section → PIC GM
-        $pick = $status === 'not' ? $idsWithoutAny('section', $secIds) : $idsWith('section', $secIds, $statusMap[$status] ?? []);
-        foreach ($secs->whereIn('id', $pick) as $sec) {
-            $rows[] = [
-                'structure' => 'Section - ' . ($sec->name ?? '-'),
-                'pic'       => $short(optional($sec->department?->division)->gm?->name),
-            ];
-        }
-
-        // Sub Section → PIC GM
-        $pick = $status === 'not' ? $idsWithoutAny('sub_section', $subIds) : $idsWith('sub_section', $subIds, $statusMap[$status] ?? []);
-        foreach ($subs->whereIn('id', $pick) as $sub) {
-            $rows[] = [
-                'structure' => 'Sub Section - ' . ($sub->name ?? '-'),
-                'pic'       => $short(optional($sub->section?->department?->division)->gm?->name),
-            ];
-        }
-
-        usort($rows, fn($a, $b) => strcasecmp($a['structure'], $b['structure']));
-        return $rows;
     }
 }
