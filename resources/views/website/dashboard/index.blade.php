@@ -240,6 +240,8 @@
                             : Str::lower($emp->position ?? '');
                         // HRD + President + VPD boleh pilih company:
                         $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
+                        // Role boleh lihat kolom PIC:
+                        $canSeePic = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
                     @endphp
 
                     <div class="col-md-3 col-8">
@@ -288,7 +290,6 @@
                                 'label' => 'Total Completion',
                                 'id' => 'kpi-all-completion',
                                 'icon' => 'bi-clipboard2-check',
-                                'sub' => 'Approved / Total employees',
                             ],
                             [
                                 'label' => 'Total Approved',
@@ -325,9 +326,6 @@
                                         <i class="bi {{ $card['icon'] }}"></i>
                                     </div>
                                     <div class="value {{ $card['class'] ?? '' }}" id="{{ $card['id'] }}">0</div>
-                                    @isset($card['sub'])
-                                        <div class="kpi-sub">{{ $card['sub'] }}</div>
-                                    @endisset
                                 </div>
                             </div>
                         </div>
@@ -378,7 +376,7 @@
 
                         <div class="module-kpis">
                             @php $k2 = $m['key']; @endphp
-                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check', 'sub' => 'Approved / Total Employees'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
+                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -386,9 +384,6 @@
                                             <i class="bi {{ $card['ic'] }}"></i>
                                         </div>
                                         <div class="value {{ $card['c'] ?? '' }}" id="{{ $card['i'] }}">0</div>
-                                        @isset($card['sub'])
-                                            <div class="kpi-sub">{{ $card['sub'] }}</div>
-                                        @endisset
                                     </div>
                                 </div>
                             @endforeach
@@ -409,7 +404,7 @@
                                                 class="table table-row-dashed align-middle clean">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th>Employee</th>
+                                                        <th>Employee</th> {{-- akan di-override JS sesuai modul/kolom --}}
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -440,8 +435,9 @@
 
         /** Flags dari Blade */
         const IS_HRD = @json(auth()->user()->role === 'HRD');
-        const CAN_PICK_COMPANY = @json($canPickCompany);
         const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
+        const CAN_PICK_COMPANY = @json($canPickCompany);
+        const CAN_SEE_PIC = @json($canSeePic); // ← penting utk kolom PIC RTC
 
         /** Helpers */
         const ctx = id => document.getElementById(id)?.getContext('2d');
@@ -463,23 +459,18 @@
             return charts[key];
         }
 
-        /** Table: single col Employee (compact) */
-        function buildEmployeeTable($table, names = []) {
+        /** Builder tabel generik */
+        function buildModuleTable($table, rows = [], columns = []) {
             if ($table.length === 0) return;
-            if ($.fn.DataTable.isDataTable($table)) {
-                $table.DataTable().clear().destroy();
-            }
+            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().clear().destroy();
 
-            const rows = [...new Set(names)].filter(Boolean).sort((a, b) => a.localeCompare(b)).map(n => ({
-                employee: n
-            }));
+            // Rebuild header sesuai kolom
+            const thead = `<tr>${columns.map(c => `<th>${c.title}</th>`).join('')}</tr>`;
+            $table.find('thead').html(thead);
 
             $table.DataTable({
                 data: rows,
-                columns: [{
-                    data: 'employee',
-                    title: 'Employee'
-                }],
+                columns: columns,
                 pageLength: 10,
                 lengthChange: false,
                 searching: false,
@@ -579,13 +570,36 @@
                 }
             });
 
-            // init empty tables first
-            ['approved', 'progress', 'revised', 'not'].forEach(s => buildEmployeeTable($(`#tbl-${key}-${s}`), []));
+            // init kosong dgn kolom default
+            ['approved', 'progress', 'revised', 'not'].forEach(s => {
+                const columns = (key === 'rtc') ?
+                    (CAN_SEE_PIC ? [{
+                        data: 'label',
+                        title: 'Structure'
+                    }, {
+                        data: 'pic',
+                        title: 'PIC'
+                    }] : [{
+                        data: 'label',
+                        title: 'Structure'
+                    }]) :
+                    (CAN_SEE_PIC ? [{
+                        data: 'employee',
+                        title: 'Employee'
+                    }, {
+                        data: 'pic',
+                        title: 'PIC'
+                    }] : [{
+                        data: 'employee',
+                        title: 'Employee'
+                    }]);
+                buildModuleTable($(`#tbl-${key}-${s}`), [], columns);
+            });
 
-            // then fetch per-status list
+            // fetch per status
             (async function loadModuleTables() {
                 let company = $('#filter-company').val();
-                if (!CAN_PICK_COMPANY) company = MY_COMPANY; // <<=== PENTING: pakai CAN_PICK_COMPANY
+                if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
                 const base = {
                     company,
@@ -603,8 +617,42 @@
                         }
                     });
                     const json = await res.json();
-                    const names = (json.rows || []).map(r => r.employee);
-                    buildEmployeeTable($(`#tbl-${key}-${status}`), names);
+
+                    let rows, columns;
+                    if (key === 'rtc') {
+                        // Backend: [{label, pic}]
+                        rows = (json.rows || []).map(r => ({
+                            label: r.label,
+                            pic: r.pic || '-'
+                        }));
+                        columns = CAN_SEE_PIC ? [{
+                            data: 'label',
+                            title: 'Structure'
+                        }, {
+                            data: 'pic',
+                            title: 'PIC'
+                        }] : [{
+                            data: 'label',
+                            title: 'Structure'
+                        }];
+                    } else {
+                        // Backend: [{employee, pic}]
+                        rows = (json.rows || []).map(r => ({
+                            employee: r.employee,
+                            pic: r.pic || '-'
+                        }));
+                        columns = CAN_SEE_PIC ? [{
+                            data: 'employee',
+                            title: 'Employee'
+                        }, {
+                            data: 'pic',
+                            title: 'PIC'
+                        }] : [{
+                            data: 'employee',
+                            title: 'Employee'
+                        }];
+                    }
+                    buildModuleTable($(`#tbl-${key}-${status}`), rows, columns);
                 }
             })();
         }
@@ -615,12 +663,9 @@
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
-                const params = {
+                const data = await fetchDashboard({
                     company
-                };
-                localStorage.setItem('dash-filters', JSON.stringify(params));
-
-                const data = await fetchDashboard(params);
+                });
                 renderAllTab(data);
                 MODULES.forEach(k => renderModuleTab(k, data[k] || {}));
             } catch (e) {
@@ -633,47 +678,30 @@
             }
         }
 
-        // Tabs resize fix
         document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(el => {
             el.addEventListener('shown.bs.tab', () => {
                 Object.values(charts).forEach(c => c && c.resize());
             });
         });
 
-        // Select2
         $('[data-control="select2"]').select2({
             allowClear: true,
             width: '100%'
         });
 
-        // Lock/enable company selector on load
         if (!CAN_PICK_COMPANY) {
             $('#filter-company').val(MY_COMPANY).trigger('change').prop('disabled', true);
         } else {
             $('#filter-company').prop('disabled', false);
         }
 
-        // Auto-apply on change & Clear
         $('#filter-company').on('change', loadDashboard);
         $('#btn-clear').on('click', function() {
-            if (CAN_PICK_COMPANY) {
-                $('#filter-company').val('').trigger('change');
-            } else {
-                $('#filter-company').val(MY_COMPANY).trigger('change');
-            }
+            if (CAN_PICK_COMPANY) $('#filter-company').val('').trigger('change');
+            else $('#filter-company').val(MY_COMPANY).trigger('change');
             loadDashboard();
         });
 
-        // Restore saved filter
-        const saved = localStorage.getItem('dash-filters');
-        if (saved) {
-            try {
-                const f = JSON.parse(saved);
-                if (f.company != null) $('#filter-company').val(f.company).trigger('change');
-            } catch {}
-        }
-
-        // First load
         loadDashboard();
     </script>
 @endpush
