@@ -17,47 +17,47 @@
         }
 
         body {
-            background: var(--ok-bg);
+            background: var(--ok-bg)
         }
 
         .card {
             border: 1px solid var(--ok-line);
-            border-radius: var(--radius-lg);
+            border-radius: var(--radius-lg)
         }
 
         .card-header {
             background: transparent;
-            border-bottom: 1px dashed var(--ok-line);
+            border-bottom: 1px dashed var(--ok-line)
         }
 
         .kpi-card .value {
             font-size: clamp(1.6rem, 2.8vw, 2.2rem);
-            font-weight: 800;
+            font-weight: 800
         }
 
         .kpi-card .kpi-sub {
             font-size: .9rem;
-            color: #64748B;
+            color: #64748B
         }
 
         .kpi-card .bi {
             font-size: 1.1rem;
-            opacity: .9;
+            opacity: .9
         }
 
         .chart-card {
-            min-height: 320px;
+            min-height: 320px
         }
 
         .chart-wrapper {
             position: relative;
-            height: 260px;
+            height: 260px
         }
 
         .table.clean {
             border-collapse: separate;
             border-spacing: 0;
-            width: 100%;
+            width: 100%
         }
 
         .table.clean thead th {
@@ -67,26 +67,26 @@
             background: #f8fafc;
             color: var(--ok-navy);
             font-weight: 800;
-            border-bottom: 1px solid var(--ok-line);
+            border-bottom: 1px solid var(--ok-line)
         }
 
         .table.clean tbody tr:nth-child(even) {
-            background: #fcfcfd;
+            background: #fcfcfd
         }
 
         .table.clean th,
         .table.clean td {
             padding: .7rem 1rem;
-            font-size: .92rem;
+            font-size: .92rem
         }
 
         .table.clean tbody td {
             font-weight: 600;
-            color: #1f2937;
+            color: #1f2937
         }
 
         .table.clean tr:hover td {
-            background: #EEF2F7;
+            background: #EEF2F7
         }
 
         .btn,
@@ -94,25 +94,25 @@
         .form-control {
             min-height: 32px;
             font-size: .85rem;
-            padding: .2rem .5rem;
+            padding: .2rem .5rem
         }
 
         .form-select-sm,
         .btn-sm {
             min-height: 30px;
             font-size: .8rem;
-            padding: .2rem .45rem;
+            padding: .2rem .45rem
         }
 
         .module-strip {
             display: grid;
             gap: 12px;
             grid-template-columns: 5fr 7fr;
-            align-items: stretch;
+            align-items: stretch
         }
 
         .module-strip .module-chart {
-            grid-column: 1 / span 1;
+            grid-column: 1 / span 1
         }
 
         .module-kpis {
@@ -120,37 +120,37 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            align-content: flex-start;
+            align-content: flex-start
         }
 
         .module-kpis .kpi-card {
             flex: 1 1 calc(33.333% - 12px);
-            min-width: 180px;
+            min-width: 180px
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width:1200px) {
             .module-strip {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr
             }
 
             .module-kpis {
-                grid-column: 1 / span 1;
+                grid-column: 1 / span 1
             }
 
             .module-kpis .kpi-card {
-                flex-basis: calc(50% - 12px);
+                flex-basis: calc(50% - 12px)
             }
         }
 
-        @media (max-width: 768px) {
+        @media (max-width:768px) {
             .module-kpis .kpi-card {
-                flex-basis: 100%;
+                flex-basis: 100%
             }
         }
 
         .nav-tabs {
             border-bottom: 2px solid var(--ok-line);
-            gap: .25rem;
+            gap: .25rem
         }
 
         .nav-tabs .nav-link {
@@ -158,32 +158,26 @@
             text-transform: uppercase;
             letter-spacing: .3px;
             color: var(--ok-navy);
-            background: #F1F5F9;
+            background: #F1F5F9
         }
 
         .nav-tabs .nav-link:hover {
             background: #E2E8F0;
-            color: var(--ok-navy);
+            color: var(--ok-navy)
         }
 
         .nav-tabs .nav-link.active {
             background: var(--ok-blue);
-            color: #fff !important;
-        }
-
-        @media (min-width: 992px) {
-            .nav-tabs .nav-link {
-                font-size: 1rem;
-            }
+            color: #fff !important
         }
 
         /* DataTables compact */
         div.dataTables_wrapper div.dataTables_info {
-            display: none !important;
+            display: none !important
         }
 
         div.dataTables_wrapper div.dataTables_paginate {
-            margin-top: .25rem;
+            margin-top: .25rem
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button {
@@ -193,28 +187,51 @@
             border-radius: 10px;
             font-size: .8rem;
             color: var(--ok-navy) !important;
-            background: #fff;
+            background: #fff
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button.current,
         .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
             background: var(--ok-blue) !important;
             color: #fff !important;
-            border-color: var(--ok-blue);
+            border-color: var(--ok-blue)
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
             background: #E2E8F0;
-            color: var(--ok-navy) !important;
+            color: var(--ok-navy) !important
         }
 
         .dataTables_wrapper .dataTables_paginate .ellipsis {
-            padding: .2rem .3rem;
+            padding: .2rem .3rem
+        }
+
+        /* Konsistensi tinggi kartu KPI */
+        .kpi-grid .kpi-card .card-body {
+            display: flex;
+            flex-direction: column;
+            gap: .35rem;
+            min-height: 110px
         }
     </style>
 @endpush
 
 @section('main')
+    @php
+        use Illuminate\Support\Str;
+        $user = auth()->user();
+        $isHRD = $user->role === 'HRD';
+        $emp = optional($user->employee);
+        $myCompany = $emp->company_name;
+        $norm = method_exists($emp, 'getNormalizedPosition')
+            ? Str::lower($emp->getNormalizedPosition())
+            : Str::lower($emp->position ?? '');
+        $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
+
+        // TAMPIL PIC hanya untuk HRD/GM/Direktur/VPD/President
+        $canSeePIC = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
+    @endphp
+
     <div id="kt_app_content_container" class="app-container container-fluid">
 
         {{-- HEADER --}}
@@ -228,22 +245,6 @@
         <div class="card mb-4">
             <div class="card-body py-3">
                 <div class="row g-2 align-items-end">
-                    @php
-                        use Illuminate\Support\Str;
-
-                        $user = auth()->user();
-                        $isHRD = $user->role === 'HRD';
-                        $emp = optional($user->employee);
-                        $myCompany = $emp->company_name; // 'AII' / 'AIIA'
-                        $norm = method_exists($emp, 'getNormalizedPosition')
-                            ? Str::lower($emp->getNormalizedPosition())
-                            : Str::lower($emp->position ?? '');
-                        // HRD + President + VPD boleh pilih company:
-                        $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
-                        // Role boleh lihat kolom PIC:
-                        $canSeePic = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
-                    @endphp
-
                     <div class="col-md-3 col-8">
                         <label class="form-label mb-1">Company</label>
                         <select id="filter-company" class="form-select form-select-sm" data-control="select2"
@@ -282,7 +283,7 @@
             {{-- ============== TAB ALL ============== --}}
             <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
                 {{-- KPI --}}
-                <div class="row g-3 mb-4">
+                <div class="row g-3 mb-4 kpi-grid">
                     @php
                         $kpis = [
                             ['label' => 'Total Employees', 'id' => 'kpi-all-in-scope', 'icon' => 'bi-bullseye'],
@@ -363,7 +364,6 @@
 
             @foreach ($modules as $m)
                 <div class="tab-pane fade" id="tab-{{ $m['key'] }}" role="tabpanel">
-                    {{-- Strip: Chart + KPIs --}}
                     <div class="module-strip">
                         <div class="card chart-card module-chart">
                             <div class="card-header d-flex align-items-center gap-2">
@@ -376,7 +376,7 @@
 
                         <div class="module-kpis">
                             @php $k2 = $m['key']; @endphp
-                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
+                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => $k2 === 'rtc' ? 'Total Process for Approval' : 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -392,7 +392,23 @@
 
                     {{-- Tables per status --}}
                     <div class="row g-4 mt-1">
-                        @foreach (['approved' => 'Approved', 'progress' => 'In Progress', 'not' => 'Not Created', 'revised' => 'Revised'] as $statusKey => $statusLabel)
+                        @php
+                            $statusLabels =
+                                $m['key'] === 'rtc'
+                                    ? [
+                                        'approved' => 'Approved',
+                                        'progress' => 'Process for Approval',
+                                        'not' => 'Not Created',
+                                        'revised' => 'Revised',
+                                    ]
+                                    : [
+                                        'approved' => 'Approved',
+                                        'progress' => 'In Progress',
+                                        'not' => 'Not Created',
+                                        'revised' => 'Revised',
+                                    ];
+                        @endphp
+                        @foreach ($statusLabels as $statusKey => $statusLabel)
                             <div class="col-lg-6">
                                 <div class="card h-100">
                                     <div class="card-header d-flex align-items-center gap-2">
@@ -404,7 +420,10 @@
                                                 class="table table-row-dashed align-middle clean">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        <th>Employee</th> {{-- akan di-override JS sesuai modul/kolom --}}
+                                                        <th>{{ $m['key'] === 'rtc' ? 'Structure' : 'Employee' }}</th>
+                                                        @if ($canSeePIC)
+                                                            <th>PIC</th> {{-- akan di-hide oleh DataTables untuk RTC-Approved --}}
+                                                        @endif
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -417,14 +436,12 @@
                     </div>
                 </div>
             @endforeach
-
         </div>
     </div>
 @endsection
 
 @push('scripts')
     <script>
-        /** Palette */
         const STATUS_COLORS = {
             approved: '#009E73',
             progress: '#0072B2',
@@ -433,13 +450,11 @@
         };
         const MODULES = ['idp', 'hav', 'icp', 'rtc'];
 
-        /** Flags dari Blade */
         const IS_HRD = @json(auth()->user()->role === 'HRD');
-        const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
         const CAN_PICK_COMPANY = @json($canPickCompany);
-        const CAN_SEE_PIC = @json($canSeePic); // ← penting utk kolom PIC RTC
+        const CAN_SEE_PIC = @json($canSeePIC);
+        const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
 
-        /** Helpers */
         const ctx = id => document.getElementById(id)?.getContext('2d');
         const charts = {};
         const setText = (id, txt) => {
@@ -447,6 +462,7 @@
             if (el) el.textContent = txt;
         };
         const pct = (a, b) => b ? Math.round((a / b) * 100) : 0;
+        const short2 = s => (s || '').trim().split(/\s+/).slice(0, 2).join(' ');
 
         function createOrUpdateChart(key, type, elCtx, data, options = {}) {
             if (!elCtx) return;
@@ -456,18 +472,13 @@
                 data,
                 options
             });
-            return charts[key];
         }
 
-        /** Builder tabel generik */
-        function buildModuleTable($table, rows = [], columns = []) {
+        function buildTable($table, rows = [], columns = []) {
             if ($table.length === 0) return;
-            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().clear().destroy();
-
-            // Rebuild header sesuai kolom
-            const thead = `<tr>${columns.map(c => `<th>${c.title}</th>`).join('')}</tr>`;
-            $table.find('thead').html(thead);
-
+            if ($.fn.DataTable.isDataTable($table)) {
+                $table.DataTable().clear().destroy();
+            }
             $table.DataTable({
                 data: rows,
                 columns: columns,
@@ -493,7 +504,6 @@
             });
         }
 
-        /** API */
         async function fetchDashboard(params = {}) {
             const qs = new URLSearchParams();
             if (params.company !== undefined && params.company !== null) qs.set('company', params.company);
@@ -508,7 +518,6 @@
             return await res.json();
         }
 
-        /** Renderers */
         function renderAllTab(data) {
             setText('kpi-all-in-scope', data.all?.scope ?? 0);
             setText('kpi-all-approved', data.all?.approved ?? 0);
@@ -545,6 +554,7 @@
         }
 
         function renderModuleTab(key, data) {
+            /* KPI + chart (tetap) */
             setText(`kpi-${key}-scope`, data?.scope ?? 0);
             setText(`kpi-${key}-appr`, data?.approved ?? 0);
             setText(`kpi-${key}-prog`, data?.progress ?? 0);
@@ -552,8 +562,12 @@
             setText(`kpi-${key}-not`, data?.not ?? 0);
             setText(`kpi-${key}-completion`, pct(data?.approved ?? 0, data?.scope ?? 0) + '%');
 
+            const labels = (key === 'rtc') ? ['Approved', 'Process for Approval', 'Revised', 'Not Created'] : ['Approved',
+                'In Progress', 'Revised', 'Not Created'
+            ];
+
             createOrUpdateChart(`chart-${key}-doughnut`, 'doughnut', ctx(`chart-${key}-doughnut`), {
-                labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
+                labels,
                 datasets: [{
                     data: [data?.approved ?? 0, data?.progress ?? 0, data?.revised ?? 0, data?.not ?? 0],
                     backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress, STATUS_COLORS.revised,
@@ -570,34 +584,38 @@
                 }
             });
 
-            // init kosong dgn kolom default
-            ['approved', 'progress', 'revised', 'not'].forEach(s => {
-                const columns = (key === 'rtc') ?
-                    (CAN_SEE_PIC ? [{
-                        data: 'label',
+            // Init kosong dengan struktur kolom yang benar
+            ['approved', 'progress', 'revised', 'not'].forEach(status => {
+                const $tbl = $(`#tbl-${key}-${status}`);
+                let cols;
+                if (key === 'rtc') {
+                    cols = [{
+                        data: 'structure',
                         title: 'Structure'
-                    }, {
-                        data: 'pic',
-                        title: 'PIC'
-                    }] : [{
-                        data: 'label',
-                        title: 'Structure'
-                    }]) :
-                    (CAN_SEE_PIC ? [{
+                    }];
+                    if (CAN_SEE_PIC) {
+                        // hide PIC saat approved (kolom tetap ada agar header sinkron)
+                        cols.push({
+                            data: 'pic',
+                            title: 'PIC',
+                            visible: (status !== 'approved')
+                        });
+                    }
+                } else {
+                    cols = [{
                         data: 'employee',
                         title: 'Employee'
-                    }, {
+                    }];
+                    if (CAN_SEE_PIC) cols.push({
                         data: 'pic',
                         title: 'PIC'
-                    }] : [{
-                        data: 'employee',
-                        title: 'Employee'
-                    }]);
-                buildModuleTable($(`#tbl-${key}-${s}`), [], columns);
+                    });
+                }
+                buildTable($tbl, [], cols);
             });
 
-            // fetch per status
-            (async function loadModuleTables() {
+            // load data per status
+            (async function() {
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
@@ -618,54 +636,64 @@
                     });
                     const json = await res.json();
 
-                    let rows, columns;
+                    let rows = [];
                     if (key === 'rtc') {
-                        // Backend: [{label, pic}]
-                        rows = (json.rows || []).map(r => ({
-                            label: r.label,
-                            pic: r.pic || '-'
-                        }));
-                        columns = CAN_SEE_PIC ? [{
-                            data: 'label',
-                            title: 'Structure'
-                        }, {
-                            data: 'pic',
-                            title: 'PIC'
-                        }] : [{
-                            data: 'label',
-                            title: 'Structure'
-                        }];
+                        rows = (json.rows || []).map(r => {
+                            // pilih PIC sesuai status:
+                            // progress => director_pic; revised/not => struct_pic; approved => abaikan
+                            let pic = '-';
+                            if (status === 'progress') pic = r.director_pic || '-';
+                            else if (status === 'revised' || status === 'not') pic = r.struct_pic || '-';
+                            return {
+                                structure: r.name || '-',
+                                pic: short2(pic)
+                            };
+                        });
                     } else {
-                        // Backend: [{employee, pic}]
                         rows = (json.rows || []).map(r => ({
-                            employee: r.employee,
-                            pic: r.pic || '-'
+                            employee: r.employee || '-',
+                            pic: short2(r.pic || '-')
                         }));
-                        columns = CAN_SEE_PIC ? [{
-                            data: 'employee',
-                            title: 'Employee'
-                        }, {
+                    }
+
+                    const $tbl = $(`#tbl-${key}-${status}`);
+                    let cols;
+                    if (key === 'rtc') {
+                        cols = [{
+                            data: 'structure',
+                            title: 'Structure'
+                        }];
+                        if (CAN_SEE_PIC) cols.push({
                             data: 'pic',
-                            title: 'PIC'
-                        }] : [{
+                            title: 'PIC',
+                            visible: (status !== 'approved')
+                        });
+                    } else {
+                        cols = [{
                             data: 'employee',
                             title: 'Employee'
                         }];
+                        if (CAN_SEE_PIC) cols.push({
+                            data: 'pic',
+                            title: 'PIC'
+                        });
                     }
-                    buildModuleTable($(`#tbl-${key}-${status}`), rows, columns);
+                    buildTable($tbl, rows, cols);
                 }
             })();
         }
 
-        /** Load & UI */
         async function loadDashboard() {
             try {
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
-                const data = await fetchDashboard({
+                const params = {
                     company
-                });
+                };
+                localStorage.setItem('dash-filters', JSON.stringify(params));
+
+                const data = await fetchDashboard(params);
                 renderAllTab(data);
                 MODULES.forEach(k => renderModuleTab(k, data[k] || {}));
             } catch (e) {
@@ -701,6 +729,14 @@
             else $('#filter-company').val(MY_COMPANY).trigger('change');
             loadDashboard();
         });
+
+        const saved = localStorage.getItem('dash-filters');
+        if (saved) {
+            try {
+                const f = JSON.parse(saved);
+                if (f.company != null) $('#filter-company').val(f.company).trigger('change');
+            } catch {}
+        }
 
         loadDashboard();
     </script>
