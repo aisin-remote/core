@@ -375,8 +375,14 @@
                         </div>
 
                         <div class="module-kpis">
-                            @php $k2 = $m['key']; @endphp
-                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => $k2 === 'rtc' ? 'Total Process for Approval' : 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
+                            @php
+                                $k2 = $m['key'];
+                                // label khusus RTC
+                                $scopeLabel = $k2 === 'rtc' ? 'Total Structure' : 'Total Employees';
+                                $progressLabel = $k2 === 'rtc' ? 'Total Process for Approval' : 'Total In Progress';
+                            @endphp
+
+                            @foreach ([['l' => $scopeLabel, 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => $progressLabel, 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -384,10 +390,14 @@
                                             <i class="bi {{ $card['ic'] }}"></i>
                                         </div>
                                         <div class="value {{ $card['c'] ?? '' }}" id="{{ $card['i'] }}">0</div>
+                                        @isset($card['sub'])
+                                            <div class="kpi-sub">{{ $card['sub'] }}</div>
+                                        @endisset
                                     </div>
                                 </div>
                             @endforeach
                         </div>
+
                     </div>
 
                     {{-- Tables per status --}}
@@ -553,6 +563,17 @@
             });
         }
 
+        function formatStructure(area, name) {
+            const map = {
+                division: 'Division',
+                department: 'Department',
+                section: 'Section',
+                sub_section: 'Sub Section'
+            };
+            const title = map[area] || (area || '').replace('-', ' ');
+            return `${title} - ${name || '-'}`;
+        }
+
         function renderModuleTab(key, data) {
             /* KPI + chart (tetap) */
             setText(`kpi-${key}-scope`, data?.scope ?? 0);
@@ -639,13 +660,13 @@
                     let rows = [];
                     if (key === 'rtc') {
                         rows = (json.rows || []).map(r => {
-                            // pilih PIC sesuai status:
-                            // progress => director_pic; revised/not => struct_pic; approved => abaikan
                             let pic = '-';
                             if (status === 'progress') pic = r.director_pic || '-';
                             else if (status === 'revised' || status === 'not') pic = r.struct_pic || '-';
+                            // tampilkan dengan prefix model
+                            const label = formatStructure(r.area, r.name);
                             return {
-                                structure: r.name || '-',
+                                structure: label,
                                 pic: short2(pic)
                             };
                         });
