@@ -28,33 +28,92 @@ class DashboardController
     {
         $company = $request->query('company');
 
+        // === Per modul (per-employee) untuk KPI/Chart ===
         $idp = $this->idpPerEmployeeBuckets($company);
 
-        $hav = $this->modulePerEmployeeBuckets(
-            (new Hav)->getTable(),
-            'status',
-            $company,
-            ['approved' => [3], 'revised' => [-1], 'progress' => [1, 2]]
-        );
+        $hav = $this->modulePerEmployeeBuckets((new Hav)->getTable(), 'status', $company, [
+            'approved' => [3],
+            'revised'  => [-1],
+            'progress' => [1, 2],
+        ]);
 
-        $icp = $this->modulePerEmployeeBuckets(
-            (new Icp)->getTable(),
-            'status',
-            $company,
-            ['approved' => [3], 'revised' => [-1], 'progress' => [1, 2]]
-        );
+        $icp = $this->modulePerEmployeeBuckets((new Icp)->getTable(), 'status', $company, [
+            'approved' => [3],
+            'revised'  => [-1],
+            'progress' => [1, 2],
+        ]);
 
-        // RTC: 2 approved, -1 revised, 0/1 progress
-        $rtc = $this->modulePerEmployeeBuckets(
-            (new Rtc)->getTable(),
-            'status',
-            $company,
-            ['approved' => [2], 'revised' => [-1], 'progress' => [0, 1]]
-        );
+        // RTC: mapping baru → 0/1 progress, 2 approved, -1 revised
+        $rtc = $this->modulePerEmployeeBuckets((new Rtc)->getTable(), 'status', $company, [
+            'approved' => [2],
+            'revised'  => [-1],
+            'progress' => [0, 1],
+        ]);
 
+        // === ALL = per karyawan unik lintas modul ===
         $all = $this->allPerEmployeeBuckets($company);
 
         return response()->json(compact('idp', 'hav', 'icp', 'rtc', 'all'));
+    }
+
+    /***********************************************************************
+     * LIST untuk tabel per status di setiap tab
+     ***********************************************************************/
+    public function list(Request $req)
+    {
+        $module      = $req->query('module');
+        $statusWant  = $req->query('status');
+        $company     = $req->query('company');
+        $division    = $req->query('division');   // (opsional, belum dipakai di contoh)
+        $department  = $req->query('department'); // (opsional, belum dipakai di contoh)
+        $month       = $req->query('month');      // (opsional)
+
+        if (!in_array($module, ['idp', 'hav', 'icp', 'rtc'], true)) {
+            return response()->json(['rows' => []]);
+        }
+        if (!in_array($statusWant, ['approved', 'progress', 'revised', 'not'], true)) {
+            return response()->json(['rows' => []]);
+        }
+
+        // ==== Khusus RTC: tampilkan struktur + PIC (roll-up 3 term) ====
+        if ($module === 'rtc') {
+            $rows = $this->listRtcStructures($company, $statusWant);
+            return response()->json(['rows' => $rows]);
+        }
+
+        // ==== Modul lain: tetap per-employee, tapi kirim juga PIC (atasan langsung) ====
+        $empScope = Employee::query()->forCompany($company);
+        if ($department) {
+            $empScope->whereHas('departments', fn($q) => $q->where('department_id', $department));
+        }
+        if ($division) {
+            $empScope->whereHas('departments.division', fn($q) => $q->where('divisions_id', $division));
+        }
+        $empIds = $empScope->pluck('id');
+
+        // range bulan (opsional)
+        [$mStart, $mEnd] = [null, null];
+        if ($month) {
+            try {
+                $mStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+                $mEnd   = (clone $mStart)->endOfMonth();
+            } catch (\Throwable $e) {
+            }
+        }
+
+        switch ($module) {
+            case 'hav':
+                $rows = $this->listSimple(Employee::class, Hav::class, 'status', $empIds, $statusWant, $mStart, $mEnd, true);
+                break;
+            case 'icp':
+                $rows = $this->listSimple(Employee::class, Icp::class, 'status', $empIds, $statusWant, $mStart, $mEnd, true);
+                break;
+            case 'idp':
+            default:
+                $rows = $this->listIdp($empIds, $statusWant, $mStart, $mEnd, $company, true);
+        }
+
+        return response()->json(['rows' => $rows]);
     }
 
     /***********************************************************************
@@ -167,12 +226,114 @@ class DashboardController
         usort($rows, fn($a, $b) => strcasecmp($a['structure'], $b['structure']));
         return $rows;
     }
+
+    /***********************************************************************
+     * ===== Helpers modul per-employee (IDP/HAV/ICP) + ALL =====
+     ***********************************************************************/
+    /** PIC untuk employee = atasan langsung (level 1), dipotong 2 kata */
+    private function employeePicName(int $empId): string
+    {
+        $emp = Employee::find($empId);
+        if (!$emp) return '-';
+        $sup = $emp->getSuperiorsByLevel(1)->first();
+        return $this->shortName($sup?->name);
+    }
+
+    /** Modul HAV/ICP generic list (kembalikan employee + pic) */
+    private function listSimple($empModel, $modelClass, string $statusCol, $empIds, string $statusWant, $start, $end, bool $withPic = false)
+    {
+        $approved = [3, 4]; // (aman untuk historis)
+        $revised  = [-1];
+
+        $q = $modelClass::query()->whereIn('employee_id', $empIds);
+        if ($start && $end) $q->whereBetween('updated_at', [$start, $end]);
+
+        if ($statusWant === 'approved')      $q->whereIn($statusCol, $approved);
+        elseif ($statusWant === 'revised')   $q->whereIn($statusCol, $revised);
+        elseif ($statusWant === 'progress')  $q->whereNotIn($statusCol, array_merge($approved, $revised));
+        else {
+            // NOT CREATED → employee tanpa record apa pun
+            $has = $modelClass::query()->whereIn('employee_id', $empIds)->pluck('employee_id')->unique();
+            $noRecordIds = collect($empIds)->diff($has)->values();
+
+            return Employee::whereIn('id', $noRecordIds)
+                ->orderBy('name')->get()
+                ->map(fn($e) => [
+                    'employee' => $e->name,
+                    'pic'      => $withPic ? $this->employeePicName($e->id) : null,
+                ])->values();
+        }
+
+        $matchedEmpIds = $q->pluck('employee_id')->unique()->values();
+
+        return Employee::whereIn('id', $matchedEmpIds)
+            ->orderBy('name')->get()
+            ->map(fn($e) => [
+                'employee' => $e->name,
+                'pic'      => $withPic ? $this->employeePicName($e->id) : null,
+            ])->values();
+    }
+
+    /** Modul IDP list (rule manager vs non-manager) */
+    private function listIdp($empIds, string $statusWant, $start, $end, ?string $company, bool $withPic = false)
+    {
+        $base = Idp::query()
+            ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
+            ->join('employees',   'assessments.employee_id', '=', 'employees.id')
+            ->whereIn('employees.id', $empIds)
+            ->selectRaw('employees.id as emp_id, idp.updated_at, employees.position');
+
+        if ($start && $end) $base->whereBetween('idp.updated_at', [$start, $end]);
+
+        $mgr = (clone $base)->whereRaw('LOWER(employees.position) LIKE ?', ['%manager%']);
+        $non = (clone $base)->whereRaw('LOWER(employees.position) NOT LIKE ?', ['%manager%']);
+
+        if ($statusWant === 'approved') {
+            $mgr->whereIn('idp.status', [4]);
+            $non->whereIn('idp.status', [3, 4]);
+            $q = $mgr->unionAll($non);
+        } elseif ($statusWant === 'revised') {
+            $q = $base->where('idp.status', -1);
+        } elseif ($statusWant === 'progress') {
+            $mgr->whereIn('idp.status', [1, 2, 3]);
+            $non->whereIn('idp.status', [1, 2]);
+            $q = $mgr->unionAll($non);
+        } else {
+            // NOT CREATED → tanpa IDP sama sekali
+            $hasIdpEmp = Idp::query()
+                ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
+                ->whereIn('assessments.employee_id', $empIds)
+                ->distinct()->pluck('assessments.employee_id');
+
+            $noIdpEmpIds = collect($empIds)->diff($hasIdpEmp)->values();
+
+            return Employee::whereIn('id', $noIdpEmpIds)
+                ->orderBy('name')->get()
+                ->map(fn($e) => [
+                    'employee' => $e->name,
+                    'pic'      => $withPic ? $this->employeePicName($e->id) : null,
+                ])->values();
+        }
+
+        $matchedEmpIds = DB::query()->fromSub($q, 't')->distinct()->pluck('emp_id');
+
+        return Employee::whereIn('id', $matchedEmpIds)
+            ->orderBy('name')->get()
+            ->map(fn($e) => [
+                'employee' => $e->name,
+                'pic'      => $withPic ? $this->employeePicName($e->id) : null,
+            ])->values();
+    }
+
+    /** ALL buckets (per karyawan unik lintas modul) */
     private function allPerEmployeeBuckets(?string $company): array
     {
         $scopeIds = Employee::forCompany($company)->pluck('id');
 
+        // Approved: ada approved di salah satu modul
         $approvedIds = Employee::forCompany($company)
             ->where(function ($q) {
+                // IDP approved (manager {4}, non-manager {3,4})
                 $q->whereExists(function ($qq) {
                     $qq->selectRaw(1)->from('idp')
                         ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
@@ -183,31 +344,30 @@ class DashboardController
                                 ->orWhereRaw("LOWER(e2.position) NOT LIKE '%manager%' AND idp.status IN (3,4)");
                         });
                 })
+                    // HAV/ICP approved {3}; RTC approved {2}
                     ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('havs')->whereColumn('havs.employee_id', 'employees.id')->whereIn('havs.status', [3]))
                     ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('icp')->whereColumn('icp.employee_id', 'employees.id')->whereIn('icp.status', [3]))
                     ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('rtc')->whereColumn('rtc.employee_id', 'employees.id')->whereIn('rtc.status', [2]));
             })
             ->pluck('id')->unique();
 
+        // Revised: ada revised tapi bukan approved
         $revisedIds = Employee::forCompany($company)
             ->whereNotIn('id', $approvedIds)
             ->where(function ($q) {
-                $q->whereExists(function ($qq) {
-                    $qq->selectRaw(1)->from('idp')
-                        ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
-                        ->whereColumn('assessments.employee_id', 'employees.id')
-                        ->where('idp.status', -1);
-                })
+                $q->whereExists(fn($qq) => $qq->selectRaw(1)->from('idp')->join('assessments', 'idp.assessment_id', '=', 'assessments.id')->whereColumn('assessments.employee_id', 'employees.id')->where('idp.status', -1))
                     ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('havs')->whereColumn('havs.employee_id', 'employees.id')->where('havs.status', -1))
                     ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('icp')->whereColumn('icp.employee_id', 'employees.id')->where('icp.status', -1))
                     ->orWhereExists(fn($qq) => $qq->selectRaw(1)->from('rtc')->whereColumn('rtc.employee_id', 'employees.id')->where('rtc.status', -1));
             })
             ->pluck('id')->unique();
 
+        // Progress: ada progress tapi bukan approved/revised
         $progressIds = Employee::forCompany($company)
             ->whereNotIn('id', $approvedIds)
             ->whereNotIn('id', $revisedIds)
             ->where(function ($q) {
+                // IDP progress: manager {1,2,3}, non-manager {1,2}
                 $q->whereExists(function ($qq) {
                     $qq->selectRaw(1)->from('idp')
                         ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
@@ -236,13 +396,14 @@ class DashboardController
         ];
     }
 
+    /** IDP buckets (khusus manager vs non-manager) */
     private function idpPerEmployeeBuckets(?string $company): array
     {
         $scope = Employee::forCompany($company)->count();
 
         $base = DB::table('idp')
             ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
-            ->join('employees', 'assessments.employee_id', '=', 'employees.id')
+            ->join('employees',  'assessments.employee_id', '=', 'employees.id')
             ->when($company, fn($q) => $q->where('employees.company_name', $company));
 
         $distinctEmp = (clone $base)->distinct()->count('assessments.employee_id');
@@ -272,8 +433,7 @@ class DashboardController
 
         $counts = DB::query()->fromSub($perEmp, 't')
             ->select('bucket', DB::raw('COUNT(*) as c'))
-            ->groupBy('bucket')
-            ->pluck('c', 'bucket');
+            ->groupBy('bucket')->pluck('c', 'bucket');
 
         $approved = (int)($counts['approved'] ?? 0);
         $revised  = (int)($counts['revised']  ?? 0);
@@ -283,10 +443,10 @@ class DashboardController
         return compact('scope', 'approved', 'progress', 'revised', 'not');
     }
 
+    /** Modul HAV/ICP/RTC generic buckets per-employee (untuk KPI/Chart) */
     private function modulePerEmployeeBuckets(string $table, string $statusCol, ?string $company, array $map, bool $joinViaAssessment = false): array
     {
         $scope = Employee::forCompany($company)->count();
-
         $base = DB::table($table);
 
         if ($joinViaAssessment) {
@@ -307,9 +467,12 @@ class DashboardController
                 $joinViaAssessment ? 'assessments.employee_id' : "$table.employee_id AS employee_id",
                 DB::raw("
                     CASE
-                        WHEN SUM(CASE WHEN $table.$statusCol IN (" . $in($map['approved'] ?? []) . ") THEN 1 ELSE 0 END) > 0 THEN 'approved'
-                        WHEN SUM(CASE WHEN $table.$statusCol IN (" . $in($map['revised']  ?? []) . ") THEN 1 ELSE 0 END) > 0 THEN 'revised'
-                        WHEN SUM(CASE WHEN $table.$statusCol IN (" . $in($map['progress'] ?? []) . ") THEN 1 ELSE 0 END) > 0 THEN 'progress'
+                        WHEN SUM(CASE WHEN $table.$statusCol IN (" . $in($map['approved'] ?? []) . ") THEN 1 ELSE 0 END) > 0
+                        THEN 'approved'
+                        WHEN SUM(CASE WHEN $table.$statusCol IN (" . $in($map['revised']  ?? []) . ") THEN 1 ELSE 0 END) > 0
+                        THEN 'revised'
+                        WHEN SUM(CASE WHEN $table.$statusCol IN (" . $in($map['progress'] ?? []) . ") THEN 1 ELSE 0 END) > 0
+                        THEN 'progress'
                         ELSE 'progress'
                     END AS bucket
                 "),
@@ -318,8 +481,7 @@ class DashboardController
 
         $counts = DB::query()->fromSub($perEmp, 't')
             ->select('bucket', DB::raw('COUNT(*) as c'))
-            ->groupBy('bucket')
-            ->pluck('c', 'bucket');
+            ->groupBy('bucket')->pluck('c', 'bucket');
 
         $approved = (int)($counts['approved'] ?? 0);
         $revised  = (int)($counts['revised']  ?? 0);
