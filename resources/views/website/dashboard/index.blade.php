@@ -5,7 +5,6 @@
 
 @push('custom-css')
     <style>
-        /* ——— styling ringkas, ambil dari versi kamu sebelumnya ——— */
         :root {
             --ok-green: #009E73;
             --ok-blue: #0072B2;
@@ -14,7 +13,7 @@
             --ok-navy: #0F172A;
             --ok-bg: #F8FAFC;
             --ok-line: #E5E7EB;
-            --radius-lg: 14px
+            --radius-lg: 14px;
         }
 
         body {
@@ -105,11 +104,16 @@
             padding: .2rem .45rem
         }
 
+        /* Module layout */
         .module-strip {
             display: grid;
             gap: 12px;
             grid-template-columns: 5fr 7fr;
             align-items: stretch
+        }
+
+        .module-strip .module-chart {
+            grid-column: 1/span 1
         }
 
         .module-kpis {
@@ -221,15 +225,19 @@
                 <div class="row g-2 align-items-end">
                     @php
                         use Illuminate\Support\Str;
+
                         $user = auth()->user();
                         $isHRD = $user->role === 'HRD';
                         $emp = optional($user->employee);
-                        $myCompany = $emp->company_name;
-                        $norm = $emp ? Str::lower($emp->getNormalizedPosition()) : '';
+                        $myCompany = $emp->company_name; // 'AII' / 'AIIA'
+                        $norm = method_exists($emp, 'getNormalizedPosition')
+                            ? Str::lower($emp->getNormalizedPosition())
+                            : Str::lower($emp->position ?? '');
+                        // HRD + President + VPD boleh pilih company:
                         $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
 
-                        // PIC boleh dilihat oleh HRD/GM/Direktur/VPD/President
-                        $SHOW_PIC = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
+                        // PIC visible for HRD, GM, Direktur, VPD, President
+                        $canSeePic = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
                     @endphp
 
                     <div class="col-md-3 col-8">
@@ -249,8 +257,9 @@
                     </div>
                     <div class="col-md-2 col-4">
                         <label class="form-label d-block mb-1">&nbsp;</label>
-                        <button id="btn-clear" class="btn btn-warning btn-sm w-100"><i class="bi bi-x-circle"></i>
-                            Clear</button>
+                        <button id="btn-clear" class="btn btn-warning btn-sm w-100">
+                            <i class="bi bi-x-circle"></i> Clear
+                        </button>
                     </div>
                 </div>
             </div>
@@ -266,10 +275,8 @@
         </ul>
 
         <div class="tab-content">
-
-            {{-- ===== TAB ALL ===== --}}
+            {{-- ============== TAB ALL ============== --}}
             <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
-
                 {{-- KPI --}}
                 <div class="row g-3 mb-4">
                     @php
@@ -340,7 +347,7 @@
                 </div>
             </div>
 
-            {{-- ===== MODULE TABS ===== --}}
+            {{-- ============== MODULE TABS ============== --}}
             @php
                 $modules = [
                     ['key' => 'idp', 'label' => 'IDP'],
@@ -352,6 +359,7 @@
 
             @foreach ($modules as $m)
                 <div class="tab-pane fade" id="tab-{{ $m['key'] }}" role="tabpanel">
+                    {{-- Strip: Chart + KPIs --}}
                     <div class="module-strip">
                         <div class="card chart-card module-chart">
                             <div class="card-header d-flex align-items-center gap-2">
@@ -363,7 +371,7 @@
                         </div>
 
                         <div class="module-kpis">
-                            @php $k2=$m['key']; @endphp
+                            @php $k2 = $m['key']; @endphp
                             @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
@@ -378,12 +386,12 @@
                         </div>
                     </div>
 
-                    {{-- Tables --}}
+                    {{-- Tables per status --}}
                     <div class="row g-4 mt-1">
                         @foreach (['approved' => 'Approved', 'progress' => 'In Progress', 'not' => 'Not Created', 'revised' => 'Revised'] as $statusKey => $statusLabel)
                             <div class="col-lg-6">
                                 <div class="card h-100">
-                                    <div class="card-header d-flex align-items-center gap-2">
+                                    <div class="card-header d-flex align-items-center justify-content-between">
                                         <h5 class="mb-0">{{ $statusLabel }}</h5>
                                     </div>
                                     <div class="card-body">
@@ -392,17 +400,9 @@
                                                 class="table table-row-dashed align-middle clean">
                                                 <thead class="table-light">
                                                     <tr>
-                                                        @if ($m['key'] === 'rtc')
-                                                            <th>Structure</th>
-                                                            @if ($SHOW_PIC)
-                                                                <th>PIC</th>
-                                                            @endif
-                                                        @else
-                                                            <th>Employee</th>
-                                                            @if ($SHOW_PIC)
-                                                                <th>PIC</th>
-                                                            @endif
-                                                        @endif
+                                                        {{-- Header akan diisi ulang via JS sesuai kolom (Employee/Structure + PIC) --}}
+                                                        <th>Name</th>
+                                                        <th>PIC</th>
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -415,19 +415,13 @@
                     </div>
                 </div>
             @endforeach
-
         </div>
     </div>
 @endsection
 
 @push('scripts')
     <script>
-        /** Flags dari blade */
-        const IS_HRD = @json(auth()->user()->role === 'HRD');
-        const CAN_PICK_COMPANY = @json($canPickCompany);
-        const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
-        const SHOW_PIC = @json($SHOW_PIC);
-
+        /** Palette & const */
         const STATUS_COLORS = {
             approved: '#009E73',
             progress: '#0072B2',
@@ -435,11 +429,19 @@
             not: '#7F7F7F'
         };
         const MODULES = ['idp', 'hav', 'icp', 'rtc'];
-        const charts = {};
+
+        /** Flags dari Blade */
+        const IS_HRD = @json(auth()->user()->role === 'HRD');
+        const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
+        const CAN_PICK_COMPANY = @json($canPickCompany);
+        const CAN_SEE_PIC = @json($canSeePic);
+
+        /** Helpers */
         const ctx = id => document.getElementById(id)?.getContext('2d');
-        const setText = (id, t) => {
+        const charts = {};
+        const setText = (id, txt) => {
             const el = document.getElementById(id);
-            if (el) el.textContent = t;
+            if (el) el.textContent = txt;
         };
         const pct = (a, b) => b ? Math.round((a / b) * 100) : 0;
 
@@ -454,19 +456,39 @@
             return charts[key];
         }
 
-        /** Tabel EMPLOYEE (opsional kolom PIC) */
-        function buildEmployeeTable($table, rows = [], showPic = false) {
+        /** DataTables builder: otomatis Employee/Structure + optional PIC */
+        function buildStatusTable($table, rows = []) {
             if ($table.length === 0) return;
-            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().clear().destroy();
+            if ($.fn.DataTable.isDataTable($table)) {
+                $table.DataTable().clear().destroy();
+            }
 
-            const columns = [{
-                data: 'employee',
-                title: 'Employee'
-            }];
-            if (showPic) columns.push({
-                data: 'pic',
-                title: 'PIC'
-            });
+            const hasStructure = rows.length && rows[0].structure !== undefined;
+
+            const columns = [
+                hasStructure ?
+                {
+                    data: 'structure',
+                    title: 'Structure'
+                } :
+                {
+                    data: 'employee',
+                    title: 'Employee'
+                }
+            ];
+            if (CAN_SEE_PIC) {
+                columns.push({
+                    data: 'pic',
+                    title: 'PIC'
+                });
+            }
+
+            // Update header HTML agar sinkron
+            const headerHtml = `<tr>
+        <th>${columns[0].title}</th>
+        ${CAN_SEE_PIC ? `<th>PIC</th>` : ``}
+    </tr>`;
+            $table.find('thead').html(headerHtml);
 
             $table.DataTable({
                 data: rows,
@@ -489,46 +511,7 @@
                 },
                 autoWidth: false,
                 destroy: true,
-                responsive: true,
-            });
-        }
-
-        /** Tabel STRUCTURE (opsional kolom PIC) */
-        function buildStructureTable($table, rows = [], showPic = false) {
-            if ($table.length === 0) return;
-            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().clear().destroy();
-
-            const columns = [{
-                data: 'structure',
-                title: 'Structure'
-            }];
-            if (showPic) columns.push({
-                data: 'pic',
-                title: 'PIC'
-            });
-
-            $table.DataTable({
-                data: rows,
-                columns,
-                pageLength: 10,
-                lengthChange: false,
-                searching: false,
-                ordering: true,
-                order: [
-                    [0, 'asc']
-                ],
-                info: false,
-                dom: 'tp',
-                pagingType: 'simple',
-                language: {
-                    paginate: {
-                        previous: '‹',
-                        next: '›'
-                    }
-                },
-                autoWidth: false,
-                destroy: true,
-                responsive: true,
+                responsive: true
             });
         }
 
@@ -536,7 +519,7 @@
         async function fetchDashboard(params = {}) {
             const qs = new URLSearchParams();
             if (params.company !== undefined && params.company !== null) qs.set('company', params.company);
-            const url = `{{ route('dashboard.summary') }}?${qs.toString()}`;
+            const url = `{{ route('dashboard.summary') }}` + '?' + qs.toString();
             const res = await fetch(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -547,7 +530,7 @@
             return await res.json();
         }
 
-        /** RENDERERS */
+        /** Renderers */
         function renderAllTab(data) {
             setText('kpi-all-in-scope', data.all?.scope ?? 0);
             setText('kpi-all-approved', data.all?.approved ?? 0);
@@ -563,27 +546,23 @@
                     revised: 0,
                     not: 0
                 };
-                createOrUpdateChart(
-                    `all-pie-${mod}`,
-                    'doughnut',
-                    ctx(`chart-all-${mod}`), {
-                        labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
-                        datasets: [{
-                            data: [s.approved, s.progress, s.revised, s.not],
-                            backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress,
-                                STATUS_COLORS.revised, STATUS_COLORS.not
-                            ]
-                        }]
-                    }, {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'bottom'
-                            }
+                createOrUpdateChart(`all-pie-${mod}`, 'doughnut', ctx(`chart-all-${mod}`), {
+                    labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
+                    datasets: [{
+                        data: [s.approved, s.progress, s.revised, s.not],
+                        backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress,
+                            STATUS_COLORS.revised, STATUS_COLORS.not
+                        ]
+                    }]
+                }, {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
                         }
                     }
-                );
+                });
             });
         }
 
@@ -595,43 +574,39 @@
             setText(`kpi-${key}-not`, data?.not ?? 0);
             setText(`kpi-${key}-completion`, pct(data?.approved ?? 0, data?.scope ?? 0) + '%');
 
-            createOrUpdateChart(
-                `chart-${key}-doughnut`,
-                'doughnut',
-                ctx(`chart-${key}-doughnut`), {
-                    labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
-                    datasets: [{
-                        data: [data?.approved ?? 0, data?.progress ?? 0, data?.revised ?? 0, data?.not ?? 0],
-                        backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress, STATUS_COLORS.revised,
-                            STATUS_COLORS.not
-                        ]
-                    }]
-                }, {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom'
-                        }
+            createOrUpdateChart(`chart-${key}-doughnut`, 'doughnut', ctx(`chart-${key}-doughnut`), {
+                labels: ['Approved', 'In Progress', 'Revised', 'Not Created'],
+                datasets: [{
+                    data: [data?.approved ?? 0, data?.progress ?? 0, data?.revised ?? 0, data?.not ?? 0],
+                    backgroundColor: [STATUS_COLORS.approved, STATUS_COLORS.progress, STATUS_COLORS.revised,
+                        STATUS_COLORS.not
+                    ]
+                }]
+            }, {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
                     }
                 }
-            );
-
-            // init kosong
-            ['approved', 'progress', 'revised', 'not'].forEach(s => {
-                if (key === 'rtc') buildStructureTable($(`#tbl-${key}-${s}`), [], SHOW_PIC);
-                else buildEmployeeTable($(`#tbl-${key}-${s}`), [], SHOW_PIC);
             });
 
-            // load list per-status
-            (async function loadTables() {
+            // init kosong dulu
+            ['approved', 'progress', 'revised', 'not'].forEach(s => buildStatusTable($(`#tbl-${key}-${s}`), []));
+
+            // fetch per-status
+            (async function loadModuleTables() {
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
+                const base = {
+                    company,
+                    module: key
+                };
                 for (const status of ['approved', 'progress', 'revised', 'not']) {
                     const qs = new URLSearchParams({
-                        company,
-                        module: key,
+                        ...base,
                         status
                     }).toString();
                     const res = await fetch(`{{ route('dashboard.list') }}?${qs}`, {
@@ -641,9 +616,7 @@
                         }
                     });
                     const json = await res.json();
-                    const rows = json.rows || [];
-                    if (key === 'rtc') buildStructureTable($(`#tbl-${key}-${status}`), rows, SHOW_PIC);
-                    else buildEmployeeTable($(`#tbl-${key}-${status}`), rows, SHOW_PIC);
+                    buildStatusTable($(`#tbl-${key}-${status}`), json.rows || []);
                 }
             })();
         }
@@ -654,13 +627,12 @@
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
-                localStorage.setItem('dash-filters', JSON.stringify({
+                const params = {
                     company
-                }));
+                };
+                localStorage.setItem('dash-filters', JSON.stringify(params));
 
-                const data = await fetchDashboard({
-                    company
-                });
+                const data = await fetchDashboard(params);
                 renderAllTab(data);
                 MODULES.forEach(k => renderModuleTab(k, data[k] || {}));
             } catch (e) {
@@ -673,9 +645,11 @@
             }
         }
 
-        // Tabs resize fix
+        // Fix charts resize when switching tabs
         document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(el => {
-            el.addEventListener('shown.bs.tab', () => Object.values(charts).forEach(c => c && c.resize()));
+            el.addEventListener('shown.bs.tab', () => {
+                Object.values(charts).forEach(c => c && c.resize());
+            });
         });
 
         // Select2
@@ -684,14 +658,14 @@
             width: '100%'
         });
 
-        // Lock/enable company
+        // Lock/enable company selector on load
         if (!CAN_PICK_COMPANY) {
             $('#filter-company').val(MY_COMPANY).trigger('change').prop('disabled', true);
         } else {
             $('#filter-company').prop('disabled', false);
         }
 
-        // Events
+        // Auto-apply on change & Clear
         $('#filter-company').on('change', loadDashboard);
         $('#btn-clear').on('click', function() {
             if (CAN_PICK_COMPANY) $('#filter-company').val('').trigger('change');
@@ -699,7 +673,7 @@
             loadDashboard();
         });
 
-        // Restore saved
+        // Restore saved filter
         const saved = localStorage.getItem('dash-filters');
         if (saved) {
             try {
