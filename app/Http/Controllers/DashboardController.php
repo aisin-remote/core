@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class DashboardController
 {
+    private const PIC_COL = 'supervisor_id';
+
     public function index()
     {
         return view('website.dashboard.index');
@@ -171,6 +173,7 @@ class DashboardController
 
         return compact('scope', 'approved', 'progress', 'revised', 'not');
     }
+
     /**
      * HAV/ICP/RTC (per-employee, priority Approved > Revised > Progress)
      */
@@ -296,6 +299,41 @@ class DashboardController
         return response()->json(['rows' => $rows]);
     }
 
+    private function shortName(?string $name, int $maxWords = 2)
+    {
+        $name = trim((string) $name);
+        if ($name === '') return '-';
+        $parts = preg_split('/\s+/', $name);
+        $parts = array_values(array_filter($parts, fn($p) => $p !== ''));
+        return implode(' ', array_slice($parts, 0, $maxWords));
+    }
+
+    /**
+     * Helper : kembalikan array rows [employee, pic] berdasarkan daftar employee_id.
+     * PIC = employees.{PIC_COL} -> employees.name (fallback '-')
+     */
+    private function rowsWithPic($empIds)
+    {
+        $ids = collect($empIds)->filter()->values();
+        if ($ids->isEmpty()) return collect();
+
+        $employees = Employee::whereIn('id', $ids)
+            ->with('supervisor')
+            ->orderBy('name')
+            ->get();
+        return $employees->map(function (Employee $e) {
+            $direct = $e->getSuperiorsByLevel(1)->first();
+            $picName = $direct?->name
+                ?? optional($e->supervisor)->name
+                ?? '-';
+
+            return [
+                'employee' => $this->shortName($e->name),
+                'pic' => $this->shortName($picName),
+            ];
+        })->values();
+    }
+
     /**
      * LIST sederhana per status, DISESUAIKAN dengan mapping per-modul
      */
@@ -326,21 +364,12 @@ class DashboardController
         } else { // NOT CREATED
             $has = $modelClass::query()->whereIn('employee_id', $empIds)->pluck('employee_id')->unique();
             $noRecordIds = collect($empIds)->diff($has)->values();
-
-            return Employee::whereIn('id', $noRecordIds)
-                ->orderBy('name')
-                ->get()
-                ->map(fn($e) => ['employee' => $e->name])
-                ->values();
+            return $this->rowsWithPic($noRecordIds);
         }
 
         $matchedEmpIds = $q->pluck('employee_id')->unique()->values();
 
-        return Employee::whereIn('id', $matchedEmpIds)
-            ->orderBy('name')
-            ->get()
-            ->map(fn($e) => ['employee' => $e->name])
-            ->values();
+        return $this->rowsWithPic($matchedEmpIds);
     }
 
     /**
@@ -375,22 +404,11 @@ class DashboardController
                 ->join('assessments', 'idp.assessment_id', '=', 'assessments.id')
                 ->whereIn('assessments.employee_id', $empIds)
                 ->distinct()->pluck('assessments.employee_id');
-
             $noIdpEmpIds = collect($empIds)->diff($hasIdpEmp)->values();
-
-            return Employee::whereIn('id', $noIdpEmpIds)
-                ->orderBy('name')
-                ->get()
-                ->map(fn($e) => ['employee' => $e->name])
-                ->values();
+            return $this->rowsWithPic($noIdpEmpIds);
         }
 
         $matchedEmpIds = DB::query()->fromSub($q, 't')->distinct()->pluck('emp_id');
-
-        return Employee::whereIn('id', $matchedEmpIds)
-            ->orderBy('name')
-            ->get()
-            ->map(fn($e) => ['employee' => $e->name])
-            ->values();
+        return $this->rowsWithPic($matchedEmpIds);
     }
 }

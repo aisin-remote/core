@@ -13,7 +13,7 @@
             --ok-navy: #0F172A;
             --ok-bg: #F8FAFC;
             --ok-line: #E5E7EB;
-            --radius-lg: 14px;
+            --radius-lg: 14px
         }
 
         body {
@@ -54,7 +54,6 @@
             height: 260px
         }
 
-        /* Tables */
         .table.clean {
             border-collapse: separate;
             border-spacing: 0;
@@ -90,7 +89,6 @@
             background: #EEF2F7
         }
 
-        /* Compact controls */
         .btn,
         .form-select,
         .form-control {
@@ -106,7 +104,6 @@
             padding: .2rem .45rem
         }
 
-        /* Module strip: chart + KPIs */
         .module-strip {
             display: grid;
             gap: 12px;
@@ -151,7 +148,6 @@
             }
         }
 
-        /* Tabs */
         .nav-tabs {
             border-bottom: 2px solid var(--ok-line);
             gap: .25rem
@@ -175,13 +171,6 @@
             color: #fff !important
         }
 
-        @media (min-width:992px) {
-            .nav-tabs .nav-link {
-                font-size: 1rem
-            }
-        }
-
-        /* DataTables compact */
         div.dataTables_wrapper div.dataTables_info {
             display: none !important
         }
@@ -212,7 +201,7 @@
             color: var(--ok-navy) !important
         }
 
-        /* ===== Mini counters (SIMPLE, hanya di tab ALL) ===== */
+        /* mini counter (tetap untuk tab ALL) */
         .status-mini {
             display: flex;
             flex-wrap: wrap;
@@ -228,7 +217,7 @@
             border-radius: 9999px;
             background: #F8FAFC;
             border: 1px solid var(--ok-line);
-            font-weight: 700;
+            font-weight: 700
         }
 
         .status-mini .lbl {
@@ -236,7 +225,6 @@
             align-items: center;
             gap: .35rem;
             color: #64748B;
-            font-size: .70rem;
             font-weight: 600
         }
 
@@ -252,19 +240,19 @@
         }
 
         .dot.approved {
-            background: var(--ok-green)
+            background: #009E73
         }
 
         .dot.progress {
-            background: var(--ok-blue)
+            background: #0072B2
         }
 
         .dot.revised {
-            background: var(--ok-orange)
+            background: #E69F00
         }
 
         .dot.not {
-            background: var(--ok-grey)
+            background: #7F7F7F
         }
     </style>
 @endpush
@@ -293,6 +281,8 @@
                             ? Str::lower($emp->getNormalizedPosition())
                             : Str::lower($emp->position ?? '');
                         $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
+                        // hak melihat kolom PIC
+                        $canSeePic = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
                     @endphp
 
                     <div class="col-md-3 col-8">
@@ -378,7 +368,7 @@
                     @endforeach
                 </div>
 
-                {{-- CHARTS per module + MINI COUNTERS (sederhana) --}}
+                {{-- CHARTS + mini counters --}}
                 <div class="row g-4">
                     @foreach (['idp' => 'IDP', 'hav' => 'HAV', 'icp' => 'ICP', 'rtc' => 'RTC'] as $k => $label)
                         <div class="col-lg-6 col-md-12">
@@ -387,9 +377,7 @@
                                     <h5 class="mb-0">{{ $label }}</h5>
                                 </div>
                                 <div class="card-body">
-                                    <div class="chart-wrapper">
-                                        <canvas id="chart-all-{{ $k }}"></canvas>
-                                    </div>
+                                    <div class="chart-wrapper"><canvas id="chart-all-{{ $k }}"></canvas></div>
                                     <div id="mini-all-{{ $k }}" class="status-mini"></div>
                                 </div>
                             </div>
@@ -410,7 +398,7 @@
 
             @foreach ($modules as $m)
                 <div class="tab-pane fade" id="tab-{{ $m['key'] }}" role="tabpanel">
-                    {{-- Strip: Chart + KPIs (tanpa mini counter) --}}
+                    {{-- Strip: Chart + KPIs --}}
                     <div class="module-strip">
                         <div class="card chart-card module-chart">
                             <div class="card-header d-flex align-items-center gap-2">
@@ -437,7 +425,7 @@
                         </div>
                     </div>
 
-                    {{-- Tables per status --}}
+                    {{-- Tables per status (kolom PIC kondisional) --}}
                     <div class="row g-4 mt-1">
                         @foreach (['approved' => 'Approved', 'progress' => 'In Progress', 'not' => 'Not Created', 'revised' => 'Revised'] as $statusKey => $statusLabel)
                             <div class="col-lg-6">
@@ -452,6 +440,9 @@
                                                 <thead class="table-light">
                                                     <tr>
                                                         <th>Employee</th>
+                                                        @if ($canSeePic)
+                                                            <th>PIC</th>
+                                                        @endif
                                                     </tr>
                                                 </thead>
                                                 <tbody></tbody>
@@ -471,7 +462,6 @@
 
 @push('scripts')
     <script>
-        /** Palette */
         const STATUS_COLORS = {
             approved: '#009E73',
             progress: '#0072B2',
@@ -479,13 +469,11 @@
             not: '#7F7F7F'
         };
         const MODULES = ['idp', 'hav', 'icp', 'rtc'];
-
-        /** Flags dari Blade */
         const IS_HRD = @json(auth()->user()->role === 'HRD');
         const CAN_PICK_COMPANY = @json($canPickCompany);
+        const CAN_SEE_PIC = @json($canSeePic); // <<=== penting
         const MY_COMPANY = @json(optional(auth()->user()->employee)->company_name);
 
-        /** Helpers */
         const ctx = id => document.getElementById(id)?.getContext('2d');
         const charts = {};
         const setText = (id, txt) => {
@@ -505,7 +493,7 @@
             return charts[key];
         }
 
-        /** ===== Mini counters builder (ALL only) ===== */
+        // mini counter (ALL)
         function renderMini(containerId, s) {
             const el = document.getElementById(containerId);
             if (!el) return;
@@ -516,28 +504,35 @@
                 not: 0
             };
             el.innerHTML = `
-                <div class="pill"><span class="lbl"><span class="dot approved"></span>Approved</span><span class="n">${x.approved ?? 0}</span></div>
-                <div class="pill"><span class="lbl"><span class="dot progress"></span>In&nbsp;Progress</span><span class="n">${x.progress ?? 0}</span></div>
-                <div class="pill"><span class="lbl"><span class="dot revised"></span>Revised</span><span class="n">${x.revised ?? 0}</span></div>
-                <div class="pill"><span class="lbl"><span class="dot not"></span>Not&nbsp;Created</span><span class="n">${x.not ?? 0}</span></div>
-            `;
+            <div class="pill"><span class="lbl"><span class="dot approved"></span>Approved</span><span class="n">${x.approved ?? 0}</span></div>
+            <div class="pill"><span class="lbl"><span class="dot progress"></span>In&nbsp;Progress</span><span class="n">${x.progress ?? 0}</span></div>
+            <div class="pill"><span class="lbl"><span class="dot revised"></span>Revised</span><span class="n">${x.revised ?? 0}</span></div>
+            <div class="pill"><span class="lbl"><span class="dot not"></span>Not&nbsp;Created</span><span class="n">${x.not ?? 0}</span></div>
+        `;
         }
 
-        /** Table: single col Employee (compact) */
-        function buildEmployeeTable($table, names = []) {
+        // DataTable builder: rows = [{employee, pic?}]
+        function buildEmployeeTable($table, rows = [], showPic = false) {
             if ($table.length === 0) return;
             if ($.fn.DataTable.isDataTable($table)) $table.DataTable().clear().destroy();
 
-            const rows = [...new Set(names)].filter(Boolean).sort((a, b) => a.localeCompare(b)).map(n => ({
-                employee: n
+            const data = (rows || []).map(r => ({
+                employee: r.employee || '',
+                pic: r.pic || '-'
             }));
 
+            const columns = [{
+                data: 'employee',
+                title: 'Employee'
+            }];
+            if (showPic) columns.push({
+                data: 'pic',
+                title: 'PIC'
+            });
+
             $table.DataTable({
-                data: rows,
-                columns: [{
-                    data: 'employee',
-                    title: 'Employee'
-                }],
+                data,
+                columns,
                 pageLength: 10,
                 lengthChange: false,
                 searching: false,
@@ -560,7 +555,7 @@
             });
         }
 
-        /** API */
+        // API
         async function fetchDashboard(params = {}) {
             const qs = new URLSearchParams();
             if (params.company !== undefined && params.company !== null) qs.set('company', params.company);
@@ -575,7 +570,7 @@
             return await res.json();
         }
 
-        /** Renderers */
+        // RENDER
         function renderAllTab(data) {
             setText('kpi-all-in-scope', data.all?.scope ?? 0);
             setText('kpi-all-approved', data.all?.approved ?? 0);
@@ -604,11 +599,11 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'right'
+                            position: 'bottom'
                         }
                     }
                 });
-                renderMini(`mini-all-${mod}`, s); // << hanya di tab ALL
+                renderMini(`mini-all-${mod}`, s);
             });
         }
 
@@ -638,9 +633,12 @@
                 }
             });
 
-            // Tidak ada mini counter di tab modul.
-            ['approved', 'progress', 'revised', 'not'].forEach(s => buildEmployeeTable($(`#tbl-${key}-${s}`), []));
+            // init kosong
+            ['approved', 'progress', 'revised', 'not'].forEach(s => {
+                buildEmployeeTable($(`#tbl-${key}-${s}`), [], CAN_SEE_PIC);
+            });
 
+            // fetch list per status
             (async function loadModuleTables() {
                 let company = $('#filter-company').val();
                 if (!CAN_PICK_COMPANY) company = MY_COMPANY;
@@ -661,13 +659,13 @@
                         }
                     });
                     const json = await res.json();
-                    const names = (json.rows || []).map(r => r.employee);
-                    buildEmployeeTable($(`#tbl-${key}-${status}`), names);
+                    const rows = json.rows || []; // [{employee, pic}]
+                    buildEmployeeTable($(`#tbl-${key}-${status}`), rows, CAN_SEE_PIC);
                 }
             })();
         }
 
-        /** Load & UI */
+        // LOAD & UI
         async function loadDashboard() {
             try {
                 let company = $('#filter-company').val();
@@ -691,27 +689,20 @@
             }
         }
 
-        // Tabs resize fix
         document.querySelectorAll('a[data-bs-toggle="tab"]').forEach(el => {
             el.addEventListener('shown.bs.tab', () => {
                 Object.values(charts).forEach(c => c && c.resize());
             });
         });
-
-        // Select2
         $('[data-control="select2"]').select2({
             allowClear: true,
             width: '100%'
         });
-
-        // Lock/enable company selector on load
         if (!CAN_PICK_COMPANY) {
             $('#filter-company').val(MY_COMPANY).trigger('change').prop('disabled', true);
         } else {
             $('#filter-company').prop('disabled', false);
         }
-
-        // Auto-apply on change & Clear
         $('#filter-company').on('change', loadDashboard);
         $('#btn-clear').on('click', function() {
             if (CAN_PICK_COMPANY) $('#filter-company').val('').trigger('change');
@@ -719,7 +710,6 @@
             loadDashboard();
         });
 
-        // Restore saved filter
         const saved = localStorage.getItem('dash-filters');
         if (saved) {
             try {
@@ -728,7 +718,6 @@
             } catch {}
         }
 
-        // First load
         loadDashboard();
     </script>
 @endpush
