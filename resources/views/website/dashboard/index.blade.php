@@ -17,47 +17,48 @@
         }
 
         body {
-            background: var(--ok-bg);
+            background: var(--ok-bg)
         }
 
         .card {
             border: 1px solid var(--ok-line);
-            border-radius: var(--radius-lg);
+            border-radius: var(--radius-lg)
         }
 
         .card-header {
             background: transparent;
-            border-bottom: 1px dashed var(--ok-line);
+            border-bottom: 1px dashed var(--ok-line)
         }
 
         .kpi-card .value {
             font-size: clamp(1.6rem, 2.8vw, 2.2rem);
-            font-weight: 800;
+            font-weight: 800
         }
 
         .kpi-card .kpi-sub {
             font-size: .9rem;
-            color: #64748B;
+            color: #64748B
         }
 
         .kpi-card .bi {
             font-size: 1.1rem;
-            opacity: .9;
+            opacity: .9
         }
 
         .chart-card {
-            min-height: 320px;
+            min-height: 320px
         }
 
         .chart-wrapper {
             position: relative;
-            height: 260px;
+            height: 260px
         }
 
+        /* Tables */
         .table.clean {
             border-collapse: separate;
             border-spacing: 0;
-            width: 100%;
+            width: 100%
         }
 
         .table.clean thead th {
@@ -67,52 +68,54 @@
             background: #f8fafc;
             color: var(--ok-navy);
             font-weight: 800;
-            border-bottom: 1px solid var(--ok-line);
+            border-bottom: 1px solid var(--ok-line)
         }
 
         .table.clean tbody tr:nth-child(even) {
-            background: #fcfcfd;
+            background: #fcfcfd
         }
 
         .table.clean th,
         .table.clean td {
             padding: .7rem 1rem;
-            font-size: .92rem;
+            font-size: .92rem
         }
 
         .table.clean tbody td {
             font-weight: 600;
-            color: #1f2937;
+            color: #1f2937
         }
 
         .table.clean tr:hover td {
-            background: #EEF2F7;
+            background: #EEF2F7
         }
 
+        /* Compact controls */
         .btn,
         .form-select,
         .form-control {
             min-height: 32px;
             font-size: .85rem;
-            padding: .2rem .5rem;
+            padding: .2rem .5rem
         }
 
         .form-select-sm,
         .btn-sm {
             min-height: 30px;
             font-size: .8rem;
-            padding: .2rem .45rem;
+            padding: .2rem .45rem
         }
 
+        /* Module strip: chart + KPIs */
         .module-strip {
             display: grid;
             gap: 12px;
             grid-template-columns: 5fr 7fr;
-            align-items: stretch;
+            align-items: stretch
         }
 
         .module-strip .module-chart {
-            grid-column: 1 / span 1;
+            grid-column: 1 / span 1
         }
 
         .module-kpis {
@@ -120,37 +123,38 @@
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            align-content: flex-start;
+            align-content: flex-start
         }
 
         .module-kpis .kpi-card {
             flex: 1 1 calc(33.333% - 12px);
-            min-width: 180px;
+            min-width: 180px
         }
 
-        @media (max-width: 1200px) {
+        @media (max-width:1200px) {
             .module-strip {
-                grid-template-columns: 1fr;
+                grid-template-columns: 1fr
             }
 
             .module-kpis {
-                grid-column: 1 / span 1;
+                grid-column: 1 / span 1
             }
 
             .module-kpis .kpi-card {
-                flex-basis: calc(50% - 12px);
+                flex-basis: calc(50% - 12px)
             }
         }
 
-        @media (max-width: 768px) {
+        @media (max-width:768px) {
             .module-kpis .kpi-card {
-                flex-basis: 100%;
+                flex-basis: 100%
             }
         }
 
+        /* Tabs */
         .nav-tabs {
             border-bottom: 2px solid var(--ok-line);
-            gap: .25rem;
+            gap: .25rem
         }
 
         .nav-tabs .nav-link {
@@ -158,32 +162,32 @@
             text-transform: uppercase;
             letter-spacing: .3px;
             color: var(--ok-navy);
-            background: #F1F5F9;
+            background: #F1F5F9
         }
 
         .nav-tabs .nav-link:hover {
             background: #E2E8F0;
-            color: var(--ok-navy);
+            color: var(--ok-navy)
         }
 
         .nav-tabs .nav-link.active {
             background: var(--ok-blue);
-            color: #fff !important;
+            color: #fff !important
         }
 
-        @media (min-width: 992px) {
+        @media (min-width:992px) {
             .nav-tabs .nav-link {
-                font-size: 1rem;
+                font-size: 1rem
             }
         }
 
         /* DataTables compact */
         div.dataTables_wrapper div.dataTables_info {
-            display: none !important;
+            display: none !important
         }
 
         div.dataTables_wrapper div.dataTables_paginate {
-            margin-top: .25rem;
+            margin-top: .25rem
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button {
@@ -193,23 +197,74 @@
             border-radius: 10px;
             font-size: .8rem;
             color: var(--ok-navy) !important;
-            background: #fff;
+            background: #fff
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button.current,
         .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover {
             background: var(--ok-blue) !important;
             color: #fff !important;
-            border-color: var(--ok-blue);
+            border-color: var(--ok-blue)
         }
 
         .dataTables_wrapper .dataTables_paginate .paginate_button:hover {
             background: #E2E8F0;
-            color: var(--ok-navy) !important;
+            color: var(--ok-navy) !important
         }
 
-        .dataTables_wrapper .dataTables_paginate .ellipsis {
-            padding: .2rem .3rem;
+        /* ===== Mini counters (SIMPLE, hanya di tab ALL) ===== */
+        .status-mini {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px
+        }
+
+        .status-mini .pill {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            padding: .35rem .6rem;
+            border-radius: 9999px;
+            background: #F8FAFC;
+            border: 1px solid var(--ok-line);
+            font-weight: 700;
+        }
+
+        .status-mini .lbl {
+            display: flex;
+            align-items: center;
+            gap: .35rem;
+            color: #64748B;
+            font-size: .70rem;
+            font-weight: 600
+        }
+
+        .status-mini .n {
+            color: #0F172A
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            display: inline-block
+        }
+
+        .dot.approved {
+            background: var(--ok-green)
+        }
+
+        .dot.progress {
+            background: var(--ok-blue)
+        }
+
+        .dot.revised {
+            background: var(--ok-orange)
+        }
+
+        .dot.not {
+            background: var(--ok-grey)
         }
     </style>
 @endpush
@@ -230,15 +285,13 @@
                 <div class="row g-2 align-items-end">
                     @php
                         use Illuminate\Support\Str;
-
                         $user = auth()->user();
                         $isHRD = $user->role === 'HRD';
                         $emp = optional($user->employee);
-                        $myCompany = $emp->company_name; // 'AII' / 'AIIA'
+                        $myCompany = $emp->company_name;
                         $norm = method_exists($emp, 'getNormalizedPosition')
                             ? Str::lower($emp->getNormalizedPosition())
                             : Str::lower($emp->position ?? '');
-                        // HRD + President + VPD boleh pilih company:
                         $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
                     @endphp
 
@@ -288,7 +341,6 @@
                                 'label' => 'Total Completion',
                                 'id' => 'kpi-all-completion',
                                 'icon' => 'bi-clipboard2-check',
-                                'sub' => 'Approved / Total employees',
                             ],
                             [
                                 'label' => 'Total Approved',
@@ -308,12 +360,7 @@
                                 'icon' => 'bi-pencil-square',
                                 'class' => 'text-warning',
                             ],
-                            [
-                                'label' => 'Total Not Created',
-                                'id' => 'kpi-all-not',
-                                'icon' => 'bi-dash-circle',
-                                'class' => 'text-gray-700',
-                            ],
+                            ['label' => 'Total Not Created', 'id' => 'kpi-all-not', 'icon' => 'bi-dash-circle'],
                         ];
                     @endphp
                     @foreach ($kpis as $card)
@@ -325,16 +372,13 @@
                                         <i class="bi {{ $card['icon'] }}"></i>
                                     </div>
                                     <div class="value {{ $card['class'] ?? '' }}" id="{{ $card['id'] }}">0</div>
-                                    @isset($card['sub'])
-                                        <div class="kpi-sub">{{ $card['sub'] }}</div>
-                                    @endisset
                                 </div>
                             </div>
                         </div>
                     @endforeach
                 </div>
 
-                {{-- CHARTS per module --}}
+                {{-- CHARTS per module + MINI COUNTERS (sederhana) --}}
                 <div class="row g-4">
                     @foreach (['idp' => 'IDP', 'hav' => 'HAV', 'icp' => 'ICP', 'rtc' => 'RTC'] as $k => $label)
                         <div class="col-lg-6 col-md-12">
@@ -346,6 +390,7 @@
                                     <div class="chart-wrapper">
                                         <canvas id="chart-all-{{ $k }}"></canvas>
                                     </div>
+                                    <div id="mini-all-{{ $k }}" class="status-mini"></div>
                                 </div>
                             </div>
                         </div>
@@ -365,7 +410,7 @@
 
             @foreach ($modules as $m)
                 <div class="tab-pane fade" id="tab-{{ $m['key'] }}" role="tabpanel">
-                    {{-- Strip: Chart + KPIs --}}
+                    {{-- Strip: Chart + KPIs (tanpa mini counter) --}}
                     <div class="module-strip">
                         <div class="card chart-card module-chart">
                             <div class="card-header d-flex align-items-center gap-2">
@@ -378,7 +423,7 @@
 
                         <div class="module-kpis">
                             @php $k2 = $m['key']; @endphp
-                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check', 'sub' => 'Approved / Total Employees'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
+                            @foreach ([['l' => 'Total Employees', 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total In Progress', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -386,9 +431,6 @@
                                             <i class="bi {{ $card['ic'] }}"></i>
                                         </div>
                                         <div class="value {{ $card['c'] ?? '' }}" id="{{ $card['i'] }}">0</div>
-                                        @isset($card['sub'])
-                                            <div class="kpi-sub">{{ $card['sub'] }}</div>
-                                        @endisset
                                     </div>
                                 </div>
                             @endforeach
@@ -463,12 +505,28 @@
             return charts[key];
         }
 
+        /** ===== Mini counters builder (ALL only) ===== */
+        function renderMini(containerId, s) {
+            const el = document.getElementById(containerId);
+            if (!el) return;
+            const x = s || {
+                approved: 0,
+                progress: 0,
+                revised: 0,
+                not: 0
+            };
+            el.innerHTML = `
+                <div class="pill"><span class="lbl"><span class="dot approved"></span>Approved</span><span class="n">${x.approved ?? 0}</span></div>
+                <div class="pill"><span class="lbl"><span class="dot progress"></span>In&nbsp;Progress</span><span class="n">${x.progress ?? 0}</span></div>
+                <div class="pill"><span class="lbl"><span class="dot revised"></span>Revised</span><span class="n">${x.revised ?? 0}</span></div>
+                <div class="pill"><span class="lbl"><span class="dot not"></span>Not&nbsp;Created</span><span class="n">${x.not ?? 0}</span></div>
+            `;
+        }
+
         /** Table: single col Employee (compact) */
         function buildEmployeeTable($table, names = []) {
             if ($table.length === 0) return;
-            if ($.fn.DataTable.isDataTable($table)) {
-                $table.DataTable().clear().destroy();
-            }
+            if ($.fn.DataTable.isDataTable($table)) $table.DataTable().clear().destroy();
 
             const rows = [...new Set(names)].filter(Boolean).sort((a, b) => a.localeCompare(b)).map(n => ({
                 employee: n
@@ -546,10 +604,11 @@
                     maintainAspectRatio: false,
                     plugins: {
                         legend: {
-                            position: 'bottom'
+                            position: 'right'
                         }
                     }
                 });
+                renderMini(`mini-all-${mod}`, s); // << hanya di tab ALL
             });
         }
 
@@ -579,13 +638,12 @@
                 }
             });
 
-            // init empty tables first
+            // Tidak ada mini counter di tab modul.
             ['approved', 'progress', 'revised', 'not'].forEach(s => buildEmployeeTable($(`#tbl-${key}-${s}`), []));
 
-            // then fetch per-status list
             (async function loadModuleTables() {
                 let company = $('#filter-company').val();
-                if (!CAN_PICK_COMPANY) company = MY_COMPANY; // <<=== PENTING: pakai CAN_PICK_COMPANY
+                if (!CAN_PICK_COMPANY) company = MY_COMPANY;
 
                 const base = {
                     company,
@@ -656,11 +714,8 @@
         // Auto-apply on change & Clear
         $('#filter-company').on('change', loadDashboard);
         $('#btn-clear').on('click', function() {
-            if (CAN_PICK_COMPANY) {
-                $('#filter-company').val('').trigger('change');
-            } else {
-                $('#filter-company').val(MY_COMPANY).trigger('change');
-            }
+            if (CAN_PICK_COMPANY) $('#filter-company').val('').trigger('change');
+            else $('#filter-company').val(MY_COMPANY).trigger('change');
             loadDashboard();
         });
 
