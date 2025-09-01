@@ -284,54 +284,19 @@
             <div class="tab-pane fade show active" id="tab-all" role="tabpanel">
                 {{-- KPI --}}
                 <div class="row g-3 mb-4 kpi-grid">
-                    @php
-                        $kpis = [
-                            ['label' => 'Total Employees', 'id' => 'kpi-all-in-scope', 'icon' => 'bi-bullseye'],
-                            [
-                                'label' => 'Total Completion',
-                                'id' => 'kpi-all-completion',
-                                'icon' => 'bi-clipboard2-check',
-                            ],
-                            [
-                                'label' => 'Total Approved',
-                                'id' => 'kpi-all-approved',
-                                'icon' => 'bi-check2-circle',
-                                'class' => 'text-success',
-                            ],
-                            [
-                                'label' => 'Total In Progress',
-                                'id' => 'kpi-all-progress',
-                                'icon' => 'bi-arrow-repeat',
-                                'class' => 'text-primary',
-                            ],
-                            [
-                                'label' => 'Total Revised',
-                                'id' => 'kpi-all-revised',
-                                'icon' => 'bi-pencil-square',
-                                'class' => 'text-warning',
-                            ],
-                            [
-                                'label' => 'Total Not Created',
-                                'id' => 'kpi-all-not',
-                                'icon' => 'bi-dash-circle',
-                                'class' => 'text-gray-700',
-                            ],
-                        ];
-                    @endphp
-                    @foreach ($kpis as $card)
-                        <div class="col-6 col-md-4 col-lg-2">
-                            <div class="card kpi-card h-auto">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <div class="text-muted">{{ $card['label'] }}</div>
-                                        <i class="bi {{ $card['icon'] }}"></i>
-                                    </div>
-                                    <div class="value {{ $card['class'] ?? '' }}" id="{{ $card['id'] }}">0</div>
+                    <div class="col-12 col-md-4 col-lg-3">
+                        <div class="card kpi-card h-auto">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <div class="text-muted">Total Employees</div>
+                                    <i class="bi bi-bullseye"></i>
                                 </div>
+                                <div class="value" id="kpi-all-in-scope">0</div>
                             </div>
                         </div>
-                    @endforeach
+                    </div>
                 </div>
+
 
                 {{-- CHARTS per module --}}
                 <div class="row g-4">
@@ -379,10 +344,10 @@
                                 $k2 = $m['key'];
                                 // label khusus RTC
                                 $scopeLabel = $k2 === 'rtc' ? 'Total Structure' : 'Total Employees';
-                                $progressLabel = $k2 === 'rtc' ? 'Total Process for Approval' : 'Total In Progress';
+                                $progressLabel = $k2 === 'Total Process for Approval';
                             @endphp
 
-                            @foreach ([['l' => $scopeLabel, 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => $progressLabel, 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
+                            @foreach ([['l' => $scopeLabel, 'i' => "kpi-$k2-scope", 'ic' => 'bi-bullseye'], ['l' => 'Total Completion', 'i' => "kpi-$k2-completion", 'ic' => 'bi-clipboard2-check'], ['l' => 'Total Approved', 'i' => "kpi-$k2-appr", 'ic' => 'bi-check2-circle', 'c' => 'text-success'], ['l' => 'Total Process for Approval', 'i' => "kpi-$k2-prog", 'ic' => 'bi-arrow-repeat', 'c' => 'text-primary'], ['l' => 'Total Revised', 'i' => "kpi-$k2-rev", 'ic' => 'bi-pencil-square', 'c' => 'text-warning'], ['l' => 'Total Not Created', 'i' => "kpi-$k2-not", 'ic' => 'bi-dash-circle']] as $card)
                                 <div class="card kpi-card h-full">
                                     <div class="card-body">
                                         <div class="d-flex align-items-center justify-content-between mb-1">
@@ -413,7 +378,7 @@
                                     ]
                                     : [
                                         'approved' => 'Approved',
-                                        'progress' => 'In Progress',
+                                        'progress' => 'Process for Approval',
                                         'not' => 'Not Created',
                                         'revised' => 'Revised',
                                     ];

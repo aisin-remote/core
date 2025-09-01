@@ -29,25 +29,24 @@ class DashboardController
     /* =============================================================================
      * SUMMARY (semua modul) — DEDUP BY NPK (orang unik) + DOMAIN-FIRST COMPANY
      * ============================================================================= */
-
     public function summary(Request $request)
     {
         $company = $request->query('company');
         $company = $company === '' ? null : $company;
 
-        // Scope akses (tanpa filter company di sini)
+        // scope akses (tanpa filter company dulu)
         $empScope = $this->visibleEmployeeScope();
 
-        // Assignment per NPK (company via domain & rep employee id)
+        // assignment per NPK (domain-first) + optional filter company
         [$npks, $repEmpMap, $assignBreakdown] = $this->assignCompanyPerNpk($empScope, $company);
 
         Log::info('summary:scope', [
             'company_param' => $company,
             'npks_count'    => $npks->count(),
-            'breakdown'     => $assignBreakdown, // ['AII'=>..., 'AIIA'=>..., 'Unassigned'=>...]
+            'breakdown'     => $assignBreakdown,
         ]);
 
-        // Per modul (latest per NPK)
+        // per modul (tetap)
         $idp = $this->idpBucketsByNpks($npks);
         $hav = $this->moduleBucketsByNpks((new Hav)->getTable(), 'status', $npks, [
             'approved' => [3],
@@ -59,14 +58,10 @@ class DashboardController
             'revised'  => [-1],
             'progress' => [1, 2],
         ]);
-
-        // RTC agregat per struktur (tetap by-structure)
         $rtc = $this->moduleRtcBucketsByStructure($company);
 
-        // ALL = gabungan bucket IDP/HAV/ICP per NPK
-        $all = $this->allBucketsByNpks($npks);
-
-        Log::info('summary:buckets', compact('idp', 'hav', 'icp', 'rtc', 'all'));
+        // TAB ALL sekarang cuma butuh total unique NPK
+        $all = ['scope' => $npks->count()];
 
         return response()->json(compact('idp', 'hav', 'icp', 'rtc', 'all'));
     }
