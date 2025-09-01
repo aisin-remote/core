@@ -17,6 +17,7 @@ use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class DashboardController
 {
@@ -25,66 +26,94 @@ class DashboardController
         return view('website.dashboard.index');
     }
 
+    /* =============================================================================
+     * SUMMARY (semua modul) — DEDUP BY NPK (orang unik) + DOMAIN-FIRST COMPANY
+     * ============================================================================= */
+
     public function summary(Request $request)
     {
         $company = $request->query('company');
+        $company = $company === '' ? null : $company;
 
-        // === batasan akses: HRD/VPD/President => all; selain itu => bawahan
-        $empScope = $this->visibleEmployeeScope($company);
-        $empIds   = $empScope->pluck('id')->values();
+        // Scope akses (tanpa filter company di sini)
+        $empScope = $this->visibleEmployeeScope();
 
-        // modul per-employee (pakai latest-per-employee)
-        $idp = $this->idpPerEmployeeBucketsByEmpIds($empIds);
-        $hav = $this->modulePerEmployeeBucketsByEmpIds((new Hav)->getTable(), 'status', $empIds, [
+        // Assignment per NPK (company via domain & rep employee id)
+        [$npks, $repEmpMap, $assignBreakdown] = $this->assignCompanyPerNpk($empScope, $company);
+
+        Log::info('summary:scope', [
+            'company_param' => $company,
+            'npks_count'    => $npks->count(),
+            'breakdown'     => $assignBreakdown, // ['AII'=>..., 'AIIA'=>..., 'Unassigned'=>...]
+        ]);
+
+        // Per modul (latest per NPK)
+        $idp = $this->idpBucketsByNpks($npks);
+        $hav = $this->moduleBucketsByNpks((new Hav)->getTable(), 'status', $npks, [
             'approved' => [3],
             'revised'  => [-1],
             'progress' => [1, 2],
         ]);
-        $icp = $this->modulePerEmployeeBucketsByEmpIds((new Icp)->getTable(), 'status', $empIds, [
+        $icp = $this->moduleBucketsByNpks((new Icp)->getTable(), 'status', $npks, [
             'approved' => [3],
             'revised'  => [-1],
             'progress' => [1, 2],
         ]);
 
-        // RTC tetap agregat struktur (division/department/section/sub_section)
+        // RTC agregat per struktur (tetap by-structure)
         $rtc = $this->moduleRtcBucketsByStructure($company);
 
-        // ALL gabungan modul, per-employee, latest-per-employee
-        $all = $this->allPerEmployeeBucketsByEmpIds($empIds);
+        // ALL = gabungan bucket IDP/HAV/ICP per NPK
+        $all = $this->allBucketsByNpks($npks);
+
+        Log::info('summary:buckets', compact('idp', 'hav', 'icp', 'rtc', 'all'));
 
         return response()->json(compact('idp', 'hav', 'icp', 'rtc', 'all'));
     }
 
-    /* ============================== IDP/HAV/ICP LIST (TIDAK DIUBAH KONSEP) ============================== */
+    /* =============================================================================
+     * LIST (IDP/HAV/ICP — DEDUP BY NPK) & RTC (by-structure)
+     * ============================================================================= */
 
     public function list(Request $req)
     {
         $module     = $req->query('module');
         $statusWant = $req->query('status');
         $company    = $req->query('company');
+        $company    = $company === '' ? null : $company;
         $division   = $req->query('division');
         $department = $req->query('department');
         $month      = $req->query('month');
+
+        Log::info('list:request', compact('module', 'statusWant', 'company', 'division', 'department', 'month'));
 
         if (!in_array($module, ['idp', 'hav', 'icp', 'rtc'], true)) return response()->json(['rows' => []]);
         if (!in_array($statusWant, ['approved', 'progress', 'revised', 'not'], true)) return response()->json(['rows' => []]);
 
         if ($module === 'rtc') {
             $rows = $this->listRtcStructures($company, $statusWant);
+            Log::info('list:rtc', ['rows_count' => count($rows)]);
             return response()->json(['rows' => $rows]);
         }
 
-        $empScope = $this->visibleEmployeeScope($company); // <<< penting: kirim $company
-        if ($department) $empScope->whereHas('departments', fn($q) => $q->where('department_id', $department));
-        if ($division)   $empScope->whereHas('departments.division', fn($q) => $q->where('divisions_id', $division));
+        // Scope akses (tanpa filter company dulu)
+        $empScope = $this->visibleEmployeeScope();
 
-        $empIds = $empScope->pluck('id');
+        if ($department) {
+            $empScope->whereHas('departments', fn($q) => $q->where('department_id', $department));
+        }
+        if ($division) {
+            $empScope->whereHas('departments.division', fn($q) => $q->where('divisions_id', $division));
+        }
+
+        // Assignment per NPK (sesuai company filter)
+        [$npks, $repEmpMap] = $this->assignCompanyPerNpk($empScope, $company);
 
         [$mStart, $mEnd] = [null, null];
         if ($month) {
             try {
                 $mStart = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
-                $mEnd = (clone $mStart)->endOfMonth();
+                $mEnd   = (clone $mStart)->endOfMonth();
             } catch (\Throwable $e) {
                 $mStart = $mEnd = null;
             }
@@ -92,308 +121,320 @@ class DashboardController
 
         switch ($module) {
             case 'idp':
-                $rows = $this->listIdp($empIds, $statusWant, $mStart, $mEnd, $company);
+                $rows = $this->listIdpByNpk($npks, $repEmpMap, $statusWant, $mStart, $mEnd);
                 break;
             case 'hav':
-                $rows = $this->listSimple(Employee::class, Hav::class, 'status', $empIds, $statusWant, $mStart, $mEnd);
+                $rows = $this->listSimpleByNpk((new Hav)->getTable(), 'status', $npks, $repEmpMap, $statusWant, $mStart, $mEnd, [
+                    'approved' => [3],
+                    'revised'  => [-1],
+                ]);
                 break;
             case 'icp':
-                $rows = $this->listSimple(Employee::class, Icp::class, 'status', $empIds, $statusWant, $mStart, $mEnd);
+                $rows = $this->listSimpleByNpk((new Icp)->getTable(), 'status', $npks, $repEmpMap, $statusWant, $mStart, $mEnd, [
+                    'approved' => [3],
+                    'revised'  => [-1],
+                ]);
                 break;
+            default:
+                $rows = collect();
         }
 
-        return response()->json(['rows' => $rows]);
+        Log::info("list:$module", ['status' => $statusWant, 'result_count' => count($rows ?? [])]);
+        return response()->json(['rows' => $rows ?? []]);
     }
 
-    private function listSimple($empModel, $modelClass, string $statusCol, $empIds, string $statusWant, $start, $end)
-    {
-        $approved = [3, 4];
-        $revised  = [-1];
+    /* =============================================================================
+     * LIST HELPERS (per NPK)
+     * ============================================================================= */
 
-        // latest per employee
-        $latestIds = $modelClass::query()
-            ->whereIn('employee_id', $empIds)
-            ->selectRaw('MAX(id) AS id')
-            ->groupBy('employee_id')
-            ->pluck('id');
+    private function listSimpleByNpk(string $table, string $statusCol, $npks, $repEmpMap, string $statusWant, $start, $end, array $map)
+    {
+        $npks = collect($npks)->filter()->values();
+        if ($npks->isEmpty()) return collect();
+
+        $expr = $this->npkNormExpr('e');
+
+        // Ambil latest row per NPK (by normalized NPK)
+        $latest = DB::table("$table as t")
+            ->join('employees as e', 'e.id', '=', 't.employee_id')
+            ->whereIn(DB::raw($expr), $npks)
+            ->when($start && $end, fn($q) => $q->whereBetween('t.updated_at', [$start, $end]))
+            ->selectRaw("$expr AS nk, MAX(t.id) AS last_id")
+            ->groupBy('nk');
+
+        $rows = DB::table("$table as x")
+            ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
+            ->select('l.nk as npk_norm', "x.$statusCol as status")
+            ->get();
+
+        $approvedSet = array_map('intval', $map['approved'] ?? []);
+        $revisedSet  = array_map('intval', $map['revised']  ?? []);
+
+        $keepNk = collect();
 
         if ($statusWant === 'not') {
-            $has = $modelClass::query()->whereIn('employee_id', $empIds)->distinct()->pluck('employee_id');
-            $no  = collect($empIds)->diff($has)->values();
-
-            return Employee::whereIn('id', $no)->orderBy('name')->get()
-                ->map(fn($e) => [
-                    'employee' => $e->name,
-                    'pic'      => $this->short2(optional($e->getSuperiorsByLevel(1)->first())->name ?? '-'),
-                ])->values();
+            $have = $rows->pluck('npk_norm')->unique();
+            $keepNk = $npks->diff($have)->values();
+        } else {
+            foreach ($rows as $r) {
+                $s = (int)$r->status;
+                if ($statusWant === 'approved' && in_array($s, $approvedSet, true)) $keepNk->push($r->npk_norm);
+                elseif ($statusWant === 'revised' && in_array($s, $revisedSet, true)) $keepNk->push($r->npk_norm);
+                elseif ($statusWant === 'progress' && !in_array($s, array_merge($approvedSet, $revisedSet), true)) $keepNk->push($r->npk_norm);
+            }
         }
 
-        if ($latestIds->isEmpty()) return collect();
+        $keepNk = $keepNk->unique()->values();
+        if ($keepNk->isEmpty()) return collect();
 
-        $q = $modelClass::query()->whereIn('id', $latestIds);
-        if ($start && $end) $q->whereBetween('updated_at', [$start, $end]);
+        // Ambil Employee representative utk render nama & PIC
+        $repIds = $keepNk->map(fn($nk) => $repEmpMap[$nk] ?? null)->filter()->values();
+        $employees = Employee::whereIn('id', $repIds)->orderBy('name')->get();
 
-        if ($statusWant === 'approved')      $q->whereIn($statusCol, $approved);
-        elseif ($statusWant === 'revised')   $q->whereIn($statusCol, $revised);
-        elseif ($statusWant === 'progress')  $q->whereNotIn($statusCol, array_merge($approved, $revised));
-
-        $matchedEmpIds = $q->pluck('employee_id')->unique()->values();
-
-        return Employee::whereIn('id', $matchedEmpIds)->orderBy('name')->get()
-            ->map(function ($e) {
-                $pic = optional($e->getSuperiorsByLevel(1)->first())->name ?? '-';
-                return ['employee' => $e->name, 'pic' => $this->short2($pic)];
-            })->values();
+        return $employees->map(function ($e) {
+            $pic = optional($e->getSuperiorsByLevel(1)->first())->name ?? '-';
+            return ['employee' => $e->name, 'pic' => $this->short2($pic)];
+        })->values();
     }
 
-    private function listIdp($empIds, string $statusWant, $start, $end, ?string $company)
+    private function listIdpByNpk($npks, $repEmpMap, string $statusWant, $start, $end)
     {
-        // latest IDP per employee
+        $npks = collect($npks)->filter()->values();
+        if ($npks->isEmpty()) return collect();
+
+        $expr = $this->npkNormExpr('e');
+
+        // latest IDP per normalized NPK
         $latest = DB::table('idp as i')
             ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
-            ->whereIn('a.employee_id', $empIds)
-            ->selectRaw('a.employee_id AS emp_id, MAX(i.id) AS last_idp_id')
-            ->groupBy('a.employee_id');
+            ->join('employees as e', 'a.employee_id', '=', 'e.id')
+            ->whereIn(DB::raw($expr), $npks)
+            ->when($start && $end, fn($q) => $q->whereBetween('i.updated_at', [$start, $end]))
+            ->selectRaw("$expr AS nk, MAX(i.id) AS last_id")
+            ->groupBy('nk');
 
-        $base = DB::table('idp as i2')
-            ->joinSub($latest, 't', fn($j) => $j->on('i2.id', '=', 't.last_idp_id'))
-            ->join('employees as e', 'e.id', '=', 't.emp_id')
-            ->select('t.emp_id', 'i2.status', 'e.position');
+        $rows = DB::table('idp as x')
+            ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
+            ->join('assessments as a', 'x.assessment_id', '=', 'a.id')
+            ->join('employees as e', 'a.employee_id', '=', 'e.id')
+            ->select('l.nk as npk_norm', 'x.status', 'e.position')
+            ->get();
 
-        if ($start && $end) $base->whereBetween('i2.updated_at', [$start, $end]);
+        $keepNk = collect();
 
-        if ($statusWant === 'approved') {
-            $base->where(function ($w) {
-                $w->whereRaw("LOWER(e.position) LIKE '%manager%' AND i2.status IN (4)")
-                    ->orWhereRaw("LOWER(e.position) NOT LIKE '%manager%' AND i2.status IN (3,4)");
-            });
-        } elseif ($statusWant === 'revised') {
-            $base->where('i2.status', -1);
-        } elseif ($statusWant === 'progress') {
-            $base->where(function ($w) {
-                $w->whereRaw("LOWER(e.position) LIKE '%manager%' AND i2.status IN (1,2,3)")
-                    ->orWhereRaw("LOWER(e.position) NOT LIKE '%manager%' AND i2.status IN (1,2)");
-            });
-        } else { // 'not'
-            $has = DB::table('idp as i')
-                ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
-                ->whereIn('a.employee_id', $empIds)
-                ->distinct()->pluck('a.employee_id');
+        if ($statusWant === 'not') {
+            $have = $rows->pluck('npk_norm')->unique();
+            $keepNk = $npks->diff($have)->values();
+        } else {
+            foreach ($rows as $r) {
+                $isMgr = str_contains(strtolower($r->position), 'manager');
+                $s = (int)$r->status;
 
-            $no = collect($empIds)->diff($has)->values();
+                $isApproved = ($isMgr && in_array($s, [4], true)) || (!$isMgr && in_array($s, [3, 4], true));
+                $isRevised  = ($s === -1);
+                $isProgress = !$isApproved && !$isRevised;
 
-            return Employee::whereIn('id', $no)->orderBy('name')->get()
-                ->map(fn($e) => [
-                    'employee' => $e->name,
-                    'pic'      => $this->short2(optional($e->getSuperiorsByLevel(1)->first())->name ?? '-'),
-                ])->values();
+                if ($statusWant === 'approved' && $isApproved)   $keepNk->push($r->npk_norm);
+                if ($statusWant === 'revised'  && $isRevised)    $keepNk->push($r->npk_norm);
+                if ($statusWant === 'progress' && $isProgress)   $keepNk->push($r->npk_norm);
+            }
         }
 
-        $matched = $base->pluck('emp_id')->unique()->values();
+        $keepNk = $keepNk->unique()->values();
+        if ($keepNk->isEmpty()) return collect();
 
-        return Employee::whereIn('id', $matched)->orderBy('name')->get()
-            ->map(function ($e) {
-                $pic = optional($e->getSuperiorsByLevel(1)->first())->name ?? '-';
-                return ['employee' => $e->name, 'pic' => $this->short2($pic)];
-            })->values();
+        // Ambil Employee representative utk render nama & PIC
+        $repIds = $keepNk->map(fn($nk) => $repEmpMap[$nk] ?? null)->filter()->values();
+        $employees = Employee::whereIn('id', $repIds)->orderBy('name')->get();
+
+        return $employees->map(function ($e) {
+            $pic = optional($e->getSuperiorsByLevel(1)->first())->name ?? '-';
+            return ['employee' => $e->name, 'pic' => $this->short2($pic)];
+        })->values();
     }
 
-    /* ============================== SUMMARY HELPERS (BARU / DISESUAIKAN) ============================== */
+    /* =============================================================================
+     * SUMMARY HELPERS (per NPK)
+     * ============================================================================= */
 
-    private function idpPerEmployeeBucketsByEmpIds($empIds): array
+    private function idpBucketsByNpks($npks): array
     {
-        $scope = collect($empIds)->count();
-
+        $npks = collect($npks)->filter()->values();
+        $scope = $npks->count();
         if ($scope === 0) {
-            return ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
+            $res = ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
+            Log::info('summary:idp', $res);
+            return $res;
         }
 
-        // last IDP per employee
+        $expr = $this->npkNormExpr('e');
+
+        // IDP terakhir per normalized NPK
         $latest = DB::table('idp as i')
             ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
-            ->whereIn('a.employee_id', $empIds)
-            ->selectRaw('a.employee_id AS emp_id, MAX(i.id) AS last_idp_id')
-            ->groupBy('a.employee_id');
+            ->join('employees as e', 'a.employee_id', '=', 'e.id')
+            ->whereIn(DB::raw($expr), $npks)
+            ->selectRaw("$expr AS nk, MAX(i.id) AS last_id")
+            ->groupBy('nk');
 
-        $rows = DB::table('idp as i2')
-            ->joinSub($latest, 't', fn($j) => $j->on('i2.id', '=', 't.last_idp_id'))
-            ->join('employees as e', 'e.id', '=', 't.emp_id')
-            ->select('t.emp_id', 'i2.status', 'e.position')
+        $rows = DB::table('idp as x')
+            ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
+            ->join('assessments as a', 'x.assessment_id', '=', 'a.id')
+            ->join('employees as e', 'a.employee_id', '=', 'e.id')
+            ->select('l.nk as npk_norm', 'x.status', 'e.position')
             ->get();
 
         $hasCount = $rows->count();
         $approved = 0;
-        $revised = 0;
+        $revised  = 0;
         $progress = 0;
 
         foreach ($rows as $r) {
             $isMgr = str_contains(strtolower($r->position), 'manager');
-
-            if (($isMgr && in_array((int)$r->status, [4], true))
-                || (!$isMgr && in_array((int)$r->status, [3, 4], true))
-            ) {
+            $s = (int)$r->status;
+            if (($isMgr && in_array($s, [4], true)) || (!$isMgr && in_array($s, [3, 4], true))) {
                 $approved++;
-            } elseif ((int)$r->status === -1) {
+            } elseif ($s === -1) {
                 $revised++;
             } else {
-                $progress++; // ada data tapi belum memenuhi approved/revised
+                $progress++;
             }
         }
 
         $not = max($scope - $hasCount, 0);
-
-        return compact('scope', 'approved', 'progress', 'revised', 'not');
+        $res = compact('scope', 'approved', 'progress', 'revised', 'not');
+        Log::info('summary:idp', $res);
+        return $res;
     }
 
-    private function modulePerEmployeeBucketsByEmpIds(string $table, string $statusCol, $empIds, array $map, bool $joinViaAssessment = false): array
+    private function moduleBucketsByNpks(string $table, string $statusCol, $npks, array $map): array
     {
-        $scope = collect($empIds)->count();
-
+        $npks = collect($npks)->filter()->values();
+        $scope = $npks->count();
         if ($scope === 0) {
-            return ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
+            $res = ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
+            Log::info("summary:$table", $res);
+            return $res;
         }
 
-        if ($joinViaAssessment) {
-            // tidak dipakai untuk HAV/ICP; siapkan kalau dibutuhkan modul lain
-            $latest = DB::table("$table as t")
-                ->join('assessments as a', 't.assessment_id', '=', 'a.id')
-                ->whereIn('a.employee_id', $empIds)
-                ->selectRaw('a.employee_id AS emp_id, MAX(t.id) AS last_id')
-                ->groupBy('a.employee_id');
+        $expr = $this->npkNormExpr('e');
 
-            $rows = DB::table("$table as x")
-                ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-                ->select('l.emp_id as employee_id', "x.$statusCol as status")
-                ->get();
-        } else {
-            $latest = DB::table("$table as t")
-                ->whereIn('t.employee_id', $empIds)
-                ->selectRaw('t.employee_id, MAX(t.id) AS last_id')
-                ->groupBy('t.employee_id');
+        // latest per normalized NPK
+        $latest = DB::table("$table as t")
+            ->join('employees as e', 'e.id', '=', 't.employee_id')
+            ->whereIn(DB::raw($expr), $npks)
+            ->selectRaw("$expr AS nk, MAX(t.id) AS last_id")
+            ->groupBy('nk');
 
-            $rows = DB::table("$table as x")
-                ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-                ->select('x.employee_id', "x.$statusCol as status")
-                ->get();
-        }
+        $rows = DB::table("$table as x")
+            ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
+            ->select('l.nk as npk_norm', "x.$statusCol as status")
+            ->get();
 
-        $hasCount = $rows->count();
+        $hasCount   = $rows->count();
         $approvedSet = array_map('intval', $map['approved'] ?? []);
         $revisedSet  = array_map('intval', $map['revised']  ?? []);
         $approved = 0;
-        $revised = 0;
+        $revised  = 0;
         $progress = 0;
 
         foreach ($rows as $r) {
             $s = (int)$r->status;
             if (in_array($s, $approvedSet, true))      $approved++;
             elseif (in_array($s, $revisedSet, true))   $revised++;
-            else                                        $progress++; // ada data tapi belum memenuhi approved/revised
+            else                                       $progress++;
         }
 
         $not = max($scope - $hasCount, 0);
-
-        return compact('scope', 'approved', 'progress', 'revised', 'not');
+        $res = compact('scope', 'approved', 'progress', 'revised', 'not');
+        Log::info("summary:$table", $res);
+        return $res;
     }
 
-    private function allPerEmployeeBucketsByEmpIds($empIds): array
+    private function allBucketsByNpks($npks): array
     {
-        $ids = collect($empIds)->values();
-        $scope = $ids->count();
-        if ($scope === 0) return ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
+        $npks = collect($npks)->filter()->values();
+        $scope = $npks->count();
+        if ($scope === 0) {
+            $res = ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
+            Log::info('summary:all', $res);
+            return $res;
+        }
 
-        // ==== IDP bucket per employee (latest)
+        $expr = $this->npkNormExpr('e');
+
+        // ==== IDP latest per NPK
         $latestIdp = DB::table('idp as i')
             ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
-            ->whereIn('a.employee_id', $ids)
-            ->selectRaw('a.employee_id AS emp_id, MAX(i.id) AS last_id')
-            ->groupBy('a.employee_id');
+            ->join('employees as e', 'a.employee_id', '=', 'e.id')
+            ->whereIn(DB::raw($expr), $npks)
+            ->selectRaw("$expr AS nk, MAX(i.id) AS last_id")
+            ->groupBy('nk');
 
         $idpRows = DB::table('idp as x')
             ->joinSub($latestIdp, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->join('employees as e', 'e.id', '=', 'l.emp_id')
-            ->select('l.emp_id as employee_id', 'x.status', 'e.position')
-            ->get();
+            ->join('assessments as a', 'x.assessment_id', '=', 'a.id')
+            ->join('employees as e', 'a.employee_id', '=', 'e.id')
+            ->select('l.nk as npk_norm', 'x.status', 'e.position')->get();
 
         $idpBucket = [];
         foreach ($idpRows as $r) {
             $isMgr = str_contains(strtolower($r->position), 'manager');
             $s = (int)$r->status;
-            if (($isMgr && in_array($s, [4], true)) || (!$isMgr && in_array($s, [3, 4], true))) $idpBucket[$r->employee_id] = 'approved';
-            elseif ($s === -1) $idpBucket[$r->employee_id] = 'revised';
-            else $idpBucket[$r->employee_id] = 'progress';
+            if (($isMgr && in_array($s, [4], true)) || (!$isMgr && in_array($s, [3, 4], true))) $idpBucket[$r->npk_norm] = 'approved';
+            elseif ($s === -1) $idpBucket[$r->npk_norm] = 'revised';
+            else $idpBucket[$r->npk_norm] = 'progress';
         }
 
-        // ==== HAV bucket (latest)
-        $havMap = ['approved' => [3], 'revised' => [-1]];
+        // ==== HAV latest per NPK
         $havLatest = DB::table('havs as t')
-            ->whereIn('t.employee_id', $ids)
-            ->selectRaw('t.employee_id, MAX(t.id) AS last_id')
-            ->groupBy('t.employee_id');
+            ->join('employees as e', 'e.id', '=', 't.employee_id')
+            ->whereIn(DB::raw($expr), $npks)
+            ->selectRaw("$expr AS nk, MAX(t.id) AS last_id")
+            ->groupBy('nk');
 
         $havRows = DB::table('havs as x')
             ->joinSub($havLatest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->select('x.employee_id', 'x.status')->get();
+            ->select('l.nk as npk_norm', 'x.status')->get();
 
         $havBucket = [];
         foreach ($havRows as $r) {
             $s = (int)$r->status;
-            if (in_array($s, $havMap['approved'], true)) $havBucket[$r->employee_id] = 'approved';
-            elseif (in_array($s, $havMap['revised'], true)) $havBucket[$r->employee_id] = 'revised';
-            else $havBucket[$r->employee_id] = 'progress';
+            if ($s === 3) $havBucket[$r->npk_norm] = 'approved';
+            elseif ($s === -1) $havBucket[$r->npk_norm] = 'revised';
+            else $havBucket[$r->npk_norm] = 'progress';
         }
 
-        // ==== ICP bucket (latest)
-        $icpMap = ['approved' => [3], 'revised' => [-1]];
+        // ==== ICP latest per NPK
         $icpLatest = DB::table('icp as t')
-            ->whereIn('t.employee_id', $ids)
-            ->selectRaw('t.employee_id, MAX(t.id) AS last_id')
-            ->groupBy('t.employee_id');
+            ->join('employees as e', 'e.id', '=', 't.employee_id')
+            ->whereIn(DB::raw($expr), $npks)
+            ->selectRaw("$expr AS nk, MAX(t.id) AS last_id")
+            ->groupBy('nk');
 
         $icpRows = DB::table('icp as x')
             ->joinSub($icpLatest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->select('x.employee_id', 'x.status')->get();
+            ->select('l.nk as npk_norm', 'x.status')->get();
 
         $icpBucket = [];
         foreach ($icpRows as $r) {
             $s = (int)$r->status;
-            if (in_array($s, $icpMap['approved'], true)) $icpBucket[$r->employee_id] = 'approved';
-            elseif (in_array($s, $icpMap['revised'], true)) $icpBucket[$r->employee_id] = 'revised';
-            else $icpBucket[$r->employee_id] = 'progress';
+            if ($s === 3) $icpBucket[$r->npk_norm] = 'approved';
+            elseif ($s === -1) $icpBucket[$r->npk_norm] = 'revised';
+            else $icpBucket[$r->npk_norm] = 'progress';
         }
 
-        // ==== RTC per-employee (jika ada), latest
-        // (RTC utama by-structure; tapi untuk ALL pakai fallback per-employee jika ada row employee_id)
-        $rtcMap = ['approved' => [2], 'revised' => [-1]];
-        $rtcLatest = DB::table('rtc as t')
-            ->whereIn('t.employee_id', $ids)
-            ->selectRaw('t.employee_id, MAX(t.id) AS last_id')
-            ->groupBy('t.employee_id');
-
-        $rtcRows = DB::table('rtc as x')
-            ->joinSub($rtcLatest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->select('x.employee_id', 'x.status')->get();
-
-        $rtcBucket = [];
-        foreach ($rtcRows as $r) {
-            $s = (int)$r->status;
-            if (in_array($s, $rtcMap['approved'], true)) $rtcBucket[$r->employee_id] = 'approved';
-            elseif (in_array($s, $rtcMap['revised'], true)) $rtcBucket[$r->employee_id] = 'revised';
-            else $rtcBucket[$r->employee_id] = 'progress';
-        }
-
-        // ==== Gabungkan per employee
+        // ==== Gabungkan per NPK
         $approved = 0;
-        $revised = 0;
+        $revised  = 0;
         $progress = 0;
-        $not = 0;
+        $not      = 0;
 
-        foreach ($ids as $eid) {
+        foreach ($npks as $nk) {
             $buckets = [
-                $idpBucket[$eid] ?? null,
-                $havBucket[$eid] ?? null,
-                $icpBucket[$eid] ?? null,
-                $rtcBucket[$eid] ?? null,
+                $idpBucket[$nk] ?? null,
+                $havBucket[$nk] ?? null,
+                $icpBucket[$nk] ?? null,
             ];
 
             if (in_array('approved', $buckets, true))      $approved++;
@@ -402,10 +443,14 @@ class DashboardController
             else                                            $not++;
         }
 
-        return compact('scope', 'approved', 'progress', 'revised', 'not');
+        $res = compact('scope', 'approved', 'progress', 'revised', 'not');
+        Log::info('summary:all', $res);
+        return $res;
     }
 
-    /* ============================== RTC AGG & LIST ============================== */
+    /* =============================================================================
+     * RTC AGG & LIST (by-structure) — tetap sama
+     * ============================================================================= */
 
     private function moduleRtcBucketsByStructure(?string $company): array
     {
@@ -413,9 +458,9 @@ class DashboardController
         $total = $divs->count() + $depts->count() + $secs->count() + $subs->count();
 
         $approved = 0;
-        $revised = 0;
+        $revised  = 0;
         $progress = 0;
-        $hasAny = 0;
+        $hasAny   = 0;
 
         $bucketOf = function (string $area, int $id) {
             $arr = Rtc::where('area', $area)->where('area_id', $id)->pluck('status')->all();
@@ -492,7 +537,7 @@ class DashboardController
         $rows = collect();
 
         $push = function (string $area, $model) use (&$rows, $bucketOf) {
-            $b = $bucketOf($area, $model->id);
+            $b = $bucketOf($area, $model->id); // null -> not created
             $structPic = $this->getStructuralPIC($area, $model);
             $dirPic    = $this->getDirectorForStructure($area, $model);
 
@@ -510,6 +555,7 @@ class DashboardController
         foreach ($secs as $m)  $push('section',    $m);
         foreach ($subs as $m)  $push('sub_section', $m);
 
+        // filter by status
         $rows = $rows->filter(function ($r) use ($statusWant) {
             if ($statusWant === 'not')      return $r['bucket'] === null;
             if ($statusWant === 'approved') return $r['bucket'] === 'approved';
@@ -542,10 +588,6 @@ class DashboardController
         return [$divs, $depts, $secs, $subs];
     }
 
-    /** PIC struktural:
-     *  - Division  : Direktur plant
-     *  - Dept/Sec/Subsec : GM division
-     */
     private function getStructuralPIC(string $area, $model): ?Employee
     {
         if ($area === 'division') {
@@ -566,7 +608,6 @@ class DashboardController
         return null;
     }
 
-    /** Direktur plant (approval PIC) berdasarkan struktur */
     private function getDirectorForStructure(string $area, $model): ?Employee
     {
         $plant = null;
@@ -583,48 +624,183 @@ class DashboardController
         return Employee::find($plant->director_id);
     }
 
-    /* ============================== ACCESS HELPERS ============================== */
+    /* =============================================================================
+     * ACCESS SCOPE & ASSIGNMENT PER NPK
+     * ============================================================================= */
 
     /**
-     * Query scope karyawan yang boleh dilihat user saat ini.
-     * HRD / VPD / President => seluruh karyawan (sesuai filter company).
-     * Lainnya => gabungan semua bawahan (semua level) dari employee yang login (via struktur).
+     * Scope karyawan yang boleh dilihat user saat ini.
+     * HRD / VPD / President => seluruh karyawan.
+     * Lainnya => semua bawahan (via struktur) dari employee login.
      *
-     * Return: Builder<Employee>
+     * NOTE: TIDAK mem-filter company di sini. Filter company dilakukan
+     * pada level assignment per-NPK (domain-first).
      */
-    private function visibleEmployeeScope(?string $company)
+    private function visibleEmployeeScope()
     {
         $user = auth()->user();
-        $emp  = $user->employee; // <-- BUKAN optional()
-
+        $emp  = $user->employee; // Employee instance (bisa null)
         $role = (string)($user->role ?? '');
 
         $posNorm = $emp && method_exists($emp, 'getNormalizedPosition')
             ? strtolower((string)$emp->getNormalizedPosition())
             : strtolower((string)($emp->position ?? ''));
 
-        // base query selalu filter company
-        $base = Employee::query()->forCompany($company);
-
         // HRD / VPD / President / tidak punya employee -> lihat semua
         if (($role === 'HRD') || in_array($posNorm, ['vpd', 'president'], true) || !$emp || !$emp->id) {
-            return $base;
+            Log::info('visibleEmployeeScope:ALL');
+            return Employee::query();
         }
 
-        // Ambil bawahan via helper (Employee instance, bukan Optional)
+        // Ambil bawahan via struktur, lalu batasi ke set itu
         $ids = $this->getSubordinatesFromStructure($emp)->pluck('id')->unique()->values();
 
-        Log::info($emp->name, ['bawahan' => $ids]);
+        Log::info('visibleEmployeeScope:subordinates', [
+            'owner'       => $emp->name ?? '-',
+            'ids_count'   => $ids->count(),
+            'ids_preview' => $ids->take(50),
+        ]);
 
-        // Tidak ada bawahan -> kosong (bukan diri sendiri)
         if ($ids->isEmpty()) {
-            return $base->whereRaw('1=0');
+            return Employee::query()->whereRaw('1=0'); // kosong
         }
 
-        // Kembalikan Builder agar bisa di-whereHas, dst.
-        return $base->whereIn('id', $ids);
+        return Employee::query()->whereIn('employees.id', $ids);
     }
 
+    /**
+     * Assignment company per NPK berbasis domain email user (AII/AIIA).
+     * - Normalisasi NPK agar unik (hapus spasi, -, ., / dan lower).
+     * - Domain-first: pakai domain email; jika ada dua domain, pilih yang count email terbanyak; tie → majority company_name.
+     * - Jika tidak ada email → pakai majority employees.company_name (AII/AIIA). Tie/kosong → Unassigned.
+     * - Representative employee_id dipilih deterministik:
+     *     * Prioritas baris yang match assigned company, prefer yg ada email domain → MIN(users.id); fallback MIN(employees.id).
+     * - Jika $company != null → hanya include NPK yang ter-assign ke company tsb.
+     *
+     * Return:
+     *  - Collection $npks (npk_norm list)
+     *  - array $repEmpMap: npk_norm => representative employees.id
+     *  - array $breakdown: ['AII'=>x, 'AIIA'=>y, 'Unassigned'=>z]
+     */
+    private function assignCompanyPerNpk($empScope, ?string $company = null): array
+    {
+        $expr = $this->npkNormExpr('employees');
+
+        // Ambil data dasar
+        $rows = (clone $empScope)
+            ->leftJoin('users', 'users.id', '=', 'employees.user_id')
+            ->whereNotNull('employees.npk')
+            ->whereRaw("TRIM(employees.npk) <> ''")
+            ->get([
+                DB::raw("$expr AS npk_norm"),
+                'employees.id as employee_id',
+                'employees.company_name as emp_company',
+                'users.id as uid',
+                'users.email as email',
+            ]);
+
+        // Group per NPK normalisasi
+        $grouped = $rows->groupBy('npk_norm');
+
+        $repEmpMap   = [];
+        $npks        = collect();
+        $breakdown   = ['AII' => 0, 'AIIA' => 0, 'Unassigned' => 0];
+
+        foreach ($grouped as $nk => $items) {
+            // Hitung domain & company majority
+            $domainCnt = ['AII' => 0, 'AIIA' => 0];
+            $compCnt   = ['AII' => 0, 'AIIA' => 0];
+
+            foreach ($items as $r) {
+                $email = strtolower((string)($r->email ?? ''));
+                if (Str::endsWith($email, '@aisin-indonesia.co.id')) $domainCnt['AII']++;
+                elseif (Str::endsWith($email, '@aiia.co.id'))        $domainCnt['AIIA']++;
+
+                $empCompany = strtoupper(trim((string)($r->emp_company ?? '')));
+                if ($empCompany === 'AII')  $compCnt['AII']++;
+                if ($empCompany === 'AIIA') $compCnt['AIIA']++;
+            }
+
+            // Tentukan assigned company (domain-first)
+            $assigned = null;
+            if (($domainCnt['AII'] + $domainCnt['AIIA']) > 0) {
+                if ($domainCnt['AII'] > $domainCnt['AIIA'])      $assigned = 'AII';
+                elseif ($domainCnt['AIIA'] > $domainCnt['AII'])  $assigned = 'AIIA';
+                else {
+                    // tie by email → majority company_name
+                    if ($compCnt['AII']  > $compCnt['AIIA']) $assigned = 'AII';
+                    elseif ($compCnt['AIIA'] > $compCnt['AII'])  $assigned = 'AIIA';
+                    else $assigned = null; // tetap unassigned
+                }
+            } else {
+                // tidak ada email → majority company_name
+                if ($compCnt['AII']  > $compCnt['AIIA']) $assigned = 'AII';
+                elseif ($compCnt['AIIA'] > $compCnt['AII'])  $assigned = 'AIIA';
+                else $assigned = null; // unassigned
+            }
+
+            // Representative employee (deterministik)
+            $repId = null;
+            if ($assigned) {
+                // Prefer baris dengan email domain yang match assigned
+                $withDomain = $items->filter(function ($r) use ($assigned) {
+                    $email = strtolower((string)($r->email ?? ''));
+                    return ($assigned === 'AII'  && Str::endsWith($email, '@aisin-indonesia.co.id'))
+                        || ($assigned === 'AIIA' && Str::endsWith($email, '@aiia.co.id'));
+                });
+                if ($withDomain->isNotEmpty()) {
+                    $repId = $withDomain->sortBy('uid')->first()->employee_id;
+                } else {
+                    // Fallback: baris dengan emp_company = assigned
+                    $withComp = $items->filter(function ($r) use ($assigned) {
+                        $ec = strtoupper(trim((string)($r->emp_company ?? '')));
+                        return $ec === $assigned;
+                    });
+                    if ($withComp->isNotEmpty()) {
+                        $repId = $withComp->sortBy('employee_id')->first()->employee_id;
+                    } else {
+                        // Benar-benar tidak ada—pakai MIN employees.id
+                        $repId = $items->sortBy('employee_id')->first()->employee_id;
+                    }
+                }
+            } else {
+                // Unassigned: tetap pilih rep agar bisa render list “not created”
+                $repId = $items->sortBy('employee_id')->first()->employee_id;
+            }
+
+            // Filter company jika diminta
+            if ($company && $assigned !== $company) {
+                continue;
+            }
+
+            $repEmpMap[$nk] = $repId;
+            $npks->push($nk);
+
+            if ($assigned === 'AII')  $breakdown['AII']++;
+            elseif ($assigned === 'AIIA') $breakdown['AIIA']++;
+            else                          $breakdown['Unassigned']++;
+        }
+
+        $npks = $npks->unique()->values();
+
+        Log::info('assignCompanyPerNpk:done', [
+            'npk_count'      => $npks->count(),
+            'breakdown'      => $breakdown,
+            'company_filter' => $company,
+        ]);
+
+        return [$npks, $repEmpMap, $breakdown];
+    }
+
+    /**
+     * Ekspresi SQL untuk normalisasi NPK.
+     * $alias: alias table employees (misal 'e' atau 'employees')
+     */
+    private function npkNormExpr(string $alias): string
+    {
+        // LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE({alias}.npk,' ',''),'-',''),'.',''),'/','')))
+        return "LOWER(TRIM(REPLACE(REPLACE(REPLACE(REPLACE($alias.npk,' ',''),'-',''),'.',''),'/','')))";
+    }
 
     private function getSubordinatesFromStructure(Employee $employee)
     {
@@ -696,7 +872,9 @@ class DashboardController
         return $subordinateIds->merge($operatorIds);
     }
 
-    /* ============================== UTIL ============================== */
+    /* =============================================================================
+     * MISC
+     * ============================================================================= */
 
     private function short2(?string $name): string
     {
