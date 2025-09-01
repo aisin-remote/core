@@ -149,7 +149,7 @@ class DashboardController
 
         $expr = $this->npkNormExpr('e');
 
-        // Ambil latest row per NPK (by normalized NPK)
+        // Latest per NPK
         $latest = DB::table("$table as t")
             ->join('employees as e', 'e.id', '=', 't.employee_id')
             ->whereIn(DB::raw($expr), $npks)
@@ -166,6 +166,7 @@ class DashboardController
         $revisedSet  = array_map('intval', $map['revised']  ?? []);
 
         $keepNk = collect();
+        $pendingLevelByNk = []; // nk => 1|2 (dipakai hanya utk status progress)
 
         if ($statusWant === 'not') {
             $have = $rows->pluck('npk_norm')->unique();
@@ -173,9 +174,18 @@ class DashboardController
         } else {
             foreach ($rows as $r) {
                 $s = (int)$r->status;
-                if ($statusWant === 'approved' && in_array($s, $approvedSet, true)) $keepNk->push($r->npk_norm);
-                elseif ($statusWant === 'revised' && in_array($s, $revisedSet, true)) $keepNk->push($r->npk_norm);
-                elseif ($statusWant === 'progress' && !in_array($s, array_merge($approvedSet, $revisedSet), true)) $keepNk->push($r->npk_norm);
+
+                $isApproved = in_array($s, $approvedSet, true);
+                $isRevised  = in_array($s, $revisedSet,  true);
+                $isProgress = !$isApproved && !$isRevised;
+
+                if ($statusWant === 'approved' && $isApproved) $keepNk->push($r->npk_norm);
+                if ($statusWant === 'revised'  && $isRevised)  $keepNk->push($r->npk_norm);
+                if ($statusWant === 'progress' && $isProgress) {
+                    $keepNk->push($r->npk_norm);
+                    // latest status 2 => anggap pending level-2, selain itu level-1
+                    $pendingLevelByNk[$r->npk_norm] = ($s === 2) ? 2 : 1;
+                }
             }
         }
 
@@ -186,8 +196,21 @@ class DashboardController
         $repIds = $keepNk->map(fn($nk) => $repEmpMap[$nk] ?? null)->filter()->values();
         $employees = Employee::whereIn('id', $repIds)->orderBy('name')->get();
 
-        return $employees->map(function ($e) {
-            $pic = optional($e->getSuperiorsByLevel(1)->first())->name ?? '-';
+        // reverse map: employee_id -> nk
+        $nkByEmpId = [];
+        foreach ($repEmpMap as $nk => $eid) $nkByEmpId[$eid] = $nk;
+
+        return $employees->map(function ($e) use ($statusWant, $pendingLevelByNk, $nkByEmpId) {
+            $level = 1;
+            if ($statusWant === 'progress') {
+                $nk = $nkByEmpId[$e->id] ?? null;
+                if ($nk && isset($pendingLevelByNk[$nk])) {
+                    $level = (int)$pendingLevelByNk[$nk];
+                }
+            }
+            $superior = method_exists($e, 'getSuperiorsByLevel') ? $e->getSuperiorsByLevel($level)->first() : null;
+            $pic = optional($superior)->name ?? '-';
+
             return ['employee' => $e->name, 'pic' => $this->short2($pic)];
         })->values();
     }
@@ -199,7 +222,7 @@ class DashboardController
 
         $expr = $this->npkNormExpr('e');
 
-        // Agregasi semua baris IDP per NPK (di dalam rentang waktu jika ada)
+        // Agregasi semua baris IDP per NPK + hitung jumlah per-status
         $agg = DB::table('idp as i')
             ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
             ->join('employees as e', 'a.employee_id', '=', 'e.id')
@@ -209,17 +232,23 @@ class DashboardController
             $expr AS nk,
             COUNT(*) AS total_cnt,
             SUM(CASE WHEN i.status = -1 THEN 1 ELSE 0 END) AS revised_cnt,
+            -- 'ok' = semua baris sudah finish (nm=3, mgr=4)
             SUM(
                 CASE WHEN
                     (LOWER(COALESCE(e.position,'')) LIKE '%manager%' AND i.status = 4)
                     OR
                     (LOWER(COALESCE(e.position,'')) NOT LIKE '%manager%' AND i.status = 3)
                 THEN 1 ELSE 0 END
-            ) AS ok_cnt
+            ) AS ok_cnt,
+            SUM(CASE WHEN i.status = 1 THEN 1 ELSE 0 END) AS s1_cnt,
+            SUM(CASE WHEN i.status = 2 THEN 1 ELSE 0 END) AS s2_cnt,
+            SUM(CASE WHEN i.status = 3 THEN 1 ELSE 0 END) AS s3_cnt,
+            SUM(CASE WHEN i.status = 4 THEN 1 ELSE 0 END) AS s4_cnt
         ")
             ->groupBy('nk');
 
         $rows = DB::query()->fromSub($agg, 't')->get();
+        $rowsByNk = $rows->keyBy('nk');
 
         $keepNk = collect();
 
@@ -249,9 +278,71 @@ class DashboardController
         $repIds = $keepNk->map(fn($nk) => $repEmpMap[$nk] ?? null)->filter()->values();
         $employees = Employee::whereIn('id', $repIds)->orderBy('name')->get();
 
-        return $employees->map(function ($e) {
-            $pic = optional($e->getSuperiorsByLevel(1)->first())->name ?? '-';
-            return ['employee' => $e->name, 'pic' => $this->short2($pic)];
+        // reverse map: employee_id -> nk
+        $nkByEmpId = [];
+        foreach ($repEmpMap as $nk => $eid) $nkByEmpId[$eid] = $nk;
+
+        return $employees->map(function ($e) use ($statusWant, $nkByEmpId, $rowsByNk) {
+            $picName = '-';
+
+            if ($statusWant === 'progress') {
+                $nk = $nkByEmpId[$e->id] ?? null;
+                $agg = $nk ? ($rowsByNk[$nk] ?? null) : null;
+
+                if ($agg) {
+                    // Tentukan siapa PIC saat ini berdasarkan step yang masih pending
+                    $norm = method_exists($e, 'getNormalizedPosition')
+                        ? strtolower((string)$e->getNormalizedPosition())
+                        : strtolower((string)$e->position);
+
+                    $s1 = (int)$agg->s1_cnt;
+                    $s2 = (int)$agg->s2_cnt;
+                    $s3 = (int)$agg->s3_cnt;
+                    // $s4 dipakai di manager tapi kalau masih progress nilainya < total
+
+                    if ($norm === 'manager') {
+                        // Manager:
+                        //   1 -> Direktur, 2 -> VPD, 3 -> President (cek), 4 -> approved (finish)
+                        if ($s1 > 0) {
+                            $sup = $this->findInChainOrFallback($e, ['direktur', 'director']);
+                            $picName = optional($sup)->name ?? '-';
+                        } elseif ($s2 > 0) {
+                            $sup = $this->findInChainOrFallback($e, ['vpd', 'vp']);
+                            $picName = optional($sup)->name ?? '-';
+                        } elseif ($s3 > 0) {
+                            $sup = $this->findInChainOrFallback($e, ['president', 'pd']);
+                            $picName = optional($sup)->name ?? '-';
+                        } else {
+                            // fallback (seharusnya tidak kena)
+                            $sup = $this->findInChainOrFallback($e, ['president', 'pd']);
+                            $picName = optional($sup)->name ?? '-';
+                        }
+                    } else {
+                        // Non-manager:
+                        //   1 -> cek oleh atasan 2 level di atas (getCreateAuth()+1)
+                        //   2 -> menuju approve final (getFinalApproval())
+                        if ($s1 > 0) {
+                            $lvl = (int)$e->getCreateAuth() + 1;
+                            $sup = $e->getSuperiorsByLevel($lvl)->last();
+                            $picName = optional($sup)->name ?? '-';
+                        } elseif ($s2 > 0) {
+                            $lvl = (int)$e->getFinalApproval();
+                            $sup = $e->getSuperiorsByLevel($lvl)->last();
+                            $picName = optional($sup)->name ?? '-';
+                        } else {
+                            // fallback: anggap tinggal approve final
+                            $lvl = (int)$e->getFinalApproval();
+                            $sup = $e->getSuperiorsByLevel($lvl)->last();
+                            $picName = optional($sup)->name ?? '-';
+                        }
+                    }
+                }
+            } else {
+                // approved/revised/not: tetap seperti sebelumnya → PIC = atasan level-1 (informasi umum saja)
+                $picName = optional($e->getSuperiorsByLevel(1)->first())->name ?? '-';
+            }
+
+            return ['employee' => $e->name, 'pic' => $this->short2($picName)];
         })->values();
     }
 
@@ -882,6 +973,51 @@ class DashboardController
         $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
     }
+
+    private function normalizeTargets(array $targets): array
+    {
+        $map = [
+            'director'  => 'direktur',
+            'direktur'  => 'direktur',
+            'vp'        => 'vpd',
+            'vpd'       => 'vpd',
+            'pd'        => 'president',
+            'president' => 'president',
+        ];
+        return array_values(array_unique(array_map(function ($t) use ($map) {
+            $t = strtolower(trim($t));
+            return $map[$t] ?? $t;
+        }, $targets)));
+    }
+
+    /**
+     * Cari atasan dengan jabatan target di rantai atasan employee.
+     * Kalau tidak ketemu di chain, fallback cari global (opsional sederhana).
+     */
+    private function findInChainOrFallback(Employee $employee, array $targetPositions): ?Employee
+    {
+        $targets = $this->normalizeTargets($targetPositions);
+
+        // 1) coba di chain
+        $chain = $employee->getSuperiorsByLevel(10); // Collection<Employee>
+        $found = $chain->first(function ($sup) use ($targets) {
+            if (method_exists($sup, 'getNormalizedPosition')) {
+                return in_array(strtolower((string)$sup->getNormalizedPosition()), $targets, true);
+            }
+            return in_array(strtolower((string)$sup->position), $targets, true);
+        });
+        if ($found) return $found;
+
+        // 2) fallback sederhana (tanpa filter plant/division)
+        return Employee::query()
+            ->where(function ($q) use ($targets) {
+                foreach ($targets as $t) {
+                    $q->orWhereRaw('LOWER(TRIM(position)) = ?', [$t]);
+                }
+            })
+            ->first();
+    }
+
 
     /* =============================================================================
      * MISC

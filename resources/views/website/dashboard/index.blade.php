@@ -396,8 +396,8 @@
                                                 <thead class="table-light">
                                                     <tr>
                                                         <th>{{ $m['key'] === 'rtc' ? 'Structure' : 'Employee' }}</th>
-                                                        @if ($canSeePIC)
-                                                            <th>PIC</th> {{-- akan di-hide oleh DataTables untuk RTC-Approved --}}
+                                                        @if ($canSeePIC && $statusKey !== 'approved')
+                                                            <th>PIC</th>
                                                         @endif
                                                     </tr>
                                                 </thead>
@@ -579,12 +579,10 @@
                         data: 'structure',
                         title: 'Structure'
                     }];
-                    if (CAN_SEE_PIC) {
-                        // hide PIC saat approved (kolom tetap ada agar header sinkron)
+                    if (CAN_SEE_PIC && status !== 'approved') {
                         cols.push({
                             data: 'pic',
-                            title: 'PIC',
-                            visible: (status !== 'approved')
+                            title: 'PIC'
                         });
                     }
                 } else {
@@ -592,10 +590,12 @@
                         data: 'employee',
                         title: 'Employee'
                     }];
-                    if (CAN_SEE_PIC) cols.push({
-                        data: 'pic',
-                        title: 'PIC'
-                    });
+                    if (CAN_SEE_PIC && status !== 'approved') {
+                        cols.push({
+                            data: 'pic',
+                            title: 'PIC'
+                        });
+                    }
                 }
                 buildTable($tbl, [], cols);
             });
@@ -649,20 +649,23 @@
                             data: 'structure',
                             title: 'Structure'
                         }];
-                        if (CAN_SEE_PIC) cols.push({
-                            data: 'pic',
-                            title: 'PIC',
-                            visible: (status !== 'approved')
-                        });
+                        if (CAN_SEE_PIC && status !== 'approved') {
+                            cols.push({
+                                data: 'pic',
+                                title: 'PIC'
+                            });
+                        }
                     } else {
                         cols = [{
                             data: 'employee',
                             title: 'Employee'
                         }];
-                        if (CAN_SEE_PIC) cols.push({
-                            data: 'pic',
-                            title: 'PIC'
-                        });
+                        if (CAN_SEE_PIC && status !== 'approved') {
+                            cols.push({
+                                data: 'pic',
+                                title: 'PIC'
+                            });
+                        }
                     }
                     buildTable($tbl, rows, cols);
                 }
