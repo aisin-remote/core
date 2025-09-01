@@ -565,10 +565,10 @@
 
         function formatStructure(area, name) {
             const map = {
-                division: 'Division',
-                department: 'Department',
-                section: 'Section',
-                sub_section: 'Sub Section'
+                division: 'DIVISION',
+                department: 'DEPARTMENT',
+                section: 'SECTION',
+                sub_section: 'SUB SECTION'
             };
             const title = map[area] || (area || '').replace('-', ' ');
             return `${title} - ${name || '-'}`;
