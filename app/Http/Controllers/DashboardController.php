@@ -199,39 +199,46 @@ class DashboardController
 
         $expr = $this->npkNormExpr('e');
 
-        // latest IDP per normalized NPK
-        $latest = DB::table('idp as i')
+        // Agregasi semua baris IDP per NPK (di dalam rentang waktu jika ada)
+        $agg = DB::table('idp as i')
             ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
             ->join('employees as e', 'a.employee_id', '=', 'e.id')
             ->whereIn(DB::raw($expr), $npks)
             ->when($start && $end, fn($q) => $q->whereBetween('i.updated_at', [$start, $end]))
-            ->selectRaw("$expr AS nk, MAX(i.id) AS last_id")
+            ->selectRaw("
+            $expr AS nk,
+            COUNT(*) AS total_cnt,
+            SUM(CASE WHEN i.status = -1 THEN 1 ELSE 0 END) AS revised_cnt,
+            SUM(
+                CASE WHEN
+                    (LOWER(COALESCE(e.position,'')) LIKE '%manager%' AND i.status = 4)
+                    OR
+                    (LOWER(COALESCE(e.position,'')) NOT LIKE '%manager%' AND i.status = 3)
+                THEN 1 ELSE 0 END
+            ) AS ok_cnt
+        ")
             ->groupBy('nk');
 
-        $rows = DB::table('idp as x')
-            ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->join('assessments as a', 'x.assessment_id', '=', 'a.id')
-            ->join('employees as e', 'a.employee_id', '=', 'e.id')
-            ->select('l.nk as npk_norm', 'x.status', 'e.position')
-            ->get();
+        $rows = DB::query()->fromSub($agg, 't')->get();
 
         $keepNk = collect();
 
         if ($statusWant === 'not') {
-            $have = $rows->pluck('npk_norm')->unique();
+            $have = $rows->pluck('nk')->unique();
             $keepNk = $npks->diff($have)->values();
         } else {
             foreach ($rows as $r) {
-                $isMgr = str_contains(strtolower($r->position), 'manager');
-                $s = (int)$r->status;
+                $total   = (int)$r->total_cnt;
+                $revised = (int)$r->revised_cnt;
+                $ok      = (int)$r->ok_cnt;
 
-                $isApproved = ($isMgr && in_array($s, [4], true)) || (!$isMgr && in_array($s, [3, 4], true));
-                $isRevised  = ($s === -1);
-                $isProgress = !$isApproved && !$isRevised;
+                $isRevised  = $revised > 0;
+                $isApproved = $total > 0 && $revised === 0 && $ok === $total;
+                $isProgress = $total > 0 && $revised === 0 && $ok < $total;
 
-                if ($statusWant === 'approved' && $isApproved)   $keepNk->push($r->npk_norm);
-                if ($statusWant === 'revised'  && $isRevised)    $keepNk->push($r->npk_norm);
-                if ($statusWant === 'progress' && $isProgress)   $keepNk->push($r->npk_norm);
+                if ($statusWant === 'revised'  && $isRevised)  $keepNk->push($r->nk);
+                if ($statusWant === 'approved' && $isApproved) $keepNk->push($r->nk);
+                if ($statusWant === 'progress' && $isProgress) $keepNk->push($r->nk);
             }
         }
 
@@ -254,7 +261,7 @@ class DashboardController
 
     private function idpBucketsByNpks($npks): array
     {
-        $npks = collect($npks)->filter()->values();
+        $npks  = collect($npks)->filter()->values();
         $scope = $npks->count();
         if ($scope === 0) {
             $res = ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
@@ -264,39 +271,48 @@ class DashboardController
 
         $expr = $this->npkNormExpr('e');
 
-        // IDP terakhir per normalized NPK
-        $latest = DB::table('idp as i')
+        // Agregasi semua baris IDP per NPK (tanpa filter waktu untuk summary),
+        // kalau perlu filter tahun/bulan → tambahkan di sini mirip list().
+        $agg = DB::table('idp as i')
             ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
             ->join('employees as e', 'a.employee_id', '=', 'e.id')
             ->whereIn(DB::raw($expr), $npks)
-            ->selectRaw("$expr AS nk, MAX(i.id) AS last_id")
+            ->selectRaw("
+            $expr AS nk,
+            COUNT(*) AS total_cnt,
+            SUM(CASE WHEN i.status = -1 THEN 1 ELSE 0 END) AS revised_cnt,
+            SUM(
+                CASE WHEN
+                    (LOWER(COALESCE(e.position,'')) LIKE '%manager%' AND i.status = 4)
+                    OR
+                    (LOWER(COALESCE(e.position,'')) NOT LIKE '%manager%' AND i.status = 3)
+                THEN 1 ELSE 0 END
+            ) AS ok_cnt
+        ")
             ->groupBy('nk');
 
-        $rows = DB::table('idp as x')
-            ->joinSub($latest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->join('assessments as a', 'x.assessment_id', '=', 'a.id')
-            ->join('employees as e', 'a.employee_id', '=', 'e.id')
-            ->select('l.nk as npk_norm', 'x.status', 'e.position')
-            ->get();
+        $rows = DB::query()->fromSub($agg, 't')->get();
 
-        $hasCount = $rows->count();
+        $have     = $rows->pluck('nk')->unique()->count();
         $approved = 0;
         $revised  = 0;
         $progress = 0;
 
         foreach ($rows as $r) {
-            $isMgr = str_contains(strtolower($r->position), 'manager');
-            $s = (int)$r->status;
-            if (($isMgr && in_array($s, [4], true)) || (!$isMgr && in_array($s, [3, 4], true))) {
-                $approved++;
-            } elseif ($s === -1) {
+            $total   = (int)$r->total_cnt;
+            $rev     = (int)$r->revised_cnt;
+            $ok      = (int)$r->ok_cnt;
+
+            if ($rev > 0) {
                 $revised++;
+            } elseif ($total > 0 && $ok === $total) {
+                $approved++;
             } else {
                 $progress++;
             }
         }
 
-        $not = max($scope - $hasCount, 0);
+        $not = max($scope - $have, 0);
         $res = compact('scope', 'approved', 'progress', 'revised', 'not');
         Log::info('summary:idp', $res);
         return $res;
