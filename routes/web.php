@@ -255,6 +255,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/list', [RtcController::class, 'list'])->name('rtc.list');
         Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
+        Route::get('/division/{id}', [RtcController::class, 'showDivision'])->name('rtc.list');
     });
 
     Route::prefix('idp')->group(function () {

@@ -17,43 +17,80 @@ class RtcController extends Controller
     {
         $user = auth()->user();
         $employee = $user->employee;
+        $company ??= $employee->company_name;
 
-        if ($company == null) {
-            $company = $user->employee->company_name;
-        }
+        $isGM = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
 
-        // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
         if ($user->isHRDorDireksi()) {
             $table = 'Division';
-
             $divisions = Division::where('company', $company)->get();
-            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])->get();
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $company)->get();
+        } elseif ($employee->position === 'Direktur') {
+            $table = 'Division';
+            $divisions = Division::where('company', $company)
+                ->where('plant_id', $employee->plant->id)->get();
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $employee->company_name)->get();
+        } elseif ($isGM) {
+            // GM: halaman pertama = list Division, TIDAK tampilkan kolom plan
+            $table = 'Division';
+            $divisions = Division::where('gm_id', $employee->id)->get();
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $employee->company_name)->get();
         } else {
-            if ($employee->position === 'Direktur') {
-                $table = 'Division';
-                $plant = $employee->plant;
-
-                $divisions = Division::where('company', $company)
-                    ->where('plant_id', $plant->id)
-                    ->get();
-
-                $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
-                    ->where('company_name', $employee->company_name)
-                    ->get();
-            } else {
-                $table = 'Department';
-
-                $division = Division::where('gm_id', $employee->id)->first();
-                $divisions = Department::where('division_id', $division?->id)->get();
-                $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
-                    ->where('company_name', $employee->company_name)
-                    ->get();
-            }
+            // role lain langsung ke Department
+            $table = 'Department';
+            $divisionId = $employee->division_id ?? null;
+            $divisions = Department::when($divisionId, fn($q) => $q->where('division_id', $divisionId))->get();
+            $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
+                ->where('company_name', $employee->company_name)->get();
         }
 
         $rtcs = Rtc::all();
+        $title = 'RTC';
 
-        return view('website.rtc.index', compact('divisions', 'employees', 'table', 'rtcs'));
+        // RULE: sembunyikan kolom plan HANYA untuk GM di halaman Division
+        $showPlanColumns = !($isGM && $table === 'Division');
+
+        return view('website.rtc.index', compact(
+            'divisions',
+            'employees',
+            'table',
+            'rtcs',
+            'title',
+            'showPlanColumns'
+        ));
+    }
+
+    public function showDivision($id)
+    {
+        $user = auth()->user();
+        $employee = $user->employee;
+        $isGM = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
+
+        $division = Division::findOrFail($id);
+        if ($isGM && $division->gm_id !== $employee->id) abort(403);
+
+        // DETAIL = list Department → GM BOLEH lihat & edit plan
+        $table = 'Department';
+        $divisions = Department::where('division_id', $division->id)->get();
+        $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
+            ->where('company_name', $employee->company_name)->get();
+
+        $rtcs = Rtc::all();
+        $title = 'RTC - ' . $division->name;
+
+        $showPlanColumns = true; // penting!
+
+        return view('website.rtc.index', compact(
+            'divisions',
+            'employees',
+            'table',
+            'rtcs',
+            'title',
+            'showPlanColumns'
+        ));
     }
 
     public function list(Request $request)
