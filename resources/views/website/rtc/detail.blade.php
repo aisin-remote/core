@@ -69,6 +69,7 @@
     <script>
         const main = @json($main);
         const managers = @json($managers);
+        const hideMainPlans = @json($hideMainPlans ?? false); // true = root tanpa ST/MT/LT
     </script>
 
     <script>
@@ -76,18 +77,18 @@
             /* ================== TEMPLATE ================== */
             const W = 360,
                 H = 430,
-                HDR = 76; // header lebih tinggi biar muat foto besar
+                HDR = 76;
             const CX = W / 2;
-            const AV = 64; // diameter avatar (px) → 64px
-            const CY = (AV / 2) + 18; // posisi Y pusat avatar di dalam header
+            const AV = 64;
+            const CY = (AV / 2) + 18;
             const LEFTX = 26,
                 RIGHTX = W - 26;
 
-            // Base dari template "ana" supaya kompatibel
+            // base dari "ana"
             OrgChart.templates.factory = Object.assign({}, OrgChart.templates.ana);
             OrgChart.templates.factory.size = [W, H];
 
-            // Defs: filter shadow + clip photo (tanpa newline diawal)
+            // defs
             OrgChart.templates.factory.defs =
                 '<filter id="dropShadow" x="-40%" y="-40%" width="180%" height="180%">' +
                 '<feGaussianBlur in="SourceAlpha" stdDeviation="3"></feGaussianBlur>' +
@@ -95,11 +96,10 @@
                 '<feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer>' +
                 '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>' +
                 '</filter>' +
-                // cincin putih tipis sebagai border avatar (opsional)
                 '<clipPath id="clipPhoto"><circle cx="' + CX + '" cy="' + CY + '" r="' + (AV / 2) +
                 '"/></clipPath>';
 
-            // Node body + header + LABEL statis (label kiri dibuat statis disini)
+            // node normal (DENGAN label ST/MT/LT)
             OrgChart.templates.factory.node =
                 '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
                 '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
@@ -119,46 +119,46 @@
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="285" text-anchor="start">L/T</text>';
 
-            // Foto kecil
+            // fields & img
             OrgChart.templates.factory.img_0 =
-                '<image clip-path="url(#clipPhoto)" xlink:href="{val}" ' +
-                'x="' + (CX - AV / 2) + '" y="' + (CY - AV / 2) + '" ' +
-                'width="' + AV + '" height="' + AV + '" preserveAspectRatio="xMidYMid slice"></image>';
+                '<image clip-path="url(#clipPhoto)" xlink:href="{val}" x="' + (CX - AV / 2) + '" y="' + (CY - AV /
+                    2) + '" width="' + AV + '" height="' + AV + '" preserveAspectRatio="xMidYMid slice"></image>';
+            OrgChart.templates.factory.field_0 = '<text style="font-size:16px;font-weight:700;fill:#111827" x="' +
+                CX + '" y="105" text-anchor="middle">{val}</text>';
+            OrgChart.templates.factory.field_1 = '<text style="font-size:13px;fill:#6b7280" x="' + CX +
+                '" y="128" text-anchor="middle">{val}</text>';
+            OrgChart.templates.factory.field_2 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="155" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_3 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="175" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_4 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="195" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_5 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="215" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_6 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="245" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_7 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="265" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_8 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="285" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_9 = '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (
+                H - 14) + '" text-anchor="middle">(grade, age, HAV)</text>';
 
-            // Field dinamis (nilai-nilai di kanan & judul)
-            OrgChart.templates.factory.field_0 =
-                '<text style="font-size:16px;font-weight:700;fill:#111827" x="' + CX +
-                '" y="105" text-anchor="middle">{val}</text>'; // Department/Title
-            OrgChart.templates.factory.field_1 =
-                '<text style="font-size:13px;fill:#6b7280" x="' + CX +
-                '" y="128" text-anchor="middle">{val}</text>'; // Nama
-
-            OrgChart.templates.factory.field_2 =
-                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
-                '" y="155" text-anchor="end">{val}</text>'; // Grade
-            OrgChart.templates.factory.field_3 =
-                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
-                '" y="175" text-anchor="end">{val}</text>'; // Age
-            OrgChart.templates.factory.field_4 =
-                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
-                '" y="195" text-anchor="end">{val}</text>'; // LOS
-            OrgChart.templates.factory.field_5 =
-                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
-                '" y="215" text-anchor="end">{val}</text>'; // LCP
-
-            // Kandidat (sudah di-clamp via JS biar aman)
-            OrgChart.templates.factory.field_6 =
-                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="245" text-anchor="end">{val}</text>'; // ST
-            OrgChart.templates.factory.field_7 =
-                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="265" text-anchor="end">{val}</text>'; // MT
-            OrgChart.templates.factory.field_8 =
-                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="285" text-anchor="end">{val}</text>'; // LT
-            OrgChart.templates.factory.field_9 =
-                '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (H - 14) +
-                '" text-anchor="middle">(grade, age, HAV)</text>';
+            // === template khusus ROOT TANPA label ST/MT/LT ===
+            OrgChart.templates.factoryRoot = Object.assign({}, OrgChart.templates.factory);
+            OrgChart.templates.factoryRoot.node =
+                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
+                '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
+                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + HDR + '" fill="{val}"></rect>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="155" text-anchor="start">Grade</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="175" text-anchor="start">Age</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="195" text-anchor="start">LOS</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="215" text-anchor="start">LCP</text>';
+            // (fields & img mewarisi dari 'factory')
 
             /* ================== WARNA ================== */
             const colorMap = {
@@ -185,7 +185,8 @@
                 const nodes = [];
                 const rootId = 'root';
 
-                nodes.push({
+                // root node — gunakan TAG agar template root pasti terpakai
+                const rootNode = {
                     id: rootId,
                     department: clamp(main.title, 64),
                     name: clamp(main.person?.name, 48),
@@ -193,19 +194,25 @@
                     age: main.person?.age ?? '-',
                     los: main.person?.los ?? '-',
                     lcp: main.person?.lcp ?? '-',
-                    cand_st: clamp(
+                    cand_st: hideMainPlans ? '' : clamp(
                         `${main.shortTerm?.name ?? '-'} (${main.shortTerm?.grade ?? '-'}, ${main.shortTerm?.age ?? '-'})`,
                         48),
-                    cand_mt: clamp(
+                    cand_mt: hideMainPlans ? '' : clamp(
                         `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
                         48),
-                    cand_lt: clamp(
+                    cand_lt: hideMainPlans ? '' : clamp(
                         `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
                         48),
                     color: colorMap[main.colorClass] || '#0ea5e9',
                     img: main.person?.photo || null
-                });
+                };
+                if (hideMainPlans) {
+                    // tag khusus agar chart memaksa template 'factoryRoot'
+                    rootNode.tags = ['root-no-plans'];
+                }
+                nodes.push(rootNode);
 
+                // children
                 managers.forEach((m, i) => {
                     const mid = `m-${i}`;
 
@@ -234,7 +241,6 @@
                     }
 
                     const parentId = m.skipManagerNode ? rootId : mid;
-
                     (m.supervisors || []).forEach((s, j) => {
                         nodes.push({
                             id: `m-${i}-s-${j}`,
@@ -282,7 +288,6 @@
             function updateProgress(loaded, total) {
                 loadingProgress.text(`Mengunduh gambar ${loaded}/${total}`);
             }
-
             async function safeConvertToBase64(url) {
                 if (!url) return null;
                 try {
@@ -302,7 +307,6 @@
                     return null;
                 }
             }
-
             async function prepareChartData(main, managers) {
                 const processedMain = {
                     ...main
@@ -362,6 +366,12 @@
                     scaleMin: 0.2,
                     scaleMax: 2.2,
                     nodeMouseClick: OrgChart.action.none,
+                    // paksa template root untuk node bertag 'root-no-plans'
+                    tags: {
+                        'root-no-plans': {
+                            template: 'factoryRoot'
+                        }
+                    },
                     nodeBinding: {
                         node: "color",
                         img_0: "img",
@@ -416,6 +426,11 @@
                     mode: "dark",
                     enableSearch: false,
                     nodeMouseClick: OrgChart.action.none,
+                    tags: {
+                        'root-no-plans': {
+                            template: 'factoryRoot'
+                        }
+                    },
                     nodeBinding: {
                         node: "color",
                         img_0: "img",

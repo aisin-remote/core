@@ -22,6 +22,7 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
+use Illuminate\Support\Facades\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -252,10 +253,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('rtc')->group(function () {
         Route::get('/summary', [RtcController::class, 'summary'])->name('rtc.summary');
         Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
-        Route::get('/list', [RtcController::class, 'list'])->name('rtc.list');
+        Route::get('/list/{id}', [RtcController::class, 'list'])
+            ->whereNumber('id')
+            ->name('rtc.list');
+        Route::get('/list', function (Request $r) {
+            if ($r->filled('id')) return redirect()->route('rtc.list', $r->integer('id'));
+            abort(404);
+        });
         Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
-        Route::get('/division/{id}', [RtcController::class, 'showDivision'])->name('rtc.list');
     });
 
     Route::prefix('idp')->group(function () {

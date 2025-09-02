@@ -476,75 +476,60 @@ class MasterController extends Controller
         $user     = auth()->user();
         $employee = $user->employee;
 
-        $mapLatest = function ($items, string $area) {
-            return $items->map(function ($item) use ($area) {
+        $mapLatest = function ($items, string $area = '') {
+            return $items->map(function ($item) {
                 $item->loadMissing([
                     'rtcShortLatest.employee:id,name,grade,birthday_date',
                     'rtcMidLatest.employee:id,name,grade,birthday_date',
                     'rtcLongLatest.employee:id,name,grade,birthday_date',
                 ]);
-
                 $item->setRelation('short', optional($item->rtcShortLatest)->employee);
                 $item->setRelation('mid',   optional($item->rtcMidLatest)->employee);
                 $item->setRelation('long',  optional($item->rtcLongLatest)->employee);
-
                 return $item;
             });
         };
 
-        if ($user->role === 'HRD' || $employee->position == 'Direktur') {
-            switch ($filter) {
-                case 'department':
-                    $data = Department::where('division_id', $division_id)
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'department');
-                    break;
+        $isTopRole = $user->role === 'HRD' || ($employee && $employee->position === 'Direktur');
+        $isGM      = $employee && $employee->position === 'GM';
 
-                case 'section':
-                    $data = Section::whereHas('department', function ($q) use ($division_id) {
-                        $q->where('division_id', $division_id);
-                    })
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'section');
-                    break;
-
-                case 'sub_section':
-                    $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
-                        $q->where('division_id', $division_id);
-                    })
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'sub_section');
-                    break;
-
-                default:
-                    $data = collect();
-            }
-        } else {
-            switch ($filter) {
-                case 'section':
-                    $data = Section::where('department_id', $division_id)
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'section');
-                    break;
-
-                case 'sub_section':
-                    $data = SubSection::whereHas('section', function ($q) use ($division_id) {
-                        $q->where('department_id', $division_id);
-                    })
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'sub_section');
-                    break;
-
-                default:
-                    $data = collect();
+        // (opsional) batasi GM hanya ke divisi yang dipimpinnya
+        if ($isGM) {
+            $allowed = \App\Models\Division::where('gm_id', $employee->id)->pluck('id');
+            if (!$allowed->contains($division_id)) {
+                abort(403); // atau return view kosong
             }
         }
 
-        return view('layouts.partials.filter', compact('data'))->render();
+        switch ($filter) {
+            case 'department':
+                // Semua role (HRD/Direktur/GM) ambil department berdasarkan division_id
+                $data = \App\Models\Department::where('division_id', $division_id)
+                    ->orderBy('name')->get();
+                $data = $mapLatest($data, 'department');
+                break;
+
+            case 'section':
+                // Semua role: section by division via relasi department
+                $data = \App\Models\Section::whereHas('department', function ($q) use ($division_id) {
+                    $q->where('division_id', $division_id);
+                })->orderBy('name')->get();
+                $data = $mapLatest($data, 'section');
+                break;
+
+            case 'sub_section':
+                // Semua role: sub section by division via relasi section->department
+                $data = \App\Models\SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                    $q->where('division_id', $division_id);
+                })->orderBy('name')->get();
+                $data = $mapLatest($data, 'sub_section');
+                break;
+
+            default:
+                $data = collect();
+        }
+
+        // kirim juga $filter kalau partial rows butuh beda kolom
+        return view('layouts.partials.filter', compact('data', 'filter'))->render();
     }
 }

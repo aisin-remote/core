@@ -28,7 +28,7 @@
             <div id="kt_app_content_container" class="app-container  container-fluid ">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="card-title"></h3>
+                        <h3 class="card-title">{{ $cardTitle ?? 'List' }}</h3>
                         <div class="d-flex align-items-center">
                             <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
                                 style="width: 200px;">
@@ -42,11 +42,17 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        @php
+                            $user = auth()->user();
+                            $pos = optional($user->employee)->position;
+                            $showDeptTab = $user->role === 'HRD' || $pos === 'Direktur' || $pos === 'GM';
+                        @endphp
+
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                             role="tablist" style="cursor:pointer">
-                            @if (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Direktur')
+                            @if ($showDeptTab)
                                 <li class="nav-item" role="presentation">
-                                    <a class="nav-link text-active-primary pb-4 filter-tab active"
+                                    <a class="nav-link text-active-primary pb-4 filter-tab"
                                         data-filter="department">Department</a>
                                 </li>
                             @endif
@@ -158,119 +164,81 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
-            function loadTable(filter = 'Supervisor') {
-                $.ajax({
-                    url: '{{ route('filter.master') }}',
-                    type: 'GET',
-                    data: {
-                        filter: filter,
-                        division_id: @json($divisionId)
-                    },
-                    success: function(res) {
-                        console.log('Response', res);
-                        $('#kt_table_users tbody').html(res);
-                    }
-                });
+            function loadTable(filter) {
+                $.get('{{ route('filter.master') }}', {
+                    filter: filter,
+                    division_id: @json($divisionId)
+                }).done(res => $('#kt_table_users tbody').html(res));
             }
 
-            // initial load = Supervisor (Department)
+            // Default dari server (untuk GM: 'department')
+            const titles = {
+                department: 'Department List',
+                section: 'Section List',
+                sub_section: 'Sub Section List'
+            };
+            let currentFilter = @json($defaultFilter ?? 'department');
+            if (!$('.filter-tab[data-filter="' + currentFilter + '"]').length) currentFilter = 'section';
 
+
+            // Set tab aktif dan judul, lalu load data awal
+            $('.filter-tab').removeClass('active');
+            $('.filter-tab[data-filter="' + currentFilter + '"]').addClass('active');
+            $('.card-title').text(titles[currentFilter] ?? 'List');
+            loadTable(currentFilter);
+
+            // Ganti tab
             $('.filter-tab').on('click', function() {
                 $('.filter-tab').removeClass('active');
                 $(this).addClass('active');
-                let filter = $(this).data('filter');
-                loadTable(filter);
+                currentFilter = $(this).data('filter');
+                $('.card-title').text(titles[currentFilter] ?? 'List');
+                loadTable(currentFilter);
             });
 
             const employees = @json($employees);
             const user = @json($user);
 
+            let currentId = null;
 
-            let currentFilter
-            if (user.employee.position == 'Direktur' || user.role == 'HRD') {
-                currentFilter = 'department'; // default tab
-            } else {
-                currentFilter = 'section'; // default tab
-            }
-
-            loadTable(currentFilter);
-
-            $('.filter-tab').on('click', function() {
-                $('.filter-tab').removeClass('active');
-                $(this).addClass('active');
-                currentFilter = $(this).data('filter'); // update tab saat klik
-                loadTable(currentFilter);
-            });
-
-
-            let currentId = null; // definisikan di global scope
+            // Modal Add Plan
             $(document).on('click', '.btn-show-modal', function() {
-                currentId = $(this).data('id'); // ID dari department / section / sub_section
+                currentId = $(this).data('id');
 
-                // Mapping posisi berdasarkan filter
                 const positionMap = {
                     department: ['Supervisor', 'Section Head'],
                     section: ['Leader'],
                     sub_section: ['JP', 'Act JP', 'Act Leader'],
                 };
+                const targetPosition = (positionMap[currentFilter] || []).map(p => p.toLowerCase());
+                const filtered = employees.filter(e => targetPosition.includes((e.position || '')
+                    .toLowerCase()));
 
-                const targetPosition = positionMap[currentFilter] || [];
-
-                // Filter karyawan berdasarkan posisi
-                const filtered = employees.filter(e =>
-                    targetPosition.map(p => p.toLowerCase()).includes(e.position.toLowerCase())
-                );
-
-                // Populate semua select dropdown
                 ['#short_term', '#mid_term', '#long_term'].forEach(id => {
                     const select = $(id);
                     select.empty().append('<option value="">-- Select --</option>');
-                    filtered.forEach(e => {
-                        select.append(`<option value="${e.id}">${e.name}</option>`);
-                    });
+                    filtered.forEach(e => select.append(
+                        `<option value="${e.id}">${e.name}</option>`));
                 });
-
-                // Cari karyawan yang jadi leader sesuai currentFilter dan currentId
-                const currentEmployee = employees.find(e => {
-                    const lead = e[`leading_${currentFilter}`];
-                    return lead && lead.id === currentId;
-                });
-
-                // Jika ditemukan, set default value dari dropdown-nya
-                if (currentEmployee) {
-                    const leadData = currentEmployee[`leading_${currentFilter}`];
-                    $('#short_term').val(leadData?.short_term || '');
-                    $('#mid_term').val(leadData?.mid_term || '');
-                    $('#long_term').val(leadData?.long_term || '');
-                }
             });
 
-
-            // $(document).on('click', '.btn-view', function() {
-            //     const id = $(this).data('id');
-            //     const url = `/rtc/detail?filter=${currentFilter}&id=${id}`;
-            //     window.location.replace(url);
-            // });
-
+            // Button View → summary
             $(document).on('click', '.btn-view', function(e) {
                 e.preventDefault();
                 const id = $(this).data('id');
-                const filter = currentFilter;
-
-                window.location.href = `{{ route('rtc.summary') }}?id=${id}&filter=${filter}`;
+                window.location.href = `{{ route('rtc.summary') }}?id=${id}&filter=${currentFilter}`;
             });
 
+            // Submit Add Plan
             $('#addPlanForm').on('submit', function(e) {
                 e.preventDefault();
-
                 const formData = {
-                    filter: currentFilter, // misalnya ambil dari global JS variable
-                    id: currentId, // id dari entity (division/department/etc)
+                    filter: currentFilter,
+                    id: currentId,
                     short_term: $('#short_term').val(),
                     mid_term: $('#mid_term').val(),
                     long_term: $('#long_term').val(),
                 };
-
                 $.ajax({
                     url: '{{ route('rtc.update') }}',
                     type: 'GET',
@@ -278,26 +246,12 @@
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
-                    success: function(response) {
-
+                    success: function() {
                         $('#addPlanModal').modal('hide');
-                        // optionally refresh the page or data
-                        window.location.reload()
-                    },
-                    error: function(xhr) {
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'error',
-                            title: 'Terjadi kesalahan!',
-                            showConfirmButton: false,
-                            timer: 2000
-                        });
-                        console.error("Error: " + xhr.responseText);
+                        window.location.reload();
                     }
                 });
             });
-
         });
     </script>
 @endpush
