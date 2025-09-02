@@ -477,9 +477,9 @@ class MasterController extends Controller
         $user     = auth()->user();
         $employee = $user->employee;
 
-        // batasi GM hanya boleh akses divisi yang dipimpinnya ===
+        // GM hanya boleh lihat divisi yang dia pegang
         if ($employee && strcasecmp($employee->position, 'GM') === 0) {
-            $owns = Division::where('gm_id', $employee->id)
+            $owns = \App\Models\Division::where('gm_id', $employee->id)
                 ->where('id', $division_id)
                 ->exists();
             if (!$owns) {
@@ -487,30 +487,25 @@ class MasterController extends Controller
             }
         }
 
-        // Ambil koleksi item sesuai filter (semua berdasarkan division_id)
+        // Ambil list item per filter
         switch ($filter) {
             case 'department':
-                $data = Department::where('division_id', $division_id)
-                    ->orderBy('name')
-                    ->get();
+                $data = \App\Models\Department::where('division_id', $division_id)
+                    ->orderBy('name')->get();
                 $areaKey = 'department';
                 break;
 
             case 'section':
-                $data = Section::whereHas('department', function ($q) use ($division_id) {
+                $data = \App\Models\Section::whereHas('department', function ($q) use ($division_id) {
                     $q->where('division_id', $division_id);
-                })
-                    ->orderBy('name')
-                    ->get();
+                })->orderBy('name')->get();
                 $areaKey = 'section';
                 break;
 
             case 'sub_section':
-                $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                $data = \App\Models\SubSection::whereHas('section.department', function ($q) use ($division_id) {
                     $q->where('division_id', $division_id);
-                })
-                    ->orderBy('name')
-                    ->get();
+                })->orderBy('name')->get();
                 $areaKey = 'sub_section';
                 break;
 
@@ -519,7 +514,7 @@ class MasterController extends Controller
                 $areaKey = 'department';
         }
 
-        // ===== helper alias term & area (agar data lama tetap kebaca) =====
+        // ==== alias2 agar data lama kebaca (term dan area case-insensitive) ====
         $termAliases = function (string $term): array {
             $t = strtolower(trim($term));
             return match ($t) {
@@ -529,59 +524,118 @@ class MasterController extends Controller
                 default => [$t],
             };
         };
-
         $areaAliases = function (string $area): array {
             $a = strtolower(trim($area));
-            $variants = [$a, ucfirst($a)]; // 'department' & 'Department', dst.
-            if ($a === 'division') {
-                $variants[] = 'Division';
-            }
-            if ($a === 'sub_section') {
-                // bila ada variasi lama seperti 'Sub_section'
-                $variants[] = 'Sub_section';
-            }
+            $variants = [$a, ucfirst($a)];
+            if ($a === 'division')    $variants[] = 'Division';
+            if ($a === 'sub_section') $variants[] = 'Sub_section';
             return array_values(array_unique($variants));
         };
-
-        // ===== inject kandidat terbaru per-term (short/mid/long) berbasis RTC =====
         $areas = $areaAliases($areaKey);
 
-        $data->transform(function ($item) use ($areas, $termAliases) {
-            $rtcShort = Rtc::whereIn('area', $areas)
+        // ==== bentuk payload JSON untuk tabel ====
+        $items = $data->map(function ($item) use ($areas, $termAliases) {
+            $rtcShort = \App\Models\Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('short'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcMid = Rtc::whereIn('area', $areas)
+            $rtcMid = \App\Models\Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('mid'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcLong = Rtc::whereIn('area', $areas)
+            $rtcLong = \App\Models\Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('long'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            // setRelation supaya blade lama tetap bisa pakai $row->short / mid / long
-            $item->setRelation('short', optional($rtcShort)->employee);
-            $item->setRelation('mid',   optional($rtcMid)->employee);
-            $item->setRelation('long',  optional($rtcLong)->employee);
+            $shortEmp = optional($rtcShort)->employee;
+            $midEmp   = optional($rtcMid)->employee;
+            $longEmp  = optional($rtcLong)->employee;
 
-            // (opsional) kalau perlu, ikut set rtcShortLatest/rtcMidLatest/rtcLongLatest:
-            $item->setRelation('rtcShortLatest', $rtcShort);
-            $item->setRelation('rtcMidLatest',   $rtcMid);
-            $item->setRelation('rtcLongLatest',  $rtcLong);
+            // status keseluruhan ────────────────────────────────────────────────
+            $hasShort  = !is_null($shortEmp);
+            $hasMid    = !is_null($midEmp);
+            $hasLong   = !is_null($longEmp);
+            $complete3 = $hasShort && $hasMid && $hasLong;
 
-            return $item;
+            // status per-term: 0=submitted, 1=checked, 3=approved, null=belum submit
+            $s = optional($rtcShort)->status;
+            $m = optional($rtcMid)->status;
+            $l = optional($rtcLong)->status;
+
+            $label = 'Not Set';
+            $class = 'badge badge-danger';
+            $code  = 'not_set';
+
+            if ($complete3) {
+                // Ambil hanya nilai valid (0,1,3)
+                $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2], true));
+
+                if ($vals->isEmpty()) {
+                    // Sudah lengkap kandidat, tapi belum di-submit sama sekali
+                    $label = 'Complete';
+                    $class = 'badge badge-secondary';
+                    $code  = 'complete_no_submit';
+                } else {
+                    $allApproved = $vals->every(fn($v) => $v === 2);
+                    $allChecked  = $vals->every(fn($v) => $v === 1);
+                    $allSubmitted = $vals->every(fn($v) => $v === 0);
+
+                    if ($allApproved) {
+                        $label = 'Approved';
+                        $class = 'badge badge-success';
+                        $code  = 'approved';
+                    } elseif ($allChecked) {
+                        $label = 'Checked';
+                        $class = 'badge badge-info';
+                        $code  = 'checked';
+                    } elseif ($allSubmitted) {
+                        $label = 'Submitted';
+                        $class = 'badge badge-warning';
+                        $code  = 'submitted';
+                    } else {
+                        // kombinasi campur 0/1/3
+                        $label = 'Partial';
+                        $class = 'badge badge-primary';
+                        $code  = 'partial';
+                    }
+                }
+            }
+
+            return [
+                'id'   => $item->id,
+                'name' => $item->name,
+
+                'short' => [
+                    'name'   => $shortEmp?->name,
+                    'status' => $s, // 0/1/3/null
+                ],
+                'mid' => [
+                    'name'   => $midEmp?->name,
+                    'status' => $m,
+                ],
+                'long' => [
+                    'name'   => $longEmp?->name,
+                    'status' => $l,
+                ],
+
+                'overall' => [
+                    'label' => $label,
+                    'class' => $class,
+                    'code'  => $code,   // 'approved'|'checked'|'submitted'|'partial'|'complete_no_submit'|'not_set'
+                ],
+                'can_add' => !$complete3, // hide tombol Add kalau ST/MT/LT sudah lengkap
+            ];
         });
 
-        // render partial rows
-        return view('layouts.partials.filter', compact('data', 'filter'))->render();
+        return response()->json(['items' => $items->values()]);
     }
 }
