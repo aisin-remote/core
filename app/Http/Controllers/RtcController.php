@@ -15,51 +15,150 @@ class RtcController extends Controller
 {
     public function index($company = null)
     {
-        $user = auth()->user();
+        $user     = auth()->user();
         $employee = $user->employee;
-        $company ??= $employee->company_name;
 
-        $isGM = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
-
-        if ($user->isHRDorDireksi()) {
-            $table = 'Division';
-            $divisions = Division::where('company', $company)->get();
-            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
-                ->where('company_name', $company)->get();
-        } elseif ($employee->position === 'Direktur') {
-            $table = 'Division';
-            $divisions = Division::where('company', $company)
-                ->where('plant_id', $employee->plant->id)->get();
-            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
-                ->where('company_name', $employee->company_name)->get();
-        } elseif ($isGM) {
-            // GM: halaman pertama = list Division, TIDAK tampilkan kolom plan
-            $table = 'Division';
-            $divisions = Division::where('gm_id', $employee->id)->get();
-            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
-                ->where('company_name', $employee->company_name)->get();
-        } else {
-            // role lain langsung ke Department
-            $table = 'Department';
-            $divisionId = $employee->division_id ?? null;
-            $divisions = Department::when($divisionId, fn($q) => $q->where('division_id', $divisionId))->get();
-            $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
-                ->where('company_name', $employee->company_name)->get();
+        if (!$employee) {
+            abort(403, 'Employee profile is missing.');
         }
 
-        $rtcs = Rtc::all();
+        $company ??= $employee->company_name;
+        $pos   = trim($employee->position ?? '');
+        $isGM  = strcasecmp($pos, 'GM') === 0;
+
+        // Tentukan level list dan kandidat posisi untuk Add Plan
+        if ($user->isHRDorDireksi()) {
+            $table   = 'Division';
+            $items   = Division::where('company', $company)->orderBy('name')->get();
+            $candPos = ['Manager', 'Coordinator'];
+        } elseif (strcasecmp($pos, 'Direktur') === 0) {
+            $table   = 'Division';
+            $items   = Division::where('company', $company)
+                ->where('plant_id', optional($employee->plant)->id)
+                ->orderBy('name')->get();
+            $candPos = ['Manager', 'Coordinator'];
+        } elseif ($isGM) {
+            // GM: list Division milik dia
+            $table   = 'Division';
+            $items   = Division::where('gm_id', $employee->id)->orderBy('name')->get();
+            $candPos = ['Manager', 'Coordinator'];
+        } else {
+            // Selain itu langsung ke Department di divisinya
+            $table      = 'Department';
+            $divisionId = $employee->division_id;
+            $items      = Department::when($divisionId, fn($q) => $q->where('division_id', $divisionId))
+                ->orderBy('name')->get();
+            $candPos = ['Supervisor', 'Section Head'];
+        }
+
+        $employees = Employee::whereIn('position', $candPos)
+            ->where('company_name', $company)
+            ->orderBy('name')->get();
+
+        // === Helper alias ===
+        $termAliases = function (string $term): array {
+            $t = strtolower(trim($term));
+            return match ($t) {
+                'short' => ['short', 'short_term', 'st', 's/t'],
+                'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
+                'long'  => ['long', 'long_term', 'lt', 'l/t'],
+                default => [$t],
+            };
+        };
+        $areaAliases = function (string $area): array {
+            $a = strtolower(trim($area));
+            $arr = [$a, ucfirst($a)];
+            if ($a === 'division')    $arr[] = 'Division';
+            if ($a === 'sub_section') $arr[] = 'Sub_section';
+            return array_values(array_unique($arr));
+        };
+
+        $areaKey = strtolower($table);                  // 'division' | 'department'
+        $areas   = $areaAliases($areaKey);
+        $ids     = $items->pluck('id')->all();
+
+        // Ambil semua RTC terkait (terbaru duluan)
+        $rtcs = Rtc::whereIn('area', $areas)
+            ->whereIn('area_id', $ids)
+            ->with('employee:id,name,grade,birthday_date')
+            ->orderByDesc('id')
+            ->get();
+
+        // Picker RTC terbaru per item+term (pakai aliases)
+        $pickLatest = function ($list, int $areaId, string $term) use ($termAliases) {
+            $aliases = array_map('strtolower', $termAliases($term));
+            return $list->first(function ($r) use ($areaId, $aliases) {
+                return (int)$r->area_id === $areaId && in_array(strtolower($r->term), $aliases, true);
+            });
+        };
+
+        // Tempel kandidat dari RTC ke relasi 'short'/'mid'/'long' + hitung status overall
+        $metaById = [];
+        foreach ($items as $it) {
+            $rtcS = $pickLatest($rtcs, $it->id, 'short');
+            $rtcM = $pickLatest($rtcs, $it->id, 'mid');
+            $rtcL = $pickLatest($rtcs, $it->id, 'long');
+
+            // supaya blade lama `$division->short->name` tetap jalan
+            $it->setRelation('short', optional($rtcS)->employee);
+            $it->setRelation('mid',   optional($rtcM)->employee);
+            $it->setRelation('long',  optional($rtcL)->employee);
+
+            $hasS = !is_null(optional($rtcS)->employee);
+            $hasM = !is_null(optional($rtcM)->employee);
+            $hasL = !is_null(optional($rtcL)->employee);
+            $complete3 = $hasS && $hasM && $hasL;
+
+            $vals = collect([$rtcS?->status, $rtcM?->status, $rtcL?->status])
+                ->filter(fn($v) => in_array($v, [0, 1, 2], true));
+
+            // Mapping chip status (disamakan dengan list-rtc)
+            $overall = ['text' => 'Not Set', 'code' => 'not_set', 'data_status' => 'not_created'];
+            if ($complete3) {
+                if ($vals->isEmpty()) {
+                    $overall = ['text' => 'Complete', 'code' => 'complete_no_submit', 'data_status' => 'draft'];
+                } else {
+                    if ($vals->every(fn($v) => $v === 2)) {
+                        $overall = ['text' => 'Approved', 'code' => 'approved', 'data_status' => 'approved'];
+                    } elseif ($vals->every(fn($v) => $v === 1)) {
+                        $overall = ['text' => 'Checked', 'code' => 'checked', 'data_status' => 'checked'];
+                    } elseif ($vals->every(fn($v) => $v === 0)) {
+                        $overall = ['text' => 'Submitted', 'code' => 'submitted', 'data_status' => 'waiting'];
+                    } else {
+                        $overall = ['text' => 'Partial', 'code' => 'partial', 'data_status' => 'draft'];
+                    }
+                }
+            }
+
+            $metaById[$it->id] = [
+                'overall_badge' => $overall,
+                'can_add'       => !$complete3,     // hide tombol Add bila sudah lengkap 3 term
+                'short_status'  => $rtcS?->status,  // optional kalau butuh
+                'mid_status'    => $rtcM?->status,
+                'long_status'   => $rtcL?->status,
+            ];
+        }
+
         $title = 'RTC';
 
-        // RULE: sembunyikan kolom plan HANYA untuk GM di halaman Division
+        // GM di halaman Division → kolom plan disembunyikan
         $showPlanColumns = !($isGM && $table === 'Division');
 
+        // GM tidak melihat kolom Status di index
+        $showStatusColumn = !$isGM;
+
+        // Agar blade tetap kompatibel (loop pakai $divisions)
+        $divisions = $items;
+
         return view('website.rtc.index', compact(
-            'divisions',
-            'employees',
-            'table',
-            'rtcs',
+            'divisions',      // bisa Division/Department collection
+            'employees',      // untuk modal Add (kalau diizinkan)
+            'table',          // 'Division' | 'Department'
+            'rtcs',           // RTC terfilter area (sudah with employee)
             'title',
-            'showPlanColumns'
+            'showPlanColumns',
+            'metaById',        // dipakai utk kolom Status & hide tombol Add
+            'showStatusColumn'
         ));
     }
 
@@ -510,10 +609,10 @@ class RtcController extends Controller
 
             // update planning
             $modelClass = match ($area) {
-                'division' => \App\Models\Division::class,
-                'department' => \App\Models\Department::class,
-                'section' => \App\Models\Section::class,
-                'sub_section' => \App\Models\SubSection::class,
+                'division' => Division::class,
+                'department' => Department::class,
+                'section' => Section::class,
+                'sub_section' => SubSection::class,
                 default => throw new \Exception("Invalid filter value: $area")
             };
 
