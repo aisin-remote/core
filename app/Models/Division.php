@@ -47,21 +47,22 @@ class Division extends Model
     public function rtcShortLatest()
     {
         return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'Division')->where('term', 'short')
-            ->latestOfMany('created_at'); // butuh Laravel 8.42+
+            ->areaLogical('division')    // <— ganti ini
+            ->termLogical('short')
+            ->latestOfMany('created_at');
     }
-
     public function rtcMidLatest()
     {
         return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'Division')->where('term', 'mid')
+            ->areaLogical('division')
+            ->termLogical('mid')
             ->latestOfMany('created_at');
     }
-
     public function rtcLongLatest()
     {
         return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'Division')->where('term', 'long')
+            ->areaLogical('division')
+            ->termLogical('long')
             ->latestOfMany('created_at');
     }
 }

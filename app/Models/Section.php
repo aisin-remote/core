@@ -38,24 +38,23 @@ class Section extends Model
     }
 
     // RTC terbaru per-term (area = 'section')
+    protected function rtcLatestByTerm(string $term)
+    {
+        return $this->hasOne(Rtc::class, 'area_id', 'id')
+            ->areaLogical('section')
+            ->termLogical($term)
+            ->latestOfMany('id');
+    }
     public function rtcShortLatest()
     {
-        return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'section')->where('term', 'short')
-            ->latestOfMany('created_at');
+        return $this->rtcLatestByTerm('short');
     }
-
     public function rtcMidLatest()
     {
-        return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'section')->where('term', 'mid')
-            ->latestOfMany('created_at');
+        return $this->rtcLatestByTerm('mid');
     }
-
     public function rtcLongLatest()
     {
-        return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'section')->where('term', 'long')
-            ->latestOfMany('created_at');
+        return $this->rtcLatestByTerm('long');
     }
 }

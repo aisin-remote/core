@@ -7,6 +7,7 @@ use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
+use App\Models\Rtc;
 use App\Models\SubSection;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -470,66 +471,117 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        $filter      = $request->filter;
-        $division_id = (int) $request->division_id;
+        $filter      = strtolower($request->input('filter', 'department')); // department|section|sub_section
+        $division_id = (int) $request->input('division_id');
 
         $user     = auth()->user();
         $employee = $user->employee;
 
-        $mapLatest = function ($items, string $area = '') {
-            return $items->map(function ($item) {
-                $item->loadMissing([
-                    'rtcShortLatest.employee:id,name,grade,birthday_date',
-                    'rtcMidLatest.employee:id,name,grade,birthday_date',
-                    'rtcLongLatest.employee:id,name,grade,birthday_date',
-                ]);
-                $item->setRelation('short', optional($item->rtcShortLatest)->employee);
-                $item->setRelation('mid',   optional($item->rtcMidLatest)->employee);
-                $item->setRelation('long',  optional($item->rtcLongLatest)->employee);
-                return $item;
-            });
-        };
-
-        $isTopRole = $user->role === 'HRD' || ($employee && $employee->position === 'Direktur');
-        $isGM      = $employee && $employee->position === 'GM';
-
-        // (opsional) batasi GM hanya ke divisi yang dipimpinnya
-        if ($isGM) {
-            $allowed = \App\Models\Division::where('gm_id', $employee->id)->pluck('id');
-            if (!$allowed->contains($division_id)) {
-                abort(403); // atau return view kosong
+        // batasi GM hanya boleh akses divisi yang dipimpinnya ===
+        if ($employee && strcasecmp($employee->position, 'GM') === 0) {
+            $owns = Division::where('gm_id', $employee->id)
+                ->where('id', $division_id)
+                ->exists();
+            if (!$owns) {
+                abort(403, 'Unauthorized division');
             }
         }
 
+        // Ambil koleksi item sesuai filter (semua berdasarkan division_id)
         switch ($filter) {
             case 'department':
-                // Semua role (HRD/Direktur/GM) ambil department berdasarkan division_id
-                $data = \App\Models\Department::where('division_id', $division_id)
-                    ->orderBy('name')->get();
-                $data = $mapLatest($data, 'department');
+                $data = Department::where('division_id', $division_id)
+                    ->orderBy('name')
+                    ->get();
+                $areaKey = 'department';
                 break;
 
             case 'section':
-                // Semua role: section by division via relasi department
-                $data = \App\Models\Section::whereHas('department', function ($q) use ($division_id) {
+                $data = Section::whereHas('department', function ($q) use ($division_id) {
                     $q->where('division_id', $division_id);
-                })->orderBy('name')->get();
-                $data = $mapLatest($data, 'section');
+                })
+                    ->orderBy('name')
+                    ->get();
+                $areaKey = 'section';
                 break;
 
             case 'sub_section':
-                // Semua role: sub section by division via relasi section->department
-                $data = \App\Models\SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
                     $q->where('division_id', $division_id);
-                })->orderBy('name')->get();
-                $data = $mapLatest($data, 'sub_section');
+                })
+                    ->orderBy('name')
+                    ->get();
+                $areaKey = 'sub_section';
                 break;
 
             default:
                 $data = collect();
+                $areaKey = 'department';
         }
 
-        // kirim juga $filter kalau partial rows butuh beda kolom
+        // ===== helper alias term & area (agar data lama tetap kebaca) =====
+        $termAliases = function (string $term): array {
+            $t = strtolower(trim($term));
+            return match ($t) {
+                'short' => ['short', 'short_term', 'st', 's/t'],
+                'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
+                'long'  => ['long', 'long_term', 'lt', 'l/t'],
+                default => [$t],
+            };
+        };
+
+        $areaAliases = function (string $area): array {
+            $a = strtolower(trim($area));
+            $variants = [$a, ucfirst($a)]; // 'department' & 'Department', dst.
+            if ($a === 'division') {
+                $variants[] = 'Division';
+            }
+            if ($a === 'sub_section') {
+                // bila ada variasi lama seperti 'Sub_section'
+                $variants[] = 'Sub_section';
+            }
+            return array_values(array_unique($variants));
+        };
+
+        // ===== inject kandidat terbaru per-term (short/mid/long) berbasis RTC =====
+        $areas = $areaAliases($areaKey);
+
+        $data->transform(function ($item) use ($areas, $termAliases) {
+            $rtcShort = Rtc::whereIn('area', $areas)
+                ->where('area_id', $item->id)
+                ->whereIn('term', $termAliases('short'))
+                ->orderByDesc('id')
+                ->with(['employee:id,name,grade,birthday_date'])
+                ->first();
+
+            $rtcMid = Rtc::whereIn('area', $areas)
+                ->where('area_id', $item->id)
+                ->whereIn('term', $termAliases('mid'))
+                ->orderByDesc('id')
+                ->with(['employee:id,name,grade,birthday_date'])
+                ->first();
+
+            $rtcLong = Rtc::whereIn('area', $areas)
+                ->where('area_id', $item->id)
+                ->whereIn('term', $termAliases('long'))
+                ->orderByDesc('id')
+                ->with(['employee:id,name,grade,birthday_date'])
+                ->first();
+
+            // setRelation supaya blade lama tetap bisa pakai $row->short / mid / long
+            $item->setRelation('short', optional($rtcShort)->employee);
+            $item->setRelation('mid',   optional($rtcMid)->employee);
+            $item->setRelation('long',  optional($rtcLong)->employee);
+
+            // (opsional) kalau perlu, ikut set rtcShortLatest/rtcMidLatest/rtcLongLatest:
+            $item->setRelation('rtcShortLatest', $rtcShort);
+            $item->setRelation('rtcMidLatest',   $rtcMid);
+            $item->setRelation('rtcLongLatest',  $rtcLong);
+
+            return $item;
+        });
+
+        // render partial rows
         return view('layouts.partials.filter', compact('data', 'filter'))->render();
     }
 }

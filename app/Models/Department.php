@@ -51,25 +51,30 @@ class Department extends Model
         return $this->belongsTo(Employee::class, 'long_term');
     }
 
-    // ===== RTC terbaru per-term (area = 'department')
+    public function rtc()
+    {
+        return $this->hasMany(Rtc::class, 'area_id', 'id')
+            ->where('area', 'department');
+    }
+
+    protected function rtcLatestByTerm(string $term)
+    {
+        return $this->hasOne(Rtc::class, 'area_id', 'id')
+            ->areaLogical('department')
+            ->termLogical($term)
+            ->latestOfMany('id'); // atau 'created_at' jika lebih cocok
+    }
+
     public function rtcShortLatest()
     {
-        return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'department')->where('term', 'short')
-            ->latestOfMany('created_at');
+        return $this->rtcLatestByTerm('short');
     }
-
     public function rtcMidLatest()
     {
-        return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'department')->where('term', 'mid')
-            ->latestOfMany('created_at');
+        return $this->rtcLatestByTerm('mid');
     }
-
     public function rtcLongLatest()
     {
-        return $this->hasOne(Rtc::class, 'area_id')
-            ->where('area', 'department')->where('term', 'long')
-            ->latestOfMany('created_at');
+        return $this->rtcLatestByTerm('long');
     }
 }
