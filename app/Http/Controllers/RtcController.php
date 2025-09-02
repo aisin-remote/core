@@ -17,64 +17,109 @@ class RtcController extends Controller
     {
         $user = auth()->user();
         $employee = $user->employee;
+        $company ??= $employee->company_name;
 
-        if ($company == null) {
-            $company = $user->employee->company_name;
-        }
+        $isGM = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
 
-        // Jika HRD, bisa melihat semua employee dan assessment dalam satu perusahaan (jika ada filter company)
         if ($user->isHRDorDireksi()) {
             $table = 'Division';
-
             $divisions = Division::where('company', $company)->get();
-            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])->get();
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $company)->get();
+        } elseif ($employee->position === 'Direktur') {
+            $table = 'Division';
+            $divisions = Division::where('company', $company)
+                ->where('plant_id', $employee->plant->id)->get();
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $employee->company_name)->get();
+        } elseif ($isGM) {
+            // GM: halaman pertama = list Division, TIDAK tampilkan kolom plan
+            $table = 'Division';
+            $divisions = Division::where('gm_id', $employee->id)->get();
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $employee->company_name)->get();
         } else {
-            if ($employee->position === 'Direktur') {
-                $table = 'Division';
-                $plant = $employee->plant;
-
-                $divisions = Division::where('company', $company)
-                    ->where('plant_id', $plant->id)
-                    ->get();
-
-                $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
-                    ->where('company_name', $employee->company_name)
-                    ->get();
-            } else {
-                $table = 'Department';
-
-                $division = Division::where('gm_id', $employee->id)->first();
-                $divisions = Department::where('division_id', $division?->id)->get();
-                $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
-                    ->where('company_name', $employee->company_name)
-                    ->get();
-            }
+            // role lain langsung ke Department
+            $table = 'Department';
+            $divisionId = $employee->division_id ?? null;
+            $divisions = Department::when($divisionId, fn($q) => $q->where('division_id', $divisionId))->get();
+            $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
+                ->where('company_name', $employee->company_name)->get();
         }
 
         $rtcs = Rtc::all();
+        $title = 'RTC';
 
-        return view('website.rtc.index', compact('divisions', 'employees', 'table', 'rtcs'));
+        // RULE: sembunyikan kolom plan HANYA untuk GM di halaman Division
+        $showPlanColumns = !($isGM && $table === 'Division');
+
+        return view('website.rtc.index', compact(
+            'divisions',
+            'employees',
+            'table',
+            'rtcs',
+            'title',
+            'showPlanColumns'
+        ));
     }
 
-    public function list(Request $request)
+    public function showDivision($id)
     {
-        $user       = auth()->user()->load('employee');
-        $divisionId = (int) $request->query('id');
+        $user = auth()->user();
+        $employee = $user->employee;
+        $isGM = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
 
-        $employees = Employee::select('id', 'name', 'position')->get();
+        $division = Division::findOrFail($id);
+        if ($isGM && $division->gm_id !== $employee->id) abort(403);
 
-        $defaultFilter = ($user->role == 'HRD' || $user->employee->position == 'Direktur')
-            ? 'department'
-            : 'section';
+        // DETAIL = list Department → GM BOLEH lihat & edit plan
+        $table = 'Department';
+        $divisions = Department::where('division_id', $division->id)->get();
+        $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
+            ->where('company_name', $employee->company_name)->get();
 
-        return view('website.rtc.list', [
-            'employees'     => $employees,
-            'divisionId'    => $divisionId,
-            'user'          => $user,
-            'defaultFilter' => $defaultFilter,
-        ]);
+        $rtcs = Rtc::all();
+        $title = 'RTC - ' . $division->name;
+
+        $showPlanColumns = true; // penting!
+
+        return view('website.rtc.index', compact(
+            'divisions',
+            'employees',
+            'table',
+            'rtcs',
+            'title',
+            'showPlanColumns'
+        ));
     }
 
+    public function list($id)
+    {
+        $user     = auth()->user();
+        $employee = $user->employee;
+
+        $division    = Division::findOrFail($id);
+        $divisionId  = $division->id;
+        $employees   = Employee::where('company_name', $employee->company_name)->get();
+
+        // --- default tab ---
+        if ($user->role === 'HRD' || ($employee && $employee->position === 'Direktur')) {
+            $defaultFilter = 'department';
+        } elseif ($employee && $employee->position === 'GM') {
+            $defaultFilter = 'department';              // <— GM wajib Department dulu
+        } else {
+            $defaultFilter = 'section';
+        }
+
+        $cardTitle = 'Department List'; // biar judul awal sesuai tab default
+        return view('website.rtc.list', compact(
+            'divisionId',
+            'employees',
+            'user',
+            'defaultFilter',
+            'cardTitle'
+        ));
+    }
 
     public function detail(Request $request)
     {
@@ -128,16 +173,25 @@ class RtcController extends Controller
         return view('website.rtc.detail', compact('data', 'filter'));
     }
 
+    // app/Http/Controllers/RtcController.php
+
     public function summary(Request $request)
     {
         $filter = strtolower($request->query('filter', 'department'));
         $id     = (int) $request->query('id');
 
+        $user     = auth()->user();
+        $employee = $user->employee ?? null;
+        $isGM     = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
+
         $main = [];
         $managers = [];
         $title = '-';
 
-        // Palet warna panjang; tambahkan lagi jika perlu
+        // flag untuk menyembunyikan kandidat (S/T, M/T, L/T) di node MAIN
+        $hideMainPlans = false;
+
+        // Palet warna
         $palette = [
             'color-1',
             'color-2',
@@ -154,17 +208,17 @@ class RtcController extends Controller
             'color-13',
             'color-14'
         ];
-
-        // Helper pilih warna deterministik (fallback jika suatu hari perlu)
         $pickColor = fn(string $key) => $palette[crc32($key) % count($palette)];
 
         switch ($filter) {
-            // ============================= DIVISION =============================
+            /* =========================== DIVISION =========================== */
             case 'division': {
+                    // GM melihat summary division → sembunyikan S/T, M/T, L/T pada node utama
+                    $hideMainPlans = $isGM;
+
                     $div   = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $div->name ?? 'Division';
 
-                    // Warna root khusus
                     $mainColor = $pickColor("division-root-{$div->id}");
 
                     RtcHelper::setAreaContext('Division', $div->id);
@@ -182,24 +236,20 @@ class RtcController extends Controller
                         ->orderBy('name')
                         ->get();
 
-                    // Daftar warna untuk dept = semua palet KECUALI warna root
-                    $deptPalette  = array_values(array_filter($palette, fn($c) => $c !== $mainColor));
+                    $deptPalette = array_values(array_filter($palette, fn($c) => $c !== $mainColor));
                     $deptIdx = 0;
 
                     foreach ($depts as $d) {
-                        // Setiap department dapat warna berbeda (berurutan)
-                        $deptColor = $deptPalette[$deptIdx % count($deptPalette)];
-                        $deptIdx++;
+                        $deptColor = $deptPalette[$deptIdx++ % count($deptPalette)];
 
                         RtcHelper::setAreaContext('department', $d->id);
-
                         $node = [
                             'title'           => $d->name,
                             'person'          => RtcHelper::formatPerson($d->manager),
                             'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
                             'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
                             'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
-                            'colorClass'      => $deptColor,   // unik per dept
+                            'colorClass'      => $deptColor,
                             'supervisors'     => [],
                             'skipManagerNode' => false,
                         ];
@@ -217,7 +267,7 @@ class RtcController extends Controller
                                 'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
                                 'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
                                 'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
-                                'colorClass' => $deptColor,       // mewarisi warna dept
+                                'colorClass' => $deptColor,
                             ];
                         }
 
@@ -226,8 +276,11 @@ class RtcController extends Controller
                     break;
                 }
 
-                // ============================ DEPARTMENT ============================
+                /* ========================== DEPARTMENT ========================== */
             case 'department': {
+                    // GM di summary department → tampilkan S/T, M/T, L/T pada node utama
+                    $hideMainPlans = false;
+
                     $d = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $d->name ?? 'Department';
 
@@ -243,7 +296,6 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    // Root = manager; anak2 section mewarisi warna root
                     $container = [
                         'title'           => $d->name,
                         'person'          => RtcHelper::formatPerson($d->manager),
@@ -252,7 +304,7 @@ class RtcController extends Controller
                         'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
                         'colorClass'      => $mainColor,
                         'supervisors'     => [],
-                        'skipManagerNode' => true, // tidak render node manager duplikat
+                        'skipManagerNode' => true,
                     ];
 
                     $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
@@ -268,7 +320,7 @@ class RtcController extends Controller
                             'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
                             'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
                             'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
-                            'colorClass' => $mainColor, // ikut root
+                            'colorClass' => $mainColor,
                         ];
                     }
 
@@ -276,8 +328,10 @@ class RtcController extends Controller
                     break;
                 }
 
-                // ============================== SECTION =============================
+                /* ============================ SECTION =========================== */
             case 'section': {
+                    $hideMainPlans = false;
+
                     $s = Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $s->name ?? 'Section';
 
@@ -317,7 +371,7 @@ class RtcController extends Controller
                             'shortTerm'  => RtcHelper::formatCandidate($sub->short, 'short'),
                             'midTerm'    => RtcHelper::formatCandidate($sub->mid,   'mid'),
                             'longTerm'   => RtcHelper::formatCandidate($sub->long,  'long'),
-                            'colorClass' => $mainColor, // ikut root
+                            'colorClass' => $mainColor,
                         ];
                     }
 
@@ -325,8 +379,10 @@ class RtcController extends Controller
                     break;
                 }
 
-                // ============================ SUB SECTION ===========================
+                /* ========================== SUB SECTION ========================= */
             case 'sub_section': {
+                    $hideMainPlans = false;
+
                     $sub = SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $sub->name ?? 'Sub Section';
 
@@ -349,7 +405,7 @@ class RtcController extends Controller
                 abort(404, 'Unsupported filter');
         }
 
-        return view('website.rtc.detail', compact('main', 'managers', 'title'));
+        return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans'));
     }
 
     public function update(Request $request)

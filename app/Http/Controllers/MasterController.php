@@ -7,6 +7,7 @@ use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
+use App\Models\Rtc;
 use App\Models\SubSection;
 use App\Models\User;
 use Illuminate\Support\Str;
@@ -470,81 +471,171 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        $filter      = $request->filter;
-        $division_id = (int) $request->division_id;
+        $filter      = strtolower($request->input('filter', 'department')); // department|section|sub_section
+        $division_id = (int) $request->input('division_id');
 
         $user     = auth()->user();
         $employee = $user->employee;
 
-        $mapLatest = function ($items, string $area) {
-            return $items->map(function ($item) use ($area) {
-                $item->loadMissing([
-                    'rtcShortLatest.employee:id,name,grade,birthday_date',
-                    'rtcMidLatest.employee:id,name,grade,birthday_date',
-                    'rtcLongLatest.employee:id,name,grade,birthday_date',
-                ]);
-
-                $item->setRelation('short', optional($item->rtcShortLatest)->employee);
-                $item->setRelation('mid',   optional($item->rtcMidLatest)->employee);
-                $item->setRelation('long',  optional($item->rtcLongLatest)->employee);
-
-                return $item;
-            });
-        };
-
-        if ($user->role === 'HRD' || $employee->position == 'Direktur') {
-            switch ($filter) {
-                case 'department':
-                    $data = Department::where('division_id', $division_id)
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'department');
-                    break;
-
-                case 'section':
-                    $data = Section::whereHas('department', function ($q) use ($division_id) {
-                        $q->where('division_id', $division_id);
-                    })
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'section');
-                    break;
-
-                case 'sub_section':
-                    $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
-                        $q->where('division_id', $division_id);
-                    })
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'sub_section');
-                    break;
-
-                default:
-                    $data = collect();
-            }
-        } else {
-            switch ($filter) {
-                case 'section':
-                    $data = Section::where('department_id', $division_id)
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'section');
-                    break;
-
-                case 'sub_section':
-                    $data = SubSection::whereHas('section', function ($q) use ($division_id) {
-                        $q->where('department_id', $division_id);
-                    })
-                        ->orderBy('name')
-                        ->get();
-                    $data = $mapLatest($data, 'sub_section');
-                    break;
-
-                default:
-                    $data = collect();
+        // GM hanya boleh lihat divisi yang dia pegang
+        if ($employee && strcasecmp($employee->position, 'GM') === 0) {
+            $owns = \App\Models\Division::where('gm_id', $employee->id)
+                ->where('id', $division_id)
+                ->exists();
+            if (!$owns) {
+                abort(403, 'Unauthorized division');
             }
         }
 
-        return view('layouts.partials.filter', compact('data'))->render();
+        // Ambil list item per filter
+        switch ($filter) {
+            case 'department':
+                $data = \App\Models\Department::where('division_id', $division_id)
+                    ->orderBy('name')->get();
+                $areaKey = 'department';
+                break;
+
+            case 'section':
+                $data = \App\Models\Section::whereHas('department', function ($q) use ($division_id) {
+                    $q->where('division_id', $division_id);
+                })->orderBy('name')->get();
+                $areaKey = 'section';
+                break;
+
+            case 'sub_section':
+                $data = \App\Models\SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                    $q->where('division_id', $division_id);
+                })->orderBy('name')->get();
+                $areaKey = 'sub_section';
+                break;
+
+            default:
+                $data = collect();
+                $areaKey = 'department';
+        }
+
+        // ==== alias2 agar data lama kebaca (term dan area case-insensitive) ====
+        $termAliases = function (string $term): array {
+            $t = strtolower(trim($term));
+            return match ($t) {
+                'short' => ['short', 'short_term', 'st', 's/t'],
+                'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
+                'long'  => ['long', 'long_term', 'lt', 'l/t'],
+                default => [$t],
+            };
+        };
+        $areaAliases = function (string $area): array {
+            $a = strtolower(trim($area));
+            $variants = [$a, ucfirst($a)];
+            if ($a === 'division')    $variants[] = 'Division';
+            if ($a === 'sub_section') $variants[] = 'Sub_section';
+            return array_values(array_unique($variants));
+        };
+        $areas = $areaAliases($areaKey);
+
+        // ==== bentuk payload JSON untuk tabel ====
+        $items = $data->map(function ($item) use ($areas, $termAliases) {
+            $rtcShort = \App\Models\Rtc::whereIn('area', $areas)
+                ->where('area_id', $item->id)
+                ->whereIn('term', $termAliases('short'))
+                ->orderByDesc('id')
+                ->with(['employee:id,name,grade,birthday_date'])
+                ->first();
+
+            $rtcMid = \App\Models\Rtc::whereIn('area', $areas)
+                ->where('area_id', $item->id)
+                ->whereIn('term', $termAliases('mid'))
+                ->orderByDesc('id')
+                ->with(['employee:id,name,grade,birthday_date'])
+                ->first();
+
+            $rtcLong = \App\Models\Rtc::whereIn('area', $areas)
+                ->where('area_id', $item->id)
+                ->whereIn('term', $termAliases('long'))
+                ->orderByDesc('id')
+                ->with(['employee:id,name,grade,birthday_date'])
+                ->first();
+
+            $shortEmp = optional($rtcShort)->employee;
+            $midEmp   = optional($rtcMid)->employee;
+            $longEmp  = optional($rtcLong)->employee;
+
+            // status keseluruhan ────────────────────────────────────────────────
+            $hasShort  = !is_null($shortEmp);
+            $hasMid    = !is_null($midEmp);
+            $hasLong   = !is_null($longEmp);
+            $complete3 = $hasShort && $hasMid && $hasLong;
+
+            // status per-term: 0=submitted, 1=checked, 3=approved, null=belum submit
+            $s = optional($rtcShort)->status;
+            $m = optional($rtcMid)->status;
+            $l = optional($rtcLong)->status;
+
+            $label = 'Not Set';
+            $class = 'badge badge-danger';
+            $code  = 'not_set';
+
+            if ($complete3) {
+                // Ambil hanya nilai valid (0,1,3)
+                $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2], true));
+
+                if ($vals->isEmpty()) {
+                    // Sudah lengkap kandidat, tapi belum di-submit sama sekali
+                    $label = 'Complete';
+                    $class = 'badge badge-secondary';
+                    $code  = 'complete_no_submit';
+                } else {
+                    $allApproved = $vals->every(fn($v) => $v === 2);
+                    $allChecked  = $vals->every(fn($v) => $v === 1);
+                    $allSubmitted = $vals->every(fn($v) => $v === 0);
+
+                    if ($allApproved) {
+                        $label = 'Approved';
+                        $class = 'badge badge-success';
+                        $code  = 'approved';
+                    } elseif ($allChecked) {
+                        $label = 'Checked';
+                        $class = 'badge badge-info';
+                        $code  = 'checked';
+                    } elseif ($allSubmitted) {
+                        $label = 'Submitted';
+                        $class = 'badge badge-warning';
+                        $code  = 'submitted';
+                    } else {
+                        // kombinasi campur 0/1/3
+                        $label = 'Partial';
+                        $class = 'badge badge-primary';
+                        $code  = 'partial';
+                    }
+                }
+            }
+
+            return [
+                'id'   => $item->id,
+                'name' => $item->name,
+
+                'short' => [
+                    'name'   => $shortEmp?->name,
+                    'status' => $s, // 0/1/3/null
+                ],
+                'mid' => [
+                    'name'   => $midEmp?->name,
+                    'status' => $m,
+                ],
+                'long' => [
+                    'name'   => $longEmp?->name,
+                    'status' => $l,
+                ],
+
+                'overall' => [
+                    'label' => $label,
+                    'class' => $class,
+                    'code'  => $code,   // 'approved'|'checked'|'submitted'|'partial'|'complete_no_submit'|'not_set'
+                ],
+                'can_add' => !$complete3, // hide tombol Add kalau ST/MT/LT sudah lengkap
+            ];
+        });
+
+        return response()->json(['items' => $items->values()]);
     }
 }

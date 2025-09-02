@@ -8,6 +8,116 @@
     {{ $title ?? 'RTC' }}
 @endsection
 
+@push('custom-css')
+    <style>
+        /* Status Chip */
+        .status-chip {
+            --bg: #eef2ff;
+            --fg: #312e81;
+            --bd: #c7d2fe;
+            --dot: #6366f1;
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .5rem .9rem;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: .9rem;
+            line-height: 1;
+            border: 1px solid var(--bd);
+            background: var(--bg);
+            color: var(--fg);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .06);
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .status-chip i {
+            font-size: 1rem;
+            opacity: .95
+        }
+
+        /* Dot/pulse di kiri */
+        .status-chip::before {
+            content: "";
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--dot);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot) 20%, transparent);
+        }
+
+        /* Variasi warna per status */
+        .status-chip[data-status="approved"] {
+            /* hijau */
+            --bg: #ecfdf5;
+            --fg: #065f46;
+            --bd: #a7f3d0;
+            --dot: #10b981;
+        }
+
+        .status-chip[data-status="checked"],
+        .status-chip[data-status="waiting"] {
+            /* kuning */
+            --bg: #fffbeb;
+            --fg: #92400e;
+            --bd: #fde68a;
+            --dot: #f59e0b;
+        }
+
+        .status-chip[data-status="draft"] {
+            /* abu */
+            --bg: #f8fafc;
+            --fg: #334155;
+            --bd: #e2e8f0;
+            --dot: #94a3b8;
+        }
+
+        .status-chip[data-status="revise"] {
+            /* merah */
+            --bg: #fef2f2;
+            --fg: #7f1d1d;
+            --bd: #fecaca;
+            --dot: #ef4444;
+        }
+
+        .status-chip[data-status="not_created"],
+        .status-chip[data-status="unknown"] {
+            --bg: #f4f4f5;
+            --fg: #27272a;
+            --bd: #e4e4e7;
+            --dot: #a1a1aa;
+        }
+
+        /* Animasi pulse utk Waiting */
+        @keyframes pulseDot {
+            0% {
+                box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 30%, transparent);
+            }
+
+            70% {
+                box-shadow: 0 0 0 8px color-mix(in srgb, var(--dot) 0%, transparent);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent);
+            }
+        }
+
+        .status-chip[data-status="waiting"]::before {
+            animation: pulseDot 1.25s infinite;
+        }
+
+        @media (max-width: 768px) {
+            .status-chip {
+                max-width: 210px;
+            }
+        }
+    </style>
+@endpush
+
 @section('main')
     @if (session()->has('success'))
         <script>
@@ -28,10 +138,10 @@
             <div id="kt_app_content_container" class="app-container  container-fluid ">
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <h3 class="card-title"></h3>
+                        <h3 class="card-title">{{ $cardTitle ?? 'List' }}</h3>
                         <div class="d-flex align-items-center">
-                            <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                                style="width: 200px;">
+                            <input type="text" id="searchInput" class="form-control me-2"
+                                placeholder="Search Employee..." style="width: 200px;">
                             <button type="button" class="btn btn-primary me-3" id="searchButton">
                                 <i class="fas fa-search"></i> Search
                             </button>
@@ -42,11 +152,17 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        @php
+                            $user = auth()->user();
+                            $pos = optional($user->employee)->position;
+                            $showDeptTab = $user->role === 'HRD' || $pos === 'Direktur' || $pos === 'GM';
+                        @endphp
+
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
                             role="tablist" style="cursor:pointer">
-                            @if (auth()->user()->role == 'HRD' || auth()->user()->employee->position == 'Direktur')
+                            @if ($showDeptTab)
                                 <li class="nav-item" role="presentation">
-                                    <a class="nav-link text-active-primary pb-4 filter-tab active"
+                                    <a class="nav-link text-active-primary pb-4 filter-tab"
                                         data-filter="department">Department</a>
                                 </li>
                             @endif
@@ -66,6 +182,7 @@
                                     <th class="text-center">Short Term</th>
                                     <th class="text-center">Mid Term</th>
                                     <th class="text-center">Long Term</th>
+                                    <th class="text-center">Status</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -158,146 +275,169 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
-            function loadTable(filter = 'Supervisor') {
-                $.ajax({
-                    url: '{{ route('filter.master') }}',
-                    type: 'GET',
-                    data: {
-                        filter: filter,
-                        division_id: @json($divisionId)
+            function esc(s) {
+                return $('<div>').text(s ?? '').html();
+            }
+
+            // Map status backend -> style chip IDP
+            // overall.code dari backend: 'checked' | 'submitted' | 'partial' | 'complete_no_submit' | 'not_set'
+            function statusChip(overall) {
+                // overall.code dari backend:
+                // 'approved' | 'checked' | 'submitted' | 'partial' | 'complete_no_submit' | 'not_set'
+                const map = {
+                    approved: {
+                        ds: 'approved',
+                        icon: '<i class="fas fa-circle-check"></i>'
+                    }, // 3
+                    checked: {
+                        ds: 'checked',
+                        icon: '<i class="fas fa-clipboard-check"></i>'
+                    }, // 1
+                    submitted: {
+                        ds: 'waiting',
+                        icon: '<i class="fas fa-paper-plane"></i>'
+                    }, // 0
+                    partial: {
+                        ds: 'draft',
+                        icon: '<i class="far fa-pen-to-square"></i>'
                     },
-                    success: function(res) {
-                        console.log('Response', res);
-                        $('#kt_table_users tbody').html(res);
-                    }
+                    complete_no_submit: {
+                        ds: 'draft',
+                        icon: '<i class="far fa-pen-to-square"></i>'
+                    },
+                    not_set: {
+                        ds: 'not_created',
+                        icon: '<i class="far fa-circle"></i>'
+                    },
+                };
+                const conf = map[overall?.code] ?? map['not_set'];
+                const label = overall?.label || 'Not Set';
+                return `<span class="status-chip" data-status="${conf.ds}" title="${$('<div>').text(label).html()}">
+                ${conf.icon}<span>${$('<div>').text(label).html()}</span>
+            </span>`;
+            }
+
+            function renderRows(items) {
+                if (!items || !items.length) {
+                    $('#kt_table_users tbody').html(
+                        '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>');
+                    return;
+                }
+                const rows = items.map((row, idx) => {
+                    const st = row.short?.name ? esc(row.short.name) :
+                        '<span class="text-danger">not set</span>';
+                    const mt = row.mid?.name ? esc(row.mid.name) :
+                        '<span class="text-danger">not set</span>';
+                    const lt = row.long?.name ? esc(row.long.name) :
+                        '<span class="text-danger">not set</span>';
+
+                    const statusHtml = statusChip(row.overall);
+
+                    const viewBtn = `<a href="#" class="btn btn-sm btn-primary btn-view" data-id="${row.id}" title="Detail">
+                                <i class="fas fa-info-circle"></i>
+                             </a>`;
+                    const addBtn = row.can_add ? `
+                <a href="#" class="btn btn-sm btn-success btn-show-modal"
+                   data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add">
+                    <i class="fas fa-plus-circle"></i>
+                </a>` : '';
+
+                    return `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td class="text-center">${esc(row.name)}</td>
+                    <td class="text-center">${st}</td>
+                    <td class="text-center">${mt}</td>
+                    <td class="text-center">${lt}</td>
+                    <td class="text-center">${statusHtml}</td>
+                    <td class="text-center">${viewBtn} ${addBtn}</td>
+                </tr>
+            `;
+                }).join('');
+                $('#kt_table_users tbody').html(rows);
+            }
+
+            function loadTable(filter) {
+                $.getJSON('{{ route('filter.master') }}', {
+                    filter: filter,
+                    division_id: @json($divisionId)
+                }).done(function(res) {
+                    renderRows(res.items || []);
+                }).fail(function(xhr) {
+                    console.error(xhr.responseText || xhr.statusText);
+                    $('#kt_table_users tbody').html(
+                        '<tr><td colspan="7" class="text-center text-danger">Failed to load data</td></tr>'
+                    );
                 });
             }
 
-            // initial load = Supervisor (Department)
+            // === (bagian lain script kamu tetap sama) ===
+            const titles = {
+                department: 'Department List',
+                section: 'Section List',
+                sub_section: 'Sub Section List'
+            };
+            let currentFilter = @json($defaultFilter ?? 'department');
+            if (!$('.filter-tab[data-filter="' + currentFilter + '"]').length) currentFilter = 'section';
 
-            $('.filter-tab').on('click', function() {
-                $('.filter-tab').removeClass('active');
-                $(this).addClass('active');
-                let filter = $(this).data('filter');
-                loadTable(filter);
-            });
-
-            const employees = @json($employees);
-            const user = @json($user);
-
-
-            let currentFilter
-            if (user.employee.position == 'Direktur' || user.role == 'HRD') {
-                currentFilter = 'department'; // default tab
-            } else {
-                currentFilter = 'section'; // default tab
-            }
-
+            $('.filter-tab').removeClass('active');
+            $('.filter-tab[data-filter="' + currentFilter + '"]').addClass('active');
+            $('.card-title').text(titles[currentFilter] ?? 'List');
             loadTable(currentFilter);
 
             $('.filter-tab').on('click', function() {
                 $('.filter-tab').removeClass('active');
                 $(this).addClass('active');
-                currentFilter = $(this).data('filter'); // update tab saat klik
+                currentFilter = $(this).data('filter');
+                $('.card-title').text(titles[currentFilter] ?? 'List');
                 loadTable(currentFilter);
             });
 
+            const employees = @json($employees);
+            let currentId = null;
 
-            let currentId = null; // definisikan di global scope
             $(document).on('click', '.btn-show-modal', function() {
-                currentId = $(this).data('id'); // ID dari department / section / sub_section
-
-                // Mapping posisi berdasarkan filter
+                currentId = $(this).data('id');
                 const positionMap = {
                     department: ['Supervisor', 'Section Head'],
                     section: ['Leader'],
-                    sub_section: ['JP', 'Act JP', 'Act Leader'],
+                    sub_section: ['JP', 'Act JP', 'Act Leader']
                 };
-
-                const targetPosition = positionMap[currentFilter] || [];
-
-                // Filter karyawan berdasarkan posisi
-                const filtered = employees.filter(e =>
-                    targetPosition.map(p => p.toLowerCase()).includes(e.position.toLowerCase())
-                );
-
-                // Populate semua select dropdown
+                const targetPosition = (positionMap[currentFilter] || []).map(p => p.toLowerCase());
+                const filtered = employees.filter(e => targetPosition.includes((e.position || '')
+                    .toLowerCase()));
                 ['#short_term', '#mid_term', '#long_term'].forEach(id => {
-                    const select = $(id);
-                    select.empty().append('<option value="">-- Select --</option>');
-                    filtered.forEach(e => {
-                        select.append(`<option value="${e.id}">${e.name}</option>`);
-                    });
+                    const $s = $(id).empty().append('<option value="">-- Select --</option>');
+                    filtered.forEach(e => $s.append(`<option value="${e.id}">${e.name}</option>`));
                 });
-
-                // Cari karyawan yang jadi leader sesuai currentFilter dan currentId
-                const currentEmployee = employees.find(e => {
-                    const lead = e[`leading_${currentFilter}`];
-                    return lead && lead.id === currentId;
-                });
-
-                // Jika ditemukan, set default value dari dropdown-nya
-                if (currentEmployee) {
-                    const leadData = currentEmployee[`leading_${currentFilter}`];
-                    $('#short_term').val(leadData?.short_term || '');
-                    $('#mid_term').val(leadData?.mid_term || '');
-                    $('#long_term').val(leadData?.long_term || '');
-                }
             });
-
-
-            // $(document).on('click', '.btn-view', function() {
-            //     const id = $(this).data('id');
-            //     const url = `/rtc/detail?filter=${currentFilter}&id=${id}`;
-            //     window.location.replace(url);
-            // });
 
             $(document).on('click', '.btn-view', function(e) {
                 e.preventDefault();
                 const id = $(this).data('id');
-                const filter = currentFilter;
-
-                window.location.href = `{{ route('rtc.summary') }}?id=${id}&filter=${filter}`;
+                window.location.href = `{{ route('rtc.summary') }}?id=${id}&filter=${currentFilter}`;
             });
 
             $('#addPlanForm').on('submit', function(e) {
                 e.preventDefault();
-
-                const formData = {
-                    filter: currentFilter, // misalnya ambil dari global JS variable
-                    id: currentId, // id dari entity (division/department/etc)
-                    short_term: $('#short_term').val(),
-                    mid_term: $('#mid_term').val(),
-                    long_term: $('#long_term').val(),
-                };
-
                 $.ajax({
                     url: '{{ route('rtc.update') }}',
                     type: 'GET',
-                    data: formData,
+                    data: {
+                        filter: currentFilter,
+                        id: currentId,
+                        short_term: $('#short_term').val(),
+                        mid_term: $('#mid_term').val(),
+                        long_term: $('#long_term').val(),
+                    },
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    success: function(response) {
-
-                        $('#addPlanModal').modal('hide');
-                        // optionally refresh the page or data
-                        window.location.reload()
-                    },
-                    error: function(xhr) {
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'error',
-                            title: 'Terjadi kesalahan!',
-                            showConfirmButton: false,
-                            timer: 2000
-                        });
-                        console.error("Error: " + xhr.responseText);
                     }
+                }).done(function() {
+                    $('#addPlanModal').modal('hide');
+                    loadTable(currentFilter);
                 });
             });
-
         });
     </script>
 @endpush
