@@ -23,7 +23,7 @@ class RtcController extends Controller
         $company ??= $employee->company_name;
 
         $pos        = trim(strtolower($employee->position ?? ''));
-        $isGM       = ($pos === 'gm');
+        $isGM = $employee && in_array($pos, ['gm', 'act gm'], true);
         $isDirektur = ($pos === 'direktur');
 
         // =========================
@@ -309,7 +309,10 @@ class RtcController extends Controller
 
         $divisionId    = $id;
         $title         = 'RTC';
-        $isGM          = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
+        $isGM = $employee && (
+            strcasecmp($employee->position, 'GM') === 0 ||
+            strcasecmp($employee->position, 'Act GM') === 0
+        );
         $isDirektur    = strcasecmp(trim($employee->position ?? ''), 'Direktur') === 0;
 
         if ($user->role === 'HRD' || $isGM) {
@@ -476,7 +479,10 @@ class RtcController extends Controller
 
         $user     = auth()->user();
         $employee = $user->employee ?? null;
-        $isGM     = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
+        $isGM = $employee && (
+            strcasecmp($employee->position, 'GM') === 0 ||
+            strcasecmp($employee->position, 'Act GM') === 0
+        );
 
         $main = [];
         $managers = [];
