@@ -466,10 +466,13 @@ class RtcController extends Controller
         return view('website.rtc.detail', compact('data', 'filter'));
     }
 
-    public function summary(Request $request)
+    public function summary(Request $request, $id = null)
     {
+        // Ambil id dari: route param -> route()->parameter -> query
+        $id = (int) ($id ?? $request->route('id') ?? $request->query('id'));
+
+        // Normalisasi filter (case-insensitive)
         $filter = strtolower($request->query('filter', 'department'));
-        $id     = (int) $request->query('id');
 
         $user     = auth()->user();
         $employee = $user->employee ?? null;
@@ -478,39 +481,15 @@ class RtcController extends Controller
         $main = [];
         $managers = [];
         $title = '-';
-
-        // flag untuk menyembunyikan kandidat (S/T, M/T, L/T) di node MAIN
         $hideMainPlans = false;
 
-        // Palet warna
-        $palette = [
-            'color-1',
-            'color-2',
-            'color-3',
-            'color-4',
-            'color-5',
-            'color-6',
-            'color-7',
-            'color-8',
-            'color-9',
-            'color-10',
-            'color-11',
-            'color-12',
-            'color-13',
-            'color-14'
-        ];
+        $palette = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5', 'color-6', 'color-7', 'color-8', 'color-9', 'color-10', 'color-11', 'color-12', 'color-13', 'color-14'];
         $pickColor = fn(string $key) => $palette[crc32($key) % count($palette)];
 
         switch ($filter) {
             case 'plant': {
-                    // hanya direktur yang relevan, tapi jika tidak perlu batasi, hapus guard ini
-                    // $employee = auth()->user()->employee;
-                    // if (strcasecmp($employee->position ?? '', 'Direktur') !== 0) abort(403);
-
                     $p = Plant::with('director')->findOrFail($id);
                     $title = $p->name ?? 'Plant';
-
-                    // di Plant kita jadikan node utama = plant; sembunyikan S/M/L di root
                     $hideMainPlans = true;
 
                     $main = [
@@ -527,7 +506,6 @@ class RtcController extends Controller
                         ->orderBy('name')
                         ->get();
 
-                    $managers = [];
                     foreach ($divs as $d) {
                         RtcHelper::setAreaContext('division', $d->id);
                         $managers[] = [
@@ -537,20 +515,18 @@ class RtcController extends Controller
                             'midTerm'    => RtcHelper::formatCandidate($d->mid,   'mid'),
                             'longTerm'   => RtcHelper::formatCandidate($d->long,  'long'),
                             'colorClass' => 'color-2',
-                            'supervisors' => [],           // stop di level division
+                            'supervisors' => [],
                             'skipManagerNode' => false,
                         ];
                     }
                     break;
                 }
-                /* =========================== DIVISION =========================== */
+
             case 'division': {
-                    // GM melihat summary division → sembunyikan S/T, M/T, L/T pada node utama
                     $hideMainPlans = $isGM;
 
                     $div   = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $div->name ?? 'Division';
-
                     $mainColor = $pickColor("division-root-{$div->id}");
 
                     RtcHelper::setAreaContext('Division', $div->id);
@@ -602,20 +578,16 @@ class RtcController extends Controller
                                 'colorClass' => $deptColor,
                             ];
                         }
-
                         $managers[] = $node;
                     }
                     break;
                 }
 
-                /* ========================== DEPARTMENT ========================== */
             case 'department': {
-                    // GM di summary department → tampilkan S/T, M/T, L/T pada node utama
                     $hideMainPlans = false;
 
                     $d = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $d->name ?? 'Department';
-
                     $mainColor = $pickColor("department-root-{$d->id}");
 
                     RtcHelper::setAreaContext('department', $d->id);
@@ -660,13 +632,11 @@ class RtcController extends Controller
                     break;
                 }
 
-                /* ============================ SECTION =========================== */
             case 'section': {
                     $hideMainPlans = false;
 
                     $s = Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $s->name ?? 'Section';
-
                     $mainColor = $pickColor("section-root-{$s->id}");
 
                     RtcHelper::setAreaContext('section', $s->id);
@@ -711,13 +681,11 @@ class RtcController extends Controller
                     break;
                 }
 
-                /* ========================== SUB SECTION ========================= */
             case 'sub_section': {
                     $hideMainPlans = false;
 
                     $sub = SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $sub->name ?? 'Sub Section';
-
                     $mainColor = $pickColor("subsection-root-{$sub->id}");
 
                     RtcHelper::setAreaContext('sub_section', $sub->id);
