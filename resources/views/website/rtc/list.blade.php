@@ -183,7 +183,8 @@
                             $showDivTab = $user->role === 'User' && $pos === 'Direktur';
 
                             // Department tab untuk HRD, Direktur, GM
-                            $showDeptTab = $user->role === 'HRD' || $pos === 'Direktur' || $pos === 'GM';
+                            $showDeptTab =
+                                $user->role === 'HRD' || $pos === 'Direktur' || $pos === 'GM' || $pos === 'Act GM';
                         @endphp
 
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
@@ -382,7 +383,7 @@
                     console.error(xhr.responseText || xhr.statusText);
                     $('#kt_table_users tbody').html(
                         '<tr><td colspan="7" class="text-center text-danger">Failed to load data</td></tr>'
-                        );
+                    );
                 });
             }
 
