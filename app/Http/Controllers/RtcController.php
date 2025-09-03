@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Plant;
 use App\Models\SubSection;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 
 class RtcController extends Controller
@@ -277,6 +278,12 @@ class RtcController extends Controller
                 }
             }
 
+            $dtS = $rS?->updated_at ?? $rS?->created_at;
+            $dtM = $rM?->updated_at ?? $rM?->created_at;
+            $dtL = $rL?->updated_at ?? $rL?->created_at;
+            $max = collect([$dtS, $dtM, $dtL])->filter()->max();
+            $item->last_year = $max ? Carbon::parse($max)->format('Y') : null;
+
             // set ke item agar langsung dipakai di blade
             $item->st_name        = $st;
             $item->mt_name        = $mt;
@@ -362,8 +369,8 @@ class RtcController extends Controller
                     'mid'     => ['name' => $d->mt_name],
                     'long'    => ['name' => $d->lt_name],
                     'overall' => ['label' => $d->overall_label, 'code' => $d->overall_code],
-                    // force non-add jika readOnly
                     'can_add' => !$readOnly && $d->can_add,
+                    'last_year' => $d->last_year,
                 ];
             })->values();
 

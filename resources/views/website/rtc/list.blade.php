@@ -87,15 +87,15 @@
 
         @keyframes pulseDot {
             0% {
-                box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 30%, transparent);
+                box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 30%, transparent)
             }
 
             70% {
-                box-shadow: 0 0 0 8px color-mix(in srgb, var(--dot) 0%, transparent);
+                box-shadow: 0 0 0 8px color-mix(in srgb, var(--dot) 0%, transparent)
             }
 
             100% {
-                box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent);
+                box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent)
             }
         }
 
@@ -103,9 +103,9 @@
             animation: pulseDot 1.25s infinite;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width:768px) {
             .status-chip {
-                max-width: 210px;
+                max-width: 210px
             }
         }
 
@@ -175,7 +175,7 @@
                             // Division tab hanya untuk Direktur dengan role 'User'
                             $showDivTab = $user->role === 'User' && $pos === 'Direktur';
 
-                            // Department tab untuk HRD, Direktur, GM/Act GM
+                            // Department tab untuk HRD, Direktur, GM/Act GM, President, VPD
                             $showDeptTab =
                                 $user->role === 'HRD' ||
                                 $pos === 'Direktur' ||
@@ -220,6 +220,7 @@
                                     <th class="text-center">Mid Term</th>
                                     <th class="text-center">Long Term</th>
                                     <th class="text-center">Status</th>
+                                    <th class="text-center fs-8">Last Year Modified</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -292,8 +293,8 @@
         window.READ_ONLY = @json((bool) ($readOnly ?? false));
 
         // base urls untuk tombol action
-        window.ROUTE_LIST_BASE = @json(route('rtc.list')); // gunakan ?id=...
-        window.ROUTE_SUMMARY_BASE = @json(route('rtc.summary')); // gunakan ?id=...&filter=...
+        window.ROUTE_LIST_BASE = @json(route('rtc.list'));
+        window.ROUTE_SUMMARY_BASE = @json(route('rtc.summary'));
     </script>
 
     <script>
@@ -340,7 +341,7 @@
             function renderRows(items, currentFilter = 'division') {
                 if (!items || !items.length) {
                     $('#kt_table_users tbody').html(
-                        '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>');
+                        '<tr><td colspan="8" class="text-center text-muted">No data available</td></tr>');
                     return;
                 }
                 const rows = items.map((row, idx) => {
@@ -351,18 +352,17 @@
                     const lt = row.long?.name ? esc(row.long.name) :
                         '<span class="text-danger">not set</span>';
                     const statusHtml = statusChip(row.overall);
+                    const lastYear = row.last_year ? esc(row.last_year) : '-';
 
-                    // Tombol:
-                    // - Detail (ke list bertab per-division) → ?id={division_id}
+                    // Detail (list tabbed) & Summary
                     const detailBtn = `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}" class="btn btn-sm btn-primary" title="Detail">
                                             <i class="fas fa-list-ul"></i>
                                        </a>`;
-                    // - Summary (eye) → filter dari currentFilter (saat division preload tetap 'division')
                     const summaryBtn = `<a href="${window.ROUTE_SUMMARY_BASE}?id=${row.id}&filter=${currentFilter}" class="btn btn-sm btn-info" title="View" target="_blank">
                                             <i class="fas fa-eye"></i>
                                         </a>`;
 
-                    // - Add (hidden kalau read-only)
+                    // Add (hidden jika read-only)
                     let addBtn = '';
                     if (!window.READ_ONLY && row.can_add) {
                         addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add">
@@ -378,6 +378,7 @@
                             <td class="text-center">${mt}</td>
                             <td class="text-center">${lt}</td>
                             <td class="text-center">${statusHtml}</td>
+                            <td class="text-center">${lastYear}</td>
                             <td class="text-center">${detailBtn} ${summaryBtn} ${addBtn}</td>
                         </tr>`;
                 }).join('');
@@ -393,7 +394,6 @@
                     filter: filter,
                     division_id: @json($divisionId ?? null)
                 }).done(function(res) {
-                    // Jika read-only, paksa can_add = false di client
                     const items = (res.items || []).map(it => ({
                         ...it,
                         can_add: window.READ_ONLY ? false : !!it.can_add
@@ -402,7 +402,7 @@
                 }).fail(function(xhr) {
                     console.error(xhr.responseText || xhr.statusText);
                     $('#kt_table_users tbody').html(
-                        '<tr><td colspan="7" class="text-center text-danger">Failed to load data</td></tr>'
+                        '<tr><td colspan="8" class="text-center text-danger">Failed to load data</td></tr>'
                     );
                 });
             }
@@ -417,7 +417,6 @@
             // Default tab
             let currentFilter = window.IS_DIVISION_PRELOAD ? 'division' : @json($defaultFilter ?? 'department');
 
-            // Saat preload division (klik plant), tab lain disembunyikan—kecuali kamu ingin tetap menampilkan.
             if (window.IS_DIVISION_PRELOAD) {
                 $('.filter-tab').not('[data-filter="division"]').closest('li').hide();
             }
@@ -436,8 +435,7 @@
             // Ganti tab
             $('.filter-tab').on('click', function() {
                 const target = $(this).data('filter');
-                if (window.IS_DIVISION_PRELOAD && target !== 'division')
-                    return; // blokir pindah tab saat preload
+                if (window.IS_DIVISION_PRELOAD && target !== 'division') return;
                 $('.filter-tab').removeClass('active');
                 $(this).addClass('active');
                 currentFilter = target;
@@ -449,7 +447,7 @@
                 }
             });
 
-            // ===== READ-WRITE area (Add Plan) → hanya aktif jika !READ_ONLY =====
+            // ===== READ-WRITE area (Add Plan) → aktif hanya jika !READ_ONLY =====
             @if (empty($readOnly) || !$readOnly)
                 const employees = @json($employees);
                 let currentId = null;
@@ -459,9 +457,7 @@
                     const $modal = $('#addPlanModal');
                     ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
                         const $el = $modal.find(sel);
-                        if ($el.hasClass('select2-hidden-accessible')) {
-                            $el.select2('destroy');
-                        }
+                        if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
                         $el.select2({
                             dropdownParent: $modal,
                             width: '100%',
@@ -483,7 +479,6 @@
 
                 $(document).on('click', '.btn-show-modal', function() {
                     currentId = $(this).data('id');
-
                     const positionMap = {
                         division: ['Act GM', 'GM'],
                         department: ['Supervisor', 'Section Head'],
@@ -498,7 +493,6 @@
                 $('#addPlanModal').on('shown.bs.modal', function() {
                     populateModalOptions(filteredForModal || []);
                 });
-
                 $('#addPlanModal').on('hidden.bs.modal', function() {
                     $(this).find('select').each(function() {
                         try {
