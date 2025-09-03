@@ -182,7 +182,7 @@
                             // Division tab hanya untuk Direktur dengan role 'User'
                             $showDivTab = $user->role === 'User' && $pos === 'Direktur';
 
-                            // Department tab untuk HRD, Direktur, GM
+                            // Department tab untuk HRD, Direktur, GM/Act GM
                             $showDeptTab =
                                 $user->role === 'HRD' || $pos === 'Direktur' || $pos === 'GM' || $pos === 'Act GM';
                         @endphp
@@ -258,7 +258,7 @@
         </div>
     </div>
 
-    {{-- Fullscreen detail modal (opsional, tetap disediakan) --}}
+    {{-- Fullscreen detail modal (opsional) --}}
     <div class="modal fade" id="viewDetailModal" tabindex="-1" aria-labelledby="viewDetailLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -282,7 +282,7 @@
 @endsection
 
 @push('scripts')
-    {{-- Inject preload data dari controller (mode plant → list Division) --}}
+    {{-- Preload (mode Direktur klik Plant → Division List sudah dipass dari controller) --}}
     <script>
         window.PRELOADED_ITEMS = @json($items ?? []);
         window.IS_DIVISION_PRELOAD = Array.isArray(window.PRELOADED_ITEMS) && window.PRELOADED_ITEMS.length > 0;
@@ -373,7 +373,6 @@
                     renderRows(window.PRELOADED_ITEMS);
                     return;
                 }
-
                 $.getJSON('{{ route('filter.master') }}', {
                     filter: filter,
                     division_id: @json($divisionId ?? null)
@@ -395,9 +394,7 @@
             };
 
             // Default tab
-            let currentFilter = window.IS_DIVISION_PRELOAD ?
-                'division' :
-                @json($defaultFilter ?? 'department');
+            let currentFilter = window.IS_DIVISION_PRELOAD ? 'division' : @json($defaultFilter ?? 'department');
 
             // Jika preload → sembunyikan tab selain Division
             if (window.IS_DIVISION_PRELOAD) {
@@ -434,9 +431,36 @@
                 }
             });
 
-            // Data employees dari server
+            // ===== Select2 in Modal Add Plan =====
             const employees = @json($employees);
             let currentId = null;
+            let filteredForModal = [];
+
+            function initSelect2ForModal() {
+                const $modal = $('#addPlanModal');
+                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                    const $el = $modal.find(sel);
+                    if ($el.hasClass('select2-hidden-accessible')) {
+                        $el.select2('destroy'); // hindari duplikasi inisialisasi
+                    }
+                    $el.select2({
+                        dropdownParent: $modal, // penting agar dropdown muncul di atas modal
+                        width: '100%',
+                        placeholder: '-- Select --',
+                        allowClear: true
+                    });
+                });
+            }
+
+            function populateModalOptions(list) {
+                const $modal = $('#addPlanModal');
+                ['#short_term', '#mid_term', '#long_term'].forEach(id => {
+                    const $s = $modal.find(id);
+                    $s.empty().append('<option value=""></option>');
+                    list.forEach(e => $s.append(`<option value="${e.id}">${esc(e.name)}</option>`));
+                });
+                initSelect2ForModal();
+            }
 
             // Buka modal Add Plan
             $(document).on('click', '.btn-show-modal', function() {
@@ -449,13 +473,23 @@
                     sub_section: ['JP', 'Act JP', 'Act Leader']
                 };
                 const targetPosition = (positionMap[currentFilter] || []).map(p => p.toLowerCase());
-                const filtered = employees.filter(e => targetPosition.includes((e.position || '')
-                    .toLowerCase()));
+                filteredForModal = employees.filter(e =>
+                    targetPosition.includes((e.position || '').toLowerCase())
+                );
+                // Modal akan terbuka via data-bs-toggle, isi & init Select2 ketika modal sudah tampil
+            });
 
-                ['#short_term', '#mid_term', '#long_term'].forEach(id => {
-                    const $s = $(id).empty().append('<option value="">-- Select --</option>');
-                    filtered.forEach(e => $s.append(
-                        `<option value="${e.id}">${esc(e.name)}</option>`));
+            // Saat modal benar-benar tampil, isi option + init select2 (dropdownParent siap)
+            $('#addPlanModal').on('shown.bs.modal', function() {
+                populateModalOptions(filteredForModal || []);
+            });
+
+            // Optional: bersihkan nilai saat modal ditutup
+            $('#addPlanModal').on('hidden.bs.modal', function() {
+                $(this).find('select').each(function() {
+                    try {
+                        $(this).val(null).trigger('change');
+                    } catch (e) {}
                 });
             });
 
@@ -485,7 +519,6 @@
                 }).done(function() {
                     $('#addPlanModal').modal('hide');
                     if (window.IS_DIVISION_PRELOAD && currentFilter === 'division') {
-                        // reload halaman agar sinkron (bisa juga re-fetch manual jika mau)
                         location.reload();
                     } else {
                         loadTable(currentFilter);
@@ -496,8 +529,7 @@
             // Simple client-side search
             $('#searchButton').on('click', function() {
                 const query = ($('#searchInput').val() || '').toLowerCase();
-                const rows = $('#kt_table_users tbody tr');
-                rows.each(function() {
+                $('#kt_table_users tbody tr').each(function() {
                     const text = $(this).text().toLowerCase();
                     $(this).toggle(text.includes(query));
                 });

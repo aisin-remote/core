@@ -326,95 +326,13 @@ class RtcController extends Controller
         return view('website.rtc.list', [
             'title'         => $title,
             'divisionId'    => $divisionId,
-            'employees'     => Employee::select('id', 'name', 'position', 'company_name')->get(),
+            'employees'     => Employee::where('company_name', $employee->company_name)
+                ->get(['id', 'name', 'position', 'company_name']),
             'user'          => $user,
             'defaultFilter' => $defaultFilter,
             'cardTitle'     => 'List',
             'items'         => [],
         ]);
-    }
-
-    /**
-     * Helper: hitung overall status untuk koleksi item (Division/Department)
-     * Status: 0=Submitted, 1=Checked, 3=Approved
-     */
-    private function buildOverallFor($items, string $areaKey): array
-    {
-        $areas = [$areaKey, ucfirst($areaKey)];
-        if ($areaKey === 'division')    $areas[] = 'Division';
-        if ($areaKey === 'sub_section') $areas[] = 'Sub_section';
-
-        $termAliases = [
-            'short' => ['short', 'short_term', 'st', 's/t'],
-            'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
-            'long'  => ['long', 'long_term', 'lt', 'l/t'],
-        ];
-
-        $overall   = [];
-        $termNames = [];
-
-        foreach ($items as $item) {
-            $id = $item->id;
-
-            $find = function ($term) use ($areas, $id, $termAliases) {
-                return Rtc::whereIn('area', $areas)
-                    ->where('area_id', $id)
-                    ->whereIn('term', $termAliases[$term])
-                    ->with('employee:id,name')
-                    ->orderByDesc('id')
-                    ->first();
-            };
-
-            $rS = $find('short');
-            $rM = $find('mid');
-            $rL = $find('long');
-
-            $termNames[$id] = [
-                'short' => optional($rS?->employee)->name,
-                'mid'   => optional($rM?->employee)->name,
-                'long'  => optional($rL?->employee)->name,
-            ];
-
-            $hasS = (bool) $termNames[$id]['short'];
-            $hasM = (bool) $termNames[$id]['mid'];
-            $hasL = (bool) $termNames[$id]['long'];
-            $complete3 = $hasS && $hasM && $hasL;
-
-            $statuses = collect([$rS?->status, $rM?->status, $rL?->status])
-                ->filter(fn($v) => in_array($v, [0, 1, 3], true));
-
-            $label = 'Not Set';
-            $code  = 'not_set';
-
-            if ($complete3) {
-                if ($statuses->isEmpty()) {
-                    $label = 'Complete';
-                    $code  = 'complete_no_submit';
-                } else {
-                    $allApproved  = $statuses->every(fn($v) => $v === 3);
-                    $allChecked   = $statuses->every(fn($v) => $v === 1);
-                    $allSubmitted = $statuses->every(fn($v) => $v === 0);
-
-                    if ($allApproved) {
-                        $label = 'Approved';
-                        $code = 'approved';
-                    } elseif ($allChecked) {
-                        $label = 'Checked';
-                        $code = 'checked';
-                    } elseif ($allSubmitted) {
-                        $label = 'Submitted';
-                        $code = 'submitted';
-                    } else {
-                        $label = 'Partial';
-                        $code = 'partial';
-                    }
-                }
-            }
-
-            $overall[$id] = compact('label', 'code');
-        }
-
-        return ['overall' => $overall, 'termNames' => $termNames];
     }
 
     public function detail(Request $request)
