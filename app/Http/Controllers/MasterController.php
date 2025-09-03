@@ -69,6 +69,7 @@ class MasterController extends Controller
             'President',
             'Direktur',
             'GM',
+            'Act GM',
             'Manager',
             'Coordinator',
             'Section Head',
@@ -471,60 +472,80 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        $filter      = strtolower($request->input('filter', 'department')); // division/department|section|sub_section
-        $division_id = (int) $request->input('division_id');
+        // division | department | section | sub_section
+        $filter = strtolower($request->input('filter', 'department'));
+        // Catatan: untuk filter=division, param ini berisi plant_id (bukan division_id)
+        $containerId = (int) $request->input('division_id');
 
         $user     = auth()->user();
         $employee = $user->employee;
 
-        // GM hanya boleh lihat divisi yang dia pegang
-        if ($employee && strcasecmp($employee->position, 'GM') === 0) {
-            $owns = Division::where('gm_id', $employee->id)
-                ->where('id', $division_id)
+        // Normalisasi posisi
+        $pos   = strtolower(trim($employee->position ?? ''));
+        $isGM  = in_array($pos, ['gm', 'act gm'], true);
+        $isDir = ($pos === 'direktur');
+
+        // ===== Guard Akses =====
+        // GM: hanya boleh lihat resource yang berada di divisi yang dia pegang.
+        // Ini HANYA relevan untuk filter yang berbasis division_id (dept/section/sub_section),
+        // bukan untuk filter=division (karena itu berbasis plant_id).
+        if ($isGM && $filter !== 'division') {
+            $owns = \App\Models\Division::where('gm_id', $employee->id)
+                ->where('id', $containerId)
                 ->exists();
-            if (!$owns) {
-                abort(403, 'Unauthorized division');
-            }
+            if (!$owns) abort(403, 'Unauthorized division');
         }
 
-        // Ambil list item per filter
+        // Direktur: saat filter=division (menarik daftar division per PLANT),
+        // pastikan plant tersebut memang plant yang dia pegang.
+        if ($isDir && $filter === 'division') {
+            $ownsPlant = \App\Models\Plant::where('id', $containerId)
+                ->where('director_id', $employee->id)
+                ->exists();
+            if (!$ownsPlant) abort(403, 'Unauthorized plant');
+        }
+
+        // ===== Ambil list item per filter =====
         switch ($filter) {
             case 'division':
-                $data = Division::where('plant_id', $division_id)->orderBy('name')->get();
+                // containerId di sini = plant_id
+                $data    = \App\Models\Division::where('plant_id', $containerId)->orderBy('name')->get();
                 $areaKey = 'division';
                 break;
+
             case 'department':
-                $data = Department::where('division_id', $division_id)
-                    ->orderBy('name')->get();
+                // containerId di sini = division_id
+                $data    = \App\Models\Department::where('division_id', $containerId)->orderBy('name')->get();
                 $areaKey = 'department';
                 break;
 
             case 'section':
-                $data = Section::whereHas('department', function ($q) use ($division_id) {
-                    $q->where('division_id', $division_id);
+                $data = \App\Models\Section::whereHas('department', function ($q) use ($containerId) {
+                    $q->where('division_id', $containerId);
                 })->orderBy('name')->get();
                 $areaKey = 'section';
                 break;
 
             case 'sub_section':
-                $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
-                    $q->where('division_id', $division_id);
+                $data = \App\Models\SubSection::whereHas('section.department', function ($q) use ($containerId) {
+                    $q->where('division_id', $containerId);
                 })->orderBy('name')->get();
                 $areaKey = 'sub_section';
                 break;
 
             default:
-                $data = collect();
+                $data    = collect();
                 $areaKey = 'department';
+                break;
         }
 
-        // ==== alias2 agar data lama kebaca (term dan area case-insensitive) ====
+        // ===== Aliases agar data lama kebaca (term & area case-insensitive) =====
         $termAliases = function (string $term): array {
             $t = strtolower(trim($term));
             return match ($t) {
                 'short' => ['short', 'short_term', 'st', 's/t'],
-                'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
-                'long'  => ['long', 'long_term', 'lt', 'l/t'],
+                'mid'   => ['mid',   'mid_term',   'mt', 'm/t'],
+                'long'  => ['long',  'long_term',  'lt', 'l/t'],
                 default => [$t],
             };
         };
@@ -537,23 +558,23 @@ class MasterController extends Controller
         };
         $areas = $areaAliases($areaKey);
 
-        // ==== bentuk payload JSON untuk tabel ====
+        // ===== Bentuk payload JSON untuk tabel =====
         $items = $data->map(function ($item) use ($areas, $termAliases) {
-            $rtcShort = Rtc::whereIn('area', $areas)
+            $rtcShort = \App\Models\Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('short'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcMid = Rtc::whereIn('area', $areas)
+            $rtcMid = \App\Models\Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('mid'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcLong = Rtc::whereIn('area', $areas)
+            $rtcLong = \App\Models\Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('long'))
                 ->orderByDesc('id')
@@ -564,7 +585,7 @@ class MasterController extends Controller
             $midEmp   = optional($rtcMid)->employee;
             $longEmp  = optional($rtcLong)->employee;
 
-            // status keseluruhan ────────────────────────────────────────────────
+            // status keseluruhan
             $hasShort  = !is_null($shortEmp);
             $hasMid    = !is_null($midEmp);
             $hasLong   = !is_null($longEmp);
@@ -580,17 +601,17 @@ class MasterController extends Controller
             $code  = 'not_set';
 
             if ($complete3) {
-                // Ambil hanya nilai valid (0,1,3)
+                // Ambil hanya nilai valid (0,1,2)
                 $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2], true));
 
                 if ($vals->isEmpty()) {
-                    // Sudah lengkap kandidat, tapi belum di-submit sama sekali
+                    // Lengkap kandidat, belum submit semua
                     $label = 'Complete';
                     $class = 'badge badge-secondary';
                     $code  = 'complete_no_submit';
                 } else {
-                    $allApproved = $vals->every(fn($v) => $v === 2);
-                    $allChecked  = $vals->every(fn($v) => $v === 1);
+                    $allApproved  = $vals->every(fn($v) => $v === 2);
+                    $allChecked   = $vals->every(fn($v) => $v === 1);
                     $allSubmitted = $vals->every(fn($v) => $v === 0);
 
                     if ($allApproved) {
@@ -606,7 +627,7 @@ class MasterController extends Controller
                         $class = 'badge badge-warning';
                         $code  = 'submitted';
                     } else {
-                        // kombinasi campur 0/1/3
+                        // kombinasi campur 0/1/3 → partial
                         $label = 'Partial';
                         $class = 'badge badge-primary';
                         $code  = 'partial';
@@ -634,9 +655,10 @@ class MasterController extends Controller
                 'overall' => [
                     'label' => $label,
                     'class' => $class,
-                    'code'  => $code,   // 'approved'|'checked'|'submitted'|'partial'|'complete_no_submit'|'not_set'
+                    'code'  => $code, // approved|checked|submitted|partial|complete_no_submit|not_set
                 ],
-                'can_add' => !$complete3, // hide tombol Add kalau ST/MT/LT sudah lengkap
+                // tombol Add disembunyikan bila 3 term sudah lengkap
+                'can_add' => !$complete3,
             ];
         });
 
