@@ -490,7 +490,7 @@ class MasterController extends Controller
         // Ini HANYA relevan untuk filter yang berbasis division_id (dept/section/sub_section),
         // bukan untuk filter=division (karena itu berbasis plant_id).
         if ($isGM && $filter !== 'division') {
-            $owns = \App\Models\Division::where('gm_id', $employee->id)
+            $owns = Division::where('gm_id', $employee->id)
                 ->where('id', $containerId)
                 ->exists();
             if (!$owns) abort(403, 'Unauthorized division');
@@ -499,7 +499,7 @@ class MasterController extends Controller
         // Direktur: saat filter=division (menarik daftar division per PLANT),
         // pastikan plant tersebut memang plant yang dia pegang.
         if ($isDir && $filter === 'division') {
-            $ownsPlant = \App\Models\Plant::where('id', $containerId)
+            $ownsPlant = Plant::where('id', $containerId)
                 ->where('director_id', $employee->id)
                 ->exists();
             if (!$ownsPlant) abort(403, 'Unauthorized plant');
@@ -509,25 +509,25 @@ class MasterController extends Controller
         switch ($filter) {
             case 'division':
                 // containerId di sini = plant_id
-                $data    = \App\Models\Division::where('plant_id', $containerId)->orderBy('name')->get();
+                $data    = Division::where('plant_id', $containerId)->orderBy('name')->get();
                 $areaKey = 'division';
                 break;
 
             case 'department':
                 // containerId di sini = division_id
-                $data    = \App\Models\Department::where('division_id', $containerId)->orderBy('name')->get();
+                $data    = Department::where('division_id', $containerId)->orderBy('name')->get();
                 $areaKey = 'department';
                 break;
 
             case 'section':
-                $data = \App\Models\Section::whereHas('department', function ($q) use ($containerId) {
+                $data = Section::whereHas('department', function ($q) use ($containerId) {
                     $q->where('division_id', $containerId);
                 })->orderBy('name')->get();
                 $areaKey = 'section';
                 break;
 
             case 'sub_section':
-                $data = \App\Models\SubSection::whereHas('section.department', function ($q) use ($containerId) {
+                $data = SubSection::whereHas('section.department', function ($q) use ($containerId) {
                     $q->where('division_id', $containerId);
                 })->orderBy('name')->get();
                 $areaKey = 'sub_section';
@@ -560,21 +560,21 @@ class MasterController extends Controller
 
         // ===== Bentuk payload JSON untuk tabel =====
         $items = $data->map(function ($item) use ($areas, $termAliases) {
-            $rtcShort = \App\Models\Rtc::whereIn('area', $areas)
+            $rtcShort = Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('short'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcMid = \App\Models\Rtc::whereIn('area', $areas)
+            $rtcMid = Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('mid'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcLong = \App\Models\Rtc::whereIn('area', $areas)
+            $rtcLong = Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('long'))
                 ->orderByDesc('id')

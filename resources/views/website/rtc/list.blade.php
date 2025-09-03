@@ -39,7 +39,6 @@
             opacity: .95
         }
 
-        /* Dot/pulse di kiri */
         .status-chip::before {
             content: "";
             width: 8px;
@@ -49,9 +48,7 @@
             box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot) 20%, transparent);
         }
 
-        /* Variasi warna per status */
         .status-chip[data-status="approved"] {
-            /* hijau */
             --bg: #ecfdf5;
             --fg: #065f46;
             --bd: #a7f3d0;
@@ -60,7 +57,6 @@
 
         .status-chip[data-status="checked"],
         .status-chip[data-status="waiting"] {
-            /* kuning */
             --bg: #fffbeb;
             --fg: #92400e;
             --bd: #fde68a;
@@ -68,7 +64,6 @@
         }
 
         .status-chip[data-status="draft"] {
-            /* abu */
             --bg: #f8fafc;
             --fg: #334155;
             --bd: #e2e8f0;
@@ -76,7 +71,6 @@
         }
 
         .status-chip[data-status="revise"] {
-            /* merah */
             --bg: #fef2f2;
             --fg: #7f1d1d;
             --bd: #fecaca;
@@ -91,7 +85,6 @@
             --dot: #a1a1aa;
         }
 
-        /* Animasi pulse utk Waiting */
         @keyframes pulseDot {
             0% {
                 box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 30%, transparent);
@@ -162,8 +155,8 @@
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h3 class="card-title">{{ $cardTitle ?? 'List' }}</h3>
                         <div class="d-flex align-items-center">
-                            <input type="text" id="searchInput" class="form-control me-2"
-                                placeholder="Search Employee..." style="width: 200px;">
+                            <input type="text" id="searchInput" class="form-control me-2" placeholder="Search ..."
+                                style="width:200px;">
                             <button type="button" class="btn btn-primary me-3" id="searchButton">
                                 <i class="fas fa-search"></i> Search
                             </button>
@@ -184,7 +177,15 @@
 
                             // Department tab untuk HRD, Direktur, GM/Act GM
                             $showDeptTab =
-                                $user->role === 'HRD' || $pos === 'Direktur' || $pos === 'GM' || $pos === 'Act GM';
+                                $user->role === 'HRD' ||
+                                $pos === 'Direktur' ||
+                                $pos === 'GM' ||
+                                $pos === 'Act GM' ||
+                                $pos === 'President' ||
+                                $pos === 'VPD';
+
+                            // read-only flag dari controller
+                            $readOnly = (bool) ($readOnly ?? false);
                         @endphp
 
                         <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
@@ -230,33 +231,35 @@
         </div>
     </div>
 
-    <!-- Modal Add Plan -->
-    <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <form id="addPlanForm">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title">Add Plan</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+    {{-- Modal Add Plan: hanya render jika TIDAK read-only --}}
+    @unless ($readOnly)
+        <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <form id="addPlanForm">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Add Plan</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body">
+                            @foreach (['short_term' => 'Short Term', 'mid_term' => 'Mid Term', 'long_term' => 'Long Term'] as $key => $label)
+                                <div class="mb-3">
+                                    <label for="{{ $key }}" class="form-label">{{ $label }}</label>
+                                    <select id="{{ $key }}" class="form-select" name="{{ $key }}">
+                                        <option value="">-- Select --</option>
+                                    </select>
+                                </div>
+                            @endforeach
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
                     </div>
-                    <div class="modal-body">
-                        @foreach (['short_term' => 'Short Term', 'mid_term' => 'Mid Term', 'long_term' => 'Long Term'] as $key => $label)
-                            <div class="mb-3">
-                                <label for="{{ $key }}" class="form-label">{{ $label }}</label>
-                                <select id="{{ $key }}" class="form-select" name="{{ $key }}">
-                                    <option value="">-- Select --</option>
-                                </select>
-                            </div>
-                        @endforeach
-                    </div>
-                    <div class="modal-footer">
-                        <button type="submit" class="btn btn-primary">Save</button>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    </div>
-                </div>
-            </form>
+                </form>
+            </div>
         </div>
-    </div>
+    @endunless
 
     {{-- Fullscreen detail modal (opsional) --}}
     <div class="modal fade" id="viewDetailModal" tabindex="-1" aria-labelledby="viewDetailLabel" aria-hidden="true">
@@ -282,10 +285,15 @@
 @endsection
 
 @push('scripts')
-    {{-- Preload (mode Direktur klik Plant → Division List sudah dipass dari controller) --}}
+    {{-- Preload dari controller (mode Plant → Division List) + flags --}}
     <script>
         window.PRELOADED_ITEMS = @json($items ?? []);
         window.IS_DIVISION_PRELOAD = Array.isArray(window.PRELOADED_ITEMS) && window.PRELOADED_ITEMS.length > 0;
+        window.READ_ONLY = @json((bool) ($readOnly ?? false));
+
+        // base urls untuk tombol action
+        window.ROUTE_LIST_BASE = @json(route('rtc.list')); // gunakan ?id=...
+        window.ROUTE_SUMMARY_BASE = @json(route('rtc.summary')); // gunakan ?id=...&filter=...
     </script>
 
     <script>
@@ -294,21 +302,21 @@
                 return $('<div>').text(s ?? '').html();
             }
 
-            // Map status backend -> style chip
+            // status chip
             function statusChip(overall) {
                 const map = {
                     approved: {
                         ds: 'approved',
                         icon: '<i class="fas fa-circle-check"></i>'
-                    }, // 3
+                    },
                     checked: {
                         ds: 'checked',
                         icon: '<i class="fas fa-clipboard-check"></i>'
-                    }, // 1
+                    },
                     submitted: {
                         ds: 'waiting',
                         icon: '<i class="fas fa-paper-plane"></i>'
-                    }, // 0
+                    },
                     partial: {
                         ds: 'draft',
                         icon: '<i class="far fa-pen-to-square"></i>'
@@ -329,7 +337,7 @@
                         </span>`;
             }
 
-            function renderRows(items) {
+            function renderRows(items, currentFilter = 'division') {
                 if (!items || !items.length) {
                     $('#kt_table_users tbody').html(
                         '<tr><td colspan="7" class="text-center text-muted">No data available</td></tr>');
@@ -344,14 +352,23 @@
                         '<span class="text-danger">not set</span>';
                     const statusHtml = statusChip(row.overall);
 
-                    const viewBtn = `<a href="#" class="btn btn-sm btn-primary btn-view" data-id="${row.id}" title="Detail">
-                                        <i class="fas fa-info-circle"></i>
-                                     </a>`;
-                    const addBtn = row.can_add ? `
-                        <a href="#" class="btn btn-sm btn-success btn-show-modal"
-                           data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add">
-                            <i class="fas fa-plus-circle"></i>
-                        </a>` : '';
+                    // Tombol:
+                    // - Detail (ke list bertab per-division) → ?id={division_id}
+                    const detailBtn = `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}" class="btn btn-sm btn-primary" title="Detail">
+                                            <i class="fas fa-list-ul"></i>
+                                       </a>`;
+                    // - Summary (eye) → filter dari currentFilter (saat division preload tetap 'division')
+                    const summaryBtn = `<a href="${window.ROUTE_SUMMARY_BASE}?id=${row.id}&filter=${currentFilter}" class="btn btn-sm btn-info" title="View" target="_blank">
+                                            <i class="fas fa-eye"></i>
+                                        </a>`;
+
+                    // - Add (hidden kalau read-only)
+                    let addBtn = '';
+                    if (!window.READ_ONLY && row.can_add) {
+                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add">
+                                    <i class="fas fa-plus-circle"></i>
+                                  </a>`;
+                    }
 
                     return `
                         <tr>
@@ -361,23 +378,27 @@
                             <td class="text-center">${mt}</td>
                             <td class="text-center">${lt}</td>
                             <td class="text-center">${statusHtml}</td>
-                            <td class="text-center">${viewBtn} ${addBtn}</td>
+                            <td class="text-center">${detailBtn} ${summaryBtn} ${addBtn}</td>
                         </tr>`;
                 }).join('');
                 $('#kt_table_users tbody').html(rows);
             }
 
             function loadTable(filter) {
-                // Saat preload Division (mode plant) → jangan panggil AJAX
                 if (window.IS_DIVISION_PRELOAD && filter === 'division') {
-                    renderRows(window.PRELOADED_ITEMS);
+                    renderRows(window.PRELOADED_ITEMS, 'division');
                     return;
                 }
                 $.getJSON('{{ route('filter.master') }}', {
                     filter: filter,
                     division_id: @json($divisionId ?? null)
                 }).done(function(res) {
-                    renderRows(res.items || []);
+                    // Jika read-only, paksa can_add = false di client
+                    const items = (res.items || []).map(it => ({
+                        ...it,
+                        can_add: window.READ_ONLY ? false : !!it.can_add
+                    }));
+                    renderRows(items, filter);
                 }).fail(function(xhr) {
                     console.error(xhr.responseText || xhr.statusText);
                     $('#kt_table_users tbody').html(
@@ -396,18 +417,18 @@
             // Default tab
             let currentFilter = window.IS_DIVISION_PRELOAD ? 'division' : @json($defaultFilter ?? 'department');
 
-            // Jika preload → sembunyikan tab selain Division
+            // Saat preload division (klik plant), tab lain disembunyikan—kecuali kamu ingin tetap menampilkan.
             if (window.IS_DIVISION_PRELOAD) {
                 $('.filter-tab').not('[data-filter="division"]').closest('li').hide();
             }
 
-            // Set active tab + title + load awal
+            // Init tab & title & load awal
             $('.filter-tab').removeClass('active');
             $('.filter-tab[data-filter="' + currentFilter + '"]').addClass('active');
             $('.card-title').text(titles[currentFilter] ?? 'List');
 
             if (window.IS_DIVISION_PRELOAD && currentFilter === 'division') {
-                renderRows(window.PRELOADED_ITEMS);
+                renderRows(window.PRELOADED_ITEMS, 'division');
             } else {
                 loadTable(currentFilter);
             }
@@ -415,116 +436,102 @@
             // Ganti tab
             $('.filter-tab').on('click', function() {
                 const target = $(this).data('filter');
-
-                // Blokir pindah tab saat preload Division
-                if (window.IS_DIVISION_PRELOAD && target !== 'division') return;
-
+                if (window.IS_DIVISION_PRELOAD && target !== 'division')
+                    return; // blokir pindah tab saat preload
                 $('.filter-tab').removeClass('active');
                 $(this).addClass('active');
                 currentFilter = target;
                 $('.card-title').text(titles[currentFilter] ?? 'List');
-
                 if (window.IS_DIVISION_PRELOAD && currentFilter === 'division') {
-                    renderRows(window.PRELOADED_ITEMS);
+                    renderRows(window.PRELOADED_ITEMS, 'division');
                 } else {
                     loadTable(currentFilter);
                 }
             });
 
-            // ===== Select2 in Modal Add Plan =====
-            const employees = @json($employees);
-            let currentId = null;
-            let filteredForModal = [];
+            // ===== READ-WRITE area (Add Plan) → hanya aktif jika !READ_ONLY =====
+            @if (empty($readOnly) || !$readOnly)
+                const employees = @json($employees);
+                let currentId = null;
+                let filteredForModal = [];
 
-            function initSelect2ForModal() {
-                const $modal = $('#addPlanModal');
-                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
-                    const $el = $modal.find(sel);
-                    if ($el.hasClass('select2-hidden-accessible')) {
-                        $el.select2('destroy'); // hindari duplikasi inisialisasi
-                    }
-                    $el.select2({
-                        dropdownParent: $modal, // penting agar dropdown muncul di atas modal
-                        width: '100%',
-                        placeholder: '-- Select --',
-                        allowClear: true
+                function initSelect2ForModal() {
+                    const $modal = $('#addPlanModal');
+                    ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                        const $el = $modal.find(sel);
+                        if ($el.hasClass('select2-hidden-accessible')) {
+                            $el.select2('destroy');
+                        }
+                        $el.select2({
+                            dropdownParent: $modal,
+                            width: '100%',
+                            placeholder: '-- Select --',
+                            allowClear: true
+                        });
+                    });
+                }
+
+                function populateModalOptions(list) {
+                    const $modal = $('#addPlanModal');
+                    ['#short_term', '#mid_term', '#long_term'].forEach(id => {
+                        const $s = $modal.find(id);
+                        $s.empty().append('<option value=""></option>');
+                        list.forEach(e => $s.append(`<option value="${e.id}">${esc(e.name)}</option>`));
+                    });
+                    initSelect2ForModal();
+                }
+
+                $(document).on('click', '.btn-show-modal', function() {
+                    currentId = $(this).data('id');
+
+                    const positionMap = {
+                        division: ['Act GM', 'GM'],
+                        department: ['Supervisor', 'Section Head'],
+                        section: ['Leader'],
+                        sub_section: ['JP', 'Act JP', 'Act Leader']
+                    };
+                    const targetPosition = (positionMap[currentFilter] || []).map(p => p.toLowerCase());
+                    filteredForModal = employees.filter(e => targetPosition.includes((e.position || '')
+                        .toLowerCase()));
+                });
+
+                $('#addPlanModal').on('shown.bs.modal', function() {
+                    populateModalOptions(filteredForModal || []);
+                });
+
+                $('#addPlanModal').on('hidden.bs.modal', function() {
+                    $(this).find('select').each(function() {
+                        try {
+                            $(this).val(null).trigger('change');
+                        } catch (e) {}
                     });
                 });
-            }
 
-            function populateModalOptions(list) {
-                const $modal = $('#addPlanModal');
-                ['#short_term', '#mid_term', '#long_term'].forEach(id => {
-                    const $s = $modal.find(id);
-                    $s.empty().append('<option value=""></option>');
-                    list.forEach(e => $s.append(`<option value="${e.id}">${esc(e.name)}</option>`));
+                $('#addPlanForm').on('submit', function(e) {
+                    e.preventDefault();
+                    $.ajax({
+                        url: '{{ route('rtc.update') }}',
+                        type: 'GET', // idealnya POST/PUT
+                        data: {
+                            filter: currentFilter,
+                            id: currentId,
+                            short_term: $('#short_term').val(),
+                            mid_term: $('#mid_term').val(),
+                            long_term: $('#long_term').val(),
+                        },
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    }).done(function() {
+                        $('#addPlanModal').modal('hide');
+                        if (window.IS_DIVISION_PRELOAD && currentFilter === 'division') {
+                            location.reload();
+                        } else {
+                            loadTable(currentFilter);
+                        }
+                    });
                 });
-                initSelect2ForModal();
-            }
-
-            // Buka modal Add Plan
-            $(document).on('click', '.btn-show-modal', function() {
-                currentId = $(this).data('id');
-
-                const positionMap = {
-                    division: ['Act GM', 'GM'],
-                    department: ['Supervisor', 'Section Head'],
-                    section: ['Leader'],
-                    sub_section: ['JP', 'Act JP', 'Act Leader']
-                };
-                const targetPosition = (positionMap[currentFilter] || []).map(p => p.toLowerCase());
-                filteredForModal = employees.filter(e =>
-                    targetPosition.includes((e.position || '').toLowerCase())
-                );
-                // Modal akan terbuka via data-bs-toggle, isi & init Select2 ketika modal sudah tampil
-            });
-
-            // Saat modal benar-benar tampil, isi option + init select2 (dropdownParent siap)
-            $('#addPlanModal').on('shown.bs.modal', function() {
-                populateModalOptions(filteredForModal || []);
-            });
-
-            // Optional: bersihkan nilai saat modal ditutup
-            $('#addPlanModal').on('hidden.bs.modal', function() {
-                $(this).find('select').each(function() {
-                    try {
-                        $(this).val(null).trigger('change');
-                    } catch (e) {}
-                });
-            });
-
-            // Tombol View → summary
-            $(document).on('click', '.btn-view', function(e) {
-                e.preventDefault();
-                const id = $(this).data('id');
-                window.location.href = `{{ route('rtc.summary') }}?id=${id}&filter=${currentFilter}`;
-            });
-
-            // Submit Add Plan
-            $('#addPlanForm').on('submit', function(e) {
-                e.preventDefault();
-                $.ajax({
-                    url: '{{ route('rtc.update') }}',
-                    type: 'GET', // (idealnya POST/PUT)
-                    data: {
-                        filter: currentFilter,
-                        id: currentId,
-                        short_term: $('#short_term').val(),
-                        mid_term: $('#mid_term').val(),
-                        long_term: $('#long_term').val(),
-                    },
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    }
-                }).done(function() {
-                    $('#addPlanModal').modal('hide');
-                    if (window.IS_DIVISION_PRELOAD && currentFilter === 'division') {
-                        location.reload();
-                    } else {
-                        loadTable(currentFilter);
-                    }
-                });
-            });
+            @endif
 
             // Simple client-side search
             $('#searchButton').on('click', function() {

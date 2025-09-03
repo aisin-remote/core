@@ -10,7 +10,7 @@
 
 @push('custom-css')
     <style>
-        /* ===== Status Chip (sama seperti IDP) ===== */
+        /* ===== Status Chip ===== */
         .status-chip {
             --bg: #eef2ff;
             --fg: #312e81;
@@ -31,7 +31,7 @@
             max-width: 280px;
             white-space: nowrap;
             overflow: hidden;
-            text-overflow: ellipsis
+            text-overflow: ellipsis;
         }
 
         .status-chip i {
@@ -55,13 +55,7 @@
             --dot: #10b981
         }
 
-        .status-chip[data-status="checked"] {
-            --bg: #fffbeb;
-            --fg: #92400e;
-            --bd: #fde68a;
-            --dot: #f59e0b
-        }
-
+        .status-chip[data-status="checked"],
         .status-chip[data-status="waiting"] {
             --bg: #fffbeb;
             --fg: #92400e;
@@ -163,101 +157,77 @@
                             <tbody>
                                 @forelse ($divisions as $division)
                                     @php
-                                        // Nama kandidat hasil dekorasi controller (fallback ke relasi lama kalau ada)
-                                        $shortName = $division->st_name ?? ($division->short->name ?? null);
-                                        $midName = $division->mt_name ?? ($division->mid->name ?? null);
-                                        $longName = $division->lt_name ?? ($division->long->name ?? null);
-
-                                        // Pemetaan kode -> data-status chip + ikon
-                                        $code = $division->overall_code ?? 'not_set';
-                                        $label = $division->overall_label ?? 'Not Set';
-                                        $chipStatus = match ($code) {
-                                            'approved' => 'approved',
-                                            'checked' => 'checked',
-                                            'submitted' => 'waiting',
-                                            'partial' => 'draft',
-                                            'complete_no_submit' => 'draft',
-                                            'not_set' => 'not_created',
-                                            default => 'unknown',
-                                        };
-                                        $icon = match ($chipStatus) {
-                                            'approved' => 'fas fa-circle-check',
-                                            'checked' => 'fas fa-clipboard-check',
-                                            'waiting' => 'fas fa-paper-plane',
-                                            'draft' => 'far fa-pen-to-square',
-                                            'not_created' => 'far fa-circle',
-                                            default => 'fa-circle-info',
-                                        };
-
-                                        $canAdd = property_exists($division, 'can_add')
-                                            ? (bool) $division->can_add
-                                            : !($shortName && $midName && $longName);
+                                        // Guard variabel status/plan hanya saat kolomnya tampil
+                                        $shortName = $showPlanColumns
+                                            ? $division->short->name ?? ($division->st_name ?? null)
+                                            : null;
+                                        $midName = $showPlanColumns
+                                            ? $division->mid->name ?? ($division->mt_name ?? null)
+                                            : null;
+                                        $longName = $showPlanColumns
+                                            ? $division->long->name ?? ($division->lt_name ?? null)
+                                            : null;
                                     @endphp
-
                                     <tr>
                                         <td>{{ $loop->iteration }}</td>
                                         <td class="text-center">{{ $division->name }}</td>
 
                                         @if ($showPlanColumns)
-                                            <td class="text-center">
-                                                @if ($shortName)
-                                                    {{ $shortName }}
-                                                @else
-                                                    <span class="text-danger">not set</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                @if ($midName)
-                                                    {{ $midName }}
-                                                @else
-                                                    <span class="text-danger">not set</span>
-                                                @endif
-                                            </td>
-                                            <td class="text-center">
-                                                @if ($longName)
-                                                    {{ $longName }}
-                                                @else
-                                                    <span class="text-danger">not set</span>
-                                                @endif
-                                            </td>
+                                            <td class="text-center">{{ $shortName ?: __('not set') }}</td>
+                                            <td class="text-center">{{ $midName ?: __('not set') }}</td>
+                                            <td class="text-center">{{ $longName ?: __('not set') }}</td>
                                         @endif
 
                                         @if ($showStatusColumn)
+                                            @php
+                                                $badge = [
+                                                    'text' => $division->overall_label ?? 'Not Set',
+                                                    'data_status' => match ($division->overall_code ?? 'not_set') {
+                                                        'approved' => 'approved',
+                                                        'checked' => 'checked',
+                                                        'submitted' => 'waiting',
+                                                        'partial', 'complete_no_submit' => 'draft',
+                                                        default => 'not_created',
+                                                    },
+                                                ];
+                                            @endphp
                                             <td class="text-center">
-                                                <span class="status-chip" data-status="{{ $chipStatus }}">
-                                                    <i class="fa-solid {{ $icon }}"></i>
-                                                    <span>{{ $label }}</span>
+                                                <span class="status-chip" data-status="{{ $badge['data_status'] }}">
+                                                    <i class="fa-solid fa-circle-info"></i>
+                                                    <span>{{ $badge['text'] }}</span>
                                                 </span>
                                             </td>
                                         @endif
+
                                         <td class="text-center">
-                                            @if ($table === 'Plant')
-                                                {{-- Direktur: buka daftar Division di Plant --}}
-                                                <a href="{{ route('rtc.list', ['id' => $division->id, 'level' => 'plant']) }}"
-                                                    class="btn btn-sm btn-primary" title="Open Divisions">
+                                            {{-- Detail untuk level Company → ke list plant --}}
+                                            @if ($table === 'Company')
+                                                <a href="{{ route('rtc.list', ['level' => 'company', 'id' => $division->id]) }}"
+                                                    class="btn btn-sm btn-primary" title="Detail">
                                                     <i class="fas fa-list-ul"></i>
                                                 </a>
-                                                <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => strtolower($table)]) }}"
-                                                    class="btn btn-sm btn-info" title="View" target="_blank">
-                                                    <i class="fas fa-eye"></i>
+
+                                                {{-- Detail untuk level Plant → ke list division di plant --}}
+                                            @elseif ($table === 'Plant')
+                                                <a href="{{ route('rtc.list', ['level' => 'plant', 'id' => $division->id]) }}"
+                                                    class="btn btn-sm btn-primary" title="Detail">
+                                                    <i class="fas fa-list-ul"></i>
                                                 </a>
+
+                                                {{-- Detail default (Division/Department dst.) --}}
                                             @else
-                                                {{-- Detail list (mode lama per Division/Department) --}}
                                                 <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">
                                                     <i class="fas fa-info-circle"></i>
                                                 </a>
-
-                                                {{-- View summary (filter HARUS lowercase) --}}
-                                                <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => strtolower($table)]) }}"
+                                                <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
                                                     <i class="fas fa-eye"></i>
                                                 </a>
-
-                                                {{-- Add Plan (kalau memang ditampilkan) --}}
-                                                @if (($metaById[$division->id]['can_add'] ?? true) && $showPlanColumns)
+                                                @if ($showPlanColumns)
                                                     <a href="#" class="btn btn-sm btn-success open-add-plan-modal"
-                                                        data-id="{{ $division->id }}">
+                                                        data-id="{{ $division->id }}" data-bs-toggle="modal"
+                                                        data-bs-target="#addPlanModal" title="Add">
                                                         <i class="fas fa-plus-circle"></i>
                                                     </a>
                                                 @endif
@@ -265,10 +235,8 @@
                                         </td>
                                     </tr>
                                 @empty
-                                    @php
-                                        $colspan = 2 + ($showPlanColumns ? 3 : 0) + ($showStatusColumn ? 1 : 0) + 1; // actions
-                                    @endphp
                                     <tr>
+                                        @php $colspan = 2 + ($showPlanColumns ? 3 : 0) + ($showStatusColumn ? 1 : 0) + 1; @endphp
                                         <td colspan="{{ $colspan }}" class="text-center text-muted">No data available
                                         </td>
                                     </tr>
@@ -281,7 +249,7 @@
         </div>
     </div>
 
-    {{-- Modal Add hanya saat boleh tambah plan (GM/Direktur tidak akan melihat karena showPlanColumns=false) --}}
+    {{-- Modal Add ditampilkan hanya jika kolom plan aktif --}}
     @if ($showPlanColumns)
         <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -296,7 +264,8 @@
                             @foreach (['short_term' => 'Short Term', 'mid_term' => 'Mid Term', 'long_term' => 'Long Term'] as $key => $label)
                                 <div class="mb-3">
                                     <label for="{{ $key }}" class="form-label">{{ $label }}</label>
-                                    <select id="{{ $key }}" class="form-select" name="{{ $key }}">
+                                    <select id="{{ $key }}" class="form-select select2-in-modal"
+                                        name="{{ $key }}">
                                         <option value="">-- Select --</option>
                                         @foreach ($employees as $employee)
                                             <option value="{{ $employee->id }}">{{ $employee->name }}</option>
@@ -329,10 +298,23 @@
                 if ($modal.length) $modal.modal('show');
             });
 
-            $('#submitPlanBtn').on('click', function() {
-                const $modal = $('#addPlanModal');
-                if (!$modal.length) return;
+            // Init Select2 saat modal tampil (gunakan dropdownParent agar tidak "tembus" modal)
+            $('#addPlanModal').on('shown.bs.modal', function() {
+                $(this).find('.select2-in-modal').each(function() {
+                    const $sel = $(this);
+                    if ($sel.hasClass('select2-hidden-accessible')) {
+                        $sel.select2('destroy');
+                    }
+                    $sel.select2({
+                        dropdownParent: $('#addPlanModal'),
+                        width: '100%',
+                        placeholder: '-- Select --',
+                        allowClear: true
+                    });
+                });
+            });
 
+            $('#submitPlanBtn').on('click', function() {
                 const formData = {
                     filter: @json($table),
                     id: currentDivisionId,
@@ -347,15 +329,13 @@
                     data: formData,
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    success: function() {
-                        $modal.modal('hide');
-                        window.location.reload();
-                    },
-                    error: function(xhr) {
-                        console.error(xhr.responseText);
-                        Swal.fire('Error', 'Something went wrong', 'error');
                     }
+                }).done(function() {
+                    $('#addPlanModal').modal('hide');
+                    window.location.reload();
+                }).fail(function(xhr) {
+                    console.error(xhr.responseText);
+                    Swal.fire('Error', 'Something went wrong', 'error');
                 });
             });
         </script>
