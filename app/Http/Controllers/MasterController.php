@@ -471,7 +471,7 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        $filter      = strtolower($request->input('filter', 'department')); // department|section|sub_section
+        $filter      = strtolower($request->input('filter', 'department')); // division/department|section|sub_section
         $division_id = (int) $request->input('division_id');
 
         $user     = auth()->user();
@@ -479,7 +479,7 @@ class MasterController extends Controller
 
         // GM hanya boleh lihat divisi yang dia pegang
         if ($employee && strcasecmp($employee->position, 'GM') === 0) {
-            $owns = \App\Models\Division::where('gm_id', $employee->id)
+            $owns = Division::where('gm_id', $employee->id)
                 ->where('id', $division_id)
                 ->exists();
             if (!$owns) {
@@ -489,21 +489,25 @@ class MasterController extends Controller
 
         // Ambil list item per filter
         switch ($filter) {
+            case 'division':
+                $data = Division::where('plant_id', $division_id)->orderBy('name')->get();
+                $areaKey = 'division';
+                break;
             case 'department':
-                $data = \App\Models\Department::where('division_id', $division_id)
+                $data = Department::where('division_id', $division_id)
                     ->orderBy('name')->get();
                 $areaKey = 'department';
                 break;
 
             case 'section':
-                $data = \App\Models\Section::whereHas('department', function ($q) use ($division_id) {
+                $data = Section::whereHas('department', function ($q) use ($division_id) {
                     $q->where('division_id', $division_id);
                 })->orderBy('name')->get();
                 $areaKey = 'section';
                 break;
 
             case 'sub_section':
-                $data = \App\Models\SubSection::whereHas('section.department', function ($q) use ($division_id) {
+                $data = SubSection::whereHas('section.department', function ($q) use ($division_id) {
                     $q->where('division_id', $division_id);
                 })->orderBy('name')->get();
                 $areaKey = 'sub_section';
@@ -535,21 +539,21 @@ class MasterController extends Controller
 
         // ==== bentuk payload JSON untuk tabel ====
         $items = $data->map(function ($item) use ($areas, $termAliases) {
-            $rtcShort = \App\Models\Rtc::whereIn('area', $areas)
+            $rtcShort = Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('short'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcMid = \App\Models\Rtc::whereIn('area', $areas)
+            $rtcMid = Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('mid'))
                 ->orderByDesc('id')
                 ->with(['employee:id,name,grade,birthday_date'])
                 ->first();
 
-            $rtcLong = \App\Models\Rtc::whereIn('area', $areas)
+            $rtcLong = Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('long'))
                 ->orderByDesc('id')
