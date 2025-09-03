@@ -8,6 +8,7 @@ use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
+use App\Models\Plant;
 use App\Models\SubSection;
 use Illuminate\Http\Request;
 
@@ -18,206 +19,399 @@ class RtcController extends Controller
         $user     = auth()->user();
         $employee = $user->employee;
 
-        if (!$employee) {
-            abort(403, 'Employee profile is missing.');
-        }
-
+        // fallback company dari employee
         $company ??= $employee->company_name;
-        $pos   = trim($employee->position ?? '');
-        $isGM  = strcasecmp($pos, 'GM') === 0;
 
-        // Tentukan level list dan kandidat posisi untuk Add Plan
-        if ($user->isHRDorDireksi()) {
-            $table   = 'Division';
-            $items   = Division::where('company', $company)->orderBy('name')->get();
-            $candPos = ['Manager', 'Coordinator'];
-        } elseif (strcasecmp($pos, 'Direktur') === 0) {
-            $table   = 'Division';
-            $items   = Division::where('company', $company)
-                ->where('plant_id', optional($employee->plant)->id)
-                ->orderBy('name')->get();
-            $candPos = ['Manager', 'Coordinator'];
-        } elseif ($isGM) {
-            // GM: list Division milik dia
-            $table   = 'Division';
-            $items   = Division::where('gm_id', $employee->id)->orderBy('name')->get();
-            $candPos = ['Manager', 'Coordinator'];
-        } else {
-            // Selain itu langsung ke Department di divisinya
-            $table      = 'Department';
-            $divisionId = $employee->division_id;
-            $items      = Department::when($divisionId, fn($q) => $q->where('division_id', $divisionId))
-                ->orderBy('name')->get();
-            $candPos = ['Supervisor', 'Section Head'];
+        $pos        = trim(strtolower($employee->position ?? ''));
+        $isGM       = ($pos === 'gm');
+        $isDirektur = ($pos === 'direktur');
+
+        // =========================
+        // 1) DIREKTUR → Tampilkan PLANT
+        // =========================
+        if ($isDirektur && $user->role === 'User') {
+            $table  = 'Plant';
+            $title  = 'RTC';
+            $items = Plant::query()
+                ->where('company', $company)
+                ->where('director_id', $employee->id)
+                ->orderBy('name')
+                ->get();
+
+            // Direktur di index hanya melihat daftar Plant (tanpa plan/status)
+            $showPlanColumns   = false;
+            $showStatusColumn  = false;
+
+            // Kompat untuk blade lama/baru
+            $payload = [
+                'items'            => $items,
+                'divisions'        => $items, // agar blade yg masih pakai $divisions tetap aman
+                'employees'        => collect(),
+                'table'            => $table,
+                'rtcs'             => collect(),
+                'title'            => $title,
+                'showPlanColumns'  => $showPlanColumns,
+                'showStatusColumn' => $showStatusColumn,
+            ];
+
+            return view('website.rtc.index', $payload);
         }
 
-        $employees = Employee::whereIn('position', $candPos)
-            ->where('company_name', $company)
-            ->orderBy('name')->get();
+        // =========================
+        // 2) HRD → Division + plan + status
+        // =========================
+        if ($user->role === 'HRD') {
+            $table = 'Division';
+            $title = 'RTC';
 
-        // === Helper alias ===
-        $termAliases = function (string $term): array {
-            $t = strtolower(trim($term));
-            return match ($t) {
-                'short' => ['short', 'short_term', 'st', 's/t'],
-                'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
-                'long'  => ['long', 'long_term', 'lt', 'l/t'],
-                default => [$t],
-            };
-        };
-        $areaAliases = function (string $area): array {
-            $a = strtolower(trim($area));
-            $arr = [$a, ucfirst($a)];
-            if ($a === 'division')    $arr[] = 'Division';
-            if ($a === 'sub_section') $arr[] = 'Sub_section';
-            return array_values(array_unique($arr));
-        };
+            $raw = Division::query()
+                ->where('company', $company)
+                ->orderBy('name')
+                ->get();
 
-        $areaKey = strtolower($table);                  // 'division' | 'department'
-        $areas   = $areaAliases($areaKey);
-        $ids     = $items->pluck('id')->all();
+            // hias ST/MT/LT & overall
+            $items = $this->decoratePlansAndOverall($raw, 'division');
 
-        // Ambil semua RTC terkait (terbaru duluan)
-        $rtcs = Rtc::whereIn('area', $areas)
-            ->whereIn('area_id', $ids)
-            ->with('employee:id,name,grade,birthday_date')
-            ->orderByDesc('id')
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $company)
+                ->get();
+
+            $showPlanColumns   = true;
+            $showStatusColumn  = true;
+
+            $payload = [
+                'items'            => $items,
+                'divisions'        => $items,
+                'employees'        => $employees,
+                'table'            => $table,
+                'rtcs'             => Rtc::all(), // jika masih dipakai blade lama
+                'title'            => $title,
+                'showPlanColumns'  => $showPlanColumns,
+                'showStatusColumn' => $showStatusColumn,
+            ];
+
+            return view('website.rtc.index', $payload);
+        }
+
+        // =========================
+        // 3) GM → Division miliknya (tanpa plan & status)
+        // =========================
+        if ($isGM) {
+            $table = 'Division';
+            $title = 'RTC';
+
+            $items = Division::query()
+                ->where('gm_id', $employee->id)
+                ->orderBy('name')
+                ->get();
+
+            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
+                ->where('company_name', $employee->company_name)
+                ->get();
+
+            // GM: Sembunyikan kolom plan & status
+            $showPlanColumns   = false;
+            $showStatusColumn  = false;
+
+            $payload = [
+                'items'            => $items,
+                'divisions'        => $items,
+                'employees'        => $employees,
+                'table'            => $table,
+                'rtcs'             => Rtc::all(),
+                'title'            => $title,
+                'showPlanColumns'  => $showPlanColumns,
+                'showStatusColumn' => $showStatusColumn,
+            ];
+
+            return view('website.rtc.index', $payload);
+        }
+
+        // =========================
+        // 4) Role lain → Department + plan + status (berdasarkan division user)
+        // =========================
+        $table      = 'Department';
+        $title      = 'RTC';
+        $divisionId = $employee->division_id ?? null;
+
+        $raw = Department::query()
+            ->when($divisionId, fn($q) => $q->where('division_id', $divisionId))
+            ->orderBy('name')
             ->get();
 
-        // Picker RTC terbaru per item+term (pakai aliases)
-        $pickLatest = function ($list, int $areaId, string $term) use ($termAliases) {
-            $aliases = array_map('strtolower', $termAliases($term));
-            return $list->first(function ($r) use ($areaId, $aliases) {
-                return (int)$r->area_id === $areaId && in_array(strtolower($r->term), $aliases, true);
-            });
+        $items = $this->decoratePlansAndOverall($raw, 'department');
+
+        $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
+            ->where('company_name', $employee->company_name)
+            ->get();
+
+        $showPlanColumns   = true;
+        $showStatusColumn  = true;
+
+        $payload = [
+            'items'            => $items,
+            'divisions'        => $items,
+            'employees'        => $employees,
+            'table'            => $table,
+            'rtcs'             => Rtc::all(),
+            'title'            => $title,
+            'showPlanColumns'  => $showPlanColumns,
+            'showStatusColumn' => $showStatusColumn,
+        ];
+
+        return view('website.rtc.index', $payload);
+    }
+
+    /**
+     * Hias koleksi item (Division/Department) dengan:
+     * - st_name / mt_name / lt_name (nama kandidat)
+     * - overall_label / overall_code (Not Set / Complete / Submitted / Checked / Approved / Partial)
+     * - can_add (false bila ST/MT/LT sudah lengkap)
+     *
+     * @param \Illuminate\Support\Collection $items
+     * @param string $areaKey 'division' | 'department' | 'section' | 'sub_section'
+     * @return \Illuminate\Support\Collection
+     */
+    private function decoratePlansAndOverall($items, string $areaKey)
+    {
+        // area variant agar tahan kasus 'Division' (huruf besar) / 'Sub_section'
+        $areas = [$areaKey, ucfirst($areaKey)];
+        if ($areaKey === 'division')    $areas[] = 'Division';
+        if ($areaKey === 'sub_section') $areas[] = 'Sub_section';
+
+        // alias term
+        $termAliases = [
+            'short' => ['short', 'short_term', 'st', 's/t'],
+            'mid'   => ['mid',   'mid_term',   'mt', 'm/t'],
+            'long'  => ['long',  'long_term',  'lt', 'l/t'],
+        ];
+
+        $findLatest = function ($areaId, $term) use ($areas, $termAliases) {
+            return Rtc::whereIn('area', $areas)
+                ->where('area_id', $areaId)
+                ->whereIn('term', $termAliases[$term])
+                ->with('employee:id,name')
+                ->orderByDesc('id')
+                ->first();
         };
 
-        // Tempel kandidat dari RTC ke relasi 'short'/'mid'/'long' + hitung status overall
-        $metaById = [];
-        foreach ($items as $it) {
-            $rtcS = $pickLatest($rtcs, $it->id, 'short');
-            $rtcM = $pickLatest($rtcs, $it->id, 'mid');
-            $rtcL = $pickLatest($rtcs, $it->id, 'long');
+        return $items->map(function ($item) use ($findLatest) {
+            $sid = $item->id;
 
-            // supaya blade lama `$division->short->name` tetap jalan
-            $it->setRelation('short', optional($rtcS)->employee);
-            $it->setRelation('mid',   optional($rtcM)->employee);
-            $it->setRelation('long',  optional($rtcL)->employee);
+            $rS = $findLatest($sid, 'short');
+            $rM = $findLatest($sid, 'mid');
+            $rL = $findLatest($sid, 'long');
 
-            $hasS = !is_null(optional($rtcS)->employee);
-            $hasM = !is_null(optional($rtcM)->employee);
-            $hasL = !is_null(optional($rtcL)->employee);
+            $st = optional($rS?->employee)->name;
+            $mt = optional($rM?->employee)->name;
+            $lt = optional($rL?->employee)->name;
+
+            $hasS = (bool) $st;
+            $hasM = (bool) $mt;
+            $hasL = (bool) $lt;
             $complete3 = $hasS && $hasM && $hasL;
 
-            $vals = collect([$rtcS?->status, $rtcM?->status, $rtcL?->status])
-                ->filter(fn($v) => in_array($v, [0, 1, 2], true));
+            $statuses = collect([$rS?->status, $rM?->status, $rL?->status])
+                ->filter(fn($v) => in_array($v, [0, 1, 3], true)); // 0=submitted, 1=checked, 3=approved
 
-            // Mapping chip status (disamakan dengan list-rtc)
-            $overall = ['text' => 'Not Set', 'code' => 'not_set', 'data_status' => 'not_created'];
+            $label = 'Not Set';
+            $code  = 'not_set';
+
             if ($complete3) {
-                if ($vals->isEmpty()) {
-                    $overall = ['text' => 'Complete', 'code' => 'complete_no_submit', 'data_status' => 'draft'];
+                if ($statuses->isEmpty()) {
+                    $label = 'Complete';
+                    $code  = 'complete_no_submit';
                 } else {
-                    if ($vals->every(fn($v) => $v === 2)) {
-                        $overall = ['text' => 'Approved', 'code' => 'approved', 'data_status' => 'approved'];
-                    } elseif ($vals->every(fn($v) => $v === 1)) {
-                        $overall = ['text' => 'Checked', 'code' => 'checked', 'data_status' => 'checked'];
-                    } elseif ($vals->every(fn($v) => $v === 0)) {
-                        $overall = ['text' => 'Submitted', 'code' => 'submitted', 'data_status' => 'waiting'];
+                    $allApproved  = $statuses->every(fn($v) => $v === 3);
+                    $allChecked   = $statuses->every(fn($v) => $v === 1);
+                    $allSubmitted = $statuses->every(fn($v) => $v === 0);
+
+                    if ($allApproved) {
+                        $label = 'Approved';
+                        $code = 'approved';
+                    } elseif ($allChecked) {
+                        $label = 'Checked';
+                        $code = 'checked';
+                    } elseif ($allSubmitted) {
+                        $label = 'Submitted';
+                        $code = 'submitted';
                     } else {
-                        $overall = ['text' => 'Partial', 'code' => 'partial', 'data_status' => 'draft'];
+                        $label = 'Partial';
+                        $code = 'partial';
                     }
                 }
             }
 
-            $metaById[$it->id] = [
-                'overall_badge' => $overall,
-                'can_add'       => !$complete3,     // hide tombol Add bila sudah lengkap 3 term
-                'short_status'  => $rtcS?->status,  // optional kalau butuh
-                'mid_status'    => $rtcM?->status,
-                'long_status'   => $rtcL?->status,
-            ];
-        }
+            // set ke item agar langsung dipakai di blade
+            $item->st_name        = $st;
+            $item->mt_name        = $mt;
+            $item->lt_name        = $lt;
+            $item->overall_label  = $label;
+            $item->overall_code   = $code;
+            $item->can_add        = !$complete3;
 
-        $title = 'RTC';
-
-        // GM di halaman Division → kolom plan disembunyikan
-        $showPlanColumns = !($isGM && $table === 'Division');
-
-        // GM tidak melihat kolom Status di index
-        $showStatusColumn = !$isGM;
-
-        // Agar blade tetap kompatibel (loop pakai $divisions)
-        $divisions = $items;
-
-        return view('website.rtc.index', compact(
-            'divisions',      // bisa Division/Department collection
-            'employees',      // untuk modal Add (kalau diizinkan)
-            'table',          // 'Division' | 'Department'
-            'rtcs',           // RTC terfilter area (sudah with employee)
-            'title',
-            'showPlanColumns',
-            'metaById',        // dipakai utk kolom Status & hide tombol Add
-            'showStatusColumn'
-        ));
+            return $item;
+        });
     }
 
-    public function showDivision($id)
+    public function list(Request $request, $id = null)
     {
-        $user = auth()->user();
-        $employee = $user->employee;
-        $isGM = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
+        $id    = (int) ($id ?? $request->query('id'));
+        $level = $request->query('level');
 
-        $division = Division::findOrFail($id);
-        if ($isGM && $division->gm_id !== $employee->id) abort(403);
-
-        // DETAIL = list Department → GM BOLEH lihat & edit plan
-        $table = 'Department';
-        $divisions = Department::where('division_id', $division->id)->get();
-        $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
-            ->where('company_name', $employee->company_name)->get();
-
-        $rtcs = Rtc::all();
-        $title = 'RTC - ' . $division->name;
-
-        $showPlanColumns = true; // penting!
-
-        return view('website.rtc.index', compact(
-            'divisions',
-            'employees',
-            'table',
-            'rtcs',
-            'title',
-            'showPlanColumns'
-        ));
-    }
-
-    public function list($id)
-    {
         $user     = auth()->user();
         $employee = $user->employee;
 
-        $division    = Division::findOrFail($id);
-        $divisionId  = $division->id;
-        $employees   = Employee::where('company_name', $employee->company_name)->get();
+        // ====== MODE: Direktur klik Plant -> tampilkan DIVISION di Plant tsb ======
+        if ($level === 'plant') {
+            if (! $employee || strcasecmp($employee->position ?? '', 'Direktur') !== 0) {
+                abort(403, 'Unauthorized');
+            }
+            $plant = Plant::findOrFail($id);
+            if ((int) $plant->director_id !== (int) $employee->id) {
+                abort(403, 'Unauthorized plant');
+            }
 
-        // --- default tab ---
-        if ($user->role === 'HRD' || ($employee && $employee->position === 'Direktur')) {
+            $divisions = Division::where('plant_id', $plant->id)
+                ->orderBy('name')
+                ->get();
+
+            $decorated = $this->decoratePlansAndOverall($divisions, 'division');
+
+            $itemsForJs = $decorated->map(function ($d) {
+                return [
+                    'id'   => $d->id,
+                    'name' => $d->name,
+                    'short' => ['name' => $d->st_name],
+                    'mid'   => ['name' => $d->mt_name],
+                    'long'  => ['name' => $d->lt_name],
+                    'overall' => [
+                        'label' => $d->overall_label,
+                        'code'  => $d->overall_code,
+                    ],
+                    'can_add' => $d->can_add,
+                ];
+            })->values();
+
+            return view('website.rtc.list', [
+                'title'         => 'RTC',
+                'cardTitle'     => 'Division List',
+                'divisionId'    => null,
+                'employees'     => Employee::whereIn('position', ['GM', 'Act GM'])
+                    ->where('company_name', $employee->company_name)
+                    ->get(),
+                'user'          => $user,
+                'defaultFilter' => 'division',
+                'items'         => $itemsForJs,
+            ]);
+        }
+
+
+        $divisionId    = $id;
+        $title         = 'RTC';
+        $isGM          = strcasecmp(trim($employee->position ?? ''), 'GM') === 0;
+        $isDirektur    = strcasecmp(trim($employee->position ?? ''), 'Direktur') === 0;
+
+        if ($user->role === 'HRD' || $isGM) {
             $defaultFilter = 'department';
-        } elseif ($employee && $employee->position === 'GM') {
-            $defaultFilter = 'department';              // <— GM wajib Department dulu
+        } elseif ($user->role === 'User' && $isDirektur) {
+            $defaultFilter = 'division';
         } else {
             $defaultFilter = 'section';
         }
 
-        $cardTitle = 'Department List'; // biar judul awal sesuai tab default
-        return view('website.rtc.list', compact(
-            'divisionId',
-            'employees',
-            'user',
-            'defaultFilter',
-            'cardTitle'
-        ));
+        return view('website.rtc.list', [
+            'title'         => $title,
+            'divisionId'    => $divisionId,
+            'employees'     => Employee::select('id', 'name', 'position', 'company_name')->get(),
+            'user'          => $user,
+            'defaultFilter' => $defaultFilter,
+            'cardTitle'     => 'List',
+            'items'         => [],
+        ]);
+    }
+
+    /**
+     * Helper: hitung overall status untuk koleksi item (Division/Department)
+     * Status: 0=Submitted, 1=Checked, 3=Approved
+     */
+    private function buildOverallFor($items, string $areaKey): array
+    {
+        $areas = [$areaKey, ucfirst($areaKey)];
+        if ($areaKey === 'division')    $areas[] = 'Division';
+        if ($areaKey === 'sub_section') $areas[] = 'Sub_section';
+
+        $termAliases = [
+            'short' => ['short', 'short_term', 'st', 's/t'],
+            'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
+            'long'  => ['long', 'long_term', 'lt', 'l/t'],
+        ];
+
+        $overall   = [];
+        $termNames = [];
+
+        foreach ($items as $item) {
+            $id = $item->id;
+
+            $find = function ($term) use ($areas, $id, $termAliases) {
+                return Rtc::whereIn('area', $areas)
+                    ->where('area_id', $id)
+                    ->whereIn('term', $termAliases[$term])
+                    ->with('employee:id,name')
+                    ->orderByDesc('id')
+                    ->first();
+            };
+
+            $rS = $find('short');
+            $rM = $find('mid');
+            $rL = $find('long');
+
+            $termNames[$id] = [
+                'short' => optional($rS?->employee)->name,
+                'mid'   => optional($rM?->employee)->name,
+                'long'  => optional($rL?->employee)->name,
+            ];
+
+            $hasS = (bool) $termNames[$id]['short'];
+            $hasM = (bool) $termNames[$id]['mid'];
+            $hasL = (bool) $termNames[$id]['long'];
+            $complete3 = $hasS && $hasM && $hasL;
+
+            $statuses = collect([$rS?->status, $rM?->status, $rL?->status])
+                ->filter(fn($v) => in_array($v, [0, 1, 3], true));
+
+            $label = 'Not Set';
+            $code  = 'not_set';
+
+            if ($complete3) {
+                if ($statuses->isEmpty()) {
+                    $label = 'Complete';
+                    $code  = 'complete_no_submit';
+                } else {
+                    $allApproved  = $statuses->every(fn($v) => $v === 3);
+                    $allChecked   = $statuses->every(fn($v) => $v === 1);
+                    $allSubmitted = $statuses->every(fn($v) => $v === 0);
+
+                    if ($allApproved) {
+                        $label = 'Approved';
+                        $code = 'approved';
+                    } elseif ($allChecked) {
+                        $label = 'Checked';
+                        $code = 'checked';
+                    } elseif ($allSubmitted) {
+                        $label = 'Submitted';
+                        $code = 'submitted';
+                    } else {
+                        $label = 'Partial';
+                        $code = 'partial';
+                    }
+                }
+            }
+
+            $overall[$id] = compact('label', 'code');
+        }
+
+        return ['overall' => $overall, 'termNames' => $termNames];
     }
 
     public function detail(Request $request)
@@ -272,8 +466,6 @@ class RtcController extends Controller
         return view('website.rtc.detail', compact('data', 'filter'));
     }
 
-    // app/Http/Controllers/RtcController.php
-
     public function summary(Request $request)
     {
         $filter = strtolower($request->query('filter', 'department'));
@@ -310,7 +502,48 @@ class RtcController extends Controller
         $pickColor = fn(string $key) => $palette[crc32($key) % count($palette)];
 
         switch ($filter) {
-            /* =========================== DIVISION =========================== */
+            case 'plant': {
+                    // hanya direktur yang relevan, tapi jika tidak perlu batasi, hapus guard ini
+                    // $employee = auth()->user()->employee;
+                    // if (strcasecmp($employee->position ?? '', 'Direktur') !== 0) abort(403);
+
+                    $p = Plant::with('director')->findOrFail($id);
+                    $title = $p->name ?? 'Plant';
+
+                    // di Plant kita jadikan node utama = plant; sembunyikan S/M/L di root
+                    $hideMainPlans = true;
+
+                    $main = [
+                        'title'      => $p->name ?? '-',
+                        'person'     => RtcHelper::formatPerson($p->director ?? null),
+                        'shortTerm'  => null,
+                        'midTerm'    => null,
+                        'longTerm'   => null,
+                        'colorClass' => 'color-1',
+                    ];
+
+                    $divs = Division::with(['gm', 'short', 'mid', 'long'])
+                        ->where('plant_id', $p->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    $managers = [];
+                    foreach ($divs as $d) {
+                        RtcHelper::setAreaContext('division', $d->id);
+                        $managers[] = [
+                            'title'      => $d->name,
+                            'person'     => RtcHelper::formatPerson($d->gm),
+                            'shortTerm'  => RtcHelper::formatCandidate($d->short, 'short'),
+                            'midTerm'    => RtcHelper::formatCandidate($d->mid,   'mid'),
+                            'longTerm'   => RtcHelper::formatCandidate($d->long,  'long'),
+                            'colorClass' => 'color-2',
+                            'supervisors' => [],           // stop di level division
+                            'skipManagerNode' => false,
+                        ];
+                    }
+                    break;
+                }
+                /* =========================== DIVISION =========================== */
             case 'division': {
                     // GM melihat summary division → sembunyikan S/T, M/T, L/T pada node utama
                     $hideMainPlans = $isGM;

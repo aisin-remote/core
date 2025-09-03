@@ -163,74 +163,35 @@
                             <tbody>
                                 @forelse ($divisions as $division)
                                     @php
-                                        $takeTerm = function ($term) use ($rtcs, $division) {
-                                            $aliases = [
-                                                'short' => ['short', 'short_term', 'st', 's/t'],
-                                                'mid' => ['mid', 'mid_term', 'mt', 'm/t'],
-                                                'long' => ['long', 'long_term', 'lt', 'l/t'],
-                                            ][$term] ?? [$term];
-                                            return $rtcs->first(function ($r) use ($division, $aliases) {
-                                                return (int) $r->area_id === (int) $division->id &&
-                                                    in_array(strtolower($r->term), $aliases, true);
-                                            });
+                                        // Nama kandidat hasil dekorasi controller (fallback ke relasi lama kalau ada)
+                                        $shortName = $division->st_name ?? ($division->short->name ?? null);
+                                        $midName = $division->mt_name ?? ($division->mid->name ?? null);
+                                        $longName = $division->lt_name ?? ($division->long->name ?? null);
+
+                                        // Pemetaan kode -> data-status chip + ikon
+                                        $code = $division->overall_code ?? 'not_set';
+                                        $label = $division->overall_label ?? 'Not Set';
+                                        $chipStatus = match ($code) {
+                                            'approved' => 'approved',
+                                            'checked' => 'checked',
+                                            'submitted' => 'waiting',
+                                            'partial' => 'draft',
+                                            'complete_no_submit' => 'draft',
+                                            'not_set' => 'not_created',
+                                            default => 'unknown',
                                         };
-                                        $rtcShort = $takeTerm('short');
-                                        $rtcMid = $takeTerm('mid');
-                                        $rtcLong = $takeTerm('long');
+                                        $icon = match ($chipStatus) {
+                                            'approved' => 'fas fa-circle-check',
+                                            'checked' => 'fas fa-clipboard-check',
+                                            'waiting' => 'fas fa-paper-plane',
+                                            'draft' => 'far fa-pen-to-square',
+                                            'not_created' => 'far fa-circle',
+                                            default => 'fa-circle-info',
+                                        };
 
-                                        // Nama kandidat (pakai relasi lama di model Division)
-                                        $shortName = $division->short->name ?? null;
-                                        $midName = $division->mid->name ?? null;
-                                        $longName = $division->long->name ?? null;
-
-                                        // lengkap 3 kandidat?
-                                        $hasShort = !empty($shortName);
-                                        $hasMid = !empty($midName);
-                                        $hasLong = !empty($longName);
-                                        $complete3 = $hasShort && $hasMid && $hasLong;
-
-                                        // status per-term (0=submitted,1=checked,3=approved)
-                                        $s = $rtcShort->status ?? null;
-                                        $m = $rtcMid->status ?? null;
-                                        $l = $rtcLong->status ?? null;
-
-                                        // Map keseluruhan (sejalan dengan list RTC)
-                                        $label = 'Not Set';
-                                        $code = 'not_set';
-                                        $icon = 'far fa-circle';
-                                        if ($complete3) {
-                                            $vals = collect([$s, $m, $l])->filter(
-                                                fn($v) => in_array($v, [0, 1, 3], true),
-                                            );
-                                            if ($vals->isEmpty()) {
-                                                $label = 'Complete';
-                                                $code = 'draft';
-                                                $icon = 'far fa-pen-to-square';
-                                            } else {
-                                                $allApproved = $vals->every(fn($v) => $v === 3);
-                                                $allChecked = $vals->every(fn($v) => $v === 1);
-                                                $allSubmitted = $vals->every(fn($v) => $v === 0);
-                                                if ($allApproved) {
-                                                    $label = 'Approved';
-                                                    $code = 'approved';
-                                                    $icon = 'fas fa-circle-check';
-                                                } elseif ($allChecked) {
-                                                    $label = 'Checked';
-                                                    $code = 'checked';
-                                                    $icon = 'fas fa-clipboard-check';
-                                                } elseif ($allSubmitted) {
-                                                    $label = 'Submitted';
-                                                    $code = 'waiting';
-                                                    $icon = 'fas fa-paper-plane';
-                                                } else {
-                                                    $label = 'Partial';
-                                                    $code = 'draft';
-                                                    $icon = 'far fa-pen-to-square';
-                                                }
-                                            }
-                                        }
-
-                                        $canAdd = !$complete3; // hide Add jika sudah lengkap 3
+                                        $canAdd = property_exists($division, 'can_add')
+                                            ? (bool) $division->can_add
+                                            : !($shortName && $midName && $longName);
                                     @endphp
 
                                     <tr>
@@ -261,50 +222,53 @@
                                             </td>
                                         @endif
 
-                                        {{-- Status keseluruhan (chip) --}}
-                                        @php
-                                            $meta = $metaById[$division->id] ?? null;
-                                            $badge = $meta['overall_badge'] ?? [
-                                                'text' => 'Not Set',
-                                                'data_status' => 'not_created',
-                                            ];
-                                        @endphp
-
                                         @if ($showStatusColumn)
                                             <td class="text-center">
-                                                <span class="status-chip" data-status="{{ $badge['data_status'] }}">
-                                                    <i class="fa-solid fa-circle-info"></i>
-                                                    <span>{{ $badge['text'] }}</span>
+                                                <span class="status-chip" data-status="{{ $chipStatus }}">
+                                                    <i class="fa-solid {{ $icon }}"></i>
+                                                    <span>{{ $label }}</span>
                                                 </span>
                                             </td>
                                         @endif
-
-
                                         <td class="text-center">
-                                            {{-- Detail list (ke /rtc/list/:id sesuai route name rtc.list) --}}
-                                            <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
-                                                class="btn btn-sm btn-primary" title="Detail">
-                                                <i class="fas fa-info-circle"></i>
-                                            </a>
-
-                                            {{-- View summary (buka orgchart summary) --}}
-                                            <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
-                                                class="btn btn-sm btn-info" title="View" target="_blank">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-
-                                            {{-- Add Plan -> hidden bila complete3 --}}
-                                            @if (($metaById[$division->id]['can_add'] ?? true) && $showPlanColumns)
-                                                <a href="#" class="btn btn-sm btn-success open-add-plan-modal"
-                                                    data-id="{{ $division->id }}">
-                                                    <i class="fas fa-plus-circle"></i>
+                                            @if ($table === 'Plant')
+                                                {{-- Direktur: buka daftar Division di Plant --}}
+                                                <a href="{{ route('rtc.list', ['id' => $division->id, 'level' => 'plant']) }}"
+                                                    class="btn btn-sm btn-primary" title="Open Divisions">
+                                                    <i class="fas fa-list-ul"></i>
                                                 </a>
+                                                <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => strtolower($table)]) }}"
+                                                    class="btn btn-sm btn-info" title="View" target="_blank">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+                                            @else
+                                                {{-- Detail list (mode lama per Division/Department) --}}
+                                                <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
+                                                    class="btn btn-sm btn-primary" title="Detail">
+                                                    <i class="fas fa-info-circle"></i>
+                                                </a>
+
+                                                {{-- View summary (filter HARUS lowercase) --}}
+                                                <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => strtolower($table)]) }}"
+                                                    class="btn btn-sm btn-info" title="View" target="_blank">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
+
+                                                {{-- Add Plan (kalau memang ditampilkan) --}}
+                                                @if (($metaById[$division->id]['can_add'] ?? true) && $showPlanColumns)
+                                                    <a href="#" class="btn btn-sm btn-success open-add-plan-modal"
+                                                        data-id="{{ $division->id }}">
+                                                        <i class="fas fa-plus-circle"></i>
+                                                    </a>
+                                                @endif
                                             @endif
                                         </td>
                                     </tr>
                                 @empty
+                                    @php
+                                        $colspan = 2 + ($showPlanColumns ? 3 : 0) + ($showStatusColumn ? 1 : 0) + 1; // actions
+                                    @endphp
                                     <tr>
-                                        @php $colspan = 3 + ($showPlanColumns ? 3 : 0); @endphp
                                         <td colspan="{{ $colspan }}" class="text-center text-muted">No data available
                                         </td>
                                     </tr>
@@ -317,7 +281,7 @@
         </div>
     </div>
 
-    {{-- Modal Add hanya ditampilkan saat boleh tambah plan --}}
+    {{-- Modal Add hanya saat boleh tambah plan (GM/Direktur tidak akan melihat karena showPlanColumns=false) --}}
     @if ($showPlanColumns)
         <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -355,51 +319,47 @@
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    @push('scripts')
-        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    @if ($showPlanColumns)
+        <script>
+            let currentDivisionId = null;
 
-        @if ($showPlanColumns)
-            <script>
-                let currentDivisionId = null;
+            $(document).on('click', '.open-add-plan-modal', function() {
+                currentDivisionId = $(this).data('id');
+                const $modal = $('#addPlanModal');
+                if ($modal.length) $modal.modal('show');
+            });
 
-                $(document).on('click', '.open-add-plan-modal', function() {
-                    currentDivisionId = $(this).data('id');
-                    const $modal = $('#addPlanModal');
-                    if ($modal.length) $modal.modal('show');
+            $('#submitPlanBtn').on('click', function() {
+                const $modal = $('#addPlanModal');
+                if (!$modal.length) return;
+
+                const formData = {
+                    filter: @json($table),
+                    id: currentDivisionId,
+                    short_term: $('#short_term').val(),
+                    mid_term: $('#mid_term').val(),
+                    long_term: $('#long_term').val(),
+                };
+
+                $.ajax({
+                    url: '{{ route('rtc.update') }}',
+                    type: 'GET', // idealnya POST/PUT
+                    data: formData,
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    success: function() {
+                        $modal.modal('hide');
+                        window.location.reload();
+                    },
+                    error: function(xhr) {
+                        console.error(xhr.responseText);
+                        Swal.fire('Error', 'Something went wrong', 'error');
+                    }
                 });
-
-                $('#submitPlanBtn').on('click', function() {
-                    const $modal = $('#addPlanModal');
-                    if (!$modal.length) return; // guard
-
-                    const formData = {
-                        filter: @json($table),
-                        id: currentDivisionId,
-                        short_term: $('#short_term').val(),
-                        mid_term: $('#mid_term').val(),
-                        long_term: $('#long_term').val(),
-                    };
-
-                    $.ajax({
-                        url: '{{ route('rtc.update') }}',
-                        type: 'GET', // (idealnya POST/PUT)
-                        data: formData,
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        success: function() {
-                            $modal.modal('hide');
-                            window.location.reload();
-                        },
-                        error: function(xhr) {
-                            console.error(xhr.responseText);
-                            Swal.fire('Error', 'Something went wrong', 'error');
-                        }
-                    });
-                });
-            </script>
-        @endif
-    @endpush
+            });
+        </script>
+    @endif
 
     <script>
         // Simple search di client
