@@ -63,7 +63,6 @@
                         </tr>
                     </thead>
                     <tbody>
-
                         @foreach ($employees as $item)
                             <tr data-position="{{ $item->employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
@@ -375,10 +374,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                                                                                                                                                                                                data-id="${hav.id}"
-                                                                                                                                                                                                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                                                                                                                                                                                    History
-                                                                                                                                                                                                                                </a>`}
+                                                                                                                                                                                                                                    data-id="${hav.id}"
+                                                                                                                                                                                                                                    class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                                                                                                                                                                        History
+                                                                                                                                                                                                                                    </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>
