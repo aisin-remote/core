@@ -324,18 +324,18 @@
                     role="tablist" style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('idp.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                            Show All
+                            <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
 
-                    {{-- Tab Dinamis --}}
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('idp.list', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                {{ $position }}
+                                <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
                     @endforeach
