@@ -38,7 +38,7 @@ class RtcController extends Controller
         $isVPD       = in_array($pos, ['vpd', 'vice president director', 'wakil presdir'], true)
             || ($normalized === 'vpd');
 
-        $isGM        = ($pos === 'gm');
+        $isGM = $employee && in_array($pos, ['gm', 'act gm'], true);
         $isDirektur  = ($pos === 'direktur');
 
         // =====================================================================
@@ -412,8 +412,6 @@ class RtcController extends Controller
         ]);
     }
 
-
-
     public function detail(Request $request)
     {
         // Ambil filter dan id dari query string
@@ -468,14 +466,12 @@ class RtcController extends Controller
 
     public function summary(Request $request, $id = null)
     {
-        // Ambil id dari: route param -> route()->parameter -> query
-        $id = (int) ($id ?? $request->route('id') ?? $request->query('id'));
-
-        // Normalisasi filter (case-insensitive)
+        $rawId  = $id ?? $request->route('id') ?? $request->query('id'); // company code / numeric id
         $filter = strtolower($request->query('filter', 'department'));
 
         $user     = auth()->user();
         $employee = $user->employee ?? null;
+
         $isGM = $employee && (
             strcasecmp($employee->position, 'GM') === 0 ||
             strcasecmp($employee->position, 'Act GM') === 0
@@ -485,38 +481,134 @@ class RtcController extends Controller
         $managers = [];
         $title = '-';
         $hideMainPlans = false;
+        $noRoot = false;      // tidak render root default
+        $groupTop = false;    // pakai group (container) di paling atas
 
-        $palette = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5', 'color-6', 'color-7', 'color-8', 'color-9', 'color-10', 'color-11', 'color-12', 'color-13', 'color-14'];
+        $palette = [
+            'color-1',
+            'color-2',
+            'color-3',
+            'color-4',
+            'color-5',
+            'color-6',
+            'color-7',
+            'color-8',
+            'color-9',
+            'color-10',
+            'color-11',
+            'color-12',
+            'color-13',
+            'color-14'
+        ];
         $pickColor = fn(string $key) => $palette[crc32($key) % count($palette)];
 
         switch ($filter) {
+            /* ======================== COMPANY → Group (President + VPD) ======================== */
+            case 'company': {
+                    $company = strtoupper((string) $rawId);
+
+                    $noRoot        = true;           // tidak ada node company di atas
+                    $groupTop      = true;           // render group container
+                    $hideMainPlans = true;           // root default tak dipakai
+                    $title         = $company . ' — Summary';
+
+                    // ambil President & VPD untuk company tsb (bebaskan sinonim umum)
+                    $president = \App\Models\Employee::where('company_name', $company)
+                        ->whereIn(\DB::raw('LOWER(position)'), ['president', 'president director', 'presdir'])
+                        ->latest('id')->first();
+
+                    $vpd = \App\Models\Employee::where('company_name', $company)
+                        ->whereIn(\DB::raw('LOWER(position)'), ['vpd', 'vice president director', 'wakil presdir'])
+                        ->latest('id')->first();
+
+                    // divisions milik company
+                    $divisions = \App\Models\Division::with(['gm', 'short', 'mid', 'long', 'plant:id,company'])
+                        ->whereHas('plant', fn($q) => $q->where('company', $company))
+                        ->orderBy('name')
+                        ->get();
+
+                    // subtree Division: kita simpan hanya di President (nanti blade menaruhnya sebagai anak GROUP)
+                    $divNodes = [];
+                    foreach ($divisions as $d) {
+                        \App\Helpers\RtcHelper::setAreaContext('division', $d->id);
+                        $divNodes[] = [
+                            'title'           => $d->name,
+                            'person'          => \App\Helpers\RtcHelper::formatPerson($d->gm),
+                            'shortTerm'       => \App\Helpers\RtcHelper::formatCandidate($d->short, 'short'),
+                            'midTerm'         => \App\Helpers\RtcHelper::formatCandidate($d->mid,   'mid'),
+                            'longTerm'        => \App\Helpers\RtcHelper::formatCandidate($d->long,  'long'),
+                            'colorClass'      => 'color-4',
+                            'supervisors'     => [],
+                            'skipManagerNode' => false,
+                        ];
+                    }
+
+                    // Dua node kepala (tanpa S/T M/T L/T)
+                    $managers = [
+                        [
+                            'title'           => 'PRESIDENT',
+                            'person'          => \App\Helpers\RtcHelper::formatPerson($president),
+                            'shortTerm'       => null,
+                            'midTerm'         => null,
+                            'longTerm'        => null,
+                            'colorClass'      => 'color-2',
+                            'supervisors'     => $divNodes,   // subtree Division disimpan di sini
+                            'skipManagerNode' => false,
+                            'no_plans'        => true,
+                        ],
+                        [
+                            'title'           => 'VPD',
+                            'person'          => \App\Helpers\RtcHelper::formatPerson($vpd),
+                            'shortTerm'       => null,
+                            'midTerm'         => null,
+                            'longTerm'        => null,
+                            'colorClass'      => 'color-3',
+                            'supervisors'     => [],          // tidak duplikasi anak
+                            'skipManagerNode' => false,
+                            'no_plans'        => true,
+                        ],
+                    ];
+
+                    $main = [
+                        'title'      => '',
+                        'person'     => null,
+                        'shortTerm'  => null,
+                        'midTerm'    => null,
+                        'longTerm'   => null,
+                        'colorClass' => 'color-1'
+                    ];
+
+                    return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
+                }
+
+                /* ============================= PLANT ============================= */
             case 'plant': {
-                    $p = Plant::with('director')->findOrFail($id);
+                    $id = (int) $rawId;
+
+                    $p = \App\Models\Plant::with('director')->findOrFail($id);
                     $title = $p->name ?? 'Plant';
                     $hideMainPlans = true;
 
                     $main = [
                         'title'      => $p->name ?? '-',
-                        'person'     => RtcHelper::formatPerson($p->director ?? null),
+                        'person'     => \App\Helpers\RtcHelper::formatPerson($p->director ?? null),
                         'shortTerm'  => null,
                         'midTerm'    => null,
                         'longTerm'   => null,
                         'colorClass' => 'color-1',
                     ];
 
-                    $divs = Division::with(['gm', 'short', 'mid', 'long'])
-                        ->where('plant_id', $p->id)
-                        ->orderBy('name')
-                        ->get();
+                    $divs = \App\Models\Division::with(['gm', 'short', 'mid', 'long'])
+                        ->where('plant_id', $p->id)->orderBy('name')->get();
 
                     foreach ($divs as $d) {
-                        RtcHelper::setAreaContext('division', $d->id);
+                        \App\Helpers\RtcHelper::setAreaContext('division', $d->id);
                         $managers[] = [
                             'title'      => $d->name,
-                            'person'     => RtcHelper::formatPerson($d->gm),
-                            'shortTerm'  => RtcHelper::formatCandidate($d->short, 'short'),
-                            'midTerm'    => RtcHelper::formatCandidate($d->mid,   'mid'),
-                            'longTerm'   => RtcHelper::formatCandidate($d->long,  'long'),
+                            'person'     => \App\Helpers\RtcHelper::formatPerson($d->gm),
+                            'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($d->short, 'short'),
+                            'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($d->mid, 'mid'),
+                            'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($d->long, 'long'),
                             'colorClass' => 'color-2',
                             'supervisors' => [],
                             'skipManagerNode' => false,
@@ -525,27 +617,28 @@ class RtcController extends Controller
                     break;
                 }
 
+                /* ============================ DIVISION ============================ */
             case 'division': {
+                    $id = (int) $rawId;
+
                     $hideMainPlans = $isGM;
 
-                    $div   = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
+                    $div   = \App\Models\Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $div->name ?? 'Division';
                     $mainColor = $pickColor("division-root-{$div->id}");
 
-                    RtcHelper::setAreaContext('Division', $div->id);
+                    \App\Helpers\RtcHelper::setAreaContext('Division', $div->id);
                     $main = [
                         'title'      => $div->name ?? '-',
-                        'person'     => RtcHelper::formatPerson($div->gm),
-                        'shortTerm'  => RtcHelper::formatCandidate($div->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($div->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($div->long,  'long'),
+                        'person'     => \App\Helpers\RtcHelper::formatPerson($div->gm),
+                        'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($div->short, 'short'),
+                        'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($div->mid, 'mid'),
+                        'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($div->long, 'long'),
                         'colorClass' => $mainColor,
                     ];
 
-                    $depts = Department::with(['manager', 'short', 'mid', 'long'])
-                        ->where('division_id', $div->id)
-                        ->orderBy('name')
-                        ->get();
+                    $depts = \App\Models\Department::with(['manager', 'short', 'mid', 'long'])
+                        ->where('division_id', $div->id)->orderBy('name')->get();
 
                     $deptPalette = array_values(array_filter($palette, fn($c) => $c !== $mainColor));
                     $deptIdx = 0;
@@ -553,31 +646,29 @@ class RtcController extends Controller
                     foreach ($depts as $d) {
                         $deptColor = $deptPalette[$deptIdx++ % count($deptPalette)];
 
-                        RtcHelper::setAreaContext('department', $d->id);
+                        \App\Helpers\RtcHelper::setAreaContext('department', $d->id);
                         $node = [
                             'title'           => $d->name,
-                            'person'          => RtcHelper::formatPerson($d->manager),
-                            'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
-                            'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
-                            'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
+                            'person'          => \App\Helpers\RtcHelper::formatPerson($d->manager),
+                            'shortTerm'       => \App\Helpers\RtcHelper::formatCandidate($d->short, 'short'),
+                            'midTerm'         => \App\Helpers\RtcHelper::formatCandidate($d->mid, 'mid'),
+                            'longTerm'        => \App\Helpers\RtcHelper::formatCandidate($d->long, 'long'),
                             'colorClass'      => $deptColor,
                             'supervisors'     => [],
                             'skipManagerNode' => false,
                         ];
 
-                        $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
-                            ->where('department_id', $d->id)
-                            ->orderBy('name')
-                            ->get();
+                        $secs = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])
+                            ->where('department_id', $d->id)->orderBy('name')->get();
 
                         foreach ($secs as $s) {
-                            RtcHelper::setAreaContext('section', $s->id);
+                            \App\Helpers\RtcHelper::setAreaContext('section', $s->id);
                             $node['supervisors'][] = [
                                 'title'      => $s->name,
-                                'person'     => RtcHelper::formatPerson($s->supervisor),
-                                'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
-                                'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
-                                'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                                'person'     => \App\Helpers\RtcHelper::formatPerson($s->supervisor),
+                                'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($s->short, 'short'),
+                                'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($s->mid, 'mid'),
+                                'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($s->long, 'long'),
                                 'colorClass' => $deptColor,
                             ];
                         }
@@ -586,47 +677,46 @@ class RtcController extends Controller
                     break;
                 }
 
+                /* ============================ DEPARTMENT ============================ */
             case 'department': {
-                    $hideMainPlans = false;
+                    $id = (int) $rawId;
 
-                    $d = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
+                    $d = \App\Models\Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $d->name ?? 'Department';
                     $mainColor = $pickColor("department-root-{$d->id}");
 
-                    RtcHelper::setAreaContext('department', $d->id);
+                    \App\Helpers\RtcHelper::setAreaContext('department', $d->id);
                     $main = [
                         'title'      => $d->name ?? '-',
-                        'person'     => RtcHelper::formatPerson($d->manager),
-                        'shortTerm'  => RtcHelper::formatCandidate($d->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($d->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($d->long,  'long'),
+                        'person'     => \App\Helpers\RtcHelper::formatPerson($d->manager),
+                        'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($d->short, 'short'),
+                        'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($d->mid, 'mid'),
+                        'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($d->long, 'long'),
                         'colorClass' => $mainColor,
                     ];
 
                     $container = [
                         'title'           => $d->name,
-                        'person'          => RtcHelper::formatPerson($d->manager),
-                        'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
-                        'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
-                        'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
+                        'person'          => \App\Helpers\RtcHelper::formatPerson($d->manager),
+                        'shortTerm'       => \App\Helpers\RtcHelper::formatCandidate($d->short, 'short'),
+                        'midTerm'         => \App\Helpers\RtcHelper::formatCandidate($d->mid, 'mid'),
+                        'longTerm'        => \App\Helpers\RtcHelper::formatCandidate($d->long, 'long'),
                         'colorClass'      => $mainColor,
                         'supervisors'     => [],
                         'skipManagerNode' => true,
                     ];
 
-                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
-                        ->where('department_id', $d->id)
-                        ->orderBy('name')
-                        ->get();
+                    $secs = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])
+                        ->where('department_id', $d->id)->orderBy('name')->get();
 
                     foreach ($secs as $s) {
-                        RtcHelper::setAreaContext('section', $s->id);
+                        \App\Helpers\RtcHelper::setAreaContext('section', $s->id);
                         $container['supervisors'][] = [
                             'title'      => $s->name,
-                            'person'     => RtcHelper::formatPerson($s->supervisor),
-                            'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
-                            'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
-                            'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                            'person'     => \App\Helpers\RtcHelper::formatPerson($s->supervisor),
+                            'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($s->short, 'short'),
+                            'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($s->mid, 'mid'),
+                            'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($s->long, 'long'),
                             'colorClass' => $mainColor,
                         ];
                     }
@@ -635,47 +725,46 @@ class RtcController extends Controller
                     break;
                 }
 
+                /* ============================== SECTION ============================== */
             case 'section': {
-                    $hideMainPlans = false;
+                    $id = (int) $rawId;
 
-                    $s = Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
+                    $s = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $s->name ?? 'Section';
                     $mainColor = $pickColor("section-root-{$s->id}");
 
-                    RtcHelper::setAreaContext('section', $s->id);
+                    \App\Helpers\RtcHelper::setAreaContext('section', $s->id);
                     $main = [
                         'title'      => $s->name ?? '-',
-                        'person'     => RtcHelper::formatPerson($s->supervisor),
-                        'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                        'person'     => \App\Helpers\RtcHelper::formatPerson($s->supervisor),
+                        'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($s->short, 'short'),
+                        'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($s->mid, 'mid'),
+                        'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($s->long, 'long'),
                         'colorClass' => $mainColor,
                     ];
 
                     $container = [
                         'title'           => $s->name,
-                        'person'          => RtcHelper::formatPerson($s->supervisor),
-                        'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
-                        'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
-                        'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                        'person'          => \App\Helpers\RtcHelper::formatPerson($s->supervisor),
+                        'shortTerm'       => \App\Helpers\RtcHelper::formatCandidate($s->short, 'short'),
+                        'midTerm'         => \App\Helpers\RtcHelper::formatCandidate($s->mid, 'mid'),
+                        'longTerm'        => \App\Helpers\RtcHelper::formatCandidate($s->long, 'long'),
                         'colorClass'      => $mainColor,
                         'supervisors'     => [],
                         'skipManagerNode' => true,
                     ];
 
-                    $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
-                        ->where('section_id', $s->id)
-                        ->orderBy('name')
-                        ->get();
+                    $subs = \App\Models\SubSection::with(['leader', 'short', 'mid', 'long'])
+                        ->where('section_id', $s->id)->orderBy('name')->get();
 
                     foreach ($subs as $sub) {
-                        RtcHelper::setAreaContext('sub_section', $sub->id);
+                        \App\Helpers\RtcHelper::setAreaContext('sub_section', $sub->id);
                         $container['supervisors'][] = [
                             'title'      => $sub->name,
-                            'person'     => RtcHelper::formatPerson($sub->leader),
-                            'shortTerm'  => RtcHelper::formatCandidate($sub->short, 'short'),
-                            'midTerm'    => RtcHelper::formatCandidate($sub->mid,   'mid'),
-                            'longTerm'   => RtcHelper::formatCandidate($sub->long,  'long'),
+                            'person'     => \App\Helpers\RtcHelper::formatPerson($sub->leader),
+                            'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($sub->short, 'short'),
+                            'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($sub->mid, 'mid'),
+                            'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($sub->long, 'long'),
                             'colorClass' => $mainColor,
                         ];
                     }
@@ -684,20 +773,21 @@ class RtcController extends Controller
                     break;
                 }
 
+                /* =========================== SUB SECTION =========================== */
             case 'sub_section': {
-                    $hideMainPlans = false;
+                    $id = (int) $rawId;
 
-                    $sub = SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
+                    $sub = \App\Models\SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $sub->name ?? 'Sub Section';
                     $mainColor = $pickColor("subsection-root-{$sub->id}");
 
-                    RtcHelper::setAreaContext('sub_section', $sub->id);
+                    \App\Helpers\RtcHelper::setAreaContext('sub_section', $sub->id);
                     $main = [
                         'title'      => $sub->name ?? '-',
-                        'person'     => RtcHelper::formatPerson($sub->leader),
-                        'shortTerm'  => RtcHelper::formatCandidate($sub->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($sub->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($sub->long,  'long'),
+                        'person'     => \App\Helpers\RtcHelper::formatPerson($sub->leader),
+                        'shortTerm'  => \App\Helpers\RtcHelper::formatCandidate($sub->short, 'short'),
+                        'midTerm'    => \App\Helpers\RtcHelper::formatCandidate($sub->mid, 'mid'),
+                        'longTerm'   => \App\Helpers\RtcHelper::formatCandidate($sub->long, 'long'),
                         'colorClass' => $mainColor,
                     ];
                     $managers = [];
@@ -708,8 +798,9 @@ class RtcController extends Controller
                 abort(404, 'Unsupported filter');
         }
 
-        return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans'));
+        return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
     }
+
 
     public function update(Request $request)
     {

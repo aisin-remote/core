@@ -31,7 +31,6 @@
 @endsection
 
 @push('custom-css')
-    <!-- Font untuk keterbacaan tinggi -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
@@ -69,7 +68,9 @@
     <script>
         const main = @json($main);
         const managers = @json($managers);
-        const hideMainPlans = @json($hideMainPlans ?? false); // true = root tanpa ST/MT/LT
+        const hideMainPlans = @json($hideMainPlans ?? false);
+        const NO_ROOT = @json($noRoot ?? false);
+        const GROUP_TOP = @json($groupTop ?? false); // <— mode group (company)
     </script>
 
     <script>
@@ -78,9 +79,9 @@
             const W = 360,
                 H = 430,
                 HDR = 76;
-            const CX = W / 2;
-            const AV = 64;
-            const CY = (AV / 2) + 18;
+            const CX = W / 2,
+                AV = 64,
+                CY = (AV / 2) + 18;
             const LEFTX = 26,
                 RIGHTX = W - 26;
 
@@ -144,7 +145,7 @@
             OrgChart.templates.factory.field_9 = '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (
                 H - 14) + '" text-anchor="middle">(grade, age, HAV)</text>';
 
-            // === template khusus ROOT TANPA label ST/MT/LT ===
+            // template TANPA S/T M/T L/T — dipakai utk root & node bertag 'no-plans'
             OrgChart.templates.factoryRoot = Object.assign({}, OrgChart.templates.factory);
             OrgChart.templates.factoryRoot.node =
                 '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
@@ -158,7 +159,18 @@
                 '" y="195" text-anchor="start">LOS</text>' +
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="215" text-anchor="start">LCP</text>';
-            // (fields & img mewarisi dari 'factory')
+
+            /* ====== GROUP TEMPLATE (OrgChartJS) untuk container President + VPD ====== */
+            OrgChart.templates.group.link =
+                `<path stroke-linejoin="round" stroke="#aeaeae" stroke-width="1px" fill="none"
+                        d="M{xa},{ya} {xb},{yb} {xc},{yc} L{xd},{yd}" />`;
+            OrgChart.templates.group.nodeMenuButton = '';
+            OrgChart.templates.group.min = Object.assign({}, OrgChart.templates.group);
+            OrgChart.templates.group.min.imgs = `{val}`;
+            OrgChart.templates.group.min.img_0 = ``;
+            OrgChart.templates.group.min.description =
+                `<text data-width="230" data-text-overflow="multiline" style="font-size: 14px;"
+                       fill="#aeaeae" x="125" y="100" text-anchor="middle">{val}</text>`;
 
             /* ================== WARNA ================== */
             const colorMap = {
@@ -185,66 +197,41 @@
                 const nodes = [];
                 const rootId = 'root';
 
-                // root node — gunakan TAG agar template root pasti terpakai
-                const rootNode = {
-                    id: rootId,
-                    department: clamp(main.title, 64),
-                    name: clamp(main.person?.name, 48),
-                    grade: main.person?.grade ?? '-',
-                    age: main.person?.age ?? '-',
-                    los: main.person?.los ?? '-',
-                    lcp: main.person?.lcp ?? '-',
-                    cand_st: hideMainPlans ? '' : clamp(
-                        `${main.shortTerm?.name ?? '-'} (${main.shortTerm?.grade ?? '-'}, ${main.shortTerm?.age ?? '-'})`,
-                        48),
-                    cand_mt: hideMainPlans ? '' : clamp(
-                        `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
-                        48),
-                    cand_lt: hideMainPlans ? '' : clamp(
-                        `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
-                        48),
-                    color: colorMap[main.colorClass] || '#0ea5e9',
-                    img: main.person?.photo || null
-                };
-                if (hideMainPlans) {
-                    // tag khusus agar chart memaksa template 'factoryRoot'
-                    rootNode.tags = ['root-no-plans'];
-                }
-                nodes.push(rootNode);
+                // —— MODE GROUP (company): container berisi President & VPD, division jadi anak GROUP
+                if (GROUP_TOP) {
+                    const groupId = 'g-top';
+                    nodes.push({
+                        id: groupId,
+                        name: 'Top Management',
+                        description: 'President & VPD',
+                        tags: ['group', 'presvpd-group']
+                    });
 
-                // children
-                managers.forEach((m, i) => {
-                    const mid = `m-${i}`;
-
-                    if (!m.skipManagerNode) {
-                        nodes.push({
+                    // dua kepala di dalam group (tanpa S/T M/T L/T)
+                    managers.forEach((m, i) => {
+                        const mid = `m-${i}`;
+                        const node = {
                             id: mid,
-                            pid: rootId,
+                            stpid: groupId, // anggota group
                             department: clamp(m.title, 64),
                             name: clamp(m.person?.name, 48),
                             grade: m.person?.grade ?? '-',
                             age: m.person?.age ?? '-',
                             los: m.person?.los ?? '-',
                             lcp: m.person?.lcp ?? '-',
-                            cand_st: clamp(
-                                `${m.shortTerm?.name ?? '-'} (${m.shortTerm?.grade ?? '-'}, ${m.shortTerm?.age ?? '-'})`,
-                                48),
-                            cand_mt: clamp(
-                                `${m.midTerm?.name ?? '-'} (${m.midTerm?.grade ?? '-'}, ${m.midTerm?.age ?? '-'})`,
-                                48),
-                            cand_lt: clamp(
-                                `${m.longTerm?.name ?? '-'} (${m.longTerm?.grade ?? '-'}, ${m.longTerm?.age ?? '-'})`,
-                                48),
                             color: colorMap[m.colorClass] || '#22c55e',
-                            img: m.person?.photo || null
-                        });
-                    }
+                            img: m.person?.photo || null,
+                            tags: ['no-plans'] // gunakan template tanpa S/T M/T L/T
+                        };
+                        nodes.push(node);
+                    });
 
-                    const parentId = m.skipManagerNode ? rootId : mid;
-                    (m.supervisors || []).forEach((s, j) => {
+                    // subtree division → ambil dari managers[0].supervisors, digantung ke GROUP
+                    const shared = (managers[0] && managers[0].supervisors) ? managers[0].supervisors : [];
+                    shared.forEach((s, j) => {
                         nodes.push({
-                            id: `m-${i}-s-${j}`,
-                            pid: parentId,
+                            id: `d-${j}`,
+                            pid: groupId, // anak group (shared)
                             department: clamp(s.title, 64),
                             name: clamp(s.person?.name, 48),
                             grade: s.person?.grade ?? '-',
@@ -263,6 +250,94 @@
                             color: colorMap[s.colorClass] || '#ef4444',
                             img: s.person?.photo || null
                         });
+                    });
+
+                    return nodes;
+                }
+
+                // —— MODE BIASA (non-company)
+                if (!NO_ROOT) {
+                    const rootNode = {
+                        id: rootId,
+                        department: clamp(main.title, 64),
+                        name: clamp(main.person?.name, 48),
+                        grade: main.person?.grade ?? '-',
+                        age: main.person?.age ?? '-',
+                        los: main.person?.los ?? '-',
+                        lcp: main.person?.lcp ?? '-',
+                        cand_st: hideMainPlans ? '' : clamp(
+                            `${main.shortTerm?.name ?? '-'} (${main.shortTerm?.grade ?? '-'}, ${main.shortTerm?.age ?? '-'})`,
+                            48),
+                        cand_mt: hideMainPlans ? '' : clamp(
+                            `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
+                            48),
+                        cand_lt: hideMainPlans ? '' : clamp(
+                            `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
+                            48),
+                        color: colorMap[main.colorClass] || '#0ea5e9',
+                        img: main.person?.photo || null,
+                        ...(hideMainPlans ? {
+                            tags: ['root-no-plans']
+                        } : {})
+                    };
+                    nodes.push(rootNode);
+                }
+
+                managers.forEach((m, i) => {
+                    const mid = `m-${i}`;
+                    if (!m.skipManagerNode) {
+                        const node = {
+                            id: mid,
+                            ...(NO_ROOT ? {} : {
+                                pid: rootId
+                            }),
+                            department: clamp(m.title, 64),
+                            name: clamp(m.person?.name, 48),
+                            grade: m.person?.grade ?? '-',
+                            age: m.person?.age ?? '-',
+                            los: m.person?.los ?? '-',
+                            lcp: m.person?.lcp ?? '-',
+                            color: colorMap[m.colorClass] || '#22c55e',
+                            img: m.person?.photo || null
+                        };
+                        if (m.no_plans) node.tags = ['no-plans'];
+                        else {
+                            node.cand_st = clamp(
+                                `${m.shortTerm?.name ?? '-'} (${m.shortTerm?.grade ?? '-'}, ${m.shortTerm?.age ?? '-'})`,
+                                48);
+                            node.cand_mt = clamp(
+                                `${m.midTerm?.name ?? '-'} (${m.midTerm?.grade ?? '-'}, ${m.midTerm?.age ?? '-'})`,
+                                48);
+                            node.cand_lt = clamp(
+                                `${m.longTerm?.name ?? '-'} (${m.longTerm?.grade ?? '-'}, ${m.longTerm?.age ?? '-'})`,
+                                48);
+                        }
+                        nodes.push(node);
+                    }
+                    const parentId = m.skipManagerNode ? (NO_ROOT ? undefined : rootId) : mid;
+                    (m.supervisors || []).forEach((s, j) => {
+                        const node = {
+                            id: `m-${i}-s-${j}`,
+                            department: clamp(s.title, 64),
+                            name: clamp(s.person?.name, 48),
+                            grade: s.person?.grade ?? '-',
+                            age: s.person?.age ?? '-',
+                            los: s.person?.los ?? '-',
+                            lcp: s.person?.lcp ?? '-',
+                            cand_st: clamp(
+                                `${s.shortTerm?.name ?? '-'} (${s.shortTerm?.grade ?? '-'}, ${s.shortTerm?.age ?? '-'})`,
+                                48),
+                            cand_mt: clamp(
+                                `${s.midTerm?.name ?? '-'} (${s.midTerm?.grade ?? '-'}, ${s.midTerm?.age ?? '-'})`,
+                                48),
+                            cand_lt: clamp(
+                                `${s.longTerm?.name ?? '-'} (${s.longTerm?.grade ?? '-'}, ${s.longTerm?.age ?? '-'})`,
+                                48),
+                            color: colorMap[s.colorClass] || '#ef4444',
+                            img: s.person?.photo || null
+                        };
+                        if (parentId) node.pid = parentId;
+                        nodes.push(node);
                     });
                 });
 
@@ -366,13 +441,23 @@
                     scaleMin: 0.2,
                     scaleMax: 2.2,
                     nodeMouseClick: OrgChart.action.none,
-                    // paksa template root untuk node bertag 'root-no-plans'
                     tags: {
                         'root-no-plans': {
                             template: 'factoryRoot'
-                        }
+                        },
+                        'no-plans': {
+                            template: 'factoryRoot'
+                        },
+                        'group': {
+                            template: 'group',
+                            subTreeConfig: {
+                                columns: 2
+                            }
+                        },
+                        'presvpd-group': {}, // hook jika nanti mau styling khusus
                     },
                     nodeBinding: {
+                        // binding untuk node 'factory'
                         node: "color",
                         img_0: "img",
                         field_0: "department",
@@ -384,7 +469,12 @@
                         field_6: "cand_st",
                         field_7: "cand_mt",
                         field_8: "cand_lt",
-                        field_9: "field_9"
+                        field_9: "field_9",
+                        // binding tambahan agar template group tidak error
+                        imgs: "imgs",
+                        description: "description",
+                        name: "department", // group judul pakai 'department' biar aman
+                        title: "name"
                     },
                     nodes
                 });
@@ -429,7 +519,17 @@
                     tags: {
                         'root-no-plans': {
                             template: 'factoryRoot'
-                        }
+                        },
+                        'no-plans': {
+                            template: 'factoryRoot'
+                        },
+                        'group': {
+                            template: 'group',
+                            subTreeConfig: {
+                                columns: 2
+                            }
+                        },
+                        'presvpd-group': {},
                     },
                     nodeBinding: {
                         node: "color",
@@ -443,7 +543,11 @@
                         field_6: "cand_st",
                         field_7: "cand_mt",
                         field_8: "cand_lt",
-                        field_9: "field_9"
+                        field_9: "field_9",
+                        imgs: "imgs",
+                        description: "description",
+                        name: "department",
+                        title: "name"
                     },
                     nodes
                 });
