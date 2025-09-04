@@ -17,7 +17,6 @@
     </div>
 
     <div style="position: relative;">
-        <!-- Floating export buttons -->
         <div style="position: absolute; top: 20px; right: 20px; z-index: 10000; display: flex; gap: 8px;">
             <button id="btn-pdf" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PDF</button>
             <button id="btn-png" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PNG</button>
@@ -25,7 +24,6 @@
             <button id="btn-csv" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">CSV</button>
         </div>
 
-        <!-- Chart container -->
         <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
     </div>
 @endsection
@@ -70,12 +68,12 @@
         const managers = @json($managers);
         const hideMainPlans = @json($hideMainPlans ?? false);
         const NO_ROOT = @json($noRoot ?? false);
-        const GROUP_TOP = @json($groupTop ?? false); // <— mode group (company)
+        const GROUP_TOP = @json($groupTop ?? false); // <-- penting: mode group untuk company
     </script>
 
     <script>
         $(function() {
-            /* ================== TEMPLATE ================== */
+            /* ================== TEMPLATES ================== */
             const W = 360,
                 H = 430,
                 HDR = 76;
@@ -100,7 +98,7 @@
                 '<clipPath id="clipPhoto"><circle cx="' + CX + '" cy="' + CY + '" r="' + (AV / 2) +
                 '"/></clipPath>';
 
-            // node normal (DENGAN label ST/MT/LT)
+            // node normal (dengan label S/T–M/T–L/T)
             OrgChart.templates.factory.node =
                 '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
                 '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
@@ -120,7 +118,6 @@
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="285" text-anchor="start">L/T</text>';
 
-            // fields & img
             OrgChart.templates.factory.img_0 =
                 '<image clip-path="url(#clipPhoto)" xlink:href="{val}" x="' + (CX - AV / 2) + '" y="' + (CY - AV /
                     2) + '" width="' + AV + '" height="' + AV + '" preserveAspectRatio="xMidYMid slice"></image>';
@@ -145,7 +142,7 @@
             OrgChart.templates.factory.field_9 = '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (
                 H - 14) + '" text-anchor="middle">(grade, age, HAV)</text>';
 
-            // template TANPA S/T M/T L/T — dipakai utk root & node bertag 'no-plans'
+            // template tanpa S/T–M/T–L/T (pakai untuk President, VPD, Plant)
             OrgChart.templates.factoryRoot = Object.assign({}, OrgChart.templates.factory);
             OrgChart.templates.factoryRoot.node =
                 '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
@@ -160,17 +157,18 @@
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="215" text-anchor="start">LCP</text>';
 
-            /* ====== GROUP TEMPLATE (OrgChartJS) untuk container President + VPD ====== */
+            /* ===== Group template (kotak besar berisi President & VPD) ===== */
+            // (mengikuti contoh OrgChartJS, cukup definisi minimal + link path)
             OrgChart.templates.group.link =
                 `<path stroke-linejoin="round" stroke="#aeaeae" stroke-width="1px" fill="none"
-                        d="M{xa},{ya} {xb},{yb} {xc},{yc} L{xd},{yd}" />`;
+                   d="M{xa},{ya} {xb},{yb} {xc},{yc} L{xd},{yd}" />`;
             OrgChart.templates.group.nodeMenuButton = '';
             OrgChart.templates.group.min = Object.assign({}, OrgChart.templates.group);
             OrgChart.templates.group.min.imgs = `{val}`;
             OrgChart.templates.group.min.img_0 = ``;
             OrgChart.templates.group.min.description =
-                `<text data-width="230" data-text-overflow="multiline" style="font-size: 14px;"
-                       fill="#aeaeae" x="125" y="100" text-anchor="middle">{val}</text>`;
+                `<text data-width="230" data-text-overflow="multiline" style="font-size: 14px;" fill="#aeaeae"
+                   x="125" y="100" text-anchor="middle">{val}</text>`;
 
             /* ================== WARNA ================== */
             const colorMap = {
@@ -195,67 +193,76 @@
 
             function buildChartData(main, managers) {
                 const nodes = [];
-                const rootId = 'root';
+                let ai = 0;
+                const nid = () => 'n' + (ai++);
 
-                // —— MODE GROUP (company): container berisi President & VPD, division jadi anak GROUP
+                // === MODE GROUP (company): buat kotak group berisi President & VPD
                 if (GROUP_TOP) {
-                    const groupId = 'g-top';
+                    const groupId = 'top-group';
                     nodes.push({
                         id: groupId,
                         name: 'Top Management',
                         description: 'President & VPD',
-                        tags: ['group', 'presvpd-group']
+                        tags: ['group', 'top-pair'] // template group + 2 kolom
                     });
 
-                    // dua kepala di dalam group (tanpa S/T M/T L/T)
-                    managers.forEach((m, i) => {
-                        const mid = `m-${i}`;
-                        const node = {
-                            id: mid,
-                            stpid: groupId, // anggota group
+                    // 1) Masukkan Presiden & VPD ke dalam group (stpid)
+                    managers.slice(0, 2).forEach(m => {
+                        const id = nid();
+                        nodes.push({
+                            id,
+                            stpid: groupId, // <— masuk ke dalam group
                             department: clamp(m.title, 64),
                             name: clamp(m.person?.name, 48),
                             grade: m.person?.grade ?? '-',
                             age: m.person?.age ?? '-',
                             los: m.person?.los ?? '-',
                             lcp: m.person?.lcp ?? '-',
+                            cand_st: '',
+                            cand_mt: '',
+                            cand_lt: '', // kosong
                             color: colorMap[m.colorClass] || '#22c55e',
                             img: m.person?.photo || null,
-                            tags: ['no-plans'] // gunakan template tanpa S/T M/T L/T
-                        };
-                        nodes.push(node);
-                    });
-
-                    // subtree division → ambil dari managers[0].supervisors, digantung ke GROUP
-                    const shared = (managers[0] && managers[0].supervisors) ? managers[0].supervisors : [];
-                    shared.forEach((s, j) => {
-                        nodes.push({
-                            id: `d-${j}`,
-                            pid: groupId, // anak group (shared)
-                            department: clamp(s.title, 64),
-                            name: clamp(s.person?.name, 48),
-                            grade: s.person?.grade ?? '-',
-                            age: s.person?.age ?? '-',
-                            los: s.person?.los ?? '-',
-                            lcp: s.person?.lcp ?? '-',
-                            cand_st: clamp(
-                                `${s.shortTerm?.name ?? '-'} (${s.shortTerm?.grade ?? '-'}, ${s.shortTerm?.age ?? '-'})`,
-                                48),
-                            cand_mt: clamp(
-                                `${s.midTerm?.name ?? '-'} (${s.midTerm?.grade ?? '-'}, ${s.midTerm?.age ?? '-'})`,
-                                48),
-                            cand_lt: clamp(
-                                `${s.longTerm?.name ?? '-'} (${s.longTerm?.grade ?? '-'}, ${s.longTerm?.age ?? '-'})`,
-                                48),
-                            color: colorMap[s.colorClass] || '#ef4444',
-                            img: s.person?.photo || null
+                            tags: ['no-plans'] // hilangkan S/T–M/T–L/T
                         });
                     });
 
+                    // 2) Ambil subtree PLANt dari manager pertama (Presiden) → taruh di bawah group
+                    const shared = (managers[0]?.supervisors || []);
+                    const emit = (node, parentId) => {
+                        const id = nid();
+                        const base = {
+                            id,
+                            pid: parentId,
+                            department: clamp(node.title, 64),
+                            name: clamp(node.person?.name, 48),
+                            grade: node.person?.grade ?? '-',
+                            age: node.person?.age ?? '-',
+                            los: node.person?.los ?? '-',
+                            lcp: node.person?.lcp ?? '-',
+                            cand_st: node.no_plans ? '' : clamp(
+                                `${node.shortTerm?.name ?? '-'} (${node.shortTerm?.grade ?? '-'}, ${node.shortTerm?.age ?? '-'})`,
+                                48),
+                            cand_mt: node.no_plans ? '' : clamp(
+                                `${node.midTerm?.name ?? '-'} (${node.midTerm?.grade ?? '-'}, ${node.midTerm?.age ?? '-'})`,
+                                48),
+                            cand_lt: node.no_plans ? '' : clamp(
+                                `${node.longTerm?.name ?? '-'} (${node.longTerm?.grade ?? '-'}, ${node.longTerm?.age ?? '-'})`,
+                                48),
+                            color: colorMap[node.colorClass] || '#22c55e',
+                            img: node.person?.photo || null
+                        };
+                        if (node.no_plans) base.tags = ['no-plans']; // Plant juga tanpa S/T–M/T–L/T
+                        nodes.push(base);
+                        (node.supervisors || []).forEach(ch => emit(ch, id));
+                    };
+
+                    shared.forEach(ch => emit(ch, groupId));
                     return nodes;
                 }
 
-                // —— MODE BIASA (non-company)
+                // === MODE BUKAN GROUP (plant/division/department/section/sub_section)
+                const rootId = 'root';
                 if (!NO_ROOT) {
                     const rootNode = {
                         id: rootId,
@@ -277,68 +284,45 @@
                         color: colorMap[main.colorClass] || '#0ea5e9',
                         img: main.person?.photo || null,
                         ...(hideMainPlans ? {
-                            tags: ['root-no-plans']
+                            tags: ['no-plans']
                         } : {})
                     };
                     nodes.push(rootNode);
                 }
 
-                managers.forEach((m, i) => {
-                    const mid = `m-${i}`;
-                    if (!m.skipManagerNode) {
-                        const node = {
-                            id: mid,
-                            ...(NO_ROOT ? {} : {
-                                pid: rootId
-                            }),
-                            department: clamp(m.title, 64),
-                            name: clamp(m.person?.name, 48),
-                            grade: m.person?.grade ?? '-',
-                            age: m.person?.age ?? '-',
-                            los: m.person?.los ?? '-',
-                            lcp: m.person?.lcp ?? '-',
-                            color: colorMap[m.colorClass] || '#22c55e',
-                            img: m.person?.photo || null
-                        };
-                        if (m.no_plans) node.tags = ['no-plans'];
-                        else {
-                            node.cand_st = clamp(
-                                `${m.shortTerm?.name ?? '-'} (${m.shortTerm?.grade ?? '-'}, ${m.shortTerm?.age ?? '-'})`,
-                                48);
-                            node.cand_mt = clamp(
-                                `${m.midTerm?.name ?? '-'} (${m.midTerm?.grade ?? '-'}, ${m.midTerm?.age ?? '-'})`,
-                                48);
-                            node.cand_lt = clamp(
-                                `${m.longTerm?.name ?? '-'} (${m.longTerm?.grade ?? '-'}, ${m.longTerm?.age ?? '-'})`,
-                                48);
-                        }
-                        nodes.push(node);
-                    }
-                    const parentId = m.skipManagerNode ? (NO_ROOT ? undefined : rootId) : mid;
-                    (m.supervisors || []).forEach((s, j) => {
-                        const node = {
-                            id: `m-${i}-s-${j}`,
-                            department: clamp(s.title, 64),
-                            name: clamp(s.person?.name, 48),
-                            grade: s.person?.grade ?? '-',
-                            age: s.person?.age ?? '-',
-                            los: s.person?.los ?? '-',
-                            lcp: s.person?.lcp ?? '-',
-                            cand_st: clamp(
-                                `${s.shortTerm?.name ?? '-'} (${s.shortTerm?.grade ?? '-'}, ${s.shortTerm?.age ?? '-'})`,
-                                48),
-                            cand_mt: clamp(
-                                `${s.midTerm?.name ?? '-'} (${s.midTerm?.grade ?? '-'}, ${s.midTerm?.age ?? '-'})`,
-                                48),
-                            cand_lt: clamp(
-                                `${s.longTerm?.name ?? '-'} (${s.longTerm?.grade ?? '-'}, ${s.longTerm?.age ?? '-'})`,
-                                48),
-                            color: colorMap[s.colorClass] || '#ef4444',
-                            img: s.person?.photo || null
-                        };
-                        if (parentId) node.pid = parentId;
-                        nodes.push(node);
-                    });
+                const emitStd = (node, parentId) => {
+                    const id = nid();
+                    const obj = {
+                        id,
+                        ...(parentId ? {
+                            pid: parentId
+                        } : {}),
+                        department: clamp(node.title, 64),
+                        name: clamp(node.person?.name, 48),
+                        grade: node.person?.grade ?? '-',
+                        age: node.person?.age ?? '-',
+                        los: node.person?.los ?? '-',
+                        lcp: node.person?.lcp ?? '-',
+                        cand_st: node.no_plans ? '' : clamp(
+                            `${node.shortTerm?.name ?? '-'} (${node.shortTerm?.grade ?? '-'}, ${node.shortTerm?.age ?? '-'})`,
+                            48),
+                        cand_mt: node.no_plans ? '' : clamp(
+                            `${node.midTerm?.name ?? '-'} (${node.midTerm?.grade ?? '-'}, ${node.midTerm?.age ?? '-'})`,
+                            48),
+                        cand_lt: node.no_plans ? '' : clamp(
+                            `${node.longTerm?.name ?? '-'} (${node.longTerm?.grade ?? '-'}, ${node.longTerm?.age ?? '-'})`,
+                            48),
+                        color: colorMap[node.colorClass] || '#22c55e',
+                        img: node.person?.photo || null
+                    };
+                    if (node.no_plans) obj.tags = ['no-plans'];
+                    nodes.push(obj);
+                    (node.supervisors || []).forEach(ch => emitStd(ch, id));
+                };
+
+                const parentId = NO_ROOT ? null : rootId;
+                managers.forEach(m => {
+                    const id = emitStd(m, parentId);
                 });
 
                 return nodes;
@@ -351,12 +335,13 @@
             async function countTotalImages(payload) {
                 let c = 0;
                 if (payload.main.person?.photo) c++;
-                payload.managers.forEach(m => {
-                    if (m.person?.photo) c++;
-                    (m.supervisors || []).forEach(s => {
-                        if (s.person?.photo) c++;
+                const walk = (arr) => {
+                    (arr || []).forEach(n => {
+                        if (n.person?.photo) c++;
+                        walk(n.supervisors || []);
                     });
-                });
+                };
+                walk(payload.managers || []);
                 return c;
             }
 
@@ -366,8 +351,8 @@
             async function safeConvertToBase64(url) {
                 if (!url) return null;
                 try {
-                    const u = url.startsWith('//') ? (location.protocol + url) :
-                        (url.startsWith('/') ? (location.origin + url) : url);
+                    const u = url.startsWith('//') ? (location.protocol + url) : (url.startsWith('/') ? (
+                        location.origin + url) : url);
                     const res = await fetch(u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(), {
                         credentials: 'same-origin'
                     });
@@ -386,8 +371,7 @@
                 const processedMain = {
                     ...main
                 };
-                const processedManagers = JSON.parse(JSON.stringify(managers));
-
+                const deep = JSON.parse(JSON.stringify(managers));
                 let total = await countTotalImages({
                     main,
                     managers
@@ -399,23 +383,19 @@
                     processedMain.person.photo = await safeConvertToBase64(processedMain.person.photo);
                     updateProgress(++loaded, total);
                 }
-                await Promise.all(processedManagers.map(async m => {
-                    if (m.person?.photo) {
-                        m.person.photo = await safeConvertToBase64(m.person.photo);
-                        updateProgress(++loaded, total);
-                    }
-                    if (m.supervisors) {
-                        for (const s of m.supervisors) {
-                            if (s.person?.photo) {
-                                s.person.photo = await safeConvertToBase64(s.person.photo);
-                                updateProgress(++loaded, total);
-                            }
+                async function walk(list) {
+                    for (const n of (list || [])) {
+                        if (n.person?.photo) {
+                            n.person.photo = await safeConvertToBase64(n.person.photo);
+                            updateProgress(++loaded, total);
                         }
+                        if (n.supervisors) await walk(n.supervisors);
                     }
-                }));
+                }
+                await walk(deep);
                 return {
                     main: processedMain,
-                    managers: processedManagers
+                    managers: deep
                 };
             }
 
@@ -441,23 +421,21 @@
                     scaleMin: 0.2,
                     scaleMax: 2.2,
                     nodeMouseClick: OrgChart.action.none,
+                    // mapping tag → template / layout
                     tags: {
-                        'root-no-plans': {
-                            template: 'factoryRoot'
-                        },
                         'no-plans': {
                             template: 'factoryRoot'
-                        },
+                        }, // sembunyikan S/T–M/T–L/T
                         'group': {
-                            template: 'group',
+                            template: 'group'
+                        },
+                        'top-pair': {
                             subTreeConfig: {
                                 columns: 2
                             }
-                        },
-                        'presvpd-group': {}, // hook jika nanti mau styling khusus
+                        } // dua kolom di dalam group
                     },
                     nodeBinding: {
-                        // binding untuk node 'factory'
                         node: "color",
                         img_0: "img",
                         field_0: "department",
@@ -469,12 +447,7 @@
                         field_6: "cand_st",
                         field_7: "cand_mt",
                         field_8: "cand_lt",
-                        field_9: "field_9",
-                        // binding tambahan agar template group tidak error
-                        imgs: "imgs",
-                        description: "description",
-                        name: "department", // group judul pakai 'department' biar aman
-                        title: "name"
+                        field_9: "field_9"
                     },
                     nodes
                 });
@@ -517,19 +490,17 @@
                     enableSearch: false,
                     nodeMouseClick: OrgChart.action.none,
                     tags: {
-                        'root-no-plans': {
-                            template: 'factoryRoot'
-                        },
                         'no-plans': {
                             template: 'factoryRoot'
                         },
                         'group': {
-                            template: 'group',
+                            template: 'group'
+                        },
+                        'top-pair': {
                             subTreeConfig: {
                                 columns: 2
                             }
-                        },
-                        'presvpd-group': {},
+                        }
                     },
                     nodeBinding: {
                         node: "color",
@@ -543,11 +514,7 @@
                         field_6: "cand_st",
                         field_7: "cand_mt",
                         field_8: "cand_lt",
-                        field_9: "field_9",
-                        imgs: "imgs",
-                        description: "description",
-                        name: "department",
-                        title: "name"
+                        field_9: "field_9"
                     },
                     nodes
                 });
