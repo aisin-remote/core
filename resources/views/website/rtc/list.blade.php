@@ -10,7 +10,7 @@
 
 @push('custom-css')
     <style>
-        /* Status Chip */
+        /* ==================== Status Chip ==================== */
         .status-chip {
             --bg: #eef2ff;
             --fg: #312e81;
@@ -109,7 +109,85 @@
             }
         }
 
-        /* Fullscreen modal detail viewer */
+        /* ==================== PIC Badge (kecil & beda gaya) ==================== */
+        .pic-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .18rem .55rem;
+            border-radius: 9999px;
+            font-size: .82rem;
+            font-weight: 600;
+            color: #475569;
+            background: #F1F5F9;
+            border: 1px solid #E2E8F0;
+            white-space: nowrap;
+            max-width: 16rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pic-badge .role {
+            font-size: .72rem;
+            text-transform: uppercase;
+            color: #0F172A;
+            font-weight: 700;
+        }
+
+        .pic-badge .sep {
+            opacity: .35;
+        }
+
+        .pic-badge.empty {
+            color: #B91C1C;
+            background: #FEF2F2;
+            border-color: #FECACA;
+        }
+
+        /* ==================== Term cells (wrap rapi) ==================== */
+        .term-cell {
+            max-width: 180px;
+            white-space: normal;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+
+        .text-not-set {
+            color: #475569;
+            opacity: .7;
+        }
+
+        /* ==================== Sticky header + padding table ==================== */
+        #kt_table_users thead th {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 1;
+        }
+
+        .table> :not(caption)>*>* {
+            padding: .75rem .5rem;
+        }
+
+        /* ==================== Responsif: sembunyikan Long Term & Last Year ==================== */
+        @media (max-width: 992px) {
+
+            /* Kolom: 1 No, 2 Name, 3 PIC, 4 Short, 5 Mid, 6 Long, 7 Status, 8 Last Year, 9 Actions */
+            #kt_table_users th:nth-child(6),
+            #kt_table_users td:nth-child(6) {
+                display: none;
+            }
+
+            /* Long Term */
+            #kt_table_users th:nth-child(8),
+            #kt_table_users td:nth-child(8) {
+                display: none;
+            }
+
+            /* Last Year */
+        }
+
+        /* ==================== Fullscreen modal detail viewer ==================== */
         #viewDetailModal .modal-dialog {
             max-width: 100vw;
             width: 100vw;
@@ -215,10 +293,11 @@
                             <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
-                                    <th class="text-center">Name</th>
-                                    <th class="text-center">Short Term</th>
-                                    <th class="text-center">Mid Term</th>
-                                    <th class="text-center">Long Term</th>
+                                    <th class="text-start">Name</th>
+                                    <th class="text-start">Current PIC</th>
+                                    <th class="text-start">Short Term</th>
+                                    <th class="text-start">Mid Term</th>
+                                    <th class="text-start">Long Term</th>
                                     <th class="text-center">Status</th>
                                     <th class="text-center fs-8">Last Year Modified</th>
                                     <th class="text-center">Actions</th>
@@ -299,6 +378,10 @@
 
     <script>
         $(document).ready(function() {
+            // Bootstrap tooltips
+            const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            tooltipTriggerList.map(el => new bootstrap.Tooltip(el));
+
             function esc(s) {
                 return $('<div>').text(s ?? '').html();
             }
@@ -333,56 +416,82 @@
                 };
                 const conf = map[overall?.code] ?? map['not_set'];
                 const label = overall?.label || 'Not Set';
-                return `<span class="status-chip" data-status="${conf.ds}" title="${esc(label)}">
-                            ${conf.icon}<span>${esc(label)}</span>
-                        </span>`;
+                return `<span class="status-chip" data-status="${conf.ds}" title="${esc(label)}">${conf.icon}<span>${esc(label)}</span></span>`;
+            }
+
+            function limitWords(s, n = 2) {
+                if (!s) return '';
+                return s.trim().split(/\s+/).slice(0, n).join(' ');
             }
 
             function renderRows(items, currentFilter = 'division') {
                 if (!items || !items.length) {
                     $('#kt_table_users tbody').html(
-                        '<tr><td colspan="8" class="text-center text-muted">No data available</td></tr>');
+                        '<tr><td colspan="9" class="text-center text-muted">No data available</td></tr>');
                     return;
                 }
+
                 const rows = items.map((row, idx) => {
                     const st = row.short?.name ? esc(row.short.name) :
-                        '<span class="text-danger">not set</span>';
+                        '<span class="text-not-set">not set</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) :
-                        '<span class="text-danger">not set</span>';
+                        '<span class="text-not-set">not set</span>';
                     const lt = row.long?.name ? esc(row.long.name) :
-                        '<span class="text-danger">not set</span>';
+                        '<span class="text-not-set">not set</span>';
                     const statusHtml = statusChip(row.overall);
                     const lastYear = row.last_year ? esc(row.last_year) : '-';
 
-                    // Detail (list tabbed) & Summary
-                    const detailBtn = `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}" class="btn btn-sm btn-primary" title="Detail">
+                    // Detail & Summary buttons
+                    const detailBtn = `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}"
+                                          class="btn btn-sm btn-primary"
+                                          data-bs-toggle="tooltip" title="Open detail">
                                             <i class="fas fa-arrow-right"></i>
-                                    </a>`;
-                    const summaryBtn = `<a href="${window.ROUTE_SUMMARY_BASE}?id=${row.id}&filter=${currentFilter}" class="btn btn-sm btn-info" title="View" target="_blank">
+                                        </a>`;
+                    const summaryBtn = `<a href="${window.ROUTE_SUMMARY_BASE}?id=${row.id}&filter=${currentFilter}"
+                                          class="btn btn-sm btn-info" target="_blank"
+                                          data-bs-toggle="tooltip" title="Open summary">
                                             <i class="fas fa-eye"></i>
                                         </a>`;
+
+                    // PIC badge (kecil + tooltip nama lengkap)
+                    const fullName = row.pic?.name || '-';
+                    const showName = limitWords(fullName, 2);
+                    const pic = row.pic ?
+                        `<span class="pic-badge" title="${esc(fullName)}" data-bs-toggle="tooltip">
+                               <span class="role">${esc(row.pic.position || '')}</span>
+                               <span class="sep">–</span>
+                               <span class="name">${esc(showName)}</span>
+                           </span>` :
+                        `<span class="pic-badge empty">not set</span>`;
 
                     // Add (hidden jika read-only)
                     let addBtn = '';
                     if (!window.READ_ONLY && row.can_add) {
-                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add">
+                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}"
+                                    data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add plan">
                                     <i class="fas fa-plus-circle"></i>
-                                </a>`;
+                                  </a>`;
                     }
 
                     return `
                         <tr>
                             <td>${idx + 1}</td>
-                            <td class="text-center">${esc(row.name)}</td>
-                            <td class="text-center">${st}</td>
-                            <td class="text-center">${mt}</td>
-                            <td class="text-center">${lt}</td>
+                            <td class="text-start">${esc(row.name)}</td>
+                            <td class="text-start">${pic}</td>
+                            <td class="text-start term-cell">${st}</td>
+                            <td class="text-start term-cell">${mt}</td>
+                            <td class="text-start term-cell">${lt}</td>
                             <td class="text-center">${statusHtml}</td>
                             <td class="text-center">${lastYear}</td>
                             <td class="text-center">${summaryBtn} ${detailBtn} ${addBtn}</td>
                         </tr>`;
                 }).join('');
+
                 $('#kt_table_users tbody').html(rows);
+                // re-init tooltip untuk elemen baru
+                $('[data-bs-toggle="tooltip"]').each(function() {
+                    new bootstrap.Tooltip(this);
+                });
             }
 
             function loadTable(filter) {
@@ -402,8 +511,8 @@
                 }).fail(function(xhr) {
                     console.error(xhr.responseText || xhr.statusText);
                     $('#kt_table_users tbody').html(
-                        '<tr><td colspan="8" class="text-center text-danger">Failed to load data</td></tr>'
-                    );
+                        '<tr><td colspan="9" class="text-center text-danger">Failed to load data</td></tr>'
+                        );
                 });
             }
 
@@ -440,6 +549,7 @@
                 $(this).addClass('active');
                 currentFilter = target;
                 $('.card-title').text(titles[currentFilter] ?? 'List');
+
                 if (window.IS_DIVISION_PRELOAD && currentFilter === 'division') {
                     renderRows(window.PRELOADED_ITEMS, 'division');
                 } else {

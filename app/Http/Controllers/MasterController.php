@@ -12,6 +12,7 @@ use App\Models\SubSection;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class MasterController extends Controller
 {
@@ -559,7 +560,7 @@ class MasterController extends Controller
         $areas = $areaAliases($areaKey);
 
         // ===== Bentuk payload JSON untuk tabel =====
-        $items = $data->map(function ($item) use ($areas, $termAliases) {
+        $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey) {
             $rtcShort = Rtc::whereIn('area', $areas)
                 ->where('area_id', $item->id)
                 ->whereIn('term', $termAliases('short'))
@@ -635,13 +636,21 @@ class MasterController extends Controller
                 }
             }
 
+            // Get PIC
+            $picEmp = $this->currentPicFor($areaKey, $item);
+            Log::info($picEmp);
             return [
                 'id'   => $item->id,
                 'name' => $item->name,
+                'pic' => $picEmp ? [
+                    'id'       => $picEmp->id,
+                    'name'     => $picEmp->name,
+                    'position' => $picEmp->position,
+                ] : null,
 
                 'short' => [
                     'name'   => $shortEmp?->name,
-                    'status' => $s, // 0/1/3/null
+                    'status' => $s, // 0/1/2/null
                 ],
                 'mid' => [
                     'name'   => $midEmp?->name,
@@ -663,5 +672,19 @@ class MasterController extends Controller
         });
 
         return response()->json(['items' => $items->values()]);
+    }
+
+    private function currentPicFor(string $area, $model)
+    {
+        $empId = match ($area) {
+            'plant'       => $model->director_id ?? null,
+            'division'    => $model->gm_id ?? null,
+            'department'  => $model->manager_id ?? null,
+            'section'     => $model->supervisor_id ?? null,
+            'sub_section' => $model->leader_id ?? null,
+            default       => null,
+        };
+
+        return $empId ? Employee::select('id', 'name', 'position')->find($empId) : null;
     }
 }
