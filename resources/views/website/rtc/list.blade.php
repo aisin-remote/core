@@ -356,8 +356,8 @@
 
                     // Detail (list tabbed) & Summary
                     const detailBtn = `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}" class="btn btn-sm btn-primary" title="Detail">
-                                            <i class="fas fa-list-ul"></i>
-                                       </a>`;
+                                            <i class="fas fa-arrow-right"></i>
+                                    </a>`;
                     const summaryBtn = `<a href="${window.ROUTE_SUMMARY_BASE}?id=${row.id}&filter=${currentFilter}" class="btn btn-sm btn-info" title="View" target="_blank">
                                             <i class="fas fa-eye"></i>
                                         </a>`;
@@ -367,7 +367,7 @@
                     if (!window.READ_ONLY && row.can_add) {
                         addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add">
                                     <i class="fas fa-plus-circle"></i>
-                                  </a>`;
+                                </a>`;
                     }
 
                     return `
@@ -379,7 +379,7 @@
                             <td class="text-center">${lt}</td>
                             <td class="text-center">${statusHtml}</td>
                             <td class="text-center">${lastYear}</td>
-                            <td class="text-center">${detailBtn} ${summaryBtn} ${addBtn}</td>
+                            <td class="text-center">${summaryBtn} ${detailBtn} ${addBtn}</td>
                         </tr>`;
                 }).join('');
                 $('#kt_table_users tbody').html(rows);

@@ -12,6 +12,7 @@ use App\Models\Plant;
 use App\Models\SubSection;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class RtcController extends Controller
 {
@@ -298,7 +299,7 @@ class RtcController extends Controller
 
     public function list(Request $request, $id = null)
     {
-        $rawId = $id ?? $request->query('id'); // bisa string (AII/AIII) atau numeric (plant/division)
+        $rawId = $id ?? $request->query('id');
         $level = $request->query('level');
 
         $user     = auth()->user();
@@ -323,21 +324,22 @@ class RtcController extends Controller
         // ====== MODE: Company -> tampilkan PLANTS by company ======
         if ($level === 'company') {
             $companyCode = strtoupper((string)$rawId);
-
             $plants = Plant::where('company', $companyCode)
                 ->orderBy('name')
                 ->get();
 
             // pakai blade index agar sederhana (tanpa plan/status)
             return view('website.rtc.index', [
-                'title'            => 'RTC',
-                'table'            => 'Plant',
-                'divisions'        => $plants,
-                'items'            => $plants,
-                'employees'        => collect(),
-                'rtcs'             => collect(),
-                'showPlanColumns'  => false,
-                'showStatusColumn' => false,
+                'title'             => 'RTC',
+                'table'             => 'Plant',
+                'divisions'         => $plants,
+                'items'             => $plants,
+                'employees'         => collect(),
+                'rtcs'              => collect(),
+                'showPlanColumns'   => false,
+                'showStatusColumn'  => false,
+                'showSummaryButton' => true,
+                'companyCode'       => $companyCode
             ]);
         }
 
@@ -377,13 +379,13 @@ class RtcController extends Controller
             return view('website.rtc.list', [
                 'title'         => 'RTC',
                 'cardTitle'     => 'Division List',
-                'divisionId'    => null, // di halaman ini belum memilih division tertentu
+                'divisionId'    => null,
                 'employees'     => Employee::where('company_name', $employee->company_name)
                     ->get(['id', 'name', 'position', 'company_name']),
                 'user'          => $user,
                 'defaultFilter' => 'division',
-                'items'         => $itemsForJs, // preload division list
-                'readOnly'      => $readOnly,   // <— penting utk blade
+                'items'         => $itemsForJs,
+                'readOnly'      => $readOnly,
             ]);
         }
 
@@ -481,30 +483,45 @@ class RtcController extends Controller
         $managers = [];
         $title = '-';
         $hideMainPlans = false;
-        $noRoot  = false;   // tidak ada node root “company”
-        $groupTop = false;  // aktifkan tampilan group (President & VPD dalam satu kotak)
+        $noRoot  = false;   // hilangkan node root (khusus company)
+        $groupTop = false;  // aktifkan grouping President & VPD (khusus company)
 
-        $palette = ['color-1', 'color-2', 'color-3', 'color-4', 'color-5', 'color-6', 'color-7', 'color-8', 'color-9', 'color-10', 'color-11', 'color-12', 'color-13', 'color-14'];
+        $palette = [
+            'color-1',
+            'color-2',
+            'color-3',
+            'color-4',
+            'color-5',
+            'color-6',
+            'color-7',
+            'color-8',
+            'color-9',
+            'color-10',
+            'color-11',
+            'color-12',
+            'color-13',
+            'color-14'
+        ];
         $pickColor = fn(string $key) => $palette[crc32($key) % count($palette)];
 
         switch ($filter) {
-            /* ======================== COMPANY: PRESIDENT & VPD IN-ONE GROUP ======================== */
+            /* ======================== COMPANY: PRESIDENT & VPD GROUP + FULL SUBTREE ======================== */
             case 'company': {
                     $company   = strtoupper((string) $rawId);
                     $title     = $company . ' — Summary';
 
-                    $noRoot       = true;   // tidak ada node “company”
-                    $groupTop     = true;   // tampilkan group di atas
-                    $hideMainPlans = true;  // tidak pakai plan di (non-existent) root
+                    $noRoot        = true;   // tidak ada node “company”
+                    $groupTop      = true;   // tampilkan group (President & VPD)
+                    $hideMainPlans = true;   // root tidak dipakai
 
-                    // helper person (lengkapi age/LOS bila null)
+                    // helper format person (lengkapi age/LOS kalau kosong)
                     $fmtPerson = function ($emp) {
                         if (!$emp) return null;
                         $p = RtcHelper::formatPerson($emp) ?? [];
                         $age = $p['age'] ?? null;
                         if ($age === null && !empty($emp->birthday_date)) {
                             try {
-                                $age = Carbon::parse($emp->birthday_date)->age;
+                                $age = \Carbon\Carbon::parse($emp->birthday_date)->age;
                             } catch (\Throwable $e) {
                             }
                         }
@@ -512,7 +529,7 @@ class RtcController extends Controller
                         foreach (['join_date', 'start_date', 'hire_date', 'first_join_date'] as $col) {
                             if ($los === null && !empty($emp->{$col})) {
                                 try {
-                                    $los = Carbon::parse($emp->{$col})->diffInYears(now());
+                                    $los = \Carbon\Carbon::parse($emp->{$col})->diffInYears(now());
                                 } catch (\Throwable $e) {
                                 }
                             }
@@ -527,41 +544,42 @@ class RtcController extends Controller
                         ];
                     };
 
-                    // ambil Presiden & VPD (prioritas berdasarkan company name)
+                    // ambil Presiden & VPD (usahakan yang company-nya cocok dulu)
                     $lcCompany = strtolower($company);
                     $prioritizeCompany = fn($q) => $q->orderByRaw(
                         "CASE WHEN LOWER(company_name)=? THEN 0 ELSE 1 END, id DESC",
                         [$lcCompany]
                     );
 
-                    $president = Employee::query()
-                        ->whereIn(\DB::raw('LOWER(position)'), ['president', 'president director', 'presdir'])
+                    $president = \App\Models\Employee::query()
+                        ->whereIn(DB::raw('LOWER(position)'), ['president', 'president director', 'presdir'])
                         ->where(function ($q) use ($lcCompany) {
                             $q->whereRaw('LOWER(company_name)=?', [$lcCompany])
                                 ->orWhereRaw('LOWER(company_name) LIKE ?', [$lcCompany . '%']);
                         })
                         ->tap($prioritizeCompany)
                         ->first()
-                        ?? Employee::whereIn(\DB::raw('LOWER(position)'), ['president', 'president director', 'presdir'])
+                        ?? \App\Models\Employee::whereIn(DB::raw('LOWER(position)'), ['president', 'president director', 'presdir'])
                         ->latest('id')->first();
 
-                    $vpd = Employee::query()
-                        ->whereIn(\DB::raw('LOWER(position)'), ['vpd', 'vice president director', 'wakil presdir'])
+                    $vpd = \App\Models\Employee::query()
+                        ->whereIn(DB::raw('LOWER(position)'), ['vpd', 'vice president director', 'wakil presdir'])
                         ->where(function ($q) use ($lcCompany) {
                             $q->whereRaw('LOWER(company_name)=?', [$lcCompany])
                                 ->orWhereRaw('LOWER(company_name) LIKE ?', [$lcCompany . '%']);
                         })
                         ->tap($prioritizeCompany)
                         ->first()
-                        ?? Employee::whereIn(\DB::raw('LOWER(position)'), ['vpd', 'vice president director', 'wakil presdir'])
+                        ?? \App\Models\Employee::whereIn(DB::raw('LOWER(position)'), ['vpd', 'vice president director', 'wakil presdir'])
                         ->latest('id')->first();
 
-                    // === Plants by company (subtree bersama)
-                    $plants = Plant::with('director')->where('company', $company)->orderBy('name')->get();
+                    // === FULL SUBTREE: PLANT → DIVISION → DEPARTMENT → SECTION → SUB SECTION (untuk company)
+                    $plants = \App\Models\Plant::with('director')
+                        ->where('company', $company)->orderBy('name')->get();
 
                     $plantTrees = [];
                     foreach ($plants as $p) {
-                        // PLANT (tanpa S/T–M/T–L/T)
+                        // PLANT (tanpa ST/MT/LT)
                         $plantNode = [
                             'title'           => $p->name,
                             'person'          => $fmtPerson($p->director ?? null),
@@ -571,11 +589,11 @@ class RtcController extends Controller
                             'colorClass'      => 'color-1',
                             'supervisors'     => [],
                             'skipManagerNode' => false,
-                            'no_plans'        => true,
+                            'no_plans'        => true, // hide S/T M/T L/T di template
                         ];
 
                         // DIVISION
-                        $divs = Division::with(['gm', 'short', 'mid', 'long'])
+                        $divs = \App\Models\Division::with(['gm', 'short', 'mid', 'long'])
                             ->where('plant_id', $p->id)->orderBy('name')->get();
 
                         foreach ($divs as $d) {
@@ -592,7 +610,7 @@ class RtcController extends Controller
                             ];
 
                             // DEPARTMENT
-                            $depts = Department::with(['manager', 'short', 'mid', 'long'])
+                            $depts = \App\Models\Department::with(['manager', 'short', 'mid', 'long'])
                                 ->where('division_id', $d->id)->orderBy('name')->get();
 
                             foreach ($depts as $dept) {
@@ -609,7 +627,7 @@ class RtcController extends Controller
                                 ];
 
                                 // SECTION
-                                $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                                $secs = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])
                                     ->where('department_id', $dept->id)->orderBy('name')->get();
 
                                 foreach ($secs as $s) {
@@ -626,7 +644,7 @@ class RtcController extends Controller
                                     ];
 
                                     // SUB SECTION
-                                    $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                                    $subs = \App\Models\SubSection::with(['leader', 'short', 'mid', 'long'])
                                         ->where('section_id', $s->id)->orderBy('name')->get();
 
                                     foreach ($subs as $sub) {
@@ -666,7 +684,7 @@ class RtcController extends Controller
                             'colorClass'      => 'color-2',
                             'supervisors'     => $plantTrees,   // subtree bersama dimulai dari PLANT
                             'skipManagerNode' => false,
-                            'no_plans'        => true,
+                            'no_plans'        => true,          // hilangkan S/T M/T L/T
                         ],
                         [
                             'title'           => 'VPD',
@@ -675,7 +693,7 @@ class RtcController extends Controller
                             'midTerm'         => null,
                             'longTerm'        => null,
                             'colorClass'      => 'color-3',
-                            'supervisors'     => [],            // anaknya ditarik dari President via group
+                            'supervisors'     => [],            // anaknya di-link/di-share oleh group di blade
                             'skipManagerNode' => false,
                             'no_plans'        => true,
                         ],
@@ -693,13 +711,13 @@ class RtcController extends Controller
                     return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
                 }
 
-                /* ============================= PLANT ============================= */
+                /* ============================= PLANT (FULL SUBTREE) ============================= */
             case 'plant': {
                     $id = (int) $rawId;
 
-                    $p = Plant::with('director')->findOrFail($id);
+                    $p = \App\Models\Plant::with('director')->findOrFail($id);
                     $title = $p->name ?? 'Plant';
-                    $hideMainPlans = true;
+                    $hideMainPlans = true; // root plant tanpa S/T M/T L/T
 
                     $main = [
                         'title'      => $p->name ?? '-',
@@ -710,21 +728,82 @@ class RtcController extends Controller
                         'colorClass' => 'color-1',
                     ];
 
-                    $divs = Division::with(['gm', 'short', 'mid', 'long'])
+                    // FULL SUBTREE: division → department → section → sub section
+                    $divs = \App\Models\Division::with(['gm', 'short', 'mid', 'long'])
                         ->where('plant_id', $p->id)->orderBy('name')->get();
 
                     foreach ($divs as $d) {
                         RtcHelper::setAreaContext('division', $d->id);
-                        $managers[] = [
-                            'title'      => $d->name,
-                            'person'     => RtcHelper::formatPerson($d->gm),
-                            'shortTerm'  => RtcHelper::formatCandidate($d->short, 'short'),
-                            'midTerm'    => RtcHelper::formatCandidate($d->mid,   'mid'),
-                            'longTerm'   => RtcHelper::formatCandidate($d->long,  'long'),
-                            'colorClass' => 'color-2',
-                            'supervisors' => [],
+                        $divNode = [
+                            'title'           => $d->name,
+                            'person'          => RtcHelper::formatPerson($d->gm),
+                            'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
+                            'colorClass'      => 'color-4',
+                            'supervisors'     => [],
                             'skipManagerNode' => false,
                         ];
+
+                        // departments
+                        $depts = \App\Models\Department::with(['manager', 'short', 'mid', 'long'])
+                            ->where('division_id', $d->id)->orderBy('name')->get();
+
+                        foreach ($depts as $dept) {
+                            RtcHelper::setAreaContext('department', $dept->id);
+                            $deptNode = [
+                                'title'           => $dept->name,
+                                'person'          => RtcHelper::formatPerson($dept->manager),
+                                'shortTerm'       => RtcHelper::formatCandidate($dept->short, 'short'),
+                                'midTerm'         => RtcHelper::formatCandidate($dept->mid,   'mid'),
+                                'longTerm'        => RtcHelper::formatCandidate($dept->long,  'long'),
+                                'colorClass'      => 'color-10',
+                                'supervisors'     => [],
+                                'skipManagerNode' => false,
+                            ];
+
+                            // sections
+                            $secs = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])
+                                ->where('department_id', $dept->id)->orderBy('name')->get();
+
+                            foreach ($secs as $s) {
+                                RtcHelper::setAreaContext('section', $s->id);
+                                $secNode = [
+                                    'title'           => $s->name,
+                                    'person'          => RtcHelper::formatPerson($s->supervisor),
+                                    'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
+                                    'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
+                                    'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                                    'colorClass'      => 'color-8',
+                                    'supervisors'     => [],
+                                    'skipManagerNode' => false,
+                                ];
+
+                                // sub sections
+                                $subs = \App\Models\SubSection::with(['leader', 'short', 'mid', 'long'])
+                                    ->where('section_id', $s->id)->orderBy('name')->get();
+
+                                foreach ($subs as $sub) {
+                                    RtcHelper::setAreaContext('sub_section', $sub->id);
+                                    $secNode['supervisors'][] = [
+                                        'title'           => $sub->name,
+                                        'person'          => RtcHelper::formatPerson($sub->leader),
+                                        'shortTerm'       => RtcHelper::formatCandidate($sub->short, 'short'),
+                                        'midTerm'         => RtcHelper::formatCandidate($sub->mid,   'mid'),
+                                        'longTerm'        => RtcHelper::formatCandidate($sub->long,  'long'),
+                                        'colorClass'      => 'color-12',
+                                        'supervisors'     => [],
+                                        'skipManagerNode' => false,
+                                    ];
+                                }
+
+                                $deptNode['supervisors'][] = $secNode;
+                            }
+
+                            $divNode['supervisors'][] = $deptNode;
+                        }
+
+                        $managers[] = $divNode;
                     }
                     break;
                 }
@@ -735,7 +814,7 @@ class RtcController extends Controller
 
                     $hideMainPlans = $isGM;
 
-                    $div   = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
+                    $div   = \App\Models\Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $div->name ?? 'Division';
                     $mainColor = $pickColor("division-root-{$div->id}");
 
@@ -749,7 +828,7 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    $depts = Department::with(['manager', 'short', 'mid', 'long'])
+                    $depts = \App\Models\Department::with(['manager', 'short', 'mid', 'long'])
                         ->where('division_id', $div->id)->orderBy('name')->get();
 
                     $deptPalette = array_values(array_filter($palette, fn($c) => $c !== $mainColor));
@@ -770,7 +849,7 @@ class RtcController extends Controller
                             'skipManagerNode' => false,
                         ];
 
-                        $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                        $secs = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])
                             ->where('department_id', $d->id)->orderBy('name')->get();
 
                         foreach ($secs as $s) {
@@ -793,7 +872,7 @@ class RtcController extends Controller
             case 'department': {
                     $id = (int) $rawId;
 
-                    $d = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
+                    $d = \App\Models\Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $d->name ?? 'Department';
                     $mainColor = $pickColor("department-root-{$d->id}");
 
@@ -818,7 +897,7 @@ class RtcController extends Controller
                         'skipManagerNode' => true,
                     ];
 
-                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                    $secs = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])
                         ->where('department_id', $d->id)->orderBy('name')->get();
 
                     foreach ($secs as $s) {
@@ -841,7 +920,7 @@ class RtcController extends Controller
             case 'section': {
                     $id = (int) $rawId;
 
-                    $s = Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
+                    $s = \App\Models\Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $s->name ?? 'Section';
                     $mainColor = $pickColor("section-root-{$s->id}");
 
@@ -866,7 +945,7 @@ class RtcController extends Controller
                         'skipManagerNode' => true,
                     ];
 
-                    $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                    $subs = \App\Models\SubSection::with(['leader', 'short', 'mid', 'long'])
                         ->where('section_id', $s->id)->orderBy('name')->get();
 
                     foreach ($subs as $sub) {
@@ -889,7 +968,7 @@ class RtcController extends Controller
             case 'sub_section': {
                     $id = (int) $rawId;
 
-                    $sub = SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
+                    $sub = \App\Models\SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
                     $title = $sub->name ?? 'Sub Section';
                     $mainColor = $pickColor("subsection-root-{$sub->id}");
 

@@ -211,9 +211,14 @@
                                                     <i class="fas fa-arrow-right"></i>
                                                 </a>
                                             @elseif ($table === 'Plant')
+                                                <a class="btn btn-sm btn-info"
+                                                    href="{{ route('rtc.summary', ['id' => $division->id]) }}?filter=plant"
+                                                    title="RTC Summary" target="_blank">
+                                                    <i class="fas fa-eye"></i>
+                                                </a>
                                                 <a href="{{ route('rtc.list', ['level' => 'plant', 'id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">
-                                                    <i class="fas fa-list-ul"></i>
+                                                    <i class="fas fa-arrow-right"></i>
                                                 </a>
                                             @else
                                                 <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
