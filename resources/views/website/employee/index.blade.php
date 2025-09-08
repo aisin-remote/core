@@ -39,12 +39,12 @@
 
                     {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
-                            <li class="nav-item" role="presentation">
-                                <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
-                                    href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                    <i class="fas fa-user-tag me-2"></i>{{ $position }}
-                                </a>
-                            </li>
+                        <li class="nav-item" role="presentation">
+                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                <i class="fas fa-user-tag me-2"></i>{{ $position }}
+                            </a>
+                        </li>
                     @endforeach
                 </ul>
 
@@ -64,7 +64,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($employees as $index => $employee)
+                        @foreach ($employees as $index => $employee)
                             @php
                                 $unit = match ($employee->position) {
                                     'Direktur' => $employee->plant?->name,
@@ -98,11 +98,7 @@
                                     </a>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="10" class="text-center text-muted">No employees found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
                 <div class="d-flex justify-content-between">

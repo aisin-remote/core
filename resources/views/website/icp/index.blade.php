@@ -64,7 +64,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($icps as $index => $icp)
+                        @foreach ($icps as $index => $icp)
                             @php $employee = $icp->employee; @endphp
 
                             @php
@@ -103,11 +103,7 @@
                                 </td>
 
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="10" class="text-center text-muted">No employees found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
                 <div class="d-flex justify-content-end mt-4">
@@ -191,7 +187,9 @@
                         previous: "Previous"
                     }
                 },
-                ordering: false
+                ordering: false,
+                lengthChange: false,
+
             });
             console.log("✅ DataTable Initialized Successfully");
         });

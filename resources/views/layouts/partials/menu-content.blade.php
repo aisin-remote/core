@@ -363,29 +363,11 @@
                         </a>
                     </div>
                 @elseif ($isHRDorTop2)
-                    <div class="menu-item menu-accordion {{ $isRtc ? 'show' : '' }}" id="menu-rtc"
-                        data-kt-menu-trigger="click" data-kt-menu-expand="true">
-                        <span class="menu-link {{ $isRtc ? 'active' : '' }}">
+                    <div class="menu-item">
+                        <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
                             <span class="menu-icon"><i class="fas fa-tasks"></i></span>
                             <span class="menu-title">RTC</span>
-                            <span class="menu-arrow"></span>
-                        </span>
-                        <div class="menu-sub menu-sub-accordion menu-active-bg">
-                            <div class="menu-item">
-                                <a class="menu-link {{ $currentPath === 'rtc/aii' ? 'active' : '' }}"
-                                    href="/rtc/aii">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">AII</span>
-                                </a>
-                            </div>
-                            <div class="menu-item">
-                                <a class="menu-link {{ $currentPath === 'rtc/aiia' ? 'active' : '' }}"
-                                    href="/rtc/aiia">
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">AIIA</span>
-                                </a>
-                            </div>
-                        </div>
+                        </a>
                     </div>
                 @endif
             </div>

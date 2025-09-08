@@ -62,7 +62,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($sections as $section)
+                        @foreach ($sections as $section)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $section->name }}</td>
@@ -80,11 +80,7 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">No data found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
