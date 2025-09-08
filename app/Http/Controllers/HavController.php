@@ -421,7 +421,6 @@ class HavController extends Controller
             $showRevise = ($latestHav && (int)$isAssessmentOne === 0 && (int)$latestHav->status == 1);
 
             $checkLevel  = $emp?->getFirstApproval();
-            dd($checkLevel);
             $subCheck   = $emp->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
 
             return (object) [
