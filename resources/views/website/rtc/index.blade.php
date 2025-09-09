@@ -204,36 +204,36 @@
                                             @if ($table === 'Company')
                                                 <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
-                                                    <i class="fas fa-eye"></i>
+                                                    Structure
                                                 </a>
                                                 <a href="{{ route('rtc.list', ['level' => 'company', 'id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">
-                                                    <i class="fas fa-arrow-right"></i>
+                                                    Detail
                                                 </a>
                                             @elseif ($table === 'Plant')
                                                 <a class="btn btn-sm btn-info"
                                                     href="{{ route('rtc.summary', ['id' => $division->id]) }}?filter=plant"
                                                     title="RTC Summary" target="_blank">
-                                                    <i class="fas fa-eye"></i>
+                                                    Structure
                                                 </a>
                                                 <a href="{{ route('rtc.list', ['level' => 'plant', 'id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">
-                                                    <i class="fas fa-arrow-right"></i>
+                                                    Detail
                                                 </a>
                                             @else
                                                 <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
-                                                    <i class="fas fa-eye"></i>
+                                                    Structure
                                                 </a>
                                                 <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">
-                                                    <i class="fas fa-info-circle"></i>
+                                                    Detail
                                                 </a>
                                                 @if ($showPlanColumns)
                                                     <a href="#" class="btn btn-sm btn-success open-add-plan-modal"
                                                         data-id="{{ $division->id }}" data-bs-toggle="modal"
                                                         data-bs-target="#addPlanModal" title="Add">
-                                                        <i class="fas fa-plus-circle"></i>
+                                                        Detail
                                                     </a>
                                                 @endif
                                             @endif

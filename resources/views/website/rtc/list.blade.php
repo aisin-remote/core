@@ -424,6 +424,11 @@
                 return s.trim().split(/\s+/).slice(0, n).join(' ');
             }
 
+            function getQueryParam(name) {
+                const urlParams = new URLSearchParams(window.location.search);
+                return urlParams.get(name);
+            }
+
             function renderRows(items, currentFilter = 'division') {
                 if (!items || !items.length) {
                     $('#kt_table_users tbody').html(
@@ -441,25 +446,27 @@
                     const statusHtml = statusChip(row.overall);
                     const lastYear = row.last_year ? esc(row.last_year) : '-';
 
-                    // Detail & Summary buttons
-                    const detailBtn = `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}"
-                                          class="btn btn-sm btn-primary"
-                                          data-bs-toggle="tooltip" title="Open detail">
-                                            <i class="fas fa-arrow-right"></i>
-                                        </a>`;
+                    const urlId = getQueryParam('id');
+                    const detailBtn = urlId ?
+                        '' :
+                        `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}"
+            class="btn btn-sm btn-primary"
+            data-bs-toggle="tooltip" title="Open detail">
+              Detail
+       </a>`;
+
                     const summaryBtn = `<a href="${window.ROUTE_SUMMARY_BASE}?id=${row.id}&filter=${currentFilter}"
-                                          class="btn btn-sm btn-info" target="_blank"
-                                          data-bs-toggle="tooltip" title="Open summary">
-                                            <i class="fas fa-eye"></i>
-                                        </a>`;
+                      class="btn btn-sm btn-info" target="_blank"
+                      data-bs-toggle="tooltip" title="Open structure">
+                        Structure
+                   </a>`;
+
 
                     // PIC badge (kecil + tooltip nama lengkap)
                     const fullName = row.pic?.name || '-';
                     const showName = limitWords(fullName, 2);
                     const pic = row.pic ?
                         `<span class="pic-badge" title="${esc(fullName)}" data-bs-toggle="tooltip">
-                               <span class="role">${esc(row.pic.position || '')}</span>
-                               <span class="sep">–</span>
                                <span class="name">${esc(showName)}</span>
                            </span>` :
                         `<span class="pic-badge empty">not set</span>`;
@@ -512,7 +519,7 @@
                     console.error(xhr.responseText || xhr.statusText);
                     $('#kt_table_users tbody').html(
                         '<tr><td colspan="9" class="text-center text-danger">Failed to load data</td></tr>'
-                        );
+                    );
                 });
             }
 
