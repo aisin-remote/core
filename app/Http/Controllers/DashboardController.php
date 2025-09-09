@@ -10,8 +10,10 @@ use App\Models\{
     Rtc,
     Division,
     Department,
+    Plant,
     Section,
-    SubSection
+    SubSection,
+    User
 };
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -453,110 +455,13 @@ class DashboardController
         return $res;
     }
 
-    private function allBucketsByNpks($npks): array
-    {
-        $npks = collect($npks)->filter()->values();
-        $scope = $npks->count();
-        if ($scope === 0) {
-            $res = ['scope' => 0, 'approved' => 0, 'progress' => 0, 'revised' => 0, 'not' => 0];
-            Log::info('summary:all', $res);
-            return $res;
-        }
-
-        $expr = $this->npkNormExpr('e');
-
-        // ==== IDP latest per NPK
-        $latestIdp = DB::table('idp as i')
-            ->join('assessments as a', 'i.assessment_id', '=', 'a.id')
-            ->join('employees as e', 'a.employee_id', '=', 'e.id')
-            ->whereIn(DB::raw($expr), $npks)
-            ->selectRaw("$expr AS nk, MAX(i.id) AS last_id")
-            ->groupBy('nk');
-
-        $idpRows = DB::table('idp as x')
-            ->joinSub($latestIdp, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->join('assessments as a', 'x.assessment_id', '=', 'a.id')
-            ->join('employees as e', 'a.employee_id', '=', 'e.id')
-            ->select('l.nk as npk_norm', 'x.status', 'e.position')->get();
-
-        $idpBucket = [];
-        foreach ($idpRows as $r) {
-            $isMgr = str_contains(strtolower($r->position), 'manager');
-            $s = (int)$r->status;
-            if (($isMgr && in_array($s, [4], true)) || (!$isMgr && in_array($s, [3, 4], true))) $idpBucket[$r->npk_norm] = 'approved';
-            elseif ($s === -1) $idpBucket[$r->npk_norm] = 'revised';
-            else $idpBucket[$r->npk_norm] = 'progress';
-        }
-
-        // ==== HAV latest per NPK
-        $havLatest = DB::table('havs as t')
-            ->join('employees as e', 'e.id', '=', 't.employee_id')
-            ->whereIn(DB::raw($expr), $npks)
-            ->selectRaw("$expr AS nk, MAX(t.id) AS last_id")
-            ->groupBy('nk');
-
-        $havRows = DB::table('havs as x')
-            ->joinSub($havLatest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->select('l.nk as npk_norm', 'x.status')->get();
-
-        $havBucket = [];
-        foreach ($havRows as $r) {
-            $s = (int)$r->status;
-            if ($s === 3) $havBucket[$r->npk_norm] = 'approved';
-            elseif ($s === -1) $havBucket[$r->npk_norm] = 'revised';
-            else $havBucket[$r->npk_norm] = 'progress';
-        }
-
-        // ==== ICP latest per NPK
-        $icpLatest = DB::table('icp as t')
-            ->join('employees as e', 'e.id', '=', 't.employee_id')
-            ->whereIn(DB::raw($expr), $npks)
-            ->selectRaw("$expr AS nk, MAX(t.id) AS last_id")
-            ->groupBy('nk');
-
-        $icpRows = DB::table('icp as x')
-            ->joinSub($icpLatest, 'l', fn($j) => $j->on('x.id', '=', 'l.last_id'))
-            ->select('l.nk as npk_norm', 'x.status')->get();
-
-        $icpBucket = [];
-        foreach ($icpRows as $r) {
-            $s = (int)$r->status;
-            if ($s === 3) $icpBucket[$r->npk_norm] = 'approved';
-            elseif ($s === -1) $icpBucket[$r->npk_norm] = 'revised';
-            else $icpBucket[$r->npk_norm] = 'progress';
-        }
-
-        // ==== Gabungkan per NPK
-        $approved = 0;
-        $revised  = 0;
-        $progress = 0;
-        $not      = 0;
-
-        foreach ($npks as $nk) {
-            $buckets = [
-                $idpBucket[$nk] ?? null,
-                $havBucket[$nk] ?? null,
-                $icpBucket[$nk] ?? null,
-            ];
-
-            if (in_array('approved', $buckets, true))      $approved++;
-            elseif (in_array('revised', $buckets, true))   $revised++;
-            elseif (in_array('progress', $buckets, true))  $progress++;
-            else                                            $not++;
-        }
-
-        $res = compact('scope', 'approved', 'progress', 'revised', 'not');
-        Log::info('summary:all', $res);
-        return $res;
-    }
-
     /* =============================================================================
      * RTC AGG & LIST (by-structure) — tetap sama
      * ============================================================================= */
 
     private function moduleRtcBucketsByStructure(?string $company): array
     {
-        [$divs, $depts, $secs, $subs] = $this->allStructuresByCompany($company);
+        [$divs, $depts, $secs, $subs] = $this->allStructuresByCompany($company, auth()->user());
         $total = $divs->count() + $depts->count() + $secs->count() + $subs->count();
 
         $approved = 0;
@@ -575,7 +480,7 @@ class DashboardController
                 if (in_array($s, [0, 1])) return 'progress';
                 return 'revised';
             }
-            return 'revised'; // campur -> revised
+            return 'revised';
         };
 
         foreach ($divs as $m) {
@@ -620,7 +525,7 @@ class DashboardController
 
     public function listRtcStructures(?string $company, string $statusWant): array
     {
-        [$divs, $depts, $secs, $subs] = $this->allStructuresByCompany($company);
+        [$divs, $depts, $secs, $subs] = $this->allStructuresByCompany($company, auth()->user());
 
         $bucketOf = function (string $area, int $id) {
             $arr = Rtc::where('area', $area)->where('area_id', $id)->pluck('status')->all();
@@ -639,14 +544,14 @@ class DashboardController
         $rows = collect();
 
         $push = function (string $area, $model) use (&$rows, $bucketOf) {
-            $b = $bucketOf($area, $model->id); // null -> not created
+            $b = $bucketOf($area, $model->id);
             $structPic = $this->getStructuralPIC($area, $model);
             $dirPic    = $this->getDirectorForStructure($area, $model);
 
             $rows->push([
                 'area'         => $area,
                 'name'         => $model->name ?? '-',
-                'bucket'       => $b,                      // 'approved'|'progress'|'revised'|null
+                'bucket'       => $b,
                 'struct_pic'   => optional($structPic)->name ?? '-',
                 'director_pic' => optional($dirPic)->name ?? '-',
             ]);
@@ -669,23 +574,119 @@ class DashboardController
         return $rows->sortBy('name')->values()->all();
     }
 
-    private function allStructuresByCompany(?string $company)
+    private function allStructuresByCompany(?string $company, User $user)
     {
-        $divs = Division::query()
-            ->when($company, fn($q) => $q->where('company', $company))
-            ->with('plant')->orderBy('name')->get();
+        $emp   = $user->employee;                 // anchor jabatan
+        $role  = strtoupper((string) $user->role);
+        $isHRD = in_array($role, ['HRD', 'HR MANAGER', 'HRD MANAGER'], true);
 
-        $depts = Department::query()
-            ->whereHas('division', fn($q) => $q->when($company, fn($qq) => $qq->where('company', $company)))
-            ->with('division.plant')->orderBy('name')->get();
+        $company = $company ? strtoupper($company) : null;
 
-        $secs = Section::query()
-            ->whereHas('department.division', fn($q) => $q->when($company, fn($qq) => $qq->where('company', $company)))
-            ->with('department.division.plant')->orderBy('name')->get();
+        // helper: filter company (jika kolom 'company' ada di tabel terkait)
+        $byCompany = function ($q) use ($company) {
+            if ($company) {
+                $q->whereRaw('UPPER(company) = ?', [$company]);
+            }
+        };
 
-        $subs = SubSection::query()
-            ->whereHas('section.department.division', fn($q) => $q->when($company, fn($qq) => $qq->where('company', $company)))
-            ->with('section.department.division.plant')->orderBy('name')->get();
+        // deteksi kepemimpinan struktur
+        $leadPlantId    = null;
+        $leadDivisionId = null;
+
+        if ($emp) {
+            // dianggap memimpin plant jika employee adalah director di plant tsb
+            if ($emp->leadingPlant && (int)$emp->leadingPlant->director_id === (int)$emp->id) {
+                $leadPlantId = (int)$emp->leadingPlant->id;
+            }
+            // dianggap memimpin division jika employee adalah GM di division tsb
+            if ($emp->leadingDivision && (int)$emp->leadingDivision->gm_id === (int)$emp->id) {
+                $leadDivisionId = (int)$emp->leadingDivision->id;
+            }
+        }
+
+        /* ======================= DIVISION ======================= */
+        // Catatan: jika user adalah pemimpin division, kita tidak fetch divisions sama sekali.
+        if ($isHRD) {
+            $divs = Division::query()
+                ->with('plant')
+                ->orderBy('name')
+                ->tap($byCompany)
+                ->get();
+        } elseif ($leadPlantId) {
+            $divs = Division::query()
+                ->with('plant')
+                ->where('plant_id', $leadPlantId)
+                ->orderBy('name')
+                ->tap($byCompany)
+                ->get();
+        } elseif ($leadDivisionId) {
+            // <<— di sini divisi tidak dikembalikan
+            $divs = collect();
+        } else {
+            $divs = collect();
+        }
+
+        /* ======================= DEPARTMENT ======================= */
+        $deptsQ = Department::query()
+            ->with('division.plant')
+            ->orderBy('name');
+
+        $deptsQ->whereHas('division', function ($q) use ($isHRD, $leadPlantId, $leadDivisionId, $byCompany) {
+            if ($isHRD) {
+                $byCompany($q);
+            } elseif ($leadPlantId) {
+                // semua dept di semua division milik plant tsb
+                $q->where('plant_id', $leadPlantId);
+                $byCompany($q);
+            } elseif ($leadDivisionId) {
+                // semua dept di division yang dipimpin
+                $q->where('id', $leadDivisionId);
+                $byCompany($q);
+            } else {
+                $q->whereRaw('1=0');
+            }
+        });
+        $depts = $deptsQ->get();
+
+        /* ======================= SECTION ======================= */
+        $secsQ = Section::query()
+            ->with('department.division.plant')
+            ->orderBy('name');
+
+        $secsQ->whereHas('department.division', function ($q) use ($isHRD, $leadPlantId, $leadDivisionId, $byCompany) {
+            if ($isHRD) {
+                $byCompany($q);
+            } elseif ($leadPlantId) {
+                $q->where('plant_id', $leadPlantId);
+                $byCompany($q);
+            } elseif ($leadDivisionId) {
+                $q->where('id', $leadDivisionId);
+                $byCompany($q);
+            } else {
+                $q->whereRaw('1=0');
+            }
+        });
+        $secs = $secsQ->get();
+
+        /* ======================= SUB SECTION ======================= */
+        $subsQ = SubSection::query()
+            ->with('section.department.division.plant')
+            ->orderBy('name');
+
+        $subsQ->whereHas('section.department.division', function ($q) use ($isHRD, $leadPlantId, $leadDivisionId, $byCompany) {
+            if ($isHRD) {
+                $byCompany($q);
+            } elseif ($leadPlantId) {
+                $q->where('plant_id', $leadPlantId);
+                $byCompany($q);
+            } elseif ($leadDivisionId) {
+                $q->where('id', $leadDivisionId);
+                $byCompany($q);
+            } else {
+                $q->whereRaw('1=0');
+            }
+        });
+        $subs = $subsQ->get();
 
         return [$divs, $depts, $secs, $subs];
     }

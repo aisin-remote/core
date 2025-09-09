@@ -229,7 +229,7 @@
         $canPickCompany = $isHRD || in_array($norm, ['president', 'vpd'], true);
 
         // TAMPIL PIC hanya untuk HRD/GM/Direktur/VPD/President
-        $canSeePIC = $isHRD || in_array($norm, ['gm', 'direktur', 'vpd', 'president'], true);
+        $canSeePIC = $isHRD || in_array($norm, ['gm', 'act gm', 'direktur', 'vpd', 'president'], true);
     @endphp
 
     <div id="kt_app_content_container" class="app-container container-fluid">
@@ -276,7 +276,9 @@
             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-idp" role="tab">IDP</a></li>
             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-hav" role="tab">HAV</a></li>
             <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-icp" role="tab">ICP</a></li>
-            <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-rtc" role="tab">RTC</a></li>
+            @if ($canSeePIC)
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-rtc" role="tab">RTC</a></li>
+            @endif
         </ul>
 
         <div class="tab-content">

@@ -474,9 +474,9 @@
                     // Add (hidden jika read-only)
                     let addBtn = '';
                     if (!window.READ_ONLY && row.can_add) {
-                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}"
+                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal mx-1" data-id="${row.id}"
                                     data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add plan">
-                                    <i class="fas fa-plus-circle"></i>
+                                    Add RTC
                                   </a>`;
                     }
 
