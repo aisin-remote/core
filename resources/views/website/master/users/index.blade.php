@@ -54,7 +54,7 @@
                     </thead>
 
                     <tbody>
-                        @forelse ($users as $index => $user)
+                        @foreach ($users as $index => $user)
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $user->id }}</td>
@@ -66,17 +66,9 @@
                                         class="btn btn-warning btn-sm text-center">
                                         Edit
                                     </a>
-                                    {{-- <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                        data-id="{{ $user->id }}" data-name="{{ $user->name }}">
-                                        <i class="fa fa-trash"></i>
-                                    </button> --}}
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">No data found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>

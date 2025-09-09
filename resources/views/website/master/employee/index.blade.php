@@ -88,7 +88,7 @@
                     </thead>
 
                     <tbody>
-                        @forelse ($employee as $index => $employees)
+                        @foreach ($employee as $index => $employees)
                             <tr>
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td class="text-center">
@@ -127,12 +127,7 @@
                                     </button>
                                 </td>
                             </tr>
-
-                        @empty
-                            <tr>
-                                <td colspan="11" class="text-center text-muted">No employees found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
