@@ -209,6 +209,37 @@
             overflow-y: auto;
             padding: 1rem 2rem;
         }
+
+        /* ==================== Button action ==================== */
+        /* Actions column: vertical stack with spacing */
+        .actions-cell {
+            min-width: 140px;
+        }
+
+        .action-stack {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: .5rem;
+            /* spasi antar tombol */
+        }
+
+        .action-stack .btn {
+            width: 100%;
+        }
+
+        /* Di layar kecil, izinkan berbaris & tetap ada jarak */
+        @media (max-width: 576px) {
+            .action-stack {
+                flex-direction: row;
+                flex-wrap: wrap;
+                gap: .5rem;
+            }
+
+            .actions-cell {
+                min-width: 0;
+            }
+        }
     </style>
 @endpush
 
@@ -426,7 +457,18 @@
 
             function getQueryParam(name) {
                 const urlParams = new URLSearchParams(window.location.search);
-                return urlParams.get(name);
+                return name ? urlParams.get(name) : null;
+            }
+
+            function getUrlId() {
+                // ?id=...
+                const idQS = getQueryParam('id');
+                if (idQS) return idQS;
+
+                // /rtc/list/7
+                const parts = window.location.pathname.split('/').filter(Boolean);
+                const last = parts[parts.length - 1];
+                return /^\d+$/.test(last) ? last : null;
             }
 
             function renderRows(items, currentFilter = 'division') {
@@ -446,21 +488,24 @@
                     const statusHtml = statusChip(row.overall);
                     const lastYear = row.last_year ? esc(row.last_year) : '-';
 
-                    const urlId = getQueryParam('id');
-                    const detailBtn = urlId ?
-                        '' :
-                        `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}"
-            class="btn btn-sm btn-primary"
-            data-bs-toggle="tooltip" title="Open detail">
-              Detail
-       </a>`;
+                    const urlId = getUrlId();
+                    const hasLevel = !!getQueryParam('level');
+                    const shouldHideDetail = !!urlId & !hasLevel;
+
+                    let detailBtn = '';
+                    if (!shouldHideDetail) {
+                        detailBtn = `<a href="${window.ROUTE_LIST_BASE}?id=${row.id}"
+                                        class="btn btn-sm btn-primary"
+                                        data-bs-toggle="tooltip" title="Open detail">
+                                        Detail
+                                    </a>`;
+                    }
 
                     const summaryBtn = `<a href="${window.ROUTE_SUMMARY_BASE}?id=${row.id}&filter=${currentFilter}"
-                      class="btn btn-sm btn-info" target="_blank"
-                      data-bs-toggle="tooltip" title="Open structure">
-                        Structure
-                   </a>`;
-
+                                            class="btn btn-sm btn-info" target="_blank"
+                                            data-bs-toggle="tooltip" title="Open structure">
+                                            Preview
+                                        </a>`;
 
                     // PIC badge (kecil + tooltip nama lengkap)
                     const fullName = row.pic?.name || '-';
@@ -474,11 +519,20 @@
                     // Add (hidden jika read-only)
                     let addBtn = '';
                     if (!window.READ_ONLY && row.can_add) {
-                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal mx-1" data-id="${row.id}"
-                                    data-bs-toggle="modal" data-bs-target="#addPlanModal" title="Add plan">
-                                    Add RTC
-                                  </a>`;
+                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal"
+                                    data-id="${row.id}" data-bs-toggle="modal"
+                                    data-bs-target="#addPlanModal" title="Add plan">
+                                    Add
+                                    </a>`;
                     }
+
+                    const actionsHtml = `
+                                        <div class="action-stack">
+                                            ${summaryBtn}
+                                            ${detailBtn}
+                                            ${addBtn}
+                                        </div>
+                                        `;
 
                     return `
                         <tr>
@@ -490,7 +544,7 @@
                             <td class="text-start term-cell">${lt}</td>
                             <td class="text-center">${statusHtml}</td>
                             <td class="text-center">${lastYear}</td>
-                            <td class="text-center">${summaryBtn} ${detailBtn} ${addBtn}</td>
+                            <td class="text-center actions-cell">${actionsHtml}</td>
                         </tr>`;
                 }).join('');
 
