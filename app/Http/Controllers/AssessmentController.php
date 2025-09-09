@@ -836,58 +836,80 @@ class AssessmentController extends Controller
 
     private function processHavUpdate(Request $request, Assessment $assessment)
     {
-        // Cari HAV terbaru untuk employee dan assessment ini
-        $latestHav = DB::table('havs')
-            ->where('employee_id', $assessment->employee_id)
-            ->latest('created_at')
-            ->first();
+        DB::transaction(function () use ($request, $assessment) {
+            // 1) Cari HAV untuk assessment ini; kalau tidak ada -> create
+            $hav = DB::table('havs')
+                ->where('assessment_id', $assessment->id)
+                ->first();
 
-        if (!$latestHav) {
-            return; //Tidak ada hav untuk diupdate
-        }
+            if (!$hav) {
+                // fallback: ambil HAV terakhir milik employee untuk mewarisi quadrant (jika ada)
+                $last = DB::table('havs')
+                    ->where('employee_id', $assessment->employee_id)
+                    ->latest('created_at')
+                    ->first();
 
-        if ($latestHav->created_at === $assessment->created_at->format('Y-m-d H:i:s')) {
-            DB::table('havs')
-                ->where('id', $latestHav->id)
-                ->update([
+                $havId = DB::table('havs')->insertGetId([
+                    'employee_id'   => $assessment->employee_id,
+                    'year'          => (int) ($assessment->year ?? now()->year),
+                    'quadrant'      => $last ? $last->quadrant : null,
+                    'status'        => 0,
                     'assessment_id' => $assessment->id,
+                    'created_at'    => now(),
+                    'updated_at'    => now(),
                 ]);
-        }
 
-        // Load template HAV
-        $templatePath = public_path('assets/file/Import-HAV.xls');
-        $spreadsheet = IOFactory::load($templatePath);
-        $sheet = $spreadsheet->getActiveSheet();
+                $hav = DB::table('havs')->where('id', $havId)->first();
+            } else {
+                // sinkron info dasar (opsional)
+                DB::table('havs')->where('id', $hav->id)->update([
+                    'employee_id' => $assessment->employee_id,
+                    'year'        => (int) ($assessment->year ?? now()->year),
+                    'updated_at'  => now(),
+                ]);
+            }
 
-        // Isi data employee
-        $employee = Employee::with('departments')->findOrFail($assessment->employee_id);
-        $this->fillEmployeeData($sheet, $employee);
+            // 2) Load template
+            $templatePath = public_path('assets/file/Import-HAV.xls');
+            if (!is_file($templatePath)) {
+                throw new \RuntimeException('HAV template not found: ' . $templatePath);
+            }
+            $spreadsheet = IOFactory::load($templatePath);
+            $sheet = $spreadsheet->getActiveSheet();
 
-        // Mapping data assessment ke HAV
-        $alcMapping = $this->getAlcMapping();
-        $suggestionMapping = $this->getSuggestionMapping();
+            // 3) Isi data karyawan
+            $employee = Employee::with('departments')->findOrFail($assessment->employee_id);
+            $this->fillEmployeeData($sheet, $employee);
 
-        foreach ($request->alc_ids as $alc_id) {
-            $score = $request->scores[$alc_id] ?? "0";
-            $suggestion = $request->suggestion_development[$alc_id] ?? "";
+            // 4) Mapping & isi nilai
+            $alcMapping        = $this->getAlcMapping();
+            $suggestionMapping = $this->getSuggestionMapping();
 
-            $this->fillScoreData($sheet, $alcMapping, $alc_id, $score);
-            $this->fillSuggestionData($sheet, $suggestionMapping, $alc_id, $suggestion);
-        }
+            $alcIds      = (array) $request->input('alc_ids', []);
+            $scores      = (array) $request->input('scores', []);
+            $suggestions = (array) $request->input('suggestion_development', []);
 
-        // Simpan file HAV baru
-        $relativePath = $this->saveHavFile($spreadsheet);
+            foreach ($alcIds as $alcId) {
+                $score       = (string) ($scores[$alcId] ?? '0');
+                $suggestion  = (string) ($suggestions[$alcId] ?? '');
+                $this->fillScoreData($sheet, $alcMapping, $alcId, $score);
+                $this->fillSuggestionData($sheet, $suggestionMapping, $alcId, $suggestion);
+            }
 
-        DB::table('hav_comment_histories')->insert([
-            'hav_id' => $latestHav->id,
-            'employee_id' => $assessment->employee_id,
-            'upload' => $relativePath,
-            'created_at' => now(),
-            'updated_at' => now()
-        ]);
+            // 5) Simpan file hasil
+            $relativePath = $this->saveHavFile($spreadsheet);
 
-        // Jalankan import HAV
-        $this->importHavForUpdate($relativePath, $latestHav->id, $request);
+            DB::table('hav_comment_histories')->insert([
+                'hav_id'      => $hav->id,
+                'employee_id' => $assessment->employee_id,
+                'upload'      => $relativePath,
+                'created_at'  => now(),
+                'updated_at'  => now(),
+            ]);
+
+            // 6) Import data HAV ke DB (update existing HAV)
+            $this->importHavForUpdate($relativePath, $hav->id, $request);
+        });
     }
 
     private function importHavForUpdate($relativePath, $havId, $request)

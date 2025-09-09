@@ -379,142 +379,68 @@ class HavController extends Controller
 
             $allowAdd = false;
             $virtualStatus = optional($latestHav)->status;
+            $badgeClass = 'badge-light-warning';
 
             if ($latestHav && $latestHav->status == 2) {
-                $addAfter = \Carbon\Carbon::parse($latestHav->created_at)->addYear();
+                $addAfter = Carbon::parse($latestHav->created_at)->addYear();
                 if (now()->gte($addAfter)) {
                     $allowAdd = true;
                     $virtualStatus = null; // Set status virtual jadi '-' (null)
                 }
             }
 
+            // Set status for blade
+            $statusRaw = optional($latestHav)->status;
+            $isAssessmentOne = $latestHav && $latestHav->details->contains('is_assessment', 1);
+
+            $baseText = match ($statusRaw) {
+                0 => 'Submitted',
+                1 => 'Revised',
+                2 => 'Approved',
+                3 => 'Not Created',
+                default => '-',
+            };
+
+            if ($statusRaw === 0 & $isAssessmentOne) {
+                $statusText = 'Not Created';
+            } elseif ($statusRaw === 2 && Carbon::parse($latestHav->crated_at)->addYear()->isPast()) {
+                $statusText = '-';
+            } else {
+                $statusText = $baseText;
+            }
+
+
+            // Set tombol action blade
+            // “+ Add” tampil kalau:
+            // - belum punya HAV, atau
+            // - sudah Approved > 1 tahun (allowAdd), atau
+            // - masih punya HAV tapi is_assessment == 1 (mengikuti logic lama)
+            $showAdd = (!$latestHav) || $allowAdd || ($latestHav && !$allowAdd && (int)$isAssessmentOne === 1);
+
+            // “Revise” tampil kalau is_assessment == 0 DAN status == 1 (Revised)
+            $showRevise = ($latestHav && (int)$isAssessmentOne === 0 && (int)$latestHav->status == 1);
+
+            $checkLevel  = $emp?->getFirstApproval();
+            $subCheck   = $emp->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+
             return (object) [
                 'employee' => $emp,
                 'hav' => $latestHav,
                 'allowAdd' => $allowAdd,
                 'virtualStatus' => $virtualStatus,
+
+                'status_text' => $statusText,
+                'badge_class' => $badgeClass,
+
+                'show_add' => $showAdd,
+                'show_revise' => $showRevise,
+                'revise_hav_id' => $latestHav?->id,
             ];
         });
 
 
         return view('website.hav.assign', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }
-
-
-
-
-
-    // public function assign(Request $request, $company = null)
-    // {
-    //     $title = 'Add Employee';
-    //     $user = auth()->user();
-    //     $filter = $request->input('filter', 'all');
-    //     $search = $request->input('search'); // ambil input search dari request
-
-    //     // Ambil npk dari query string
-    //     $npk = $request->query('npk'); // Jika npk ada di query string
-
-    //     if ($npk) {
-    //         // Jika ada npk, tampilkan hanya data untuk npk tersebut
-
-    //         $employees = Hav::with('employee')
-
-    //             ->whereHas('employee', function ($query) use ($npk, $filter, $search) {
-    //                 $query->where('npk', $npk); // Filter berdasarkan npk
-    //                 if ($filter && $filter !== 'all') {
-    //                     $query->where(function ($q) use ($filter) {
-    //                         $q->where('position', $filter)
-    //                             ->orWhere('position', 'like', "Act %{$filter}");
-    //                     });
-    //                 }
-    //                 if ($search) {
-    //                     $query->where('name', 'like', '%' . $search . '%');
-    //                 }
-    //             })
-
-    //             ->get()
-    //             ->unique('employee_id')
-    //             ->values();
-    //     } else {
-    //         // Logika untuk HRD atau selain HRD
-    //         if ($user->role === 'HRD') {
-    //             $employees = Hav::with('employee')
-    //                 ->whereHas('employee', function ($query) use ($company, $filter, $search) {
-    //                     if ($company) {
-    //                         $query->where('company_name', $company);
-    //                     }
-    //                     if ($filter && $filter !== 'all') {
-    //                         $query->where(function ($q) use ($filter) {
-    //                             $q->where('position', $filter)
-    //                                 ->orWhere('position', 'like', "Act %{$filter}");
-    //                         });
-    //                     }
-    //                     if ($search) {
-    //                         $query->where('name', 'like', '%' . $search . '%');
-    //                     }
-    //                 })
-    //                 ->get()
-    //                 ->unique('employee_id')
-    //                 ->values();
-    //         } else {
-    //             $employee = Employee::where('user_id', $user->id)->first();
-
-    //             if (!$employee) {
-    //                 $employees = collect();
-    //             } else {
-    //                 $approvallevel = (auth()->user()->employee->getCreateAuth());
-    //                 $subordinate =  auth()->user()->employee->getSubordinatesByLevel($approvallevel)->pluck('id');
-
-    //                 $employees = Hav::with('employee')
-    //                     ->whereIn('employee_id', $subordinate)
-    //                     ->whereHas('employee', function ($query) use ($filter, $search, $employee) {
-
-    //                         if ($filter && $filter !== 'all') {
-    //                             $query->where(function ($q) use ($filter) {
-    //                                 $q->where('position', $filter)
-    //                                     ->orWhere('position', 'like', "Act %{$filter}");
-    //                             });
-    //                         }
-    //                         if ($search) {
-    //                             $query->where('name', 'like', '%' . $search . '%');
-    //                         }
-    //                     })
-    //                     ->get()
-    //                     ->unique('employee_id')
-    //                     ->values();
-    //             }
-    //         }
-    //     }
-
-    //     // Daftar posisi
-    //     $allPositions = [
-    //         'Direktur',
-    //         'GM',
-    //         'Manager',
-    //         'Coordinator',
-    //         'Section Head',
-    //         'Supervisor',
-    //         'Leader',
-    //         'JP',
-    //         'Operator',
-    //     ];
-
-    //     $rawPosition = $user->employee->position ?? 'Operator';
-    //     $currentPosition = Str::contains($rawPosition, 'Act ')
-    //         ? trim(str_replace('Act', '', $rawPosition))
-    //         : $rawPosition;
-
-    //     $positionIndex = array_search($currentPosition, $allPositions);
-    //     if ($positionIndex === false) {
-    //         $positionIndex = array_search('Operator', $allPositions);
-    //     }
-
-    //     $visiblePositions = $positionIndex !== false
-    //         ? array_slice($allPositions, $positionIndex)
-    //         : [];
-
-    //     return view('website.hav.assign', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
-    // }
 
     public function ajaxList(Request $request)
     {
