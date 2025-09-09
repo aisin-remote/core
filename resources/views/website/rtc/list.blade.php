@@ -579,11 +579,11 @@
 
                 const rows = items.map((row, idx) => {
                     const st = row.short?.name ? esc(row.short.name) :
-                        '<span class="text-not-set">not set</span>';
+                        '<span class="text-not-set">-</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) :
-                        '<span class="text-not-set">not set</span>';
+                        '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) :
-                        '<span class="text-not-set">not set</span>';
+                        '<span class="text-not-set">-</span>';
                     const statusHtml = statusChip(row.overall);
                     const lastYear = row.last_year ? esc(row.last_year) : '-';
 
