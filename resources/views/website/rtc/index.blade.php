@@ -204,7 +204,7 @@
                                             @if ($table === 'Company')
                                                 <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
-                                                    Structure
+                                                    Preview
                                                 </a>
                                                 <a href="{{ route('rtc.list', ['level' => 'company', 'id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">
@@ -214,7 +214,7 @@
                                                 <a class="btn btn-sm btn-info"
                                                     href="{{ route('rtc.summary', ['id' => $division->id]) }}?filter=plant"
                                                     title="RTC Summary" target="_blank">
-                                                    Structure
+                                                    Preview
                                                 </a>
                                                 <a href="{{ route('rtc.list', ['level' => 'plant', 'id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">
@@ -223,7 +223,7 @@
                                             @else
                                                 <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
-                                                    Structure
+                                                    Preview
                                                 </a>
                                                 <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">

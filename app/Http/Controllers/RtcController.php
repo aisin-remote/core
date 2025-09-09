@@ -594,7 +594,7 @@ class RtcController extends Controller
                             'colorClass'      => 'color-1',
                             'supervisors'     => [],
                             'skipManagerNode' => false,
-                            'no_plans'        => true, // hide S/T M/T L/T di template
+                            'no_plans'        => true,
                         ];
 
                         // DIVISION
