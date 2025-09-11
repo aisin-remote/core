@@ -133,12 +133,16 @@
                             </div>
                         @endif
 
-                        {{-- PLANT selector (tab Division; GM tidak perlu) --}}
+                        {{-- PLANT selector (SELALU muncul saat tab Division).
+     - HRD/Top2: disabled dulu sampai pilih company → options diisi via JS
+     - Direktur: server-side menaruh 1 plant yg dipimpin
+     - GM: tidak butuh plant selector (divisi fixed) --}}
                         @if (($tableFilter ?? '') === 'division' && !($isGM ?? false))
                             <div class="row mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label">Plant</label>
-                                    <select id="plantSelect" class="form-select">
+                                    <select id="plantSelect" class="form-select"
+                                        {{ !empty($isCompanyScope) ? 'disabled' : '' }}>
                                         @if (empty($isCompanyScope))
                                             @foreach ($plants ?? collect() as $p)
                                                 <option value="{{ $p['id'] ?? $p->id }}"
@@ -359,30 +363,36 @@
             }
 
             // allow extra params (e.g. company for plant list)
-            function fetchItems(filter, containerId, extra = {}) {
+            function fetchItems(filter, containerId) {
                 const needsId = ['department', 'section', 'sub_section'].includes(filter);
+
+                // Validasi kebutuhan ID
                 if (needsId && !containerId) {
                     renderEmpty('Select division first');
-                    return Promise.resolve([]);
-                }
-
-                if (filter === 'division' && !containerId && !window.IS_GM && !window.IS_COMPANY_SCOPE) {
-                    renderEmpty('Select plant first');
                     return Promise.resolve([]);
                 }
                 if (filter === 'division' && window.IS_COMPANY_SCOPE && !containerId) {
                     renderEmpty('Select company & plant first');
                     return Promise.resolve([]);
                 }
-                if (filter === 'plant' && window.IS_COMPANY_SCOPE && !(extra.company || '')) {
-                    renderEmpty('Select company first');
+                if (filter === 'division' && !window.IS_GM && !window.IS_COMPANY_SCOPE && !containerId) {
+                    renderEmpty('Select plant first');
                     return Promise.resolve([]);
                 }
 
-                const params = Object.assign({
+                // === Tambahan: untuk tab Plant (HRD/Top2) kirim company
+                const params = {
                     filter: filter,
                     division_id: containerId ?? null
-                }, extra || {});
+                };
+                if (filter === 'plant' && window.IS_COMPANY_SCOPE) {
+                    const comp = ($('#companySelect').val() || '').toUpperCase();
+                    if (!comp) {
+                        renderEmpty('Select company first');
+                        return Promise.resolve([]);
+                    }
+                    params.company = comp;
+                }
 
                 return $.getJSON(window.ROUTE_FILTER, params)
                     .then(res => {
@@ -468,15 +478,19 @@
 
             $('#companySelect').on('change', function() {
                 const comp = $(this).val() || '';
+
                 if (window.ACTIVE_FILTER === 'division') {
+                    // Tab Division → tampilkan PLANT dari company tsb
                     populatePlants(comp);
                 } else if (window.ACTIVE_FILTER === 'plant') {
-                    // HRD/Top2: tampilkan list plant per company
-                    fetchItems('plant', null, {
-                        company: comp
-                    });
+                    // Tab Plant (HRD/Top2) → langsung fetch daftar plant by company
+                    if (!comp) {
+                        renderEmpty('Select company first');
+                        return;
+                    }
+                    fetchItems('plant', null);
                 } else {
-                    // Dept/Section/Sub → isi divisions
+                    // Tab Dept/Section/Sub → populate DIVISIONS berdasarkan semua plant di company tsb
                     $('#divisionSelect').empty().append('<option value="">-- Select Division --</option>');
                     if (!comp) {
                         renderEmpty('Select company first');
