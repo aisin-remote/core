@@ -473,204 +473,249 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        // filter: company | plant | division | department | section | sub_section
-        $filter = strtolower($request->input('filter', 'department'));
-        // Catatan: filter=division → containerId = plant_id; lainnya (dept/section/sub) → division_id
-        $containerId  = (int) $request->input('division_id');
-        $companyCode  = strtoupper((string) $request->input('company', ''));
+        $trace = (string) Str::uuid();
+        $t0    = microtime(true);
 
-        $user     = auth()->user();
-        $employee = $user->employee;
+        try {
+            Log::info('[RTC][filter] start', [
+                'trace'   => $trace,
+                'params'  => [
+                    'filter'       => $request->input('filter'),
+                    'division_id'  => $request->input('division_id'),
+                    'company'      => $request->input('company'),
+                ],
+                'url'     => $request->fullUrl(),
+                'ip'      => $request->ip(),
+            ]);
 
-        $posRaw = $employee && method_exists($employee, 'getNormalizedPosition')
-            ? (string)$employee->getNormalizedPosition()
-            : (string)($employee->position ?? '');
-        $pos = strtolower(trim($posRaw));
+            // filter: company | direksi | division | department | section | sub_section
+            $filter      = strtolower($request->input('filter', 'department'));
+            // Catatan: filter=division → containerId = plant_id; lainnya (dept/section/sub) → division_id
+            $containerId = (int) $request->input('division_id');
+            $companyCode = strtoupper((string) $request->input('company', ''));
 
-        $isGM  = in_array($pos, ['gm', 'act gm'], true);
-        $isDir = in_array($pos, ['direktur', 'director'], true);
+            $user     = auth()->user();
+            $employee = $user->employee;
 
-        /* ===================== Guard akses ===================== */
-        if ($isGM && !in_array($filter, ['division', 'plant', 'company'], true)) {
-            if ($containerId === 0) {
-                $containerId = (int) optional($employee->division)->id;
+            $posRaw = $employee && method_exists($employee, 'getNormalizedPosition')
+                ? (string) $employee->getNormalizedPosition()
+                : (string) ($employee->position ?? '');
+            $pos = strtolower(trim($posRaw));
+
+            $isGM   = in_array($pos, ['gm', 'act gm'], true);
+            $isDir  = (($user->role === 'User') && in_array($pos, ['direktur', 'director'], true));
+            $isHRD  = ($user->role === 'HRD');
+            $isTop2 = in_array($pos, ['president', 'vpd', 'vice president director', 'wakil presdir'], true)
+                || in_array(strtolower((string) ($employee->getNormalizedPosition() ?? '')), ['president', 'vpd'], true);
+
+            Log::debug('[RTC][filter] role flags', [
+                'trace' => $trace,
+                'user_id' => $user->id ?? null,
+                'employee_id' => $employee->id ?? null,
+                'pos_raw' => $employee->position ?? null,
+                'pos_norm' => $posRaw,
+                'isGM' => $isGM,
+                'isDir' => $isDir,
+                'isHRD' => $isHRD,
+                'isTop2' => $isTop2,
+            ]);
+
+            /* Guards */
+            if ($isGM && !in_array($filter, ['division', 'direksi', 'company'], true)) {
+                if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
+                $owns = Division::where('gm_id', $employee->id)->where('id', $containerId)->exists();
+                if (!$owns) {
+                    Log::warning('[RTC][filter] GM unauthorized division', ['trace' => $trace, 'division_id' => $containerId]);
+                    abort(403, 'Unauthorized division');
+                }
             }
-            $owns = Division::where('gm_id', $employee->id)
-                ->where('id', $containerId)
-                ->exists();
-            if (!$owns) abort(403, 'Unauthorized division');
-        }
 
-        if ($isDir && $filter === 'division') {
-            if ($containerId === 0) {
-                $containerId = (int) optional($employee->plant)->id;
+            if ($isDir && $filter === 'division') {
+                if ($containerId === 0) $containerId = (int) optional($employee->plant)->id;
             }
-            // optional strict check
-            // $ownsPlant = Plant::where('id',$containerId)->where('director_id',$employee->id)->exists();
-            // if (!$ownsPlant) abort(403,'Unauthorized plant');
-        }
-        /* ===================== Ambil list item per filter ===================== */
-        switch ($filter) {
-            case 'company':
-                // optional: tampilkan dua company (AII & AIIA) sebagai daftar sederhana
-                $data = collect([
-                    (object)['id' => 1, 'name' => 'AII',  'code' => 'AII'],
-                    (object)['id' => 2, 'name' => 'AIIA', 'code' => 'AIIA'],
-                ]);
-                $areaKey = 'company';
-                break;
 
-            case 'plant':
-                if ($isDir) {
-                    $data = Plant::where('director_id', $employee->id)->orderBy('name')->get();
-                } else {
-                    // HRD/Top2: berdasarkan company yang dipilih di UI
-                    $data = $companyCode
-                        ? Plant::where('company', $companyCode)->orderBy('name')->get()
-                        : collect();
-                }
-                $areaKey = 'plant';
-                break;
+            /* Data per filter */
+            $data = collect();
+            $areaKey = 'department';
 
-            case 'division':
-                if ($isGM) {
-                    $data = Division::where('gm_id', $employee->id)->orderBy('name')->get();
-                } else {
-                    if ($containerId === 0) {
-                        $containerId = (int) optional($employee->plant)->id;
-                    }
-                    $data = Division::where('plant_id', $containerId)->orderBy('name')->get();
-                }
-                $areaKey = 'division';
-                break;
+            switch ($filter) {
+                case 'company':
+                    $data = collect([
+                        (object)['id' => 1, 'name' => 'AII',  'code' => 'AII'],
+                        (object)['id' => 2, 'name' => 'AIIA', 'code' => 'AIIA'],
+                    ]);
+                    $areaKey = 'company';
+                    break;
 
-            case 'department':
-                if ($containerId === 0) {
-                    $containerId = (int) optional($employee->division)->id;
-                }
-                $data    = Department::where('division_id', $containerId)->orderBy('name')->get();
-                $areaKey = 'department';
-                break;
-
-            case 'section':
-                if ($containerId === 0) {
-                    $containerId = (int) optional($employee->division)->id;
-                }
-                $data = Section::whereHas('department', function ($q) use ($containerId) {
-                    $q->where('division_id', $containerId);
-                })->orderBy('name')->get();
-                $areaKey = 'section';
-                break;
-
-            case 'sub_section':
-                if ($containerId === 0) {
-                    $containerId = (int) optional($employee->division)->id;
-                }
-                $data = SubSection::whereHas('section.department', function ($q) use ($containerId) {
-                    $q->where('division_id', $containerId);
-                })->orderBy('name')->get();
-                $areaKey = 'sub_section';
-                break;
-
-            default:
-                $data    = collect();
-                $areaKey = 'department';
-                break;
-        }
-
-        /* ===== Aliases & perhitungan status ===== */
-        $termAliases = function (string $term): array {
-            $t = strtolower(trim($term));
-            return match ($t) {
-                'short' => ['short', 'short_term', 'st', 's/t'],
-                'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
-                'long'  => ['long', 'long_term', 'lt', 'l/t'],
-                default => [$t],
-            };
-        };
-        $areaAliases = function (string $area): array {
-            $a = strtolower(trim($area));
-            $variants = [$a, ucfirst($a)];
-            if ($a === 'division')    $variants[] = 'Division';
-            if ($a === 'sub_section') $variants[] = 'Sub_section';
-            if ($a === 'plant')       $variants[] = 'Plant';
-            if ($a === 'company')     $variants[] = 'Company';
-            return array_values(array_unique($variants));
-        };
-        $areas = $areaAliases($areaKey);
-
-        $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey) {
-            $rtcShort = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
-                ->whereIn('term', $termAliases('short'))->orderByDesc('id')
-                ->with(['employee:id,name,grade,birthday_date'])->first();
-            $rtcMid   = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
-                ->whereIn('term', $termAliases('mid'))->orderByDesc('id')
-                ->with(['employee:id,name,grade,birthday_date'])->first();
-            $rtcLong  = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
-                ->whereIn('term', $termAliases('long'))->orderByDesc('id')
-                ->with(['employee:id,name,grade,birthday_date'])->first();
-
-            $shortEmp = optional($rtcShort)->employee;
-            $midEmp   = optional($rtcMid)->employee;
-            $longEmp  = optional($rtcLong)->employee;
-
-            $hasShort  = !is_null($shortEmp);
-            $hasMid    = !is_null($midEmp);
-            $hasLong   = !is_null($longEmp);
-            $complete3 = $hasShort && $hasMid && $hasLong;
-
-            $s = optional($rtcShort)->status;
-            $m = optional($rtcMid)->status;
-            $l = optional($rtcLong)->status;
-
-            $label = 'Not Set';
-            $class = 'badge badge-danger';
-            $code = 'not_set';
-            if ($complete3) {
-                $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2], true));
-                if ($vals->isEmpty()) {
-                    $label = 'Complete';
-                    $class = 'badge badge-secondary';
-                    $code = 'complete_no_submit';
-                } else {
-                    $allApproved  = $vals->every(fn($v) => $v === 2);
-                    $allChecked   = $vals->every(fn($v) => $v === 1);
-                    $allSubmitted = $vals->every(fn($v) => $v === 0);
-                    if ($allApproved) {
-                        $label = 'Approved';
-                        $class = 'badge badge-success';
-                        $code = 'approved';
-                    } elseif ($allChecked) {
-                        $label = 'Checked';
-                        $class = 'badge badge-info';
-                        $code = 'checked';
-                    } elseif ($allSubmitted) {
-                        $label = 'Submitted';
-                        $class = 'badge badge-warning';
-                        $code = 'submitted';
+                case 'direksi':
+                    if ($isDir) {
+                        $data = Plant::where('director_id', $employee->id)->orderBy('name')->get();
+                    } elseif ($isHRD || $isTop2) {
+                        $data = $companyCode
+                            ? Plant::where('company', $companyCode)->orderBy('name')->get()
+                            : collect();
                     } else {
-                        $label = 'Partial';
-                        $class = 'badge badge-primary';
-                        $code = 'partial';
+                        $data = collect();
                     }
-                }
+                    $areaKey = 'direksi';
+                    break;
+
+                case 'division':
+                    if ($isGM) {
+                        $data = Division::where('gm_id', $employee->id)->orderBy('name')->get();
+                    } else {
+                        if ($containerId === 0) $containerId = (int) optional($employee->plant)->id;
+                        $data = Division::where('plant_id', $containerId)->orderBy('name')->get();
+                    }
+                    $areaKey = 'division';
+                    break;
+
+                case 'department':
+                    if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
+                    $data = Department::where('division_id', $containerId)->orderBy('name')->get();
+                    $areaKey = 'department';
+                    break;
+
+                case 'section':
+                    if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
+                    $data = Section::whereHas('department', fn($q) => $q->where('division_id', $containerId))
+                        ->orderBy('name')->get();
+                    $areaKey = 'section';
+                    break;
+
+                case 'sub_section':
+                    if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
+                    $data = SubSection::whereHas('section.department', fn($q) => $q->where('division_id', $containerId))
+                        ->orderBy('name')->get();
+                    $areaKey = 'sub_section';
+                    break;
             }
 
-            $picEmp = $this->currentPicFor($areaKey, $item);
+            Log::debug('[RTC][filter] fetched', [
+                'trace' => $trace,
+                'filter' => $filter,
+                'companyCode' => $companyCode,
+                'containerId' => $containerId,
+                'records' => $data instanceof \Illuminate\Support\Collection ? $data->count() : 0,
+                'areaKey' => $areaKey,
+            ]);
 
-            return [
-                'id'   => $item->id,
-                'name' => $item->name,
-                'pic'  => $picEmp ? ['id' => $picEmp->id, 'name' => $picEmp->name, 'position' => $picEmp->position] : null,
-                'short' => ['name' => $shortEmp?->name, 'status' => $s],
-                'mid'  => ['name' => $midEmp?->name, 'status' => $m],
-                'long' => ['name' => $longEmp?->name, 'status' => $l],
-                'overall' => ['label' => $label, 'class' => $class, 'code' => $code],
-                'can_add' => !$complete3,
-            ];
-        });
+            /* Aliases & status */
+            $termAliases = function (string $term): array {
+                $t = strtolower(trim($term));
+                return match ($t) {
+                    'short' => ['short', 'short_term', 'st', 's/t'],
+                    'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
+                    'long'  => ['long', 'long_term', 'lt', 'l/t'],
+                    default => [$t],
+                };
+            };
+            $areaAliases = function (string $area): array {
+                $a = strtolower(trim($area));
+                $variants = [$a, ucfirst($a)];
+                if ($a === 'division')    $variants[] = 'Division';
+                if ($a === 'sub_section') $variants[] = 'Sub_section';
+                if ($a === 'direksi') {
+                    $variants[] = 'Direksi';
+                    $variants[] = 'plant';
+                    $variants[] = 'Plant';
+                } // tetap match data lama
+                if ($a === 'company')     $variants[] = 'Company';
+                return array_values(array_unique($variants));
+            };
+            $areas = $areaAliases($areaKey);
 
-        return response()->json(['items' => $items->values()]);
+            $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey) {
+                $rtcShort = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
+                    ->whereIn('term', $termAliases('short'))->orderByDesc('id')
+                    ->with(['employee:id,name,grade,birthday_date'])->first();
+                $rtcMid   = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
+                    ->whereIn('term', $termAliases('mid'))->orderByDesc('id')
+                    ->with(['employee:id,name,grade,birthday_date'])->first();
+                $rtcLong  = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
+                    ->whereIn('term', $termAliases('long'))->orderByDesc('id')
+                    ->with(['employee:id,name,grade,birthday_date'])->first();
+
+                $shortEmp = optional($rtcShort)->employee;
+                $midEmp   = optional($rtcMid)->employee;
+                $longEmp  = optional($rtcLong)->employee;
+
+                $hasShort  = !is_null($shortEmp);
+                $hasMid    = !is_null($midEmp);
+                $hasLong   = !is_null($longEmp);
+                $complete3 = $hasShort && $hasMid && $hasLong;
+
+                $s = optional($rtcShort)->status;
+                $m = optional($rtcMid)->status;
+                $l = optional($rtcLong)->status;
+
+                $label = 'Not Set';
+                $class = 'badge badge-danger';
+                $code  = 'not_set';
+                if ($complete3) {
+                    $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2], true));
+                    if ($vals->isEmpty()) {
+                        $label = 'Complete';
+                        $class = 'badge badge-secondary';
+                        $code = 'complete_no_submit';
+                    } else {
+                        $allApproved  = $vals->every(fn($v) => $v === 2);
+                        $allChecked   = $vals->every(fn($v) => $v === 1);
+                        $allSubmitted = $vals->every(fn($v) => $v === 0);
+                        if ($allApproved) {
+                            $label = 'Approved';
+                            $class = 'badge badge-success';
+                            $code = 'approved';
+                        } elseif ($allChecked) {
+                            $label = 'Checked';
+                            $class = 'badge badge-info';
+                            $code = 'checked';
+                        } elseif ($allSubmitted) {
+                            $label = 'Submitted';
+                            $class = 'badge badge-warning';
+                            $code = 'submitted';
+                        } else {
+                            $label = 'Partial';
+                            $class = 'badge badge-primary';
+                            $code = 'partial';
+                        }
+                    }
+                }
+
+                $picEmp = $this->currentPicFor($areaKey, $item);
+
+                return [
+                    'id'   => $item->id,
+                    'name' => $item->name,
+                    'pic'  => $picEmp ? ['id' => $picEmp->id, 'name' => $picEmp->name, 'position' => $picEmp->position] : null,
+                    'short' => ['name' => $shortEmp?->name, 'status' => $s],
+                    'mid'   => ['name' => $midEmp?->name,  'status' => $m],
+                    'long'  => ['name' => $longEmp?->name, 'status' => $l],
+                    'overall' => ['label' => $label, 'class' => $class, 'code' => $code],
+                    'can_add' => !$complete3,
+                ];
+            });
+
+            $resp = response()->json(['items' => $items->values()]);
+
+            Log::info('[RTC][filter] end', [
+                'trace' => $trace,
+                'filter' => $filter,
+                'items'  => $items->count(),
+                'duration_ms' => round((microtime(true) - $t0) * 1000, 2),
+            ]);
+
+            return $resp;
+        } catch (\Throwable $e) {
+            Log::error('[RTC][filter] ERROR', [
+                'trace' => $trace,
+                'msg'   => $e->getMessage(),
+                'file'  => $e->getFile(),
+                'line'  => $e->getLine(),
+                'stack' => substr($e->getTraceAsString(), 0, 4000),
+            ]);
+            return response()->json(['message' => 'Internal error', 'trace' => $trace], 500);
+        }
     }
 
     private function currentPicFor(string $area, $model)

@@ -366,32 +366,30 @@
             function fetchItems(filter, containerId) {
                 const needsId = ['department', 'section', 'sub_section'].includes(filter);
 
-                // Validasi kebutuhan ID
                 if (needsId && !containerId) {
                     renderEmpty('Select division first');
                     return Promise.resolve([]);
                 }
                 if (filter === 'division' && window.IS_COMPANY_SCOPE && !containerId) {
-                    renderEmpty('Select company & plant first');
+                    renderEmpty('Select company & direksi first');
                     return Promise.resolve([]);
                 }
                 if (filter === 'division' && !window.IS_GM && !window.IS_COMPANY_SCOPE && !containerId) {
-                    renderEmpty('Select plant first');
+                    renderEmpty('Select direksi first');
                     return Promise.resolve([]);
                 }
 
-                // === Tambahan: untuk tab Plant (HRD/Top2) kirim company
                 const params = {
                     filter: filter,
                     division_id: containerId ?? null
                 };
-                if (filter === 'plant' && window.IS_COMPANY_SCOPE) {
+                if (filter === 'direksi' && window.IS_COMPANY_SCOPE) {
                     const comp = ($('#companySelect').val() || '').toUpperCase();
                     if (!comp) {
                         renderEmpty('Select company first');
                         return Promise.resolve([]);
                     }
-                    params.company = comp;
+                    params.company = comp; // <-- kirim company untuk HRD/Top2
                 }
 
                 return $.getJSON(window.ROUTE_FILTER, params)
@@ -405,10 +403,13 @@
                         return [];
                     });
             }
+            window.fetchItems = fetchItems;
+
 
             function loadDivisionsForCompany(companyCode) {
                 const code = (companyCode || '').toUpperCase();
                 const plants = window.PLANTS_BY_COMPANY[code] || [];
+
                 const reqs = plants.map(p => $.getJSON(window.ROUTE_FILTER, {
                     filter: 'division',
                     division_id: p.id
@@ -421,7 +422,8 @@
                     }, {}));
                     const $div = $('#divisionSelect');
                     $div.empty().append('<option value="">-- Select Division --</option>');
-                    uniq.forEach(it => $div.append(`<option value="${it.id}">${esc(it.name)}</option>`));
+                    uniq.forEach(it => $div.append(
+                        `<option value="${it.id}">${esc(it.name)}</option>`));
                     return uniq;
                 });
             }
@@ -470,27 +472,25 @@
             function populatePlants(companyCode) {
                 const $plant = $('#plantSelect');
                 $plant.prop('disabled', !companyCode);
-                $plant.empty().append('<option value="">-- Select Plant --</option>');
-                const list = window.PLANTS_BY_COMPANY[(companyCode || '').toUpperCase()] || [];
-                list.forEach(p => $plant.append(`<option value="${p.id}">${esc(p.name)}</option>`));
-                renderEmpty('Select plant first');
+                $plant.empty().append('<option value="">-- Select Direksi --</option>');
+                const list = window.DIREKSI_BY_COMPANY[(companyCode || '').toUpperCase()] || [];
+                list.forEach(p => $plant.append(
+                    `<option value="${p.id}">${$('<div>').text(p.name).html()}</option>`));
+                renderEmpty('Select direksi first');
             }
 
             $('#companySelect').on('change', function() {
                 const comp = $(this).val() || '';
 
                 if (window.ACTIVE_FILTER === 'division') {
-                    // Tab Division → tampilkan PLANT dari company tsb
                     populatePlants(comp);
-                } else if (window.ACTIVE_FILTER === 'plant') {
-                    // Tab Plant (HRD/Top2) → langsung fetch daftar plant by company
+                } else if (window.ACTIVE_FILTER === 'direksi') {
                     if (!comp) {
                         renderEmpty('Select company first');
                         return;
                     }
-                    fetchItems('plant', null);
+                    fetchItems('direksi', null); // <-- dulu 'plant', sekarang 'direksi'
                 } else {
-                    // Tab Dept/Section/Sub → populate DIVISIONS berdasarkan semua plant di company tsb
                     $('#divisionSelect').empty().append('<option value="">-- Select Division --</option>');
                     if (!comp) {
                         renderEmpty('Select company first');
@@ -547,6 +547,7 @@
             function populateEmployeeSelects() {
                 const all = window.EMPLOYEES || [];
                 const comp = ($('#companySelect').val() || '').toUpperCase();
+
                 const list = comp ? all.filter(e => (String(e.company_name || '').toUpperCase() === comp)) : all;
 
                 const opts = ['<option value=""></option>'] // biar allowClear berfungsi
