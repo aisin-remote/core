@@ -299,7 +299,7 @@ class RtcController extends Controller
 
     public function list(Request $request, $id = null)
     {
-        $level    = $request->query('level'); // plant|division|department|section|sub_section
+        $level    = $request->query('level'); // company|plant|division|department|section|sub_section
         $user     = auth()->user();
         $employee = $user->employee;
 
@@ -341,14 +341,11 @@ class RtcController extends Controller
 
         // plant dropdown (hanya bila bukan GM & bukan HRD/Top2)
         $plants = collect();
-        $showPlantSelect = true;
         if (!($isHRD || $isTop2 || $isGM)) {
             $plants = Plant::query()
                 ->when($plantIdForDivision, fn($q) => $q->where('id', $plantIdForDivision))
                 ->orderBy('name')
                 ->get(['id', 'name']);
-        } else {
-            $showPlantSelect = false;
         }
 
         /* ===== Division dropdown utk Dept/Section/Sub ===== */
@@ -361,21 +358,29 @@ class RtcController extends Controller
 
         /* ===== Tabs ===== */
         $tabs = [
-            // Direktur punya tab Plant (untuk preview plant yang dipimpin)
-            'plant'       => ['label' => 'Plant',       'show' => $isDirektur, 'id' => null],
-            'division'    => ['label' => 'Division',    'show' => true,        'id' => $plantIdForDivision],
-            'department'  => ['label' => 'Department',  'show' => true,        'id' => null],
-            'section'     => ['label' => 'Section',     'show' => true,        'id' => null],
-            'sub_section' => ['label' => 'Sub Section', 'show' => true,        'id' => null],
+            'company'     => ['label' => 'Company',    'show' => ($isHRD || $isTop2), 'id' => null],
+            'plant'       => ['label' => 'Plant',      'show' => $isDirektur,         'id' => null],
+            'division'    => ['label' => 'Division',   'show' => true,                'id' => $plantIdForDivision],
+            'department'  => ['label' => 'Department', 'show' => true,                'id' => null],
+            'section'     => ['label' => 'Section',    'show' => true,                'id' => null],
+            'sub_section' => ['label' => 'Sub Section', 'show' => true,                'id' => null],
         ];
 
-        // Default tab:
-        // - GM     : Division
-        // - Direktur: Plant
-        // - lain   : Division
-        $activeTab = $level ?: ($isGM ? 'division' : ($isDirektur ? 'plant' : 'division'));
+        // Default active tab
+        if ($level) {
+            $activeTab = $level;
+        } elseif ($isGM) {
+            $activeTab = 'division';
+        } elseif ($isDirektur) {
+            $activeTab = 'plant';
+        } elseif ($isHRD || $isTop2) {
+            $activeTab = 'company';
+        } else {
+            $activeTab = 'division';
+        }
 
         $tableFilter = match ($activeTab) {
+            'company'     => 'company',
             'plant'       => 'plant',
             'division'    => 'division',
             'department'  => 'department',
@@ -384,16 +389,19 @@ class RtcController extends Controller
             default       => 'division',
         };
 
-        // Container ID awal untuk fetch pertama (hanya untuk kasus yang memang butuh)
+        // Container ID awal (hanya untuk filter yang memang butuh)
         if ($tableFilter === 'division') {
+            // GM boleh null (server pakai gm_id)
             $containerId = $isGM ? null : ($plantIdForDivision ? (int)$plantIdForDivision : null);
         } elseif (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
+            // GM langsung isi division yang dipegang
             $containerId = $isGM ? (int) optional($employee->division)->id ?: null : null;
-        } else { // plant
-            $containerId = null; // tidak perlu id (server pakai director_id)
+        } else { // company / plant
+            $containerId = null; // tidak perlu id
         }
 
         $cardTitle = match ($tableFilter) {
+            'company'     => 'Company List',
             'plant'       => 'Plant List',
             'division'    => 'Division List',
             'department'  => 'Department List',
@@ -402,11 +410,16 @@ class RtcController extends Controller
             default       => 'List',
         };
 
+        // === Aturan VISIBILITAS kolom & tombol Add
+        $hideKpiCols = in_array($tableFilter, ['company', 'plant'], true)
+            || ($isGM && $tableFilter === 'division'); // GM di tab Division juga disembunyikan
+        $forceHideAdd = $hideKpiCols; // di tab yg disembunyikan KPI → Add juga hilang
+
         return view('website.rtc.list', [
             'title'            => 'RTC',
             'cardTitle'        => $cardTitle,
 
-            'divisionId'       => $containerId,    // division: plant_id (non-GM), lainnya: division_id
+            'divisionId'       => $containerId,      // division: plant_id (non-GM), lainnya: division_id
             'companies'        => $companies,
             'plants'           => $plants,
             'divisions'        => $divisionsForSelect,
@@ -421,14 +434,19 @@ class RtcController extends Controller
             'isCompanyScope'   => (bool)($isHRD || $isTop2),
             'isGM'             => (bool)$isGM,
             'isDirektur'       => (bool)$isDirektur,
-            'showPlantSelect'  => (bool)$showPlantSelect,
 
             'tabs'             => $tabs,
             'activeTab'        => $activeTab,
             'tableFilter'      => $tableFilter,
             'plantScopeId'     => $plantIdForDivision,
+
+            // flags baru
+            'hideKpiCols'      => $hideKpiCols,
+            'forceHideAdd'     => $forceHideAdd,
         ]);
     }
+
+
     public function detail(Request $request)
     {
         // Ambil filter dan id dari query string

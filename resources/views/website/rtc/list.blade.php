@@ -114,8 +114,8 @@
 
                     <div class="card-body">
 
-                        {{-- COMPANY (khusus HRD/Top2) --}}
-                        @if (!empty($isCompanyScope))
+                        {{-- COMPANY (khusus HRD/Top2; bukan saat tab company) --}}
+                        @if (!empty($isCompanyScope) && ($tableFilter ?? '') !== 'company')
                             <div class="row mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label">Company</label>
@@ -129,19 +129,25 @@
                             </div>
                         @endif
 
-                        {{-- PLANT selector (HANYA saat tab Division & bukan GM & bukan Top2/HRD) --}}
-                        @if (($tableFilter ?? '') === 'division' && !($isGM ?? false) && empty($isCompanyScope) && ($showPlantSelect ?? true))
+                        {{-- PLANT (tab Division; GM tidak perlu) --}}
+                        @if (($tableFilter ?? '') === 'division' && !($isGM ?? false))
                             <div class="row mb-4">
                                 <div class="col-md-6">
                                     <label class="form-label">Plant</label>
                                     <select id="plantSelect" class="form-select">
-                                        @foreach ($plants ?? collect() as $p)
-                                            <option value="{{ $p['id'] ?? $p->id }}"
-                                                {{ (string) ($divisionId ?? '') === (string) ($p['id'] ?? $p->id) ? 'selected' : '' }}>
-                                                {{ $p['name'] ?? $p->name }}
-                                            </option>
-                                        @endforeach
+                                        @if (empty($isCompanyScope))
+                                            @foreach ($plants ?? collect() as $p)
+                                                <option value="{{ $p['id'] ?? $p->id }}"
+                                                    {{ (string) ($divisionId ?? '') === (string) ($p['id'] ?? $p->id) ? 'selected' : '' }}>
+                                                    {{ $p['name'] ?? $p->name }}
+                                                </option>
+                                            @endforeach
+                                        @endif
                                     </select>
+                                    @if (!empty($isCompanyScope))
+                                        <small class="text-muted">Pilih company terlebih dahulu untuk menampilkan
+                                            plant.</small>
+                                    @endif
                                 </div>
                             </div>
                         @endif
@@ -166,22 +172,31 @@
                             </div>
                         @endif
 
+                        @php
+                            $showKpiCols = empty($hideKpiCols); // current, st, mt, lt, status
+                            $colspan = 4 + ($showKpiCols ? 5 : 0); // base: No, Name, Last Modified, Actions
+                        @endphp
+
                         {{-- TABLE --}}
                         <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                             <thead>
                                 <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                                     <th>No</th>
                                     <th class="text-start">Name</th>
-                                    <th class="text-start">Current</th>
-                                    <th class="text-start">ST</th>
-                                    <th class="text-start">MT</th>
-                                    <th class="text-start">LT</th>
-                                    <th class="text-center">Status</th>
+                                    @if ($showKpiCols)
+                                        <th class="text-start">Current</th>
+                                        <th class="text-start">ST</th>
+                                        <th class="text-start">MT</th>
+                                        <th class="text-start">LT</th>
+                                        <th class="text-center">Status</th>
+                                    @endif
                                     <th class="text-center fs-8">Last Modified</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody></tbody>
+                            <tbody>
+                                {{-- diisi via JS --}}
+                            </tbody>
                         </table>
 
                     </div>
@@ -224,8 +239,8 @@
 
 @push('scripts')
     <script>
-        // Boot data untuk JS
-        window.ACTIVE_FILTER = @json($tableFilter ?? 'division'); // plant|division|department|section|sub_section
+        // Boot data
+        window.ACTIVE_FILTER = @json($tableFilter ?? 'division'); // company|plant|division|department|section|sub_section
         window.CONTAINER_ID = @json($divisionId ?? null); // division: plant_id (non-GM), lainnya: division_id
         window.READ_ONLY = @json((bool) ($readOnly ?? false));
         window.ROUTE_FILTER = @json(route('filter.master'));
@@ -234,6 +249,9 @@
         window.PLANTS_BY_COMPANY = @json($plantsByCompany ?? []);
         window.IS_GM = @json((bool) ($isGM ?? false));
         window.IS_DIREKTUR = @json((bool) ($isDirektur ?? false));
+        window.SHOW_KPI_COLS = @json(empty($hideKpiCols));
+        window.HIDE_ADD = @json((bool) ($forceHideAdd ?? false));
+        window.COLSPAN = @json(4 + (empty($hideKpiCols) ? 5 : 0));
     </script>
     <script>
         $(function() {
@@ -275,12 +293,12 @@
 
             function renderEmpty(msg) {
                 $('#kt_table_users tbody').html(
-                    `<tr><td colspan="9" class="text-center text-muted">${esc(msg||'No data')}</td></tr>`);
+                    `<tr><td colspan="${window.COLSPAN}" class="text-center text-muted">${esc(msg||'No data')}</td></tr>`
+                    );
             }
 
             function renderRows(items, filter) {
                 if (!items || !items.length) return renderEmpty('No data');
-
                 const rows = items.map((row, i) => {
                     const st = row.short?.name ? esc(row.short.name) :
                     '<span class="text-not-set">-</span>';
@@ -289,14 +307,12 @@
                     const statusHtml = statusChip(row.overall);
                     const lastYear = row.last_year ? esc(row.last_year) : '-';
 
-                    // filter=plant/division/department/section/sub_section → diteruskan ke summary
-                    const previewBtn = `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}"
-                                           class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
-
+                    const previewBtn =
+                        `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
                     let addBtn = '';
-                    if (!window.READ_ONLY && row.can_add) {
-                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}"
-                                      data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>`;
+                    if (!window.READ_ONLY && !window.HIDE_ADD && row.can_add) {
+                        addBtn =
+                            `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>`;
                     }
 
                     const fullName = row.pic?.name || '-';
@@ -304,40 +320,44 @@
                     const pic = row.pic ? `<span title="${esc(fullName)}">${esc(showName)}</span>` :
                         `<span>-</span>`;
 
-                    return `<tr class="fs-7">
-                        <td>${i+1}</td>
-                        <td class="text-start">${esc(row.name)}</td>
-                        <td class="text-start">${pic}</td>
-                        <td class="text-start term-cell">${st}</td>
-                        <td class="text-start term-cell">${mt}</td>
-                        <td class="text-start term-cell">${lt}</td>
-                        <td class="text-center">${statusHtml}</td>
-                        <td class="text-center">${lastYear}</td>
-                        <td class="text-center"><div class="action-stack">${previewBtn}${addBtn}</div></td>
-                    </tr>`;
-                }).join('');
+                    // rakit kolom dinamis
+                    let kpiCells = '';
+                    if (window.SHOW_KPI_COLS) {
+                        kpiCells = `
+                    <td class="text-start">${pic}</td>
+                    <td class="text-start term-cell">${st}</td>
+                    <td class="text-start term-cell">${mt}</td>
+                    <td class="text-start term-cell">${lt}</td>
+                    <td class="text-center">${statusHtml}</td>
+                `;
+                    }
 
+                    return `<tr class="fs-7">
+                <td>${i+1}</td>
+                <td class="text-start">${esc(row.name)}</td>
+                ${kpiCells}
+                <td class="text-center">${lastYear}</td>
+                <td class="text-center"><div class="action-stack">${previewBtn}${addBtn}</div></td>
+            </tr>`;
+                }).join('');
                 $('#kt_table_users tbody').html(rows);
             }
 
             function fetchItems(filter, containerId) {
-                // Untuk GM di tab Division → containerId boleh kosong (server gunakan gm_id)
-                // Untuk Direktur di tab Plant → containerId juga boleh kosong (server gunakan director_id)
                 const needsId = ['department', 'section', 'sub_section'].includes(filter);
                 if (needsId && !containerId) {
                     renderEmpty('Select division first');
                     return Promise.resolve([]);
                 }
+
                 if (filter === 'division' && !containerId && !window.IS_GM && !window.IS_COMPANY_SCOPE) {
                     renderEmpty('Select plant first');
                     return Promise.resolve([]);
                 }
-                // HRD/Top2 di tab Division tanpa company/plant → render pesan
                 if (filter === 'division' && window.IS_COMPANY_SCOPE && !containerId) {
                     renderEmpty('Select company & plant first');
                     return Promise.resolve([]);
                 }
-                // filter=plant → tidak butuh id
                 return $.getJSON(window.ROUTE_FILTER, {
                         filter,
                         division_id: containerId ?? null
@@ -353,17 +373,15 @@
                     });
             }
 
-            // === Helper untuk HRD/Top2: load divisions untuk sebuah company (gabungan semua plant company tsb)
             function loadDivisionsForCompany(companyCode) {
                 const code = (companyCode || '').toUpperCase();
                 const plants = window.PLANTS_BY_COMPANY[code] || [];
-                const requests = plants.map(p => $.getJSON(window.ROUTE_FILTER, {
-                        filter: 'division',
-                        division_id: p.id
-                    })
-                    .then(r => r.items || []).catch(() => []));
-                return Promise.all(requests).then(groups => {
-                    const flat = groups.flat();
+                const reqs = plants.map(p => $.getJSON(window.ROUTE_FILTER, {
+                    filter: 'division',
+                    division_id: p.id
+                }).then(r => r.items || []).catch(() => []));
+                return Promise.all(reqs).then(arr => {
+                    const flat = arr.flat();
                     const uniq = Object.values(flat.reduce((acc, it) => {
                         acc[it.id] = it;
                         return acc;
@@ -375,16 +393,20 @@
                 });
             }
 
-            // ===== Initial load =====
+            // Initial load
             (function init() {
                 if (window.IS_COMPANY_SCOPE) {
-                    renderEmpty(window.ACTIVE_FILTER === 'division' ? 'Select company & plant first' :
-                        'Select company first');
+                    if (window.ACTIVE_FILTER === 'company') {
+                        fetchItems('company', null);
+                    } else if (window.ACTIVE_FILTER === 'division') {
+                        renderEmpty('Select company & plant first');
+                    } else {
+                        renderEmpty('Select company first');
+                    }
                 } else {
                     if (window.ACTIVE_FILTER === 'plant') {
                         fetchItems('plant', null);
                     } else if (window.ACTIVE_FILTER === 'division') {
-                        // GM: langsung fetch tanpa plant id
                         if (window.IS_GM) fetchItems('division', null);
                         else if (window.CONTAINER_ID) fetchItems('division', window.CONTAINER_ID);
                         else renderEmpty('Select plant first');
@@ -395,7 +417,7 @@
                 }
             })();
 
-            // ===== Events =====
+            // Events
             function populatePlants(companyCode) {
                 const $plant = $('#plantSelect');
                 $plant.prop('disabled', !companyCode);
@@ -435,7 +457,6 @@
                 else renderEmpty('Select division first');
             });
 
-            // Search
             $('#searchButton').on('click', function() {
                 const q = ($('#searchInput').val() || '').toLowerCase();
                 $('#kt_table_users tbody tr').each(function() {
