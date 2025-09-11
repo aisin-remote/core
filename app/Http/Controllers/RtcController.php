@@ -331,7 +331,7 @@ class RtcController extends Controller
                 ->toArray();
         }
 
-        /* ===== Scope plant utk tab Division (bukan GM/Top2) ===== */
+        /* ===== Scope plant utk tab Division (non GM) ===== */
         $plantIdForDivision = null;
         if ($isDirektur) {
             $plantIdForDivision = optional($employee->plant)->id;
@@ -356,14 +356,21 @@ class RtcController extends Controller
             $divisionsForSelect = Division::where('plant_id', $plantIdForDivision)->orderBy('name')->get(['id', 'name']);
         }
 
+        /* ===== Employees untuk modal Add ===== */
+        $employeesQuery = Employee::select('id', 'name', 'position', 'company_name')->orderBy('name');
+        if (!($isHRD || $isTop2)) {
+            $employeesQuery->where('company_name', $employee->company_name);
+        }
+        $employees = $employeesQuery->get();
+
         /* ===== Tabs ===== */
         $tabs = [
-            'company'     => ['label' => 'Company',    'show' => ($isHRD || $isTop2), 'id' => null],
-            'plant'       => ['label' => 'Plant',      'show' => $isDirektur,         'id' => null],
-            'division'    => ['label' => 'Division',   'show' => true,                'id' => $plantIdForDivision],
-            'department'  => ['label' => 'Department', 'show' => true,                'id' => null],
-            'section'     => ['label' => 'Section',    'show' => true,                'id' => null],
-            'sub_section' => ['label' => 'Sub Section', 'show' => true,                'id' => null],
+            'company'     => ['label' => 'Company',    'show' => ($isHRD || $isTop2),         'id' => null],
+            'plant'       => ['label' => 'Plant',      'show' => ($isDirektur || $isHRD || $isTop2), 'id' => null],
+            'division'    => ['label' => 'Division',   'show' => true,                        'id' => $plantIdForDivision],
+            'department'  => ['label' => 'Department', 'show' => true,                        'id' => null],
+            'section'     => ['label' => 'Section',    'show' => true,                        'id' => null],
+            'sub_section' => ['label' => 'Sub Section', 'show' => true,                        'id' => null],
         ];
 
         // Default active tab
@@ -389,15 +396,13 @@ class RtcController extends Controller
             default       => 'division',
         };
 
-        // Container ID awal (hanya untuk filter yang memang butuh)
+        // Container ID awal (hanya untuk filter yang butuh)
         if ($tableFilter === 'division') {
-            // GM boleh null (server pakai gm_id)
             $containerId = $isGM ? null : ($plantIdForDivision ? (int)$plantIdForDivision : null);
         } elseif (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
-            // GM langsung isi division yang dipegang
             $containerId = $isGM ? (int) optional($employee->division)->id ?: null : null;
         } else { // company / plant
-            $containerId = null; // tidak perlu id
+            $containerId = null;
         }
 
         $cardTitle = match ($tableFilter) {
@@ -410,23 +415,21 @@ class RtcController extends Controller
             default       => 'List',
         };
 
-        // === Aturan VISIBILITAS kolom & tombol Add
-        $hideKpiCols = in_array($tableFilter, ['company', 'plant'], true)
-            || ($isGM && $tableFilter === 'division'); // GM di tab Division juga disembunyikan
-        $forceHideAdd = $hideKpiCols; // di tab yg disembunyikan KPI → Add juga hilang
+        // Aturan visibilitas KPI + Add
+        $hideKpiCols  = in_array($tableFilter, ['company', 'plant'], true) || ($isGM && $tableFilter === 'division');
+        $forceHideAdd = $hideKpiCols;
 
         return view('website.rtc.list', [
             'title'            => 'RTC',
             'cardTitle'        => $cardTitle,
 
-            'divisionId'       => $containerId,      // division: plant_id (non-GM), lainnya: division_id
+            'divisionId'       => $containerId,
             'companies'        => $companies,
             'plants'           => $plants,
             'divisions'        => $divisionsForSelect,
             'plantsByCompany'  => $plantsByCompany,
+            'employees'        => $employees,
 
-            'employees'        => Employee::where('company_name', $employee->company_name)
-                ->get(['id', 'name', 'position', 'company_name']),
             'user'             => $user,
             'items'            => [],
             'readOnly'         => $readOnly,
@@ -440,12 +443,10 @@ class RtcController extends Controller
             'tableFilter'      => $tableFilter,
             'plantScopeId'     => $plantIdForDivision,
 
-            // flags baru
             'hideKpiCols'      => $hideKpiCols,
             'forceHideAdd'     => $forceHideAdd,
         ]);
     }
-
 
     public function detail(Request $request)
     {

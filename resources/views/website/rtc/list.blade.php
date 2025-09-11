@@ -64,6 +64,10 @@
             display: inline-flex;
             gap: .5rem
         }
+
+        .select2-container {
+            width: 100% !important;
+        }
     </style>
 @endpush
 
@@ -215,14 +219,27 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            @foreach (['short_term' => 'Short Term', 'mid_term' => 'Mid Term', 'long_term' => 'Long Term'] as $key => $label)
-                                <div class="mb-3">
-                                    <label for="{{ $key }}" class="form-label">{{ $label }}</label>
-                                    <select id="{{ $key }}" class="form-select" name="{{ $key }}">
-                                        <option value="">-- Select --</option>
-                                    </select>
-                                </div>
-                            @endforeach
+                            <div class="mb-3">
+                                <label for="short_term" class="form-label">Short Term</label>
+                                <select id="short_term" name="short_term" class="form-select rtc-s2"
+                                    data-placeholder="Cari karyawan (ST) ...">
+                                    <option value="">-- Select --</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="mid_term" class="form-label">Mid Term</label>
+                                <select id="mid_term" name="mid_term" class="form-select rtc-s2"
+                                    data-placeholder="Cari karyawan (MT) ...">
+                                    <option value="">-- Select --</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label for="long_term" class="form-label">Long Term</label>
+                                <select id="long_term" name="long_term" class="form-select rtc-s2"
+                                    data-placeholder="Cari karyawan (LT) ...">
+                                    <option value="">-- Select --</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-primary">Save</button>
@@ -293,14 +310,14 @@
             function renderEmpty(msg) {
                 $('#kt_table_users tbody').html(
                     `<tr><td colspan="${window.COLSPAN}" class="text-center text-muted">${esc(msg||'No data')}</td></tr>`
-                    );
+                );
             }
 
             function renderRows(items, filter) {
                 if (!items || !items.length) return renderEmpty('No data');
                 const rows = items.map((row, i) => {
                     const st = row.short?.name ? esc(row.short.name) :
-                    '<span class="text-not-set">-</span>';
+                        '<span class="text-not-set">-</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) : '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) : '<span class="text-not-set">-</span>';
                     const statusHtml = statusChip(row.overall);
@@ -490,6 +507,132 @@
                 $('#kt_table_users tbody tr').each(function() {
                     $(this).toggle($(this).text().toLowerCase().includes(q));
                 });
+            });
+        });
+    </script>
+    <script>
+        $(function() {
+            // helper untuk aktifkan select2 di dalam modal
+            function initSelect2InModal() {
+                $('#addPlanModal .rtc-s2').each(function() {
+                    const $el = $(this);
+                    // destroy dulu kalau sudah pernah di-init
+                    if ($el.hasClass('select2-hidden-accessible')) {
+                        $el.select2('destroy');
+                    }
+                    $el.select2({
+                        dropdownParent: $('#addPlanModal'),
+                        width: '100%',
+                        placeholder: $el.data('placeholder') || '-- Select --',
+                        allowClear: true
+                    });
+                });
+            }
+
+            // panggil saat isi dropdown karyawan selesai diganti
+            function populateEmployeeSelects() {
+                const all = window.EMPLOYEES || [];
+                const comp = ($('#companySelect').val() || '').toUpperCase();
+                const list = comp ? all.filter(e => (String(e.company_name || '').toUpperCase() === comp)) : all;
+
+                const opts = ['<option value=""></option>'] // biar allowClear berfungsi
+                    .concat(list.map(e => `<option value="${e.id}">${$('<div>').text(e.name).html()}</option>`));
+
+                $('#short_term, #mid_term, #long_term').each(function() {
+                    $(this).html(opts.join(''));
+                });
+
+                // aktifkan select2 setelah opsi terisi
+                initSelect2InModal();
+            }
+
+            // buka modal via tombol "Add"
+            $(document).on('click', '.btn-show-modal', function() {
+                populateEmployeeSelects();
+                $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
+            });
+
+            // bila company berubah (HRD/Top2) & modal terbuka, perbarui pilihan
+            $('#companySelect').on('change', function() {
+                if ($('#addPlanModal').is(':visible')) {
+                    populateEmployeeSelects();
+                }
+            });
+
+            // opsional: bersihkan select2 ketika modal ditutup
+            $('#addPlanModal').on('hidden.bs.modal', function() {
+                $(this).find('.rtc-s2').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2('destroy');
+                    }
+                });
+            });
+
+            // expose ke fungsi lain yang memanggil populateEmployeeSelects sebelumnya
+            window.__populateEmployeeSelects = populateEmployeeSelects;
+        });
+    </script>
+    <script>
+        $(function() {
+            // simpan area yang diklik (id row pada tabel)
+            window.CURRENT_AREA_ID = null;
+
+            // saat klik tombol Add → buka modal + simpan id area
+            $(document).on('click', '.btn-show-modal', function() {
+                window.CURRENT_AREA_ID = $(this).data('id') || null;
+
+                // (opsional) filter kandidat sesuai level
+                // contoh sederhana: tidak dibatasi (sudah diisi via __populateEmployeeSelects)
+                if (typeof window.__populateEmployeeSelects === 'function') {
+                    window.__populateEmployeeSelects();
+                }
+            });
+
+            // submit Add via GET ke route('rtc.update')
+            $('#addPlanForm').on('submit', function(e) {
+                e.preventDefault();
+
+                if (!window.CURRENT_AREA_ID) {
+                    Swal.fire('Oops', 'Area tidak valid.', 'warning');
+                    return;
+                }
+
+                const payload = {
+                    // filter: division | department | section | sub_section (atau plant jika ada)
+                    filter: window.ACTIVE_FILTER,
+                    id: window.CURRENT_AREA_ID,
+                    short_term: $('#short_term').val() || '',
+                    mid_term: $('#mid_term').val() || '',
+                    long_term: $('#long_term').val() || '',
+                };
+
+                $.ajax({
+                    url: @json(route('rtc.update')),
+                    type: 'GET',
+                    data: payload,
+                }).done(function() {
+                    $('#addPlanModal').modal('hide');
+                    Swal.fire('Berhasil', 'RTC berhasil disimpan.', 'success');
+
+                    // refresh tabel sesuai tab aktif
+                    const cid = window.CONTAINER_ID || null;
+                    if (typeof fetchItems === 'function') {
+                        fetchItems(window.ACTIVE_FILTER, cid);
+                    } else {
+                        // fallback
+                        location.reload();
+                    }
+                }).fail(function(xhr) {
+                    const msg = xhr?.responseJSON?.message || xhr?.statusText ||
+                        'Gagal menyimpan RTC';
+                    Swal.fire('Gagal', msg, 'error');
+                });
+            });
+
+            // bersihkan state ketika modal ditutup
+            $('#addPlanModal').on('hidden.bs.modal', function() {
+                window.CURRENT_AREA_ID = null;
+                $(this).find('select').val('').trigger('change');
             });
         });
     </script>
