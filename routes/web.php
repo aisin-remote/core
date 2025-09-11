@@ -178,7 +178,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('employee/check-email', [EmployeeController::class, 'checkEmail'])->name('employee.checkEmail');
         Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
         Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
-        Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
+        Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
         Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
         Route::get('/detail/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
 
