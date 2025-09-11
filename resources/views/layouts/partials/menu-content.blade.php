@@ -349,22 +349,50 @@
 
                 {{-- RTC --}}
                 @php
-                    $normalized = method_exists($employee, 'getNormalizedPosition')
-                        ? strtolower($employee->getNormalizedPosition())
-                        : strtolower((string) $position);
-                    $allowedPositions = ['gm', 'direktur'];
-                    $isHRDorTop2 = $user->role === 'HRD' || in_array($position, ['President', 'VPD']);
+                    $user = auth()->user();
+                    $employee = $user->employee;
+                    $position = $employee->position ?? '';
+
+                    // Normalisasi role/posisi
+                    $role = strtoupper($user->role ?? '');
+                    $posRaw =
+                        $employee && method_exists($employee, 'getNormalizedPosition')
+                            ? (string) $employee->getNormalizedPosition()
+                            : (string) $position;
+                    $posNorm = strtolower(trim($posRaw));
+
+                    $isHRD = $role === 'HRD';
+                    $isTop2 = in_array($posNorm, ['president', 'vpd'], true);
+                    $isDir = in_array($posNorm, ['direktur', 'director'], true);
+                    $isGM = in_array($posNorm, ['gm', 'act gm'], true);
+
+                    // Siapa saja boleh lihat RTC
+                    $canSeeRtc = $isHRD || $isTop2 || $isDir || $isGM;
+
+                    // Tentukan level + id yang dikirim ke route
+                    $level = 'division';
+                    $id = null;
+
+                    if ($isHRD || $isTop2) {
+                        $level = 'company';
+                        // HRD/Top2 bisa pegang dua company; kalau mau satu default, pakai company login
+                        $id = strtoupper((string) $employee->company_name); // fallback AII
+                    } elseif ($isDir) {
+                        $level = 'plant';
+                        $id = optional($employee->plant)->id; // aman kalau null
+                    } elseif ($isGM) {
+                        $level = 'division';
+                        $id = optional($employee->division)->id;
+                    }
+
+                    // Jika id belum ada, biarkan null—controller akan fallback aman
+
                 @endphp
-                @if ($isUser && !in_array($position, ['President', 'VPD']) && in_array($normalized, $allowedPositions))
+
+                @if ($canSeeRtc)
                     <div class="menu-item">
-                        <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
-                            <span class="menu-icon"><i class="fas fa-tasks"></i></span>
-                            <span class="menu-title">RTC</span>
-                        </a>
-                    </div>
-                @elseif ($isHRDorTop2)
-                    <div class="menu-item">
-                        <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
+                        <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}"
+                            href="{{ route('rtc.list', ['level' => $level, 'id' => $id]) }}">
                             <span class="menu-icon"><i class="fas fa-tasks"></i></span>
                             <span class="menu-title">RTC</span>
                         </a>
@@ -578,7 +606,7 @@
                 @endif
 
                 {{-- RTC (flyout) --}}
-                @if ($isUser && !in_array($position, ['President', 'VPD']) && in_array($normalized, $allowedPositions))
+                @if ($canSeeRtc)
                     <div class="menu-item">
                         <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
                             <span class="menu-icon"><i class="fas fa-tasks"></i></span>
