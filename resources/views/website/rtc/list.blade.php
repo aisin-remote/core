@@ -140,7 +140,7 @@
                         @if (($tableFilter ?? '') === 'division' && !($isGM ?? false))
                             <div class="row mb-4">
                                 <div class="col-md-6">
-                                    <label class="form-label">Plant</label>
+                                    <label class="form-label">Direksi</label>
                                     <select id="plantSelect" class="form-select"
                                         {{ !empty($isCompanyScope) ? 'disabled' : '' }}>
                                         @if (empty($isCompanyScope))
@@ -154,7 +154,7 @@
                                     </select>
                                     @if (!empty($isCompanyScope))
                                         <small class="text-muted">Pilih company terlebih dahulu untuk menampilkan
-                                            plant.</small>
+                                            direksi.</small>
                                     @endif
                                 </div>
                             </div>
@@ -265,7 +265,7 @@
         window.ROUTE_FILTER = @json(route('filter.master'));
         window.ROUTE_SUMMARY = @json(route('rtc.summary'));
         window.IS_COMPANY_SCOPE = @json((bool) ($isCompanyScope ?? false));
-        window.PLANTS_BY_COMPANY = @json($plantsByCompany ?? []);
+        window.DIREKSI_BY_COMPANY = @json($plantsByCompany ?? []);
         window.IS_GM = @json((bool) ($isGM ?? false));
         window.IS_DIREKTUR = @json((bool) ($isDirektur ?? false));
         window.SHOW_KPI_COLS = @json(empty($hideKpiCols));
@@ -450,7 +450,7 @@
                     } else if (window.ACTIVE_FILTER === 'plant') {
                         renderEmpty('Select company first');
                     } else if (window.ACTIVE_FILTER === 'division') {
-                        renderEmpty('Select company & plant first');
+                        renderEmpty('Select company & direksi first');
                     } else {
                         renderEmpty('Select company first');
                     }
@@ -460,7 +460,7 @@
                     } else if (window.ACTIVE_FILTER === 'division') {
                         if (window.IS_GM) fetchItems('division', null);
                         else if (window.CONTAINER_ID) fetchItems('division', window.CONTAINER_ID);
-                        else renderEmpty('Select plant first');
+                        else renderEmpty('Select direksi first');
                     } else {
                         if (window.CONTAINER_ID) fetchItems(window.ACTIVE_FILTER, window.CONTAINER_ID);
                         else renderEmpty('Select division first');
