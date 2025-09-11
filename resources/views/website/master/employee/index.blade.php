@@ -106,7 +106,7 @@
 
                                 {{-- ✅ Modified Action buttons --}}
                                 <td class="text-center nowrap" style="min-width: 120px;">
-                                    <a href="{{ route('employee.edit', $employees->npk) }}"
+                                    <a href="{{ route('employee.edit', "$employees->user_id") }}"
                                         class="btn btn-warning btn-sm me-1">
                                         <i class="fa fa-edit"></i>
                                     </a>

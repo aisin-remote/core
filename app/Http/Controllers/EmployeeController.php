@@ -603,94 +603,100 @@ class EmployeeController extends Controller
         return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');;
     }
 
-    public function edit($npk)
+    public function edit($userId)
     {
-        $grade              = GradeConversion::all();
-        $promotionHistories = PromotionHistory::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('last_promotion_date', 'desc')  // Urutkan dari yang terbaru
-            ->get();
-        $employee = Employee::where('npk', $npk)->firstOrFail();
+        // 1) Ambil employee berdasarkan user_id (unik per jabatan)
+        $employee = Employee::with([
+            'subSection.section.department',
+            'leadingSection.department',
+            'leadingDepartment.division'
+        ])->where('user_id', $userId)->firstOrFail();
 
+        // 2) Simpan NPK untuk query person-level
+        $npk = $employee->npk;
+
+        $grade = GradeConversion::all();
+
+        // ----- Person-level (pakai NPK) -----
+        $promotionHistories = PromotionHistory::with('employee')
+            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->orderByDesc('last_promotion_date')
+            ->get();
+
+        $astraTrainings = AstraTraining::with('employee')
+            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->orderByDesc('date_end')
+            ->get();
+
+        $externalTrainings = ExternalTraining::with('employee')
+            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->orderByDesc('date_end')
+            ->get();
+
+        $educations = EducationalBackground::with('employee')
+            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->orderByDesc('end_date')
+            ->get();
+
+        $workExperiences = WorkingExperience::with('employee')
+            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->orderByRaw('ISNULL(end_date) DESC')
+            ->orderByDesc('end_date')
+            ->get();
+
+        $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
+            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->orderByDesc('date')
+            ->get();
+
+        $assessment = Assessment::with('details.alc', 'employee')
+            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->latest()
+            ->first();
+
+        $idps = Idp::with('alc', 'assessment.employee')
+            ->whereHas('assessment.employee', fn($q) => $q->where('npk', $npk))
+            ->get();
+
+        // ----- Jabatan-level (pakai employee_id spesifik baris yg dipilih) -----
         $humanAssets = Hav::with('employee')
-            ->where('employee_id', $employee->id)  // gunakan ID employee yang sesuai
+            ->where('employee_id', $employee->id)
             ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
             ->groupBy('quadrant', 'year')
             ->orderByDesc('year')
             ->get();
 
-
-        $astraTrainings = AstraTraining::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('date_end', 'desc')  // Urut berdasarkan tanggal selesai terbaru
-            ->get();
-
-        $externalTrainings = ExternalTraining::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('date_end', 'desc')  // Urut dari yang terbaru
-            ->get();
-
-        $educations = EducationalBackground::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('end_date', 'desc')  // Urutkan berdasarkan tanggal akhir terbaru
-            ->get();
-
-        $workExperiences = WorkingExperience::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderByRaw('ISNULL(end_date) DESC')  // Prioritaskan null (masih aktif)
-            ->orderByDesc('end_date')              // Lalu urutkan berdasarkan tanggal
-            ->get();
-
-        $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('date', 'desc')  // Urutkan berdasarkan tanggal terbaru
-            ->get();
-
-        $assessment = Assessment::with('details.alc', 'employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->latest()
-            ->first();
-
-        $idps = Idp::with('alc', 'assessment.employee')
-            ->whereHas('assessment.employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->get();
-        $employee = Employee::with([
-            'subSection.section.department',
-            'leadingSection.department',
-            'leadingDepartment.division'
-        ])
-            ->where('npk', $npk)
-            ->firstOrFail();
-
-        $positions   = Employee::select('position')->distinct()->pluck('position');
+        // ----- Dropdown/filter mengikuti company dari baris employee terpilih -----
+        $positions   = Employee::where('npk', $npk)->pluck('position')->unique()->values();
         $plants      = Plant::all();
         $departments = Department::where('company', $employee->company_name)->get();
         $divisions   = Division::where('company', $employee->company_name)->get();
         $sections    = Section::where('company', $employee->company_name)->get();
         $subSections = SubSection::with('section')
-            ->whereHas('section', function ($query) use ($employee) {
-                $query->where('company', $employee->company_name);
-            })
+            ->whereHas('section', fn($q) => $q->where('company', $employee->company_name))
             ->get();
-        $scores = PerformanceMaster::select('code')->distinct()->pluck('code');
+        $scores      = PerformanceMaster::select('code')->distinct()->pluck('code');
 
-        return view('website.employee.update', compact('employee', 'grade', 'humanAssets', 'positions', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants', 'sections', 'subSections', 'scores'))->with('mode', 'edit');
+        return view('website.employee.update', compact(
+            'employee',
+            'grade',
+            'humanAssets',
+            'positions',
+            'promotionHistories',
+            'educations',
+            'workExperiences',
+            'performanceAppraisals',
+            'departments',
+            'astraTrainings',
+            'externalTrainings',
+            'assessment',
+            'idps',
+            'divisions',
+            'plants',
+            'sections',
+            'subSections',
+            'scores'
+        ))->with('mode', 'edit');
     }
 
     public function update(Request $request, $npk)
