@@ -699,64 +699,68 @@ class EmployeeController extends Controller
         ))->with('mode', 'edit');
     }
 
-    public function update(Request $request, $npk)
+    public function update(Request $request,  Employee $employee)
     {
         try {
-            $employee = Employee::where('npk', $npk)->firstOrFail();
             $oldGrade    = $employee->grade;
             $oldPosition = $employee->position;
 
             $validatedData = $request->validate([
-                'npk'              => 'nullable|string|max:255' . $employee->id,
-                'name'             => 'nullable|string|max:255',
-                'birthday_date'    => 'nullable|date',
-                'gender'           => 'nullable|in:Male,Female',
-                'company_name'     => 'nullable|string',
-                'phone_number'     => 'nullable|string',
-                'aisin_entry_date' => 'nullable|date',
-                'company_group'    => 'nullable|string',
-                'position'         => 'nullable|string',
-                'grade'            => 'nullable|string',
-                'photo'            => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
+                // NPK tidak dibuat unique karena 1 orang (multi jabatan) bisa share NPK yang sama
+                'npk'              => ['nullable', 'string', 'max:255'],
+                'name'             => ['nullable', 'string', 'max:255'],
+                'birthday_date'    => ['nullable', 'date'],
+                'gender'           => ['nullable', 'in:Male,Female'],
+                'company_name'     => ['nullable', 'string'],
+                'phone_number'     => ['nullable', 'string'],
+                'aisin_entry_date' => ['nullable', 'date'],
+                'company_group'    => ['nullable', 'string'],
+                'position'         => ['nullable', 'string'],
+                'grade'            => ['nullable', 'string'],
+                'photo'            => ['nullable', 'image', 'mimes:jpeg,png,jpg', 'max:2048'],
 
-                'plant_id'       => 'nullable|exists:plants,id',
-                'division_id'    => 'nullable|exists:divisions,id',
-                'department_id'  => 'nullable|exists:departments,id',
-                'section_id'     => 'nullable|exists:sections,id',
-                'sub_section_id' => 'nullable|exists:sub_sections,id',
+                'plant_id'         => ['nullable', 'exists:plants,id'],
+                'division_id'      => ['nullable', 'exists:divisions,id'],
+                'department_id'    => ['nullable', 'exists:departments,id'],
+                'section_id'       => ['nullable', 'exists:sections,id'],
+                'sub_section_id'   => ['nullable', 'exists:sub_sections,id'],
             ]);
 
-            DB::transaction(function () use ($request, $validatedData, $employee, $oldGrade, $oldPosition) {
+            DB::transaction(function () use ($request, $employee, &$validatedData, $oldGrade, $oldPosition) {
+
+                // Foto
                 if ($request->hasFile('photo')) {
-                    // hapus file lama jika ada
                     if ($employee->photo && Storage::disk('public')->exists($employee->photo)) {
                         Storage::disk('public')->delete($employee->photo);
                     }
-
-                    // simpan file baru
-                    $photoPath              = $request->file('photo')->store('employee_photos', 'public');
-                    $validatedData['photo'] = $photoPath;
+                    $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
                 }
 
-                $validatedData['working_period'] = Carbon::parse($validatedData['aisin_entry_date'])->diffInYears(Carbon::now());
+                // Working period (kalau join date diisi)
+                if (!empty($validatedData['aisin_entry_date'])) {
+                    $validatedData['working_period'] = Carbon::parse($validatedData['aisin_entry_date'])
+                        ->diffInYears(now());
+                }
 
+                // Cari supervisor_id dari hirarki yang dipilih
                 $supervisorId = null;
-                if ($validatedData['sub_section_id'] ?? false) {
+                if (!empty($validatedData['sub_section_id'])) {
                     $supervisorId = DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])->value('leader_id');
-                } elseif ($validatedData['section_id'] ?? false) {
+                } elseif (!empty($validatedData['section_id'])) {
                     $supervisorId = DB::table('sections')->where('id', $validatedData['section_id'])->value('supervisor_id');
-                } elseif ($validatedData['department_id'] ?? false) {
+                } elseif (!empty($validatedData['department_id'])) {
                     $supervisorId = DB::table('departments')->where('id', $validatedData['department_id'])->value('manager_id');
-                } elseif ($validatedData['division_id'] ?? false) {
+                } elseif (!empty($validatedData['division_id'])) {
                     $supervisorId = DB::table('divisions')->where('id', $validatedData['division_id'])->value('gm_id');
-                } elseif ($validatedData['plant_id'] ?? false) {
+                } elseif (!empty($validatedData['plant_id'])) {
                     $supervisorId = DB::table('plants')->where('id', $validatedData['plant_id'])->value('director_id');
                 }
-
                 $validatedData['supervisor_id'] = $supervisorId;
 
+                // Update field utama employee
                 $employee->update($validatedData);
 
+                // ===================== PROMOSI / MUTASI STRUKTUR =====================
                 $positionAliasMap = [
                     'section head'     => 'supervisor',
                     'act section head' => 'supervisor',
@@ -770,136 +774,152 @@ class EmployeeController extends Controller
                 ];
 
                 $promotionPaths = [
-                    'operator'   => ['leader' => ['clear' => 'sub_section_id']],
-                    'jp'         => ['leader' => ['clear' => 'sub_section_id']],
-                    'leader'     => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id']],
-                    'supervisor' => ['manager' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id']],
-                    'manager'    => ['gm' => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id']],
-                    'gm'         => ['director' => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id']],
+                    'operator'   => ['leader'     => ['clear' => 'sub_section_id']],
+                    'jp'         => ['leader'     => ['clear' => 'sub_section_id']],
+                    'leader'     => ['supervisor' => ['table' => 'sub_sections', 'column' => 'leader_id',     'key' => 'sub_section_id']],
+                    'supervisor' => ['manager'    => ['table' => 'sections',     'column' => 'supervisor_id', 'key' => 'section_id']],
+                    'manager'    => ['gm'         => ['table' => 'departments',  'column' => 'manager_id',    'key' => 'department_id']],
+                    'gm'         => ['director'   => ['table' => 'divisions',    'column' => 'gm_id',         'key' => 'division_id']],
                 ];
 
-                $normalizePosition = function ($position) use ($positionAliasMap) {
+                $normalize = function ($position) use ($positionAliasMap) {
                     $lower = strtolower($position);
                     return $positionAliasMap[$lower] ?? $lower;
                 };
 
-                $old = $normalizePosition($oldPosition);
-                $new = $normalizePosition($validatedData['position']);
+                $newPosition     = $validatedData['position'] ?? $employee->position; // fallback kalau tidak diubah
+                $oldNorm         = $normalize($oldPosition);
+                $newNorm         = $normalize($newPosition);
 
-                if (isset($promotionPaths[$old][$new])) {
-                    $action = $promotionPaths[$old][$new];
+                // Jika ada path promosi, kosongkan penautan lama sesuai aturan
+                if (isset($promotionPaths[$oldNorm][$newNorm])) {
+                    $action = $promotionPaths[$oldNorm][$newNorm];
 
                     if (isset($action['clear'])) {
                         $employee->update([$action['clear'] => null]);
                     } elseif (isset($action['table'], $action['column'], $action['key'])) {
-                        $refId = DB::table($action['table'])->where($action['column'], $employee->id)->first();
-                        if ($refId) {
-                            DB::table($action['table'])->where('id', $refId->id)->update([$action['column'] => null]);
+                        $ref = DB::table($action['table'])->where($action['column'], $employee->id)->first();
+                        if ($ref) {
+                            DB::table($action['table'])->where('id', $ref->id)->update([$action['column'] => null]);
                         }
                     }
                 }
 
-                // Update struktur sesuai jabatan baru
-                $pos = strtolower($validatedData['position']);
+                // Mapping role → update struktur (penempatan baru)
+                $posLower = strtolower($newPosition);
 
-                // Mapping posisi ke entitas dan kolom yang perlu diupdate
                 $roleMappings = [
                     'sub_section' => [
                         'roles'  => ['act jp', 'operator', 'jp'],
-                        'update' => fn()                         => $employee->update([
-                            'sub_section_id' => $validatedData['sub_section_id'] ?? null,
-                        ]),
+                        'update' => function () use ($validatedData, $employee) {
+                            $employee->update(['sub_section_id' => $validatedData['sub_section_id'] ?? null]);
+                        },
                     ],
                     'sub_section_leader' => [
                         'roles'  => ['act leader', 'leader'],
-                        'update' => fn()                     => $validatedData['sub_section_id'] &&
-                            DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
-                            ->update(['leader_id' => $employee->id]),
+                        'update' => function () use ($validatedData, $employee) {
+                            if (!empty($validatedData['sub_section_id'])) {
+                                DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
+                                    ->update(['leader_id' => $employee->id]);
+                            }
+                        },
                     ],
                     'section' => [
                         'roles'  => ['act supervisor', 'act section head', 'supervisor', 'section head'],
-                        'update' => fn()                                                                 => $validatedData['section_id'] &&
-                            DB::table('sections')->where('id', $validatedData['section_id'])
-                            ->update(['supervisor_id' => $employee->id]),
+                        'update' => function () use ($validatedData, $employee) {
+                            if (!empty($validatedData['section_id'])) {
+                                DB::table('sections')->where('id', $validatedData['section_id'])
+                                    ->update(['supervisor_id' => $employee->id]);
+                            }
+                        },
                     ],
                     'department' => [
                         'roles'  => ['act manager', 'act coordinator', 'manager', 'coordinator'],
-                        'update' => fn()                                                         => $validatedData['department_id'] &&
-                            DB::table('departments')->where('id', $validatedData['department_id'])
-                            ->update(['manager_id' => $employee->id]),
+                        'update' => function () use ($validatedData, $employee) {
+                            if (!empty($validatedData['department_id'])) {
+                                DB::table('departments')->where('id', $validatedData['department_id'])
+                                    ->update(['manager_id' => $employee->id]);
+                            }
+                        },
                     ],
                     'division' => [
                         'roles'  => ['act gm', 'gm'],
-                        'update' => fn()             => $validatedData['division_id'] &&
-                            DB::table('divisions')->where('id', $validatedData['division_id'])
-                            ->update(['gm_id' => $employee->id]),
+                        'update' => function () use ($validatedData, $employee) {
+                            if (!empty($validatedData['division_id'])) {
+                                DB::table('divisions')->where('id', $validatedData['division_id'])
+                                    ->update(['gm_id' => $employee->id]);
+                            }
+                        },
                     ],
                     'plant' => [
                         'roles'  => ['director'],
-                        'update' => fn()         => $validatedData['plant_id'] &&
-                            DB::table('plants')->where('id', $validatedData['plant_id'])
-                            ->update(['director_id' => $employee->id]),
+                        'update' => function () use ($validatedData, $employee) {
+                            if (!empty($validatedData['plant_id'])) {
+                                DB::table('plants')->where('id', $validatedData['plant_id'])
+                                    ->update(['director_id' => $employee->id]);
+                            }
+                        },
                     ],
                 ];
 
-                // Jalankan update berdasarkan role
                 foreach ($roleMappings as $map) {
-                    if (in_array($pos, $map['roles'])) {
+                    if (in_array($posLower, $map['roles'])) {
                         $map['update']();
                         break;
                     }
                 }
 
+                // Mutasi lateral (posisi sama, lokasi/entitas pindah)
                 $positionFieldMap = [
-                    'leader'     => ['table' => 'sub_sections', 'column' => 'leader_id', 'key' => 'sub_section_id'],
-                    'supervisor' => ['table' => 'sections', 'column' => 'supervisor_id', 'key' => 'section_id'],
-                    'manager'    => ['table' => 'departments', 'column' => 'manager_id', 'key' => 'department_id'],
-                    'gm'         => ['table' => 'divisions', 'column' => 'gm_id', 'key' => 'division_id'],
-                    'director'   => ['table' => 'plants', 'column' => 'director_id', 'key' => 'plant_id'],
+                    'leader'     => ['table' => 'sub_sections', 'column' => 'leader_id',     'key' => 'sub_section_id'],
+                    'supervisor' => ['table' => 'sections',     'column' => 'supervisor_id', 'key' => 'section_id'],
+                    'manager'    => ['table' => 'departments',  'column' => 'manager_id',    'key' => 'department_id'],
+                    'gm'         => ['table' => 'divisions',    'column' => 'gm_id',         'key' => 'division_id'],
+                    'director'   => ['table' => 'plants',       'column' => 'director_id',   'key' => 'plant_id'],
                 ];
 
-                $oldPositionLower = $normalizePosition($oldPosition);
-                $newPositionLower = $normalizePosition($validatedData['position']);
-
-                // Cek jika posisi tidak berubah tapi tempat berubah (mutasi struktural lateral)
                 if (
-                    isset($positionFieldMap[$oldPositionLower]) &&
-                    $oldPositionLower === $newPositionLower
+                    isset($positionFieldMap[$normalize($oldPosition)]) &&
+                    $normalize($oldPosition) === $normalize($newPosition)
                 ) {
-                    $config = $positionFieldMap[$oldPositionLower];
 
-                    $oldRefId = DB::table($config['table'])->where($config['column'], $employee->id)->first();
-                    $newRefId = $validatedData[$config['key']] ?? null;
+                    $cfg     = $positionFieldMap[$normalize($oldPosition)];
+                    $oldRef  = DB::table($cfg['table'])->where($cfg['column'], $employee->id)->first();
+                    $newRefId = $validatedData[$cfg['key']] ?? null;
 
-                    if ($oldRefId && $oldRefId->id != (int) $newRefId) {
-                        DB::table($config['table'])->where('id', $oldRefId->id)->update([$config['column'] => null]);
-
-                        // Simpan riwayat mutasi lateral
-                        $this->logLateralMutation($employee->id, $oldPositionLower, $oldRefId->id, $newRefId, $config['key']);
+                    if ($oldRef && (int)$oldRef->id !== (int)$newRefId) {
+                        DB::table($cfg['table'])->where('id', $oldRef->id)->update([$cfg['column'] => null]);
+                        // log mutasi lateral (optional – fungsi Anda sendiri)
+                        if (method_exists($this, 'logLateralMutation')) {
+                            $this->logLateralMutation($employee->id, $normalize($oldPosition), $oldRef->id, $newRefId, $cfg['key']);
+                        }
                     }
                 }
 
-                // Simpan riwayat promosi jika ada perubahan
-                if ($oldGrade !== $validatedData['grade'] || $oldPosition !== $validatedData['position']) {
+                // Riwayat promosi
+                if (($oldGrade !== ($validatedData['grade'] ?? $employee->grade)) ||
+                    ($oldPosition !== $newPosition)
+                ) {
                     PromotionHistory::create([
                         'employee_id'         => $employee->id,
                         'previous_grade'      => $oldGrade,
                         'previous_position'   => $oldPosition,
-                        'current_grade'       => $validatedData['grade'],
-                        'current_position'    => $validatedData['position'],
+                        'current_grade'       => $validatedData['grade'] ?? $employee->grade,
+                        'current_position'    => $newPosition,
                         'last_promotion_date' => now(),
                     ]);
                 }
             });
 
-            return redirect()->route('employee.master.index', ['company' => $employee->company_name])
+            return redirect()
+                ->route('employee.master.index', ['company' => $employee->company_name])
                 ->with('success', 'Employee data updated successfully!');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return redirect()->back()->with('error', 'Karyawan tidak ditemukan.');
+            return back()->with('error', 'Karyawan tidak ditemukan.');
         } catch (\Illuminate\Validation\ValidationException $e) {
-            return redirect()->back()->withErrors($e->validator)->withInput();
+            return back()->withErrors($e->validator)->withInput();
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Error Message: ' . $e->getMessage());
+            return back()->with('error', 'Error Message: ' . $e->getMessage());
         }
     }
 
