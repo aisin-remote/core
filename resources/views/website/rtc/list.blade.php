@@ -114,7 +114,7 @@
 
                     <div class="card-body">
 
-                        {{-- COMPANY (khusus HRD/Top2; bukan saat tab company) --}}
+                        {{-- COMPANY selector (HRD/Top2) untuk tab selain "company" --}}
                         @if (!empty($isCompanyScope) && ($tableFilter ?? '') !== 'company')
                             <div class="row mb-4">
                                 <div class="col-md-6">
@@ -129,7 +129,7 @@
                             </div>
                         @endif
 
-                        {{-- PLANT (tab Division; GM tidak perlu) --}}
+                        {{-- PLANT selector (tab Division; GM tidak perlu) --}}
                         @if (($tableFilter ?? '') === 'division' && !($isGM ?? false))
                             <div class="row mb-4">
                                 <div class="col-md-6">
@@ -173,8 +173,8 @@
                         @endif
 
                         @php
-                            $showKpiCols = empty($hideKpiCols); // current, st, mt, lt, status
-                            $colspan = 4 + ($showKpiCols ? 5 : 0); // base: No, Name, Last Modified, Actions
+                            $showKpiCols = empty($hideKpiCols);
+                            $colspan = 4 + ($showKpiCols ? 5 : 0);
                         @endphp
 
                         {{-- TABLE --}}
@@ -194,9 +194,7 @@
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                {{-- diisi via JS --}}
-                            </tbody>
+                            <tbody></tbody>
                         </table>
 
                     </div>
@@ -240,8 +238,8 @@
 @push('scripts')
     <script>
         // Boot data
-        window.ACTIVE_FILTER = @json($tableFilter ?? 'division'); // company|plant|division|department|section|sub_section
-        window.CONTAINER_ID = @json($divisionId ?? null); // division: plant_id (non-GM), lainnya: division_id
+        window.ACTIVE_FILTER = @json($tableFilter ?? 'division');
+        window.CONTAINER_ID = @json($divisionId ?? null);
         window.READ_ONLY = @json((bool) ($readOnly ?? false));
         window.ROUTE_FILTER = @json(route('filter.master'));
         window.ROUTE_SUMMARY = @json(route('rtc.summary'));
@@ -252,6 +250,7 @@
         window.SHOW_KPI_COLS = @json(empty($hideKpiCols));
         window.HIDE_ADD = @json((bool) ($forceHideAdd ?? false));
         window.COLSPAN = @json(4 + (empty($hideKpiCols) ? 5 : 0));
+        window.EMPLOYEES = @json($employees ?? []);
     </script>
     <script>
         $(function() {
@@ -320,7 +319,6 @@
                     const pic = row.pic ? `<span title="${esc(fullName)}">${esc(showName)}</span>` :
                         `<span>-</span>`;
 
-                    // rakit kolom dinamis
                     let kpiCells = '';
                     if (window.SHOW_KPI_COLS) {
                         kpiCells = `
@@ -343,7 +341,8 @@
                 $('#kt_table_users tbody').html(rows);
             }
 
-            function fetchItems(filter, containerId) {
+            // allow extra params (e.g. company for plant list)
+            function fetchItems(filter, containerId, extra = {}) {
                 const needsId = ['department', 'section', 'sub_section'].includes(filter);
                 if (needsId && !containerId) {
                     renderEmpty('Select division first');
@@ -358,10 +357,17 @@
                     renderEmpty('Select company & plant first');
                     return Promise.resolve([]);
                 }
-                return $.getJSON(window.ROUTE_FILTER, {
-                        filter,
-                        division_id: containerId ?? null
-                    })
+                if (filter === 'plant' && window.IS_COMPANY_SCOPE && !(extra.company || '')) {
+                    renderEmpty('Select company first');
+                    return Promise.resolve([]);
+                }
+
+                const params = Object.assign({
+                    filter: filter,
+                    division_id: containerId ?? null
+                }, extra || {});
+
+                return $.getJSON(window.ROUTE_FILTER, params)
                     .then(res => {
                         const items = res.items || [];
                         renderRows(items, filter);
@@ -393,11 +399,27 @@
                 });
             }
 
+            // === Populate employee selects on Add
+            function populateEmployeeSelects() {
+                const all = window.EMPLOYEES || [];
+                const comp = ($('#companySelect').val() || '').toUpperCase();
+                const list = comp ? all.filter(e => (String(e.company_name || '').toUpperCase() === comp)) : all;
+                const opts = ['<option value="">-- Select --</option>'].concat(list.map(e =>
+                    `<option value="${e.id}">${esc(e.name)}</option>`));
+                $('#short_term,#mid_term,#long_term').each(function() {
+                    $(this).html(opts.join(''));
+                });
+            }
+            $(document).on('click', '.btn-show-modal', populateEmployeeSelects);
+
             // Initial load
             (function init() {
                 if (window.IS_COMPANY_SCOPE) {
                     if (window.ACTIVE_FILTER === 'company') {
+                        // opsional: tampilkan daftar company (statis)
                         fetchItems('company', null);
+                    } else if (window.ACTIVE_FILTER === 'plant') {
+                        renderEmpty('Select company first');
                     } else if (window.ACTIVE_FILTER === 'division') {
                         renderEmpty('Select company & plant first');
                     } else {
@@ -405,7 +427,7 @@
                     }
                 } else {
                     if (window.ACTIVE_FILTER === 'plant') {
-                        fetchItems('plant', null);
+                        fetchItems('plant', null); // direktur
                     } else if (window.ACTIVE_FILTER === 'division') {
                         if (window.IS_GM) fetchItems('division', null);
                         else if (window.CONTAINER_ID) fetchItems('division', window.CONTAINER_ID);
@@ -431,7 +453,13 @@
                 const comp = $(this).val() || '';
                 if (window.ACTIVE_FILTER === 'division') {
                     populatePlants(comp);
+                } else if (window.ACTIVE_FILTER === 'plant') {
+                    // HRD/Top2: tampilkan list plant per company
+                    fetchItems('plant', null, {
+                        company: comp
+                    });
                 } else {
+                    // Dept/Section/Sub → isi divisions
                     $('#divisionSelect').empty().append('<option value="">-- Select Division --</option>');
                     if (!comp) {
                         renderEmpty('Select company first');

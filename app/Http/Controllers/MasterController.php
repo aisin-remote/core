@@ -473,10 +473,11 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        // filter: plant | division | department | section | sub_section
+        // filter: company | plant | division | department | section | sub_section
         $filter = strtolower($request->input('filter', 'department'));
         // Catatan: filter=division → containerId = plant_id; lainnya (dept/section/sub) → division_id
-        $containerId = (int) $request->input('division_id');
+        $containerId  = (int) $request->input('division_id');
+        $companyCode  = strtoupper((string) $request->input('company', ''));
 
         $user     = auth()->user();
         $employee = $user->employee;
@@ -490,8 +491,7 @@ class MasterController extends Controller
         $isDir = in_array($pos, ['direktur', 'director'], true);
 
         /* ===================== Guard akses ===================== */
-        // GM: untuk filter berbasis division_id (department/section/sub_section) wajib di divisi miliknya
-        if ($isGM && $filter !== 'division' && $filter !== 'plant') {
+        if ($isGM && !in_array($filter, ['division', 'plant', 'company'], true)) {
             if ($containerId === 0) {
                 $containerId = (int) optional($employee->division)->id;
             }
@@ -501,29 +501,40 @@ class MasterController extends Controller
             if (!$owns) abort(403, 'Unauthorized division');
         }
 
-        // Direktur: untuk filter=division (daftar division per PLANT), harus plant yang dia pimpin
         if ($isDir && $filter === 'division') {
             if ($containerId === 0) {
                 $containerId = (int) optional($employee->plant)->id;
             }
-            // Biarkan tanpa abort untuk fleksibilitas (bisa diaktifkan kalau perlu)
-            // $ownsPlant = Plant::where('id', $containerId)->where('director_id', $employee->id)->exists();
-            // if (!$ownsPlant) abort(403, 'Unauthorized plant');
+            // optional strict check
+            // $ownsPlant = Plant::where('id',$containerId)->where('director_id',$employee->id)->exists();
+            // if (!$ownsPlant) abort(403,'Unauthorized plant');
         }
 
         /* ===================== Ambil list item per filter ===================== */
         switch ($filter) {
+            case 'company':
+                // optional: tampilkan dua company (AII & AIIA) sebagai daftar sederhana
+                $data = collect([
+                    (object)['id' => 1, 'name' => 'AII',  'code' => 'AII'],
+                    (object)['id' => 2, 'name' => 'AIIA', 'code' => 'AIIA'],
+                ]);
+                $areaKey = 'company';
+                break;
+
             case 'plant':
-                // Khusus Direktur: tampilkan plant yang dia pimpin
-                $data    = $isDir
-                    ? Plant::where('director_id', $employee->id)->orderBy('name')->get()
-                    : collect(); // role lain: kosongkan
+                if ($isDir) {
+                    $data = Plant::where('director_id', $employee->id)->orderBy('name')->get();
+                } else {
+                    // HRD/Top2: berdasarkan company yang dipilih di UI
+                    $data = $companyCode
+                        ? Plant::where('company', $companyCode)->orderBy('name')->get()
+                        : collect();
+                }
                 $areaKey = 'plant';
                 break;
 
             case 'division':
                 if ($isGM) {
-                    // GM: hanya division yang dipimpin
                     $data = Division::where('gm_id', $employee->id)->orderBy('name')->get();
                 } else {
                     if ($containerId === 0) {
@@ -568,13 +579,13 @@ class MasterController extends Controller
                 break;
         }
 
-        /* ===== Aliases & perhitungan status (tetap) ===== */
+        /* ===== Aliases & perhitungan status ===== */
         $termAliases = function (string $term): array {
             $t = strtolower(trim($term));
             return match ($t) {
                 'short' => ['short', 'short_term', 'st', 's/t'],
-                'mid'   => ['mid',   'mid_term',   'mt', 'm/t'],
-                'long'  => ['long',  'long_term',  'lt', 'l/t'],
+                'mid'   => ['mid', 'mid_term', 'mt', 'm/t'],
+                'long'  => ['long', 'long_term', 'lt', 'l/t'],
                 default => [$t],
             };
         };
@@ -584,6 +595,7 @@ class MasterController extends Controller
             if ($a === 'division')    $variants[] = 'Division';
             if ($a === 'sub_section') $variants[] = 'Sub_section';
             if ($a === 'plant')       $variants[] = 'Plant';
+            if ($a === 'company')     $variants[] = 'Company';
             return array_values(array_unique($variants));
         };
         $areas = $areaAliases($areaKey);
@@ -652,8 +664,8 @@ class MasterController extends Controller
                 'name' => $item->name,
                 'pic'  => $picEmp ? ['id' => $picEmp->id, 'name' => $picEmp->name, 'position' => $picEmp->position] : null,
                 'short' => ['name' => $shortEmp?->name, 'status' => $s],
-                'mid'   => ['name' => $midEmp?->name,  'status' => $m],
-                'long'  => ['name' => $longEmp?->name, 'status' => $l],
+                'mid'  => ['name' => $midEmp?->name, 'status' => $m],
+                'long' => ['name' => $longEmp?->name, 'status' => $l],
                 'overall' => ['label' => $label, 'class' => $class, 'code' => $code],
                 'can_add' => !$complete3,
             ];
