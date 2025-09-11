@@ -473,10 +473,11 @@ class MasterController extends Controller
 
     public function filter(Request $request)
     {
-        // filter: plant | division | department | section | sub_section
+        // filter: company | plant | division | department | section | sub_section
         $filter = strtolower($request->input('filter', 'department'));
-        // Catatan: filter=division → containerId = plant_id; lainnya → division_id
-        $containerId = (int) $request->input('division_id');
+        // Catatan: filter=division → containerId = plant_id; lainnya (dept/section/sub) → division_id
+        $containerId  = (int) $request->input('division_id');
+        $companyCode  = strtoupper((string) $request->input('company', ''));
 
         $user     = auth()->user();
         $employee = $user->employee;
@@ -488,11 +489,9 @@ class MasterController extends Controller
 
         $isGM  = in_array($pos, ['gm', 'act gm'], true);
         $isDir = in_array($pos, ['direktur', 'director'], true);
-        $isTop2 = in_array($pos, ['president', 'vpd', 'vice president director', 'wakil presdir'], true);
-        $isHRD  = ($user->role === 'HRD');
 
         /* ===================== Guard akses ===================== */
-        if ($isGM && $filter !== 'division' && $filter !== 'plant') {
+        if ($isGM && !in_array($filter, ['division', 'plant', 'company'], true)) {
             if ($containerId === 0) {
                 $containerId = (int) optional($employee->division)->id;
             }
@@ -506,25 +505,29 @@ class MasterController extends Controller
             if ($containerId === 0) {
                 $containerId = (int) optional($employee->plant)->id;
             }
-            // $ownsPlant = Plant::where('id', $containerId)->where('director_id', $employee->id)->exists();
-            // if (!$ownsPlant) abort(403, 'Unauthorized plant');
+            // optional strict check
+            // $ownsPlant = Plant::where('id',$containerId)->where('director_id',$employee->id)->exists();
+            // if (!$ownsPlant) abort(403,'Unauthorized plant');
         }
-
         /* ===================== Ambil list item per filter ===================== */
         switch ($filter) {
+            case 'company':
+                // optional: tampilkan dua company (AII & AIIA) sebagai daftar sederhana
+                $data = collect([
+                    (object)['id' => 1, 'name' => 'AII',  'code' => 'AII'],
+                    (object)['id' => 2, 'name' => 'AIIA', 'code' => 'AIIA'],
+                ]);
+                $areaKey = 'company';
+                break;
+
             case 'plant':
-                // Direktur → plant yang dia pimpin
                 if ($isDir) {
                     $data = Plant::where('director_id', $employee->id)->orderBy('name')->get();
-                }
-                // HRD/Top2 → plant berdasarkan company yang dipilih di UI
-                elseif ($isHRD || $isTop2) {
-                    $company = strtoupper((string) $request->query('company', ''));
-                    $data = $company
-                        ? Plant::where('company', $company)->orderBy('name')->get()
-                        : collect();
                 } else {
-                    $data = collect();
+                    // HRD/Top2: berdasarkan company yang dipilih di UI
+                    $data = $companyCode
+                        ? Plant::where('company', $companyCode)->orderBy('name')->get()
+                        : collect();
                 }
                 $areaKey = 'plant';
                 break;
