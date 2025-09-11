@@ -196,9 +196,9 @@
                                         <th class="text-start">ST</th>
                                         <th class="text-start">MT</th>
                                         <th class="text-start">LT</th>
+                                        <th class="text-center fs-8">Last Modified</th>
                                         <th class="text-center">Status</th>
                                     @endif
-                                    <th class="text-center fs-8">Last Modified</th>
                                     <th class="text-center">Actions</th>
                                 </tr>
                             </thead>
@@ -348,6 +348,7 @@
                     <td class="text-start term-cell">${mt}</td>
                     <td class="text-start term-cell">${lt}</td>
                     <td class="text-center">${statusHtml}</td>
+                    <td class="text-center">${lastYear}</td>
                 `;
                     }
 
@@ -355,7 +356,6 @@
                 <td>${i+1}</td>
                 <td class="text-start">${esc(row.name)}</td>
                 ${kpiCells}
-                <td class="text-center">${lastYear}</td>
                 <td class="text-center"><div class="action-stack">${previewBtn}${addBtn}</div></td>
             </tr>`;
                 }).join('');
