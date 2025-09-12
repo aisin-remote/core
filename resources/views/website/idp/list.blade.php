@@ -324,7 +324,7 @@
                     role="tablist" style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                        <a class="nav-link fs-7 {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('idp.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             <i class="fas fa-list me-2"></i>Show All
                         </a>
@@ -333,7 +333,7 @@
                     {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('idp.list', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
                                 <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
@@ -368,7 +368,7 @@
                                 $hav = $firstAssessment->hav;
                                 $employee = optional(optional($hav)->hav)->employee;
                             @endphp
-                            <tr>
+                            <tr class="fs-7">
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employee?->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"

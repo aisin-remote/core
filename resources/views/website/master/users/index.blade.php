@@ -55,7 +55,7 @@
 
                     <tbody>
                         @foreach ($users as $index => $user)
-                            <tr>
+                            <tr class="fs-7">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $user->id }}</td>
                                 <td>{{ $user->name }}</td>

@@ -25,13 +25,12 @@
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
             </div>
-
             <div class="card-body">
                 <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
                     style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                        <a class="nav-link fs-7 {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             <i class="fas fa-list me-2"></i>Show All
                         </a>
@@ -40,7 +39,7 @@
                     {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
                                 <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
@@ -72,7 +71,7 @@
                                     default => $employee->department?->name,
                                 };
                             @endphp
-                            <tr data-position="{{ $employee->position }}">
+                            <tr class="fs-7" data-position="{{ $employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
