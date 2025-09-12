@@ -287,8 +287,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('ipp')->group(function () {
-        Route::get('/create', [IppController::class, 'create'])->name('ipp.create');
-        Route::get('/', [IppController::class, 'store'])->name('ipp.store');
+        Route::get('/', [IppController::class, 'create'])->name('ipp.create');
+        Route::post('/', [IppController::class, 'store'])->name('ipp.store');
     });
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])

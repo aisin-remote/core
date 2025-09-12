@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\Request;
+
 class IppController
 {
     public function create()
@@ -21,5 +23,10 @@ class IppController
         ];
         $title = 'IPP Create';
         return view('website.ipp.create', compact('title', 'identitas'));
+    }
+
+    public function store(Request $request)
+    {
+        dd($request->all());
     }
 }

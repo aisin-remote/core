@@ -15,27 +15,23 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label fs-6">Program / Activity <span class="text-danger">*</span></label>
-                            <textarea class="form-control form-control-lg" id="pmActivity" rows="3"
-                                placeholder="cth: Develop AISIN GO (integrasi AIS & AISINBISA menjadi 1 platform)"></textarea>
-                            <div class="form-text">Jelaskan ringkas namun jelas outcome aktivitasnya.</div>
+                            <textarea class="form-control form-control-lg" id="pmActivity" rows="3"></textarea>
                         </div>
 
-                        <div class="col-md-6">
+                        {{-- <div class="col-md-6">
                             <label class="form-label fs-6">Target MID Year (Apr–Sept)</label>
                             <textarea class="form-control form-control-lg" id="pmTargetMid" rows="3"
                                 placeholder="cth: 1 app go live; 5 feature improvement, dsb."></textarea>
-                        </div>
+                        </div> --}}
 
-                        <div class="col-md-6">
+                        <div class="col-md-12">
                             <label class="form-label fs-6">Target One Year (Apr–Mar)</label>
-                            <textarea class="form-control form-control-lg" id="pmTargetOne" rows="3"
-                                placeholder="cth: 28 feature live; CR 200 Mio/tahun, dsb."></textarea>
+                            <textarea class="form-control form-control-lg" id="pmTargetOne" rows="3"></textarea>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fs-6">Due Date <span class="text-danger">*</span></label>
-                            <input type="month" class="form-control form-control-lg" id="pmDue">
-                            <div class="form-text">Pilih bulan target selesai.</div>
+                            <input type="date" class="form-control form-control-lg" id="pmDue">
                         </div>
 
                         <div class="col-md-6">
@@ -45,7 +41,6 @@
                                     id="pmWeight" placeholder="0">
                                 <span class="input-group-text">%</span>
                             </div>
-                            <div class="form-text">Sesuai alokasi kategori (70/10/10/10).</div>
                         </div>
                     </div>
 
