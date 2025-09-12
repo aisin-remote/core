@@ -214,7 +214,7 @@
             <div class="col-lg-12">
                 <div class="card shadow-sm">
                     <div class="card-header d-flex align-items-center justify-content-between">
-                        <h6 class="card-title mb-0">Ringkasan Bobot</h6>
+                        <h6 class="card-title mb-0 fw-bold">Ringkasan Bobot</h6>
                         <span class="small text-muted">Target total 100%</span>
                     </div>
                     <div class="card-body">

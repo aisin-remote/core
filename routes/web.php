@@ -287,8 +287,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('ipp')->group(function () {
-        Route::get('/', [IppController::class, 'create'])->name('ipp.create');
+        Route::get('/', [IppController::class, 'create'])->name('ipp.index');
         Route::post('/', [IppController::class, 'store'])->name('ipp.store');
+        Route::get('/list/{company}', [IppController::class, 'list'])->name('ipp.list');
+    });
+
+    Route::prefix('ipa')->group(function () {
+        Route::get('/', [IppController::class, 'create'])->name('ipa.index');
+        Route::post('/', [IppController::class, 'store'])->name('ipa.store');
+        Route::get('/list/{company}', [IppController::class, 'list'])->name('ipa.list');
     });
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])

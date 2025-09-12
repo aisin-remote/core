@@ -398,6 +398,128 @@
                         </a>
                     </div>
                 @endif
+
+                {{-- IPP & IPA --}}
+                @if ($isUserRole)
+                    <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
+                        id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
+
+                        <span
+                            class="menu-link {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'active' : '' }}">
+                            <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
+                            <span class="menu-title">IPP & IPA</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+
+                        <div class="menu-sub menu-sub-accordion menu-active-bg">
+                            {{-- IPP (tanpa AII/AIIA) --}}
+                            <div class="menu-item">
+                                <a href="{{ route('ipp.index') }}"
+                                    class="menu-link {{ request()->routeIs('ipp.*') ? 'active' : '' }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">IPP</span>
+                                </a>
+                            </div>
+
+                            {{-- IPA (fallback jika belum punya named route) --}}
+                            <div class="menu-item">
+                                @if (Route::has('ipa.index'))
+                                    <a href="{{ route('ipa.index') }}"
+                                        class="menu-link {{ request()->routeIs('ipa.*') ? 'active' : '' }}">
+                                    @else
+                                        <a href="{{ url('/ipa') }}"
+                                            class="menu-link {{ request()->is('ipa*') ? 'active' : '' }}">
+                                @endif
+                                <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                <span class="menu-title">IPA</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                @elseif ($isHRDorTop)
+                    <div class="menu-item menu-accordion
+              {{ request()->routeIs('ipp.list') || request()->routeIs('ipa.list') ? 'show' : '' }}"
+                        id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
+
+                        <span
+                            class="menu-link
+                {{ request()->routeIs('ipp.list') || request()->routeIs('ipa.list') ? 'active' : '' }}">
+                            <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
+                            <span class="menu-title">IPP & IPA</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+
+                        <div class="menu-sub menu-sub-accordion menu-active-bg">
+
+                            {{-- IPP: hanya submenu List --}}
+                            <div
+                                class="menu-item menu-accordion
+                  {{ request()->routeIs('ipp.list') ? 'show' : '' }}">
+                                <span class="menu-link {{ request()->routeIs('ipp.list') ? 'active' : '' }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">IPP</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion">
+                                    <div class="menu-item">
+                                        <a href="{{ route('ipp.list', ['company' => 'aii']) }}"
+                                            class="menu-link {{ request()->routeIs('ipp.list') && request()->route('company') === 'aii' ? 'active' : '' }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">List AII</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a href="{{ route('ipp.list', ['company' => 'aiia']) }}"
+                                            class="menu-link {{ request()->routeIs('ipp.list') && request()->route('company') === 'aiia' ? 'active' : '' }}">
+                                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                            <span class="menu-title">List AIIA</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- IPA: hanya submenu List (fallback bila ipa.list belum ada) --}}
+                            <div
+                                class="menu-item menu-accordion
+                  {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'show' : '' }}">
+                                <span
+                                    class="menu-link {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'active' : '' }}">
+                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                    <span class="menu-title">IPA</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-accordion">
+                                    <div class="menu-item">
+                                        @if (Route::has('ipa.list'))
+                                            <a href="{{ route('ipa.list', ['company' => 'aii']) }}"
+                                                class="menu-link {{ request()->routeIs('ipa.list') && request()->route('company') === 'aii' ? 'active' : '' }}">
+                                            @else
+                                                <a href="{{ url('/ipa/list/aii') }}"
+                                                    class="menu-link {{ request()->is('ipa/list/aii') ? 'active' : '' }}">
+                                        @endif
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">List AII</span>
+                                        </a>
+                                    </div>
+                                    <div class="menu-item">
+                                        @if (Route::has('ipa.list'))
+                                            <a href="{{ route('ipa.list', ['company' => 'aiia']) }}"
+                                                class="menu-link {{ request()->routeIs('ipa.list') && request()->route('company') === 'aiia' ? 'active' : '' }}">
+                                            @else
+                                                <a href="{{ url('/ipa/list/aiia') }}"
+                                                    class="menu-link {{ request()->is('ipa/list/aiia') ? 'active' : '' }}">
+                                        @endif
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">List AIIA</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                @endif
+
             </div>
 
             {{-- FLYOUT (DROPDOWN) untuk mode minimized --}}
@@ -613,7 +735,7 @@
                             <span class="menu-title">RTC</span>
                         </a>
                     </div>
-                @elseif ($isHRDorTop2)
+                @elseif ($isHRDorTop)
                     <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
                         <span class="menu-link"><span class="menu-icon"><i class="fas fa-tasks"></i></span><span
                                 class="menu-title">RTC</span><span class="menu-arrow"></span></span>
@@ -627,6 +749,96 @@
                         </div>
                     </div>
                 @endif
+
+                {{-- ==== IPP & IPA (flyout) ==== --}}
+                @if ($isUserRole)
+                    <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                        <span class="menu-link">
+                            <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
+                            <span class="menu-title">IPP & IPA</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+                        <div class="menu-sub menu-sub-dropdown">
+                            <div class="menu-item">
+                                <a class="menu-link {{ request()->routeIs('ipp.*') ? 'active' : '' }}"
+                                    href="{{ route('ipp.index') }}"><span class="menu-title">IPP</span></a>
+                            </div>
+                            <div class="menu-item">
+                                @if (Route::has('ipa.index'))
+                                    <a class="menu-link {{ request()->routeIs('ipa.*') ? 'active' : '' }}"
+                                        href="{{ route('ipa.index') }}"><span class="menu-title">IPA</span></a>
+                                @else
+                                    <a class="menu-link {{ request()->is('ipa*') ? 'active' : '' }}"
+                                        href="{{ url('/ipa') }}"><span class="menu-title">IPA</span></a>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @elseif ($isHRDorTop)
+                    <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                        <span class="menu-link">
+                            <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
+                            <span class="menu-title">IPP & IPA</span>
+                            <span class="menu-arrow"></span>
+                        </span>
+                        <div class="menu-sub menu-sub-dropdown">
+
+                            {{-- IPP --}}
+                            <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                                <span class="menu-link">
+                                    <span class="menu-title">IPP</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-dropdown">
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('ipp.list') && request()->route('company') === 'aii' ? 'active' : '' }}"
+                                            href="{{ route('ipp.list', ['company' => 'aii']) }}"><span
+                                                class="menu-title">List AII</span></a>
+                                    </div>
+                                    <div class="menu-item">
+                                        <a class="menu-link {{ request()->routeIs('ipp.list') && request()->route('company') === 'aiia' ? 'active' : '' }}"
+                                            href="{{ route('ipp.list', ['company' => 'aiia']) }}"><span
+                                                class="menu-title">List AIIA</span></a>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {{-- IPA --}}
+                            <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                                <span class="menu-link">
+                                    <span class="menu-title">IPA</span>
+                                    <span class="menu-arrow"></span>
+                                </span>
+                                <div class="menu-sub menu-sub-dropdown">
+                                    <div class="menu-item">
+                                        @if (Route::has('ipa.list'))
+                                            <a class="menu-link {{ request()->routeIs('ipa.list') && request()->route('company') === 'aii' ? 'active' : '' }}"
+                                                href="{{ route('ipa.list', ['company' => 'aii']) }}"><span
+                                                    class="menu-title">List AII</span></a>
+                                        @else
+                                            <a class="menu-link {{ request()->is('ipa/list/aii') ? 'active' : '' }}"
+                                                href="{{ url('/ipa/list/aii') }}"><span class="menu-title">List
+                                                    AII</span></a>
+                                        @endif
+                                    </div>
+                                    <div class="menu-item">
+                                        @if (Route::has('ipa.list'))
+                                            <a class="menu-link {{ request()->routeIs('ipa.list') && request()->route('company') === 'aiia' ? 'active' : '' }}"
+                                                href="{{ route('ipa.list', ['company' => 'aiia']) }}"><span
+                                                    class="menu-title">List AIIA</span></a>
+                                        @else
+                                            <a class="menu-link {{ request()->is('ipa/list/aiia') ? 'active' : '' }}"
+                                                href="{{ url('/ipa/list/aiia') }}"><span class="menu-title">List
+                                                    AIIA</span></a>
+                                        @endif
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                @endif
+
             </div>
         </div>
         <!-- ===== END PEOPLE DEVELOPMENT ===== -->
