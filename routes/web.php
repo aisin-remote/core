@@ -22,6 +22,7 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IppController;
 use Illuminate\Support\Facades\Request;
 
 /*
@@ -283,6 +284,11 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/edit/{id}', [IdpController::class, 'edit'])->name('idp.edit');
         Route::put('/update/{idp}', [IdpController::class, 'update'])->name('idp.update');
         Route::delete('/delete/{idp}', [IdpController::class, 'deleteIdp'])->name('idp.delete');
+    });
+
+    Route::prefix('ipp')->group(function () {
+        Route::get('/create', [IppController::class, 'create'])->name('ipp.create');
+        Route::get('/', [IppController::class, 'store'])->name('ipp.store');
     });
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
