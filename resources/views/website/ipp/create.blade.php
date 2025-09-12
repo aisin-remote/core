@@ -414,7 +414,7 @@
         <td class="fw-semibold">${_.escape(data.activity||'-')}</td>
         <td class="text-muted">${_.escape(oneShort)}</td>
         <td><span class="badge text-bg-light">${_.escape(dueTxt)}</span></td>
-        <td><span class="badge ${w>0?'text-bg-primary':'text-bg-secondary'}">${fmt(w)}</span></td>
+        <td><span class="badge">${fmt(w)}</span></td>
         <td class="text-end">
           <div class="btn-group btn-group-sm" role="group" aria-label="Aksi baris">
             <button type="button" class="btn btn-warning js-edit" title="Edit" aria-label="Edit point"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
