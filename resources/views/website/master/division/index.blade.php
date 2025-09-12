@@ -62,7 +62,7 @@
                     </thead>
                     <tbody>
                         @foreach ($divisions as $division)
-                            <tr>
+                            <tr class="fs-7">
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td>{{ $division->name }}</td>
                                 <td>{{ $division->plant->name }}</td>

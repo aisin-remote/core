@@ -62,7 +62,7 @@
                     </thead>
                     <tbody>
                         @foreach ($subSections as $subSection)
-                            <tr>
+                            <tr class="fs-7">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $subSection->name }}</td>
                                 <td>{{ $subSection->section->name }}</td>

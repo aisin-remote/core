@@ -61,7 +61,7 @@
                     </thead>
                     <tbody>
                         @foreach ($plants as $plant)
-                            <tr>
+                            <tr class="fs-7">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $plant->name }}</td>
                                 <td>{{ $plant->company }}</td>
