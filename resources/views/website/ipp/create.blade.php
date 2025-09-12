@@ -294,7 +294,7 @@
                                                     <th style="width:22%">Target One</th>
                                                     <th style="width:10%">Due</th>
                                                     <th style="width:6%">W%</th>
-                                                    <th style="width:6%" class="text-end"></th>
+                                                    <th style="width:6%">Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="js-tbody">
