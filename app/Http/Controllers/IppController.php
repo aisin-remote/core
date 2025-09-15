@@ -18,12 +18,14 @@ class IppController
         'special_assignment'  => 10,
     ];
 
+    /** View: data diambil via AJAX /ipp/init */
     public function index()
     {
         $title = 'IPP Create';
         return view('website.ipp.index', compact('title'));
     }
 
+    /** AJAX init: identitas, header, points, cap, + flag locked */
     public function init(Request $request)
     {
         $user  = auth()->user();
@@ -42,7 +44,6 @@ class IppController
             'no_form'     => '-',
         ];
 
-        // default payload kosong
         $pointByCat = [
             'activity_management' => [],
             'people_development'  => [],
@@ -57,6 +58,7 @@ class IppController
             'total'               => 0,
         ];
         $header = null;
+        $locked = false;
 
         if ($empId) {
             $ipp = Ipp::where('employee_id', $empId)
@@ -64,25 +66,26 @@ class IppController
                 ->first();
 
             if ($ipp) {
+                $locked = ($ipp->status === 'submitted');
+
                 $points = IppPoint::where('ipp_id', $ipp->id)
                     ->orderBy('id')
                     ->get();
 
                 foreach ($points as $p) {
                     $item = [
-                        'id'         => $p->id,
-                        'category'   => $p->category,
-                        'activity'   => (string) $p->activity,
-                        'target_mid' => (string) $p->target_mid,
-                        'target_one' => (string) $p->target_one,
-                        'due_date' => $p->due_date ? substr((string)$p->due_date, 0, 10) : null,
-                        'weight'   => (int) $p->weight,
-                        'status'   => (string) ($p->status ?? 'draft'),
+                        'id'          => $p->id,
+                        'category'    => $p->category,
+                        'activity'    => (string) $p->activity,
+                        'target_mid'  => (string) $p->target_mid,
+                        'target_one'  => (string) $p->target_one,
+                        'due_date'    => $p->due_date ? substr((string)$p->due_date, 0, 10) : null,
+                        'weight'      => (int) $p->weight,
+                        'status'      => (string) ($p->status ?? 'draft'),
                     ];
-
                     if (isset($pointByCat[$p->category])) {
                         $pointByCat[$p->category][] = $item;
-                        $summary[$p->category]      = ($summary[$p->category] ?? 0) + (int) $p->weight;
+                        $summary[$p->category] = ($summary[$p->category] ?? 0) + (int) $p->weight;
                     }
                 }
 
@@ -96,6 +99,7 @@ class IppController
                     'employee_id' => $ipp->employee_id,
                     'status'      => (string) $ipp->status,
                     'summary'     => $ipp->summary ?: $summary,
+                    'locked'      => $locked,
                 ];
             }
         }
@@ -105,9 +109,11 @@ class IppController
             'ipp'       => $header,
             'points'    => $pointByCat,
             'cap'       => self::CAP,
+            'locked'    => $locked, // convenience di root juga
         ]);
     }
 
+    /** Store dari modal (per-point, status selalu draft) */
     public function store(Request $request)
     {
         $payloadRaw = $request->input('payload');
@@ -125,7 +131,7 @@ class IppController
     {
         $v = validator($payload, [
             'mode'             => ['required', Rule::in(['create', 'edit'])],
-            'status'           => ['required', Rule::in(['draft', 'submitted'])],   // saat ini front-end kirim 'draft'
+            'status'           => ['required', Rule::in(['draft', 'submitted'])], // FE kirim 'draft'
             'cat'              => ['required', Rule::in(array_keys(self::CAP))],
             'row_id'           => ['nullable', 'integer'],
             'point.activity'   => ['required', 'string'],
@@ -140,12 +146,10 @@ class IppController
         }
 
         $mode   = $payload['mode'];
-        $status = $payload['status'];  // draft
+        $status = 'draft'; // paksa draft
         $cat    = $payload['cat'];
         $rowId  = $payload['row_id'] ?? null;
         $p      = $payload['point'];
-
-        // normalize due_date -> Y-m-d (tanpa jam)
         $dueDate = substr((string) Carbon::parse($p['due_date'])->format('Y-m-d'), 0, 10);
 
         $user  = auth()->user();
@@ -157,9 +161,15 @@ class IppController
             return response()->json(['message' => 'Employee tidak ditemukan pada akun ini.'], 422);
         }
 
-        $ipp = Ipp::firstOrCreate(
-            ['employee_id' => $empId, 'on_year' => $year],
-            [
+        // Cari header dulu. Kalau sdh submitted => lock.
+        $ipp = Ipp::where('employee_id', $empId)->where('on_year', $year)->first();
+        if ($ipp && $ipp->status === 'submitted') {
+            return response()->json(['message' => 'IPP sudah submitted. Tidak bisa menambah/mengubah point.'], 422);
+        }
+        if (!$ipp) {
+            $ipp = Ipp::create([
+                'employee_id' => $empId,
+                'on_year'     => $year,
                 'nama'        => $emp->name,
                 'department'  => $emp->bagian,
                 'division'    => '',
@@ -169,8 +179,8 @@ class IppController
                 'no_form'     => '',
                 'status'      => 'draft',
                 'summary'     => [],
-            ]
-        );
+            ]);
+        }
 
         try {
             DB::beginTransaction();
@@ -182,9 +192,9 @@ class IppController
                     'activity'   => $p['activity'],
                     'target_mid' => $p['target_mid'] ?? null,
                     'target_one' => $p['target_one'] ?? null,
-                    'due_date'   => $dueDate,                   // simpan Y-m-d
+                    'due_date'   => $dueDate,
                     'weight'     => (int) $p['weight'],
-                    'status'     => $status,                    // draft
+                    'status'     => $status, // draft
                 ]);
             } else {
                 $point = IppPoint::find($rowId);
@@ -192,19 +202,18 @@ class IppController
                     DB::rollBack();
                     return response()->json(['message' => 'Point not found'], 404);
                 }
-
                 $point->update([
                     'category'   => $cat,
                     'activity'   => $p['activity'],
                     'target_mid' => $p['target_mid'] ?? null,
                     'target_one' => $p['target_one'] ?? null,
-                    'due_date'   => $dueDate,                   // simpan Y-m-d
+                    'due_date'   => $dueDate,
                     'weight'     => (int) $p['weight'],
-                    'status'     => $status,                    // tetap draft
+                    'status'     => $status,
                 ]);
             }
 
-            // update summary header
+            // summary header
             $summary = IppPoint::where('ipp_id', $ipp->id)
                 ->selectRaw('category, SUM(weight) as used')
                 ->groupBy('category')
@@ -212,9 +221,10 @@ class IppController
                 ->toArray();
             $summary['total'] = array_sum($summary);
 
-            $ipp->summary = $summary;
-            $ipp->status  = 'draft';
-            $ipp->save();
+            $ipp->update([
+                'summary' => $summary,
+                'status'  => 'draft',
+            ]);
 
             DB::commit();
 
@@ -230,7 +240,7 @@ class IppController
         }
     }
 
-    /** === SUBMIT ALL (ubah seluruh IPP user tahun berjalan menjadi submitted) === */
+    /** Submit all -> lock */
     public function submit(Request $request)
     {
         $user  = auth()->user();
@@ -249,16 +259,19 @@ class IppController
         if (!$ipp) {
             return response()->json(['message' => 'Belum ada data IPP untuk disubmit.'], 422);
         }
+        if ($ipp->status === 'submitted') {
+            return response()->json(['message' => 'IPP sudah dalam status submitted.'], 422);
+        }
 
         $points = IppPoint::where('ipp_id', $ipp->id)->get();
         if ($points->isEmpty()) {
             return response()->json(['message' => 'Tambahkan minimal satu point sebelum submit.'], 422);
         }
 
-        // Validasi cap per kategori
+        // cap per kategori
         $summary = [];
         foreach (self::CAP as $cat => $cap) {
-            $used          = (int) $points->where('category', $cat)->sum('weight');
+            $used = (int) $points->where('category', $cat)->sum('weight');
             $summary[$cat] = $used;
             if ($used > $cap) {
                 return response()->json([
@@ -267,7 +280,6 @@ class IppController
             }
         }
 
-        // Total harus 100%
         $summary['total'] = array_sum($summary);
         if ($summary['total'] !== 100) {
             return response()->json(['message' => 'Total bobot harus tepat 100% sebelum submit.'], 422);
@@ -278,10 +290,14 @@ class IppController
             $ipp->update(['status' => 'submitted', 'summary' => $summary]);
         });
 
-        return response()->json(['message' => 'Berhasil submit IPP.', 'summary' => $summary]);
+        return response()->json([
+            'message' => 'Berhasil submit IPP.',
+            'summary' => $summary,
+            'locked'  => true,
+        ]);
     }
 
-    /** === DELETE POINT IPP (hak akses by employee_id) === */
+    /** Delete point (ditolak jika IPP sudah submitted) */
     public function destroyPoint(Request $request, IppPoint $point)
     {
         $user  = auth()->user();
@@ -290,8 +306,12 @@ class IppController
         $year  = now()->format('Y');
 
         $ipp = $point->ipp;
+
         if (!$ipp || $ipp->employee_id !== $empId || (string) $ipp->on_year !== $year) {
             return response()->json(['message' => 'Tidak diizinkan menghapus point ini.'], 403);
+        }
+        if ($ipp->status === 'submitted') {
+            return response()->json(['message' => 'IPP sudah submitted. Point tidak bisa dihapus.'], 422);
         }
 
         try {
@@ -299,7 +319,6 @@ class IppController
 
             $point->delete();
 
-            // hitung ulang summary
             $summary = IppPoint::where('ipp_id', $ipp->id)
                 ->selectRaw('category, SUM(weight) as used')
                 ->groupBy('category')
