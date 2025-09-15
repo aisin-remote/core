@@ -240,10 +240,9 @@
 @push('scripts')
     <script>
         (function($) {
-            // ======= SETTINGS =======
+            // ======= SETTINGS (default; akan di-override dari /ipp/init) =======
             const REQUIRE_TOTAL_100 = true;
-            // CAP map diset di Blade (array static di atas)
-            const CAT_CAP = {
+            let CAT_CAP = {
                 activity_management: 70,
                 people_development: 10,
                 crp: 10,
@@ -252,6 +251,7 @@
 
             const pointModal = new bootstrap.Modal(document.getElementById('pointModal'));
             let autoRowId = 0;
+            let LOCKED = false; // <- akan di-set dari backend
 
             // counter status (untuk badge per kategori)
             const catCounters = {};
@@ -351,28 +351,29 @@
                     .target_one || '-');
                 const dueTxt = data.due_date ? data.due_date : '-';
                 const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
-                const wCls = w > 0 ? 'badge-primary' : 'badge-secondary';
                 return `
-<tr class="align-middle point-row"
-    data-row-id="${rowId}"
-    data-activity="${_.escape(data.activity||'')}"
-    data-mid="${_.escape(data.target_mid||'')}"
-    data-one="${_.escape(data.target_one||'')}"
-    data-due="${_.escape(dueTxt)}"
-    data-status="${_.escape(data.status||'')}"
-    data-weight="${w}">
-  <td class="fw-semibold">${_.escape(data.activity||'-')}</td>
-  <td class="text-muted">${_.escape(oneShort)}</td>
-  <td><span class="badge text-bg-light">${_.escape(dueTxt)}</span></td>
-  <td><span class="badge ${wCls}">${fmt(w)}</span></td>
-  <td class="text-end">
-    <div class="btn-group btn-group-sm" role="group" aria-label="Aksi baris">
-      <button type="button" class="btn btn-warning js-edit" title="Edit" aria-label="Edit point"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
-      <button type="button" class="btn btn-danger js-remove" title="Hapus" aria-label="Hapus point"><i class="bi bi-trash" aria-hidden="true"></i></button>
-    </div>
-  </td>
-</tr>`;
+                        <tr class="align-middle point-row"
+                                data-row-id="${rowId}"
+                                data-activity="${_.escape(data.activity||'')}"
+                                data-mid="${_.escape(data.target_mid||'')}"
+                                data-one="${_.escape(data.target_one||'')}"
+                                data-due="${_.escape(dueTxt)}"
+                                data-status="${_.escape(data.status||'')}"
+                                data-weight="${w}">
+                            <td class="fw-semibold">${_.escape(data.activity||'-')}</td>
+                            <td class="text-muted">${_.escape(oneShort)}</td>
+                            <td><span class="badge badge-light">${_.escape(dueTxt)}</span></td>
+                            <td><span class="">${fmt(w)}</span></td>
+                            <td class="text-end">
+                                <div class="btn-group btn-group-sm" role="group" aria-label="Aksi baris">
+                                <button type="button" class="btn btn-warning js-edit" title="Edit" aria-label="Edit point"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
+                                <button type="button" class="btn btn-danger js-remove" title="Hapus" aria-label="Hapus point"><i class="bi bi-trash" aria-hidden="true"></i></button>
+                                </div>
+                            </td>
+                        </tr>`;
             }
+
+            // Lodash-escape fallback
             window._ = window._ || {
                 escape: (s) => String(s).replace(/[&<>"'`=\/]/g, c => ({
                 '&': '&amp;',
@@ -399,6 +400,32 @@
             function removeEmptyState($tbody) {
                 $tbody.find('.empty-row').remove();
             }
+
+            // ======= LOCK UI =======
+            function applyLockDom(locked) {
+                LOCKED = !!locked;
+                // Tambah Point buttons
+                $('.js-open-modal').toggleClass('d-none', LOCKED);
+                // Submit IPP
+                $('#btnSubmitAll').toggleClass('d-none', LOCKED);
+                // Hide last column (Action) on all tables
+                $('table.js-table').each(function() {
+                    const $t = $(this);
+                    $t.find('thead th:last-child').toggleClass('d-none', LOCKED);
+                    $t.find('tbody tr').each(function() {
+                        $(this).find('td:last-child').toggleClass('d-none', LOCKED);
+                    });
+                });
+            }
+
+            // Global guard: kalau locked, cegah klik aksi
+            $(document).on('click', '.js-open-modal, .js-edit, .js-remove', function(e) {
+                if (LOCKED) {
+                    e.preventDefault();
+                    e.stopImmediatePropagation();
+                    return false;
+                }
+            });
 
             // ======= OPEN MODAL (CREATE) =======
             $(document).on('click', '.js-open-modal', function() {
@@ -434,8 +461,12 @@
             // ======= SUBMIT PER-POINT (SELALU DRAFT) =======
             $('#pointForm').on('submit', function(e) {
                 e.preventDefault();
-                const $btn = $('#pmSaveBtn').prop('disabled', true);
+                if (LOCKED) {
+                    toast('IPP sudah submitted. Tidak bisa mengubah data.', 'danger');
+                    return;
+                }
 
+                const $btn = $('#pmSaveBtn').prop('disabled', true);
                 const mode = $('#pmMode').val();
                 const cat = $('#pmCat').val();
                 const rowId = $('#pmRowId').val();
@@ -511,6 +542,8 @@
                         recalcAll();
                         pointModal.hide();
                         toast(res?.message || 'Draft tersimpan.');
+                        // kalau locked true dari server (skenario tidak mungkin di sini), kunci UI
+                        if (res?.locked) applyLockDom(true);
                     })
                     .fail(err => {
                         toast(err?.responseJSON?.message || 'Gagal menyimpan. Data tidak ditambahkan.',
@@ -536,15 +569,19 @@
                 });
             }
 
-            // ======= HAPUS (lokal) =======
+            // ======= HAPUS =======
             $(document).on('click', '.js-remove', function() {
+                if (LOCKED) {
+                    toast('IPP sudah submitted. Tidak bisa menghapus point.', 'danger');
+                    return;
+                }
+
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
-                const id = $tr.data('row-id'); // id DB
+                const id = $tr.data('row-id');
                 const prev = $tr.data('status') || null;
 
                 if (!id) {
-                    // fallback: kalau entah bagaimana tak ada id, hapus lokal saja
                     $tr.addClass('removing');
                     setTimeout(() => {
                         const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
@@ -559,7 +596,6 @@
 
                 if (!confirm('Hapus point ini?')) return;
 
-                // kunci tombol agar tidak double click
                 const $btn = $(this).prop('disabled', true);
 
                 ajaxDeletePoint(id)
@@ -582,6 +618,9 @@
 
             // ======= SUBMIT ALL =======
             $('#btnSubmitAll').on('click', function() {
+                if (LOCKED) {
+                    return;
+                }
                 const summary = buildSummaryFromDom();
 
                 for (const cat of Object.keys(CAT_CAP)) {
@@ -619,6 +658,7 @@
                             catCounters[cat].draft = 0;
                             renderCategoryStatus(cat);
                         });
+                        applyLockDom(true); // <- kunci UI setelah submit sukses
                         toast(res?.message || 'IPP berhasil disubmit.');
                     })
                     .fail(err => {
@@ -635,6 +675,11 @@
                         dataType: "json"
                     })
                     .done(res => {
+                        // override CAP dari backend bila tersedia
+                        if (res?.cap) {
+                            CAT_CAP = res.cap;
+                        }
+
                         // Render points per kategori
                         if (res?.points) {
                             Object.keys(res.points).forEach(cat => {
@@ -648,6 +693,11 @@
                                 });
                             });
                         }
+
+                        // Lock UI jika backend bilang submitted
+                        const locked = !!(res?.locked || res?.ipp?.locked || (res?.ipp?.status === 'submitted'));
+                        applyLockDom(locked);
+
                         recalcAll();
                     })
                     .fail(() => {
@@ -657,12 +707,11 @@
 
             // ======= DOCUMENT READY =======
             $(document).ready(function() {
-                // pastikan tabel ada empty state
+                // empty state awal
                 $('table.js-table tbody.js-tbody').each(function() {
                     const $tb = $(this);
                     if ($tb.find('tr').not('.empty-row').length === 0) ensureNotEmpty($tb);
                 });
-
                 // load data awal via AJAX
                 loadInitial();
             });
@@ -671,7 +720,7 @@
             function toast(msg, type = 'success') {
                 const id = 'toast-' + Date.now();
                 const $t = $(`
-<div class="toast align-items-center text-bg-${type} border-0" id="${id}"
+<div class="toast align-items-center badge-${type} border-0" id="${id}"
      role="status" aria-live="polite" aria-atomic="true"
      style="position:fixed;top:1rem;right:1rem;z-index:1080;">
   <div class="d-flex">
@@ -687,6 +736,7 @@
                 t.show();
                 $t.on('hidden.bs.toast', () => $t.remove());
             }
+
         })(jQuery);
     </script>
 @endpush
