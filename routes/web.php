@@ -289,6 +289,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('ipp')->group(function () {
         Route::get('/', [IppController::class, 'create'])->name('ipp.index');
         Route::post('/', [IppController::class, 'store'])->name('ipp.store');
+        Route::post('/submit', [IppController::class, 'submit'])->name('ipp.submit');
         Route::get('/list/{company}', [IppController::class, 'list'])->name('ipp.list');
     });
 
