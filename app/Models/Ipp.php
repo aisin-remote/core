@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class Ipp extends Model
 {
     protected $fillable = [
+        'employee_id',
         'nama',
         'department',
         'division',
@@ -23,6 +24,11 @@ class Ipp extends Model
         'summary' => 'array',
         'date_review' => 'date',
     ];
+
+    public function employee()
+    {
+        return $this->belongsTo(Employee::class);
+    }
 
     public function points()
     {

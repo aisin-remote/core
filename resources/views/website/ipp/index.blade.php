@@ -283,10 +283,10 @@
 
             function pickUsedBadgeClass(used, cap) {
                 const eps = 1e-6;
-                if (Math.abs(used) <= eps) return 'text-bg-secondary';
-                if (used > cap + eps) return 'text-bg-danger';
-                if (Math.abs(used - cap) <= eps) return 'text-bg-primary';
-                return 'text-bg-warning';
+                if (Math.abs(used) <= eps) return 'badge-secondary';
+                if (used > cap + eps) return 'badge-danger';
+                if (Math.abs(used - cap) <= eps) return 'badge-primary';
+                return 'badge-warning';
             }
 
             function renderCategoryStatus(cat) {
@@ -296,15 +296,15 @@
                 };
                 const $b = $(`.js-cat-status[data-cat="${cat}"]`);
                 let label = '—',
-                    cls = 'text-bg-secondary';
+                    cls = 'badge-secondary';
                 if (ctr.submitted > 0) {
                     label = 'Submitted';
-                    cls = 'text-bg-primary';
+                    cls = 'badge-primary';
                 } else if (ctr.draft > 0) {
                     label = 'Draft';
-                    cls = 'text-bg-warning';
+                    cls = 'badge-warning';
                 }
-                $b.text(label).removeClass('text-bg-secondary text-bg-warning text-bg-primary').addClass(cls);
+                $b.text(label).removeClass('badge-secondary badge-warning badge-primary').addClass(cls);
             }
 
             function bumpCounter(cat, prevStatus, newStatus) {
@@ -330,7 +330,7 @@
                 $wrap.find('.status-ok').toggleClass('d-none', over);
                 $wrap.find('.status-over').toggleClass('d-none', !over);
                 const $badges = $(`.js-used[data-cat="${cat}"]`).closest('.badge');
-                $badges.removeClass('text-bg-primary text-bg-warning text-bg-danger text-bg-secondary')
+                $badges.removeClass('badge-primary badge-warning badge-danger badge-secondary')
                     .addClass(pickUsedBadgeClass(used, cap));
             }
 
@@ -351,7 +351,7 @@
                     .target_one || '-');
                 const dueTxt = data.due_date ? data.due_date : '-';
                 const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
-                const wCls = w > 0 ? 'text-bg-primary' : 'text-bg-secondary';
+                const wCls = w > 0 ? 'badge-primary' : 'badge-secondary';
                 return `
 <tr class="align-middle point-row"
     data-row-id="${rowId}"
