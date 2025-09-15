@@ -259,4 +259,42 @@ class IppController
 
         return response()->json(['message' => 'Berhasil submit IPP.', 'summary' => $summary]);
     }
+    /** === DELETE POINT IPP === */
+    public function destroyPoint(Request $request, IppPoint $point)
+    {
+        $user = auth()->user();
+        $emp  = $user->employee;
+
+        $ipp = $point->ipp;
+        if (!$ipp || $ipp->nama !== ($emp->name ?? '') || (string)$ipp->on_year !== now()->format('Y')) {
+            return response()->json(['message' => 'Tidak diizinkan menghapus point ini.'], 403);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $point->delete();
+
+            $summary = IppPoint::where('ipp_id', $ipp->id)
+                ->selectRaw('category, SUM(weight) as used')
+                ->groupBy('category')
+                ->pluck('used', 'category')
+                ->toArray();
+            $summary['total'] = array_sum($summary);
+
+            $ipp->summary = $summary;
+            $ipp->save();
+
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Point dihapus.',
+                'summary' => $summary,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            report($e);
+            return response()->json(['message' => 'Gagal menghapus point.'], 500);
+        }
+    }
 }

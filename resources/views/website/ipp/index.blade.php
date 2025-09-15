@@ -392,7 +392,7 @@
                     const col = $tbody.closest('table').find('thead th').length;
                     $tbody.html(
                         `<tr class="empty-row"><td colspan="${col}">Belum ada point. Klik "Tambah Point" untuk memulai.</td></tr>`
-                        );
+                    );
                 }
             }
 
@@ -523,20 +523,61 @@
                 }
             });
 
+            function ajaxDeletePoint(id) {
+                const url = "{{ route('ipp.point.destroy', ':id') }}".replace(':id', id);
+                return $.ajax({
+                    url,
+                    method: "POST",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        _method: "DELETE"
+                    },
+                    dataType: "json"
+                });
+            }
+
             // ======= HAPUS (lokal) =======
             $(document).on('click', '.js-remove', function() {
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
+                const id = $tr.data('row-id'); // id DB
                 const prev = $tr.data('status') || null;
-                $tr.addClass('removing');
-                setTimeout(() => {
-                    const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
-                    $tr.remove();
-                    ensureNotEmpty($tbody);
-                    recalcAll();
-                    if (prev) bumpCounter(cat, prev, null);
-                    toast('Point dihapus.', 'warning');
-                }, 180);
+
+                if (!id) {
+                    // fallback: kalau entah bagaimana tak ada id, hapus lokal saja
+                    $tr.addClass('removing');
+                    setTimeout(() => {
+                        const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
+                        $tr.remove();
+                        ensureNotEmpty($tbody);
+                        recalcAll();
+                        if (prev) bumpCounter(cat, prev, null);
+                        toast('Point dihapus (lokal).', 'warning');
+                    }, 180);
+                    return;
+                }
+
+                if (!confirm('Hapus point ini?')) return;
+
+                // kunci tombol agar tidak double click
+                const $btn = $(this).prop('disabled', true);
+
+                ajaxDeletePoint(id)
+                    .done(res => {
+                        $tr.addClass('removing');
+                        setTimeout(() => {
+                            const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
+                            $tr.remove();
+                            ensureNotEmpty($tbody);
+                            recalcAll();
+                            if (prev) bumpCounter(cat, prev, null);
+                            toast(res?.message || 'Point dihapus.');
+                        }, 180);
+                    })
+                    .fail(err => {
+                        toast(err?.responseJSON?.message || 'Gagal menghapus point.', 'danger');
+                    })
+                    .always(() => $btn.prop('disabled', false));
             });
 
             // ======= SUBMIT ALL =======
