@@ -242,7 +242,13 @@
         (function($) {
             // ======= SETTINGS =======
             const REQUIRE_TOTAL_100 = true;
-            const CAT_CAP = @json($catCapMap);
+            // CAP map diset di Blade (array static di atas)
+            const CAT_CAP = {
+                activity_management: 70,
+                people_development: 10,
+                crp: 10,
+                special_assignment: 10,
+            };
 
             const pointModal = new bootstrap.Modal(document.getElementById('pointModal'));
             let autoRowId = 0;
@@ -277,10 +283,10 @@
 
             function pickUsedBadgeClass(used, cap) {
                 const eps = 1e-6;
-                if (Math.abs(used) <= eps) return 'badge-secondary';
-                if (used > cap + eps) return 'badge-danger';
-                if (Math.abs(used - cap) <= eps) return 'badge-primary';
-                return 'badge-warning';
+                if (Math.abs(used) <= eps) return 'text-bg-secondary';
+                if (used > cap + eps) return 'text-bg-danger';
+                if (Math.abs(used - cap) <= eps) return 'text-bg-primary';
+                return 'text-bg-warning';
             }
 
             function renderCategoryStatus(cat) {
@@ -290,15 +296,15 @@
                 };
                 const $b = $(`.js-cat-status[data-cat="${cat}"]`);
                 let label = '—',
-                    cls = 'badge-secondary';
+                    cls = 'text-bg-secondary';
                 if (ctr.submitted > 0) {
                     label = 'Submitted';
-                    cls = 'badge-primary';
+                    cls = 'text-bg-primary';
                 } else if (ctr.draft > 0) {
                     label = 'Draft';
-                    cls = 'badge-warning';
+                    cls = 'text-bg-warning';
                 }
-                $b.text(label).removeClass('badge-secondary badge-warning badge-primary').addClass(cls);
+                $b.text(label).removeClass('text-bg-secondary text-bg-warning text-bg-primary').addClass(cls);
             }
 
             function bumpCounter(cat, prevStatus, newStatus) {
@@ -324,7 +330,7 @@
                 $wrap.find('.status-ok').toggleClass('d-none', over);
                 $wrap.find('.status-over').toggleClass('d-none', !over);
                 const $badges = $(`.js-used[data-cat="${cat}"]`).closest('.badge');
-                $badges.removeClass('badge-primary badge-warning badge-danger badge-secondary')
+                $badges.removeClass('text-bg-primary text-bg-warning text-bg-danger text-bg-secondary')
                     .addClass(pickUsedBadgeClass(used, cap));
             }
 
@@ -345,7 +351,7 @@
                     .target_one || '-');
                 const dueTxt = data.due_date ? data.due_date : '-';
                 const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
-                const wCls = w > 0 ? 'badge-primary' : 'badge-secondary';
+                const wCls = w > 0 ? 'text-bg-primary' : 'text-bg-secondary';
                 return `
 <tr class="align-middle point-row"
     data-row-id="${rowId}"
@@ -358,7 +364,7 @@
   <td class="fw-semibold">${_.escape(data.activity||'-')}</td>
   <td class="text-muted">${_.escape(oneShort)}</td>
   <td><span class="badge text-bg-light">${_.escape(dueTxt)}</span></td>
-  <td><span>${fmt(w)}</span></td>
+  <td><span class="badge ${wCls}">${fmt(w)}</span></td>
   <td class="text-end">
     <div class="btn-group btn-group-sm" role="group" aria-label="Aksi baris">
       <button type="button" class="btn btn-warning js-edit" title="Edit" aria-label="Edit point"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
@@ -367,7 +373,6 @@
   </td>
 </tr>`;
             }
-            // lodash-escape fallback
             window._ = window._ || {
                 escape: (s) => String(s).replace(/[&<>"'`=\/]/g, c => ({
                 '&': '&amp;',
@@ -387,7 +392,7 @@
                     const col = $tbody.closest('table').find('thead th').length;
                     $tbody.html(
                         `<tr class="empty-row"><td colspan="${col}">Belum ada point. Klik "Tambah Point" untuk memulai.</td></tr>`
-                    );
+                        );
                 }
             }
 
@@ -523,7 +528,6 @@
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
                 const prev = $tr.data('status') || null;
-
                 $tr.addClass('removing');
                 setTimeout(() => {
                     const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
@@ -532,7 +536,6 @@
                     recalcAll();
                     if (prev) bumpCounter(cat, prev, null);
                     toast('Point dihapus.', 'warning');
-                    // TODO: panggil endpoint delete per-point bila tersedia
                 }, 180);
             });
 
@@ -562,7 +565,7 @@
                         dataType: "json"
                     })
                     .done(res => {
-                        // set semua row jadi submitted & refresh counters
+                        // tandai semua row submitted & refresh counters
                         Object.keys(CAT_CAP).forEach(cat => {
                             const $rows = $(`table.js-table[data-cat="${cat}"] tbody tr`).not(
                                 '.empty-row');
@@ -583,25 +586,44 @@
                     .always(() => $btn.prop('disabled', false));
             });
 
-            // ======= INIT =======
+            // ======= INIT: load data via AJAX (/ipp/init) =======
+            function loadInitial() {
+                $.ajax({
+                        url: "{{ route('ipp.init') }}",
+                        method: "GET",
+                        dataType: "json"
+                    })
+                    .done(res => {
+                        // Render points per kategori
+                        if (res?.points) {
+                            Object.keys(res.points).forEach(cat => {
+                                const list = res.points[cat] || [];
+                                const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
+                                if (list.length) removeEmptyState($tbody);
+                                list.forEach(pt => {
+                                    const html = makeRowHtml(pt.id, pt);
+                                    $tbody.append(html);
+                                    bumpCounter(cat, null, pt.status || 'draft');
+                                });
+                            });
+                        }
+                        recalcAll();
+                    })
+                    .fail(() => {
+                        toast('Gagal memuat data awal IPP.', 'danger');
+                    });
+            }
+
+            // ======= DOCUMENT READY =======
             $(document).ready(function() {
+                // pastikan tabel ada empty state
                 $('table.js-table tbody.js-tbody').each(function() {
                     const $tb = $(this);
-                    if ($tb.find('tr').not('.empty-row').length === 0) {
-                        ensureNotEmpty($tb);
-                    } else {
-                        const cat = $tb.closest('table').data('cat');
-                        $tb.find('tr').not('.empty-row').each(function() {
-                            const st = $(this).data('status');
-                            if (st) bumpCounter(cat, null, st);
-                        });
-                    }
+                    if ($tb.find('tr').not('.empty-row').length === 0) ensureNotEmpty($tb);
                 });
-                Object.keys(CAT_CAP).forEach(cat => {
-                    updateCategoryCard(cat);
-                    renderCategoryStatus(cat);
-                });
-                updateTotal();
+
+                // load data awal via AJAX
+                loadInitial();
             });
 
             // ======= TOAST =======

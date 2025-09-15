@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Ipp;
 use App\Models\IppPoint;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -17,22 +18,87 @@ class IppController
         'special_assignment'  => 10,
     ];
 
-    public function create()
+    public function index()
+    {
+        $title = 'IPP Create';
+        return view('website.ipp.index', compact('title'));
+    }
+
+    public function init(Request $request)
     {
         $user      = auth()->user();
         $emp       = $user->employee;
+        $year = now()->format('Y');
+
         $identitas = [
-            'nama'        => $emp->name,
-            'department'  => $emp->bagian,
-            'division'    => 'MS & IT',
-            'section'     => 'Policy Management',
-            'date_review' => now()->format('Y-m-d'),
-            'pic_review'  => 'Ferry Avianto',
+            'nama'        => (string)($emp->name ?? $user->name ?? ''),
+            'department'  => (string)($emp->bagian ?? ''),
+            'division'    => '-',
+            'section'     => '-',
+            'date_review' => '-',
+            'pic_review'  => '',
             'on_year'     => now()->format('Y'),
-            'no_form'     => 'FRM-HRD-S3-012-00',
+            'no_form'     => '-',
         ];
-        $title = 'IPP Create';
-        return view('website.ipp.create', compact('title', 'identitas'));
+
+        $ipp = Ipp::where('nama', $identitas['nama'])
+            ->where('on_year', $year)
+            ->first();
+        $pointByCat = [
+            'activity_management' => [],
+            'people_development'  => [],
+            'crp'                 => [],
+            'special_assignment'  => [],
+        ];
+
+        $summary = [
+            'activity_management' => 0,
+            'people_development'  => 0,
+            'crp'                 => 0,
+            'special_assignment'  => 0,
+            'total'               => 0,
+        ];
+        $header = null;
+        if ($ipp) {
+
+            $points = IppPoint::where('ipp_id', $ipp->id)
+                ->orderBy('id')
+                ->get();
+            foreach ($points  as $p) {
+                $item = [
+                    'id'          => $p->id,
+                    'category'    => $p->category,
+                    'activity'    => (string) $p->activity,
+                    'target_mid'  => (string) $p->target_mid,
+                    'target_one'  => (string) $p->target_one,
+                    'due_date'    => $p->due_date ? Carbon::parse($p->due_date)->format('Y-m-d') : null,
+                    'weight'      => (int) $p->weight,
+                    'status'      => (string) ($p->status ?? 'draft'),
+                ];
+                if (isset($pointByCat[$p->category])) {
+                    $pointByCat[$p->category][] = $item;
+                    $summary[$p->category] = ($summary[$p->category] ?? 0) + (int)$p->weight;
+                }
+            }
+
+            $summary['total'] = ($summary['activity_management'] ?? 0)
+                + ($summary['people_development'] ?? 0)
+                + ($summary['crp'] ?? 0)
+                + ($summary['special_assignment'] ?? 0);
+
+            $header = [
+                'id'      => $ipp->id,
+                'status'  => (string) $ipp->status,
+                'summary' => $ipp->summary ?: $summary,
+            ];
+        }
+
+        return response()->json([
+            'identitas' => $identitas,
+            'ipp' => $header,
+            'points' => $pointByCat,
+            'cap' =>  self::CAP,
+        ]);
     }
 
     public function store(Request $request)
