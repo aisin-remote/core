@@ -13,7 +13,12 @@ class IppPoint extends Model
         'target_mid',
         'target_one',
         'due_date',
-        'weight'
+        'weight',
+        'status'
+    ];
+
+    protected $casts = [
+        'due_date' => 'date'
     ];
 
     public function ipp()
