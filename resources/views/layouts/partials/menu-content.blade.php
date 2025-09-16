@@ -400,7 +400,7 @@
                 @endif
 
                 {{-- IPP & IPA --}}
-                {{-- @if ($isUserRole)
+                @if ($isUserRole)
                     <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
                         id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
@@ -514,7 +514,7 @@
 
                         </div>
                     </div>
-                @endif --}}
+                @endif
 
             </div>
 
