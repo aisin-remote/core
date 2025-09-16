@@ -14,6 +14,7 @@ class Ipp extends Model
         'section',
         'date_review',
         'pic_review',
+        'pic_review_id',
         'on_year',
         'no_form',
         'status',
@@ -28,6 +29,11 @@ class Ipp extends Model
     public function employee()
     {
         return $this->belongsTo(Employee::class);
+    }
+
+    public function picReviewer()
+    {
+        return $this->belongsTo(Employee::class, 'pic_review_id');
     }
 
     public function points()
