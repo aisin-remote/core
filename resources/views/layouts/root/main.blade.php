@@ -1,10 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
-<meta http-equiv="content-type" content="text/html;charset=UTF-8" />
-<meta name="csrf-token" content="{{ csrf_token() }}">
 
 <head>
+    <meta http-equiv="content-type" content="text/html;charset=UTF-8" />
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>HR- People Development</title>
+
     <meta charset="utf-8" />
     <meta name="description" content="People Development Portal" />
     <meta name="keywords" content="tailwind, bootstrap, metronic, admin, dashboard" />
@@ -81,80 +82,87 @@
                     @include('layouts.partials.footer')
                 </div>
             </div>
-
         </div>
     </div>
 
     <script>
+        // jika dipakai Metronic demo assets
         var hostUrl = "{{ asset('assets/index.html') }}";
     </script>
 
-    <!-- 1) Metronic bundle -->
+    <!-- ============ JS ORDER: jQuery/Metronic core dulu, baru vendor lain, lalu widgets & page scripts ============ -->
+
+    <!-- 1) Metronic bundle (berisi jQuery). HARUS sebelum script lain yang butuh $ -->
     <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
+
     <!-- 2) Metronic core -->
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
 
-    <!-- jQuery-based vendors -->
+    <!-- 3) jQuery-based vendors (bergantung pada jQuery dari plugins.bundle.js) -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
 
-    <!-- Charts -->
+    <!-- 4) Charts (tidak perlu jQuery) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
 
-    <!-- Highcharts (opsional) -->
+    <!-- 5) Highcharts (opsional) -->
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script src="https://code.highcharts.com/modules/exporting.js"></script>
     <script src="https://code.highcharts.com/modules/export-data.js"></script>
     <script src="https://code.highcharts.com/modules/accessibility.js"></script>
 
-    <!-- Metronic page vendors -->
+    <!-- 6) Metronic page vendors -->
     <script src="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.js') }}"></script>
 
-    <!-- Widgets / Custom -->
+    <!-- 7) Widgets / Custom -->
     <script src="{{ asset('assets/js/widgets.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/custom/widgets.js') }}"></script>
     <script src="{{ asset('assets/js/custom/apps/chat/chat.js') }}"></script>
-    <script src="{{ asset('assets/js/custom/utilities/modals/upgrade-plan.js') }}">
-        < /script --> <
-        script src = "{{ asset('assets/js/custom/utilities/modals/create-app.js') }}" >
-    </script>
-    <script src="{{ asset('assets/js/custom/utilities/modals/new-target.js') }}"></script>
-    <script src="{{ asset('assets/js/custom/utilities/modals/users-search.js') }}"></script>
 
-    @stack('scripts')
+    <!-- FIX: baris di bawah tadinya rusak (</script -->
+    < script ...>) -->
+        <script src="{{ asset('assets/js/custom/utilities/modals/upgrade-plan.js') }}"></script> <!-- FIX -->
+        <script src="{{ asset('assets/js/custom/utilities/modals/create-app.js') }}"></script> <!-- FIX -->
+        <script src="{{ asset('assets/js/custom/utilities/modals/new-target.js') }}"></script>
+        <script src="{{ asset('assets/js/custom/utilities/modals/users-search.js') }}"></script>
 
-    @if (session('show_first_login_alert'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({
-                    title: 'Welcome!',
-                    text: 'This is your first login. Please change your password to continue.',
-                    icon: 'warning',
-                    confirmButtonText: 'I Understand',
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    confirmButtonColor: '#3085d6',
-                    backdrop: `rgba(0,0,0,0.7)`
+        <!-- 8) Script halaman yang dipush -->
+        @stack('scripts')
+
+        {{-- Optional: SweetAlert via page-specific @push seperti yang sudah Anda lakukan --}}
+
+        @if (session('show_first_login_alert'))
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: 'Welcome!',
+                        text: 'This is your first login. Please change your password to continue.',
+                        icon: 'warning',
+                        confirmButtonText: 'I Understand',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        confirmButtonColor: '#3085d6',
+                        backdrop: `rgba(0,0,0,0.7)`
+                    });
                 });
-            });
-        </script>
-    @endif
+            </script>
+        @endif
 
-    @if (session('warning'))
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                Swal.fire({
-                    title: 'Warning',
-                    text: @json(session('warning')),
-                    icon: 'warning',
-                    confirmButtonText: 'OK'
+        @if (session('warning'))
+            <script>
+                document.addEventListener('DOMContentLoaded', function() {
+                    Swal.fire({
+                        title: 'Warning',
+                        text: @json(session('warning')),
+                        icon: 'warning',
+                        confirmButtonText: 'OK'
+                    });
                 });
-            });
-        </script>
-    @endif
+            </script>
+        @endif
 </body>
 
 </html>
