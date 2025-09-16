@@ -122,7 +122,9 @@
                 <div class="card shadow-sm">
                     <div class="card-header d-flex align-items-center justify-content-between">
                         <h6 class="card-title mb-0 fw-bold">Ringkasan Bobot</h6>
-                        <span class="small text-muted">Total: <span id="totalUsed">0</span>% (Target 100%)</span>
+                        <a href="{{ route('ipp.export') }}" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Export IPP
+                        </a>
                     </div>
                     <div class="card-body">
                         <div class="row g-3">
@@ -150,6 +152,7 @@
                                 </div>
                             @endforeach
                         </div>
+                        <span class="small text-muted">Total: <span id="totalUsed">0</span>% (Target 100%)</span>
                     </div>
                 </div>
             </div>

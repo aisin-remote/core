@@ -293,6 +293,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/submit', [IppController::class, 'submit'])->name('ipp.submit');
         Route::get('/list/{company}', [IppController::class, 'list'])->name('ipp.list');
         Route::delete('/point/{point}', [IppController::class, 'destroyPoint'])->name('ipp.point.destroy');
+        Route::get('/export', [IppController::class, 'export'])->name('ipp.export');
     });
 
     Route::prefix('ipa')->group(function () {

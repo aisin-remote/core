@@ -4,10 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Models\Ipp;
 use App\Models\IppPoint;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Str;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
+use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Style\Border;
+
+
 
 class IppController
 {
@@ -372,5 +379,269 @@ class IppController
             report($e);
             return response()->json(['message' => 'Gagal menghapus point.'], 500);
         }
+    }
+
+    public function export(Request $request)
+    {
+        $user  = auth()->user();
+        $emp   = $user->employee;
+        $year  = now()->format('Y');
+
+        abort_if(!$emp, 403, 'Employee not found for this account.');
+
+        $ipp = Ipp::where('employee_id', $emp->id)
+            ->where('on_year', $year)
+            ->first();
+
+        abort_if(!$ipp, 404, 'IPP not found.');
+
+        $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
+
+        $grouped = [
+            'activity_management' => [],
+            'people_development'  => [],
+            'crp'                 => [],
+            'special_assignment'  => [],
+        ];
+        foreach ($points as $p) {
+            $cat = $p->category;
+            if (!isset($grouped[$cat])) continue;
+            $grouped[$cat][] = [
+                'activity'   => (string) $p->activity,
+                'target_mid' => (string) ($p->target_mid ?? ''),
+                'target_one' => (string) ($p->target_one ?? ''),
+                'due_date'   => $p->due_date ? substr((string)$p->due_date, 0, 10) : '',
+                'weight'     => (int) $p->weight,
+            ];
+        }
+
+        $assignLevel = method_exists($emp, 'getCreateAuth') ? $emp->getCreateAuth() : null;
+        $pic = $assignLevel && method_exists($emp, 'getSuperiorsByLevel')
+            ? optional($emp->getSuperiorsByLevel($assignLevel)->first())->name
+            : '';
+
+        $identitas = [
+            'nama'        => (string)($emp->name ?? $user->name ?? ''),
+            'department'  => (string)($emp->bagian ?? ''),
+            'section'     => (string)($ipp->section ?? ''),
+            'division'    => (string)($ipp->division ?? ''),
+            'date_review' => $ipp->date_review ? substr((string)$ipp->date_review, 0, 10) : '',
+            'pic_review'  => $pic,
+        ];
+
+        $template = public_path('assets/file/Template IPP.xlsx');
+        abort_unless(is_file($template), 500, 'Template file not found on server.');
+        $spreadsheet = IOFactory::load($template);
+        /** @var Worksheet $sheet */
+        $sheet = $spreadsheet->getSheetByName('IPP form') ?? $spreadsheet->getActiveSheet();
+
+        // Blok kolom tetap
+        $YEAR_FROM = 'AA4';
+        $YEAR_TO = 'AC4';
+        $sheet->mergeCells("{$YEAR_FROM}:{$YEAR_TO}");
+        $sheet->setCellValue("{$YEAR_FROM}", (string)($ipp['on_year'] ?? ''));
+        $sheet->getStyle("{$YEAR_FROM}:{$YEAR_TO}")->applyFromArray([
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_LEFT,
+                'vertical'   => Alignment::VERTICAL_TOP,
+                'wrapText'   => true,
+            ],
+            'font' => ['name' => 'Tahoma', 'size' => 14],
+        ]);
+        // Header identitas
+        $sheet->setCellValue('J7',  $identitas['nama']);
+        $sheet->setCellValue('J8',  $identitas['department']);
+        $sheet->setCellValue('J9',  $identitas['section']);
+        $sheet->setCellValue('J10', $identitas['division']);
+        $sheet->setCellValue('AV7', $identitas['date_review']);
+        $sheet->setCellValue('AV8', $identitas['pic_review']);
+        foreach (['J7', 'J8', 'J9', 'J10'] as $addr) {
+            $sheet->getStyle($addr)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        }
+
+        // Blok kolom tetap
+        $R_ACTIVITY_FROM = 'B';
+        $R_ACTIVITY_TO = 'Q';
+        $R_WEIGHT_FROM   = 'R';
+        $R_WEIGHT_TO   = 'T';
+        $R_MID_FROM      = 'U';
+        $R_MID_TO      = 'AH';
+        $R_ONE_FROM      = 'AI';
+        $R_ONE_TO      = 'AU';
+        $R_DUE_FROM      = 'AV';
+        $R_DUE_TO      = 'BA';
+
+        // Helper border outline
+        $outlineThin = function (string $range) use ($sheet) {
+            $sheet->getStyle($range)->applyFromArray([
+                'borders' => [
+                    'outline' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color'       => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+        };
+        $outlineMedium = function (string $range) use ($sheet) {
+            $sheet->getStyle($range)->applyFromArray([
+                'borders' => [
+                    'right' => [
+                        'borderStyle' => Border::BORDER_MEDIUM,
+                        'color'       => ['rgb' => '000000'],
+                    ],
+                    'outline' => [
+                        'borderStyle' => Border::BORDER_THIN,
+                        'color'       => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+        };
+
+        $lastColLtr = 'BA';
+        $lastColIdx = $this->colIndex($lastColLtr);
+
+        // Posisi header kategori pada template
+        $HEADER = [
+            'activity_management' => 14,
+            'people_development'  => 18,
+            'crp'                 => 23,
+            'special_assignment'  => 27,
+        ];
+        $order = ['activity_management', 'people_development', 'crp', 'special_assignment'];
+
+        $offset = 0;
+        foreach ($order as $cat) {
+            $items = $grouped[$cat] ?? [];
+            $n = count($items);
+            if ($n === 0) continue;
+
+            $headerAnchor = ($HEADER[$cat] ?? 13) + $offset;
+            $baseRow      = $headerAnchor + 1;
+
+            // Sisip baris tambahan (n-1) lalu clone style dasar
+            if ($n > 1) {
+                $sheet->insertNewRowBefore($baseRow + 1, $n - 1);
+                for ($r = $baseRow + 1; $r <= $baseRow + $n - 1; $r++) {
+                    $sheet->duplicateStyle(
+                        $sheet->getStyle("B{$baseRow}:{$lastColLtr}{$baseRow}"),
+                        "B{$r}:{$lastColLtr}{$r}"
+                    );
+                    $sheet->getRowDimension($r)->setRowHeight(
+                        $sheet->getRowDimension($baseRow)->getRowHeight()
+                    );
+                }
+            }
+
+            for ($i = 0; $i < $n; $i++) {
+                $r   = $baseRow + $i;
+                $row = $items[$i];
+
+                // Kosongkan isi + hapus semua border di B:BA baris ini
+                for ($c = 2; $c <= $lastColIdx; $c++) {
+                    $sheet->setCellValueByColumnAndRow($c, $r, null);
+                }
+                $sheet->getStyle("B{$r}:{$lastColLtr}{$r}")->applyFromArray([
+                    'borders' => [
+                        'allBorders' => ['borderStyle' => Border::BORDER_NONE],
+                    ],
+                    'font' => ['name' => 'Tahoma', 'size' => 14],
+                ]);
+
+                // PROGRAM / ACTIVITY (B:Q)
+                $sheet->mergeCells("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
+                $sheet->setCellValue("{$R_ACTIVITY_FROM}{$r}", (string)($row['activity'] ?? ''));
+                $sheet->getStyle("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}")->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_LEFT,
+                        'vertical'   => Alignment::VERTICAL_TOP,
+                        'wrapText'   => true,
+                    ],
+                ]);
+                $outlineThin("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
+
+                // WEIGHT (R:T) → tulis sebagai 0.10 agar tampil 10%
+                $sheet->mergeCells("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}");
+                $sheet->setCellValue("{$R_WEIGHT_FROM}{$r}", ((int)($row['weight'] ?? 0)) / 100);
+                $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
+                $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")
+                    ->getNumberFormat()->setFormatCode('0%');
+                $outlineThin("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}");
+
+                // MID YEAR (U:AH)
+                $sheet->mergeCells("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
+                $sheet->setCellValue("{$R_MID_FROM}{$r}", (string)($row['target_mid'] ?? ''));
+                $sheet->getStyle("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}")->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_LEFT,
+                        'vertical'   => Alignment::VERTICAL_TOP,
+                        'wrapText'   => true,
+                    ],
+                ]);
+                $outlineThin("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
+
+                // ONE YEAR (AI:AU)
+                $sheet->mergeCells("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
+                $sheet->setCellValue("{$R_ONE_FROM}{$r}", (string)($row['target_one'] ?? ''));
+                $sheet->getStyle("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}")->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_LEFT,
+                        'vertical'   => Alignment::VERTICAL_TOP,
+                        'wrapText'   => true,
+                    ],
+                ]);
+                $outlineThin("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
+
+                // DUE DATE (AV:BA) — pakai teks yyyy-mm-dd agar stabil
+                $sheet->mergeCells("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}");
+                $sheet->setCellValue("{$R_DUE_FROM}{$r}", (string)($row['due_date'] ?? ''));
+                $sheet->getStyle("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}")->applyFromArray([
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                    ],
+                ]);
+                $outlineMedium("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}");
+            }
+
+            // Tambah offset (n-1) karena ada baris sisipan
+            $offset += max(0, $n - 1);
+        }
+
+        $fileName = 'IPP_' . $year . '_' . Str::slug((string)($emp->name ?? 'user')) . '.xlsx';
+        $tmp = tempnam(sys_get_temp_dir(), 'ipp_') . '.xlsx';
+        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tmp);
+
+        return response()->download(
+            $tmp,
+            $fileName,
+            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+        )->deleteFileAfterSend(true);
+    }
+
+    private function colIndex(string $letters): int
+    {
+        $letters = strtoupper($letters);
+        $n = 0;
+        for ($i = 0; $i < strlen($letters); $i++) {
+            $n = $n * 26 + (ord($letters[$i]) - 64);
+        }
+        return $n;
+    }
+
+    private function colLetter(int $index): string
+    {
+        $index = max(1, $index);
+        $out = '';
+        while ($index > 0) {
+            $index--;
+            $out = chr(65 + ($index % 26)) . $out;
+            $index = intdiv($index, 26);
+        }
+        return $out;
     }
 }
