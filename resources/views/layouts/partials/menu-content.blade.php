@@ -400,7 +400,7 @@
                 @endif
 
                 {{-- IPP & IPA --}}
-                @if ($isUserRole)
+                {{-- @if ($isUserRole)
                     <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
                         id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
@@ -412,7 +412,6 @@
                         </span>
 
                         <div class="menu-sub menu-sub-accordion menu-active-bg">
-                            {{-- IPP (tanpa AII/AIIA) --}}
                             <div class="menu-item">
                                 <a href="{{ route('ipp.index') }}"
                                     class="menu-link {{ request()->routeIs('ipp.*') ? 'active' : '' }}">
@@ -421,7 +420,6 @@
                                 </a>
                             </div>
 
-                            {{-- IPA (fallback jika belum punya named route) --}}
                             <div class="menu-item">
                                 @if (Route::has('ipa.index'))
                                     <a href="{{ route('ipa.index') }}"
@@ -451,7 +449,6 @@
 
                         <div class="menu-sub menu-sub-accordion menu-active-bg">
 
-                            {{-- IPP: hanya submenu List --}}
                             <div
                                 class="menu-item menu-accordion
                   {{ request()->routeIs('ipp.list') ? 'show' : '' }}">
@@ -478,7 +475,6 @@
                                 </div>
                             </div>
 
-                            {{-- IPA: hanya submenu List (fallback bila ipa.list belum ada) --}}
                             <div
                                 class="menu-item menu-accordion
                   {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'show' : '' }}">
@@ -518,7 +514,7 @@
 
                         </div>
                     </div>
-                @endif
+                @endif --}}
 
             </div>
 
