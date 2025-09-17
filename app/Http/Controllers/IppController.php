@@ -210,7 +210,7 @@ class IppController
                     'department'    => (string)($emp->bagian ?? ''),
                     'division'      => (string)($emp->department->division->name ?? ''),
                     'section'       => (string)($emp->leadingSection->name ?? ''),
-                    'date_review'   => now(),
+                    'date_review'   => null,
                     'pic_review'    => $picReviewName,                                     // legacy field (biarkan kosong)
                     'pic_review_id' => $picReviewId,                                       // << simpan relasi PIC
                     'no_form'       => '',
