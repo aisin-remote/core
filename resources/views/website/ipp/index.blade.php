@@ -195,8 +195,7 @@
                             <h2 class="accordion-header" id="heading-{{ $cat['key'] }}">
                                 <button class="accordion-button {{ $i > 0 ? 'collapsed' : '' }}" type="button"
                                     data-bs-toggle="collapse" data-bs-target="#collapse-{{ $cat['key'] }}"
-                                    aria-expanded="{{ $i == 0 ? 'true' : 'false' }}"
-                                    aria-controls="collapse-{{ $cat['key'] }}">
+                                    aria-expanded="true" aria-controls="collapse-{{ $cat['key'] }}">
                                     <div class="d-flex flex-column w-100">
                                         <div class="d-flex align-items-center justify-content-between w-100">
                                             <span>{{ $cat['title'] }}</span>
@@ -217,9 +216,7 @@
                                     </div>
                                 </button>
                             </h2>
-                            <div id="collapse-{{ $cat['key'] }}"
-                                class="accordion-collapse collapse {{ $i == 0 ? 'show' : '' }}"
-                                data-bs-parent="#accordionPrograms">
+                            <div id="collapse-{{ $cat['key'] }}" class="accordion-collapse collapse show">
                                 <div class="accordion-body">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <button type="button" class="btn btn-sm btn-primary js-open-modal"
@@ -587,7 +584,7 @@
                     if ($tb.find('tr').not('.empty-row').length === 0) {
                         $tb.html(
                             '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
-                            );
+                        );
                     }
                     recalcAll();
                     if (prev) bumpCounter(cat, prev, null);
@@ -604,7 +601,7 @@
                         if ($tb.find('tr').not('.empty-row').length === 0) {
                             $tb.html(
                                 '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
-                                );
+                            );
                         }
                         recalcAll();
                         if (prev) bumpCounter(cat, prev, null);
@@ -716,9 +713,17 @@
                     if ($tb.find('tr').not('.empty-row').length === 0) {
                         $tb.html(
                             '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
-                            );
+                        );
                     }
                 });
+
+                $('#accordionPrograms .accordion-ctollapse').each(function() {
+                    this.removeAttribute('data-bs-parent');
+                    this.classList.add('show');
+                    const btn = $(this).prev('.accordion-header').find('.accordion-button');
+                    btn.removeClass('collapsed').attr('aria-expanded', 'true');
+                });
+
                 loadInitial();
             });
 
