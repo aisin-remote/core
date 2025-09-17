@@ -1100,7 +1100,8 @@ class RtcController extends Controller
                 abort(404, 'Unsupported filter');
         }
 
-        return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
+        // return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
+        return view('website.rtc.structure', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
     }
     public function update(Request $request)
     {
