@@ -1204,6 +1204,95 @@
     <!-- SweetAlert (kalau belum dimuat di layout) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
+    @push('scripts')
+        <script>
+            (function() {
+                if (typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
+                    console.warn(
+                        'jQuery/Select2 belum ter-load. Cek urutan di layout: jQuery -> Select2 -> @stack('scripts')');
+                    return;
+                }
+
+                function formatLabeledOption(state) {
+                    if (!state.id) return state.text;
+                    const m = /^\[(.*?)\]\s*(.*)$/.exec(state.text);
+                    return m ? $('<span><strong>[' + m[1] + ']</strong> ' + m[2] + '</span>') : state.text;
+                }
+
+                function customMatcher(params, data) {
+                    const term = (params.term || '').toLowerCase().trim();
+
+                    // 1) kalau tidak ada kata kunci -> tampilkan apa adanya
+                    if (term === '') return data;
+
+                    // 2) kalau item ini adalah GROUP (punya children), filter anak-anaknya
+                    if (data.children && data.children.length) {
+                        const filteredChildren = [];
+                        for (const child of data.children) {
+                            const match = customMatcher(params, child); // rekursif ke anak
+                            if (match) filteredChildren.push(match);
+                        }
+                        if (filteredChildren.length) {
+                            // kembalikan GROUP dengan anak-anak yang lolos
+                            const modified = $.extend({}, data, true);
+                            modified.children = filteredChildren;
+                            return modified;
+                        }
+                        return null; // tidak ada anak yang match -> buang group
+                    }
+
+                    // 3) item biasa (OPTION)
+                    if (typeof data.text === 'undefined') return null;
+
+                    const text = (data.text || '').toLowerCase();
+                    // juga sediakan versi tanpa prefix [Department]/[Section]/dst
+                    const textNoPrefix = text.replace(/^\[[^\]]+\]\s*/, '');
+
+                    return (text.indexOf(term) > -1 || textNoPrefix.indexOf(term) > -1) ? data : null;
+                }
+
+                // === init Select2 (pastikan tetap refer ke customMatcher di sini) ===
+                function initSelect2In(modalEl) {
+                    const $modal = $(modalEl);
+
+                    $modal.find('select.select2-basic').each(function() {
+                        if ($(this).hasClass('select2-hidden-accessible')) return;
+                        $(this).select2({
+                            theme: 'bootstrap-5',
+                            width: '100%',
+                            dropdownParent: $modal,
+                            minimumResultsForSearch: 0
+                        });
+                    });
+
+                    $modal.find('select.select2-org-scope').each(function() {
+                        if ($(this).hasClass('select2-hidden-accessible')) return;
+                        $(this).select2({
+                            theme: 'bootstrap-5',
+                            width: '100%',
+                            allowClear: true,
+                            placeholder: $(this).data('placeholder') ||
+                                'Cari Plant/Division/Department/Section/Sub Section',
+                            dropdownParent: $modal,
+                            templateResult: formatLabeledOption,
+                            templateSelection: formatLabeledOption,
+                            matcher: customMatcher, // 👈 pakai matcher baru
+                            minimumResultsForSearch: 0
+                        });
+                    });
+                }
+
+                // init saat modal tampil
+                $(document).on('shown.bs.modal', '.modal', function() {
+                    initSelect2In(this);
+                });
+                $('.modal.show').each(function() {
+                    initSelect2In(this);
+                });
+            })();
+        </script>
+    @endpush
+
     <script>
         (function() {
             // Helper: jalankan saat DOM siap

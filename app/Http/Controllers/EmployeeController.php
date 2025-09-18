@@ -31,6 +31,7 @@ use App\Models\EducationalBackground;
 use Illuminate\Support\Facades\Storage;
 use App\Models\PerformanceAppraisalHistory;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 
 class EmployeeController extends Controller
@@ -527,7 +528,7 @@ class EmployeeController extends Controller
     /**
      * Tampilkan detail karyawan
      */
-    public function show($id) // $id = user_id
+    public function show($id)
     {
         try {
             // 1) Ambil user & employee berdasarkan user_id
@@ -691,7 +692,108 @@ class EmployeeController extends Controller
         $subSections = SubSection::with('section')
             ->whereHas('section', fn($q) => $q->where('company', $employee->company_name))
             ->get();
+
         $scores      = PerformanceMaster::select('code')->distinct()->pluck('code');
+
+        // ==== Gabungkan semua ke satu collection ====
+        $allOptions = collect();
+
+        $allOptions = $allOptions->merge(
+            $plants->map(fn($x) => [
+                'type'  => 'plant',
+                'id'    => $x->id,
+                'name'  => $x->name,
+                'label' => '[Plant] ' . $x->name,
+                'group' => 'Plant',
+                'value' => 'plant|' . $x->id,
+            ])
+        )->merge(
+            $divisions->map(fn($x) => [
+                'type'  => 'division',
+                'id'    => $x->id,
+                'name'  => $x->name,
+                'label' => '[Division] ' . $x->name,
+                'group' => 'Division',
+                'value' => 'division|' . $x->id,
+            ])
+        )->merge(
+            $departments->map(fn($x) => [
+                'type'  => 'department',
+                'id'    => $x->id,
+                'name'  => $x->name,
+                'label' => '[Department] ' . $x->name,
+                'group' => 'Department',
+                'value' => 'department|' . $x->id,
+            ])
+        )->merge(
+            $sections->map(fn($x) => [
+                'type'  => 'section',
+                'id'    => $x->id,
+                'name'  => $x->name,
+                'label' => '[Section] ' . $x->name,
+                'group' => 'Section',
+                'value' => 'section|' . $x->id,
+            ])
+        )->merge(
+            $subSections->map(fn($x) => [
+                'type'  => 'sub_section',
+                'id'    => $x->id,
+                'name'  => $x->name,
+                'label' => '[Sub Section] ' . $x->name,
+                'group' => 'Sub Section',
+                'value' => 'sub_section|' . $x->id,
+            ])
+        );
+
+        $allOptions = $allOptions->sortBy('label')->values();
+
+        // === Selected per WorkExperience (PARSE dari kolom department yang berprefix)
+        $resolveSelected = function ($exp) use ($plants, $divisions, $departments, $sections, $subSections) {
+            // Format disimpan: "[Section] Assembly 1"
+            if (
+                !empty($exp->department) &&
+                preg_match('/^\[(Plant|Division|Department|Section|Sub Section)\]\s*(.+)$/i', $exp->department, $m)
+            ) {
+
+                $typeLabel = strtolower($m[1]); // 'section' | 'sub section' | ...
+                $name      = trim($m[2]);
+
+                $typeMap = [
+                    'plant'        => 'plant',
+                    'division'     => 'division',
+                    'department'   => 'department',
+                    'section'      => 'section',
+                    'sub section'  => 'sub_section',
+                ];
+                $typeKey = $typeMap[$typeLabel] ?? null;
+
+                if ($typeKey) {
+                    $id = match ($typeKey) {
+                        'plant'       => optional($plants->firstWhere('name', $name))->id,
+                        'division'    => optional($divisions->firstWhere('name', $name))->id,
+                        'department'  => optional($departments->firstWhere('name', $name))->id,
+                        'section'     => optional($sections->firstWhere('name', $name))->id,
+                        'sub_section' => optional($subSections->firstWhere('name', $name))->id,
+                        default       => null,
+                    };
+                    if ($id) return $typeKey . '|' . $id;
+                }
+            }
+
+            // Fallback: kalau string department tanpa prefix, coba cocokkan Department
+            if (!empty($exp->department)) {
+                if ($id = optional($departments->firstWhere('name', $exp->department))->id) {
+                    return 'department|' . $id;
+                }
+            }
+            return null;
+        };
+
+        // tempelkan selected ke setiap experience
+        $workExperiences = $workExperiences->map(function ($exp) use ($resolveSelected) {
+            $exp->selected_org_scope = $resolveSelected($exp);
+            return $exp;
+        });
 
         return view('website.employee.update', compact(
             'employee',
@@ -711,7 +813,8 @@ class EmployeeController extends Controller
             'plants',
             'sections',
             'subSections',
-            'scores'
+            'scores',
+            'allOptions',
         ))->with('mode', 'edit');
     }
 
@@ -1034,19 +1137,19 @@ class EmployeeController extends Controller
         return redirect()->back();
     }
 
-
     public function workExperienceStore(Request $request)
     {
-        \Log::debug($request->all());
-        $employee = DB::table('employees')->where('id', $request->employee_id)->exists();
+        Log::debug($request->all());
 
-        if (!$employee) {
+        $exists = DB::table('employees')->where('id', $request->employee_id)->exists();
+        if (!$exists) {
             return back()->with('error', 'Employee tidak ditemukan!');
         }
 
         $request->validate([
+            'employee_id' => 'required|integer',
             'position'    => 'required|string|max:255',
-            'department'  => 'required|string|max:255',
+            'org_scope'   => ['required', 'regex:/^(plant|division|department|section|sub_section)\|\d+$/'],
             'start_date'  => 'required|date',
             'end_date'    => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string',
@@ -1055,22 +1158,37 @@ class EmployeeController extends Controller
         try {
             DB::beginTransaction();
 
+            [$type, $id] = explode('|', $request->input('org_scope'), 2);
+
+            [$labelPrefix, $name] = match ($type) {
+                'plant'        => ['[Plant] ',       Plant::find($id)?->name],
+                'division'     => ['[Division] ',    Division::find($id)?->name],
+                'department'   => ['[Department] ',  Department::find($id)?->name],
+                'section'      => ['[Section] ',     Section::find($id)?->name],
+                'sub_section'  => ['[Sub Section] ', SubSection::find($id)?->name],
+            };
+
+            if (!$name) {
+                return back()->with('error', 'Organizational scope tidak valid!');
+            }
+
+            $scopedText = $labelPrefix . $name;
+
             WorkingExperience::create([
                 'employee_id' => $request->employee_id,
                 'position'    => $request->position,
-                'department'  => $request->department,
+                'department'  => $scopedText,              // simpan gabungan ke field tunggal
                 'start_date'  => $request->start_date,
-                'end_date'    => $request->end_date ?: null,   // konversi kosong jadi null
+                'end_date'    => $request->end_date ?: null,
                 'description' => $request->description,
             ]);
 
             DB::commit();
-            return redirect()->back()->with('success', 'Pengalaman kerja berhasil ditambahkan.');
+            return back()->with('success', 'Pengalaman kerja berhasil ditambahkan.');
         } catch (\Throwable $th) {
-
-            dd($th);
-            DB::rollback();
-            return redirect()->back()->with('error', 'Pengalaman kerja gagal ditambahkan!');
+            DB::rollBack();
+            Log::error($th);
+            return back()->with('error', 'Pengalaman kerja gagal ditambahkan!');
         }
     }
 
@@ -1080,48 +1198,46 @@ class EmployeeController extends Controller
 
         $request->validate([
             'position'    => 'required|string|max:255',
-            'department'  => 'required|string|max:255',
+            'org_scope'   => ['required', 'regex:/^(plant|division|department|section|sub_section)\|\d+$/'],
             'start_date'  => 'required|date',
             'end_date'    => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string',
         ]);
 
-
         try {
             DB::beginTransaction();
 
+            [$type, $scopeId] = explode('|', $request->input('org_scope'), 2);
+
+            [$prefix, $name] = match ($type) {
+                'plant'       => ['[Plant] ',       Plant::find($scopeId)?->name],
+                'division'    => ['[Division] ',    Division::find($scopeId)?->name],
+                'department'  => ['[Department] ',  Department::find($scopeId)?->name],
+                'section'     => ['[Section] ',     Section::find($scopeId)?->name],
+                'sub_section' => ['[Sub Section] ', SubSection::find($scopeId)?->name],
+            };
+
+            if (!$name) {
+                return back()->with('error', 'Organizational scope tidak valid!');
+            }
+
             $experience->update([
                 'position'    => $request->position,
-                'department'  => $request->department,
+                'department'  => $prefix . $name, // simpan gabungan ke kolom tunggal
                 'start_date'  => $request->start_date ? Carbon::parse($request->start_date) : null,
                 'end_date'    => $request->end_date ? Carbon::parse($request->end_date) : null,
                 'description' => $request->description,
             ]);
 
             DB::commit();
-            return redirect()->back()->with('success', 'Pengalaman kerja berhasil diupdate.');
+            return back()->with('success', 'Pengalaman kerja berhasil diupdate.');
         } catch (\Throwable $th) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Pengalaman kerja gagal diupdate.');
+            \Log::error($th);
+            return back()->with('error', 'Pengalaman kerja gagal diupdate.');
         }
     }
 
-    public function workExperienceDestroy($id)
-    {
-        $experience = WorkingExperience::findOrFail($id);
-
-        try {
-            DB::beginTransaction();
-
-            $experience->delete();
-
-            DB::commit();
-            return redirect()->back()->with('success', 'Pengalaman kerja berhasil dihapus.');
-        } catch (\Throwable $th) {
-            DB::rollBack();
-            return redirect()->back()->with('error', 'Pengalaman kerja gagal dihapus.');
-        }
-    }
 
     public function educationStore(Request $request)
     {
