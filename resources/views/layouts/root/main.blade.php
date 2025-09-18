@@ -13,7 +13,6 @@
     <meta property="og:locale" content="en_US" />
     <meta property="og:type" content="article" />
     <meta property="og:title" content="HR - People Development" />
-    <link rel="canonical" href="index.html" />
     <link rel="shortcut icon" href="{{ asset('assets/media/logos/satu-aisin-final1.png') }}" />
 
     <!-- Fonts -->
@@ -22,8 +21,10 @@
     <!-- Vendor CSS -->
     <link href="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.css') }}" rel="stylesheet" />
 
-    <!-- Select2 + DataTables (jQuery stack, Bootstrap 5) -->
+    <!-- Select2 + DataTables CSS -->
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
+        rel="stylesheet" />
     <link href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css" rel="stylesheet" />
 
     <!-- Global CSS -->
@@ -31,6 +32,17 @@
     <link href="{{ asset('assets/css/style.bundle.css') }}" rel="stylesheet" />
 
     @stack('custom-css')
+
+    <style>
+        /* jaga-jaga dropdown tidak ketutup backdrop */
+        .modal .select2-container {
+            z-index: 2055
+        }
+
+        .modal .select2-container .select2-dropdown {
+            z-index: 2056
+        }
+    </style>
 </head>
 
 <body id="kt_app_body" data-kt-app-layout="dark-sidebar" data-kt-app-header-fixed="true"
@@ -41,18 +53,18 @@
 
     <script>
         (function() {
-            var defaultThemeMode = "light";
-            var themeMode;
+            var defaultThemeMode = "light",
+                themeMode;
             if (document.documentElement) {
                 if (document.documentElement.hasAttribute("data-bs-theme-mode")) {
                     themeMode = document.documentElement.getAttribute("data-bs-theme-mode");
                 } else if (localStorage.getItem("data-bs-theme") !== null) {
                     themeMode = localStorage.getItem("data-bs-theme");
                 } else {
-                    themeMode = defaultThemeMode;
+                    themeMode = defaultThemeMode
                 }
                 if (themeMode === "system") {
-                    themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+                    themeMode = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"
                 }
                 document.documentElement.setAttribute("data-bs-theme", themeMode);
             }
@@ -70,7 +82,6 @@
                     <div class="d-flex flex-column flex-column-fluid">
                         <div id="kt_app_toolbar" class="app-toolbar py-3 py-lg-6">
                             <div id="kt_app_toolbar_container" class="app-container container-fluid d-flex flex-stack">
-                                <!-- optional -->
                             </div>
                         </div>
 
@@ -86,24 +97,24 @@
     </div>
 
     <script>
-        // jika dipakai Metronic demo assets
         var hostUrl = "{{ asset('assets/index.html') }}";
     </script>
 
-    <!-- ============ JS ORDER: jQuery/Metronic core dulu, baru vendor lain, lalu widgets & page scripts ============ -->
+    <!-- ===== JS ORDER: jQuery -> Select2 -> Metronic core -> lainnya -> @stack('scripts') ===== -->
 
-    <!-- 1) Metronic bundle (berisi jQuery). HARUS sebelum script lain yang butuh $ -->
-    <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
+    <!-- 1) jQuery (WAJIB untuk Select2) -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-    <!-- 2) Metronic core -->
-    <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
-
-    <!-- 3) jQuery-based vendors (bergantung pada jQuery dari plugins.bundle.js) -->
+    <!-- 2) Select2 & DataTables (butuh jQuery) -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
 
-    <!-- 4) Charts (tidak perlu jQuery) -->
+    <!-- 3) Metronic bundles (boleh setelah jQuery) -->
+    <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
+    <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
+
+    <!-- 4) Charts (opsional) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
@@ -121,48 +132,44 @@
     <script src="{{ asset('assets/js/widgets.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/custom/widgets.js') }}"></script>
     <script src="{{ asset('assets/js/custom/apps/chat/chat.js') }}"></script>
+    <script src="{{ asset('assets/js/custom/utilities/modals/upgrade-plan.js') }}"></script>
+    <script src="{{ asset('assets/js/custom/utilities/modals/create-app.js') }}"></script>
+    <script src="{{ asset('assets/js/custom/utilities/modals/new-target.js') }}"></script>
+    <script src="{{ asset('assets/js/custom/utilities/modals/users-search.js') }}"></script>
 
-    <!-- FIX: baris di bawah tadinya rusak (</script -->
-    < script ...>) -->
-        <script src="{{ asset('assets/js/custom/utilities/modals/upgrade-plan.js') }}"></script> <!-- FIX -->
-        <script src="{{ asset('assets/js/custom/utilities/modals/create-app.js') }}"></script> <!-- FIX -->
-        <script src="{{ asset('assets/js/custom/utilities/modals/new-target.js') }}"></script>
-        <script src="{{ asset('assets/js/custom/utilities/modals/users-search.js') }}"></script>
+    <!-- 8) Page-specific scripts -->
+    @stack('scripts')
 
-        <!-- 8) Script halaman yang dipush -->
-        @stack('scripts')
-
-        {{-- Optional: SweetAlert via page-specific @push seperti yang sudah Anda lakukan --}}
-
-        @if (session('show_first_login_alert'))
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    Swal.fire({
-                        title: 'Welcome!',
-                        text: 'This is your first login. Please change your password to continue.',
-                        icon: 'warning',
-                        confirmButtonText: 'I Understand',
-                        allowOutsideClick: false,
-                        allowEscapeKey: false,
-                        confirmButtonColor: '#3085d6',
-                        backdrop: `rgba(0,0,0,0.7)`
-                    });
+    @if (session('show_first_login_alert'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: 'Welcome!',
+                    text: 'This is your first login. Please change your password to continue.',
+                    icon: 'warning',
+                    confirmButtonText: 'I Understand',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    confirmButtonColor: '#3085d6',
+                    backdrop: `rgba(0,0,0,0.7)`
                 });
-            </script>
-        @endif
+            });
+        </script>
+    @endif
 
-        @if (session('warning'))
-            <script>
-                document.addEventListener('DOMContentLoaded', function() {
-                    Swal.fire({
-                        title: 'Warning',
-                        text: @json(session('warning')),
-                        icon: 'warning',
-                        confirmButtonText: 'OK'
-                    });
+    @if (session('warning'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                Swal.fire({
+                    title: 'Warning',
+                    text: @json(session('warning')),
+                    icon: 'warning',
+                    confirmButtonText: 'OK'
                 });
-            </script>
-        @endif
+            });
+        </script>
+    @endif
+
 </body>
 
 </html>
