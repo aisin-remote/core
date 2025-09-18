@@ -101,37 +101,6 @@
             color: #6c757d;
             font-style: italic;
         }
-
-        /* ===== Used box (ringkasan) ===== */
-        .used-box {
-            display: inline-flex;
-            align-items: center;
-            gap: .5rem;
-            padding: .2rem .6rem;
-            border-radius: .6rem;
-            font-weight: 600;
-        }
-
-        /* Warna saat class badge-* ditempel ke .used-box */
-        .used-box.badge-secondary {
-            background: #f1f3f5;
-            color: #495057;
-        }
-
-        .used-box.badge-warning {
-            background: #fff3cd;
-            color: #856404;
-        }
-
-        .used-box.badge-primary {
-            background: #e7f1ff;
-            color: #0d6efd;
-        }
-
-        .used-box.badge-danger {
-            background: #fde2e1;
-            color: #842029;
-        }
     </style>
 @endpush
 
@@ -144,45 +113,13 @@
                 ['key' => 'crp', 'title' => 'III. CRP', 'cap' => 10],
                 ['key' => 'special_assignment', 'title' => 'IV. Special Assignment & Improvement', 'cap' => 10],
             ];
-            $catCapMap = array_column($categories, 'cap', 'key');
         @endphp
 
-        {{-- RINGKASAN --}}
-        <div class="row g-3">
-            <div class="col-lg-12">
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex align-items-center justify-content-between">
-                        <h6 class="card-title mb-0 fw-bold">Ringkasan Bobot</h6>
-                        <a href="{{ route('ipp.export') }}" class="btn btn-primary">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> Export IPP
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            @foreach ($categories as $cat)
-                                <div class="col-md-6 col-lg-3">
-                                    <div class="border rounded p-3 summary-card h-100" aria-live="polite">
-                                        <div class="title mb-1">{{ $cat['title'] }}</div>
-                                        <div class="cap mb-2">Cap:
-                                            <span class="badge badge-cap js-cap-badge"
-                                                data-cat="{{ $cat['key'] }}">{{ $cat['cap'] }}%</span>
-                                        </div>
-                                        {{-- MODIF: box used + status diberi kelas badge used-box + data-cat --}}
-                                        <div class="badge used-box js-used-box" data-cat="{{ $cat['key'] }}">
-                                            <span class="used js-used" data-cat="{{ $cat['key'] }}">0</span>%
-                                            <span class="ms-2 js-status-cat" data-cat="{{ $cat['key'] }}">
-                                                <span class="status-ok d-none">OK</span>
-                                                <span class="status-over d-none">Over Cap</span>
-                                            </span>
-                                        </div>
-                                        {{-- /MODIF --}}
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                        <span class="small text-muted">Total: <span id="totalUsed">0</span>% (Target 100%)</span>
-                    </div>
-                </div>
+        {{-- BADGE STATUS GLOBAL (diambil dari ipp->status via AJAX init) --}}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold">Status IPP:</span>
+                <span id="ippStatusBadge" class="badge badge-secondary">—</span>
             </div>
         </div>
 
@@ -190,12 +127,12 @@
         <div class="row g-3">
             <div class="col-lg-12">
                 <div class="accordion mt-3 ipp" id="accordionPrograms">
-                    @foreach ($categories as $i => $cat)
+                    @foreach ($categories as $cat)
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="heading-{{ $cat['key'] }}">
-                                <button class="accordion-button {{ $i > 0 ? 'collapsed' : '' }}" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#collapse-{{ $cat['key'] }}"
-                                    aria-expanded="true" aria-controls="collapse-{{ $cat['key'] }}">
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapse-{{ $cat['key'] }}" aria-expanded="true"
+                                    aria-controls="collapse-{{ $cat['key'] }}">
                                     <div class="d-flex flex-column w-100">
                                         <div class="d-flex align-items-center justify-content-between w-100">
                                             <span>{{ $cat['title'] }}</span>
@@ -204,13 +141,12 @@
                                                     <span class="badge badge-cap js-cap-badge"
                                                         data-cat="{{ $cat['key'] }}">{{ $cat['cap'] }}%</span>
                                                 </span>
-                                                <span>Used <span class="badge"><span class="js-used"
-                                                            data-cat="{{ $cat['key'] }}">0</span>%</span></span>
-                                                <span class="ms-2">
-                                                    Status
-                                                    <span class="badge badge-secondary js-cat-status"
-                                                        data-cat="{{ $cat['key'] }}">—</span>
+                                                <span>Used
+                                                    <span class="badge">
+                                                        <span class="js-used" data-cat="{{ $cat['key'] }}">0</span>%
+                                                    </span>
                                                 </span>
+                                                {{-- STATUS PER-ACCORDION DIHAPUS --}}
                                             </span>
                                         </div>
                                     </div>
@@ -241,8 +177,7 @@
                                             </thead>
                                             <tbody class="js-tbody">
                                                 <tr class="empty-row">
-                                                    <td colspan="5">Klik "Tambah Point" untuk memulai.
-                                                    </td>
+                                                    <td colspan="5">Klik "Tambah Point" untuk memulai.</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -254,8 +189,11 @@
                     @endforeach
                 </div>
 
-                {{-- Submit All --}}
-                <div class="d-flex justify-content-end mt-3">
+                {{-- Submit + Export (Export muncul hanya jika IPP sudah ada) --}}
+                <div class="d-flex justify-content-end mt-3 gap-2">
+                    <a href="{{ route('ipp.export') }}" class="btn btn-primary d-none" id="btnExport">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export IPP
+                    </a>
                     <button type="button" class="btn btn-success" id="btnSubmitAll">
                         <i class="bi bi-send-check"></i> Submit IPP
                     </button>
@@ -282,12 +220,6 @@
             let autoRowId = 0;
             let LOCKED = false;
 
-            const catCounters = {};
-            Object.keys(CAT_CAP).forEach(k => (catCounters[k] = {
-                draft: 0,
-                submitted: 0
-            }));
-
             /* ===== Utils kecil ===== */
             const esc = (s) =>
                 String(s ?? '').replace(/[&<>"'`=\/]/g, (c) => ({
@@ -300,7 +232,6 @@
                 '`': '&#x60;',
                     '=': '&#x3D;',
                 } [c]));
-
             const fmt = (n) => (Math.round(n + Number.EPSILON)).toFixed(0);
 
             function sumWeights(cat) {
@@ -325,36 +256,6 @@
                 if (used > cap + eps) return 'badge-danger';
                 if (Math.abs(used - cap) <= eps) return 'badge-primary';
                 return 'badge-warning';
-            }
-
-            function renderCategoryStatus(cat) {
-                const ctr = catCounters[cat] || {
-                    draft: 0,
-                    submitted: 0
-                };
-                const $b = $(`.js-cat-status[data-cat="${cat}"]`);
-                let label = '—',
-                    cls = 'badge-secondary';
-                if (ctr.submitted > 0) {
-                    label = 'Submitted';
-                    cls = 'badge-primary';
-                } else if (ctr.draft > 0) {
-                    label = 'Draft';
-                    cls = 'badge-warning';
-                }
-                $b.text(label).removeClass('badge-secondary badge-warning badge-primary').addClass(cls);
-            }
-
-            function bumpCounter(cat, prevStatus, newStatus) {
-                const ctr = catCounters[cat] || (catCounters[cat] = {
-                    draft: 0,
-                    submitted: 0
-                });
-                if (prevStatus === 'draft') ctr.draft = Math.max(0, ctr.draft - 1);
-                if (prevStatus === 'submitted') ctr.submitted = Math.max(0, ctr.submitted - 1);
-                if (newStatus === 'draft') ctr.draft += 1;
-                if (newStatus === 'submitted') ctr.submitted += 1;
-                renderCategoryStatus(cat);
             }
 
             /* ====== builder HTML baris (dipakai create, edit, init) ====== */
@@ -388,37 +289,53 @@
       </tr>`;
             }
 
-            /* ====== ringkasan & warna ====== */
+            /* ====== ringkasan & warna di header kategori (Cap/Used) ====== */
             function updateCategoryCard(cat) {
                 const used = sumWeights(cat);
                 const cap = CAT_CAP[cat];
-                const left = Math.max(cap - used, 0);
 
                 $(`.js-used[data-cat="${cat}"]`).text(fmt(used));
-                $(`.js-left[data-cat="${cat}"]`).text(fmt(left));
-
-                const over = used > cap;
-                const $wrap = $(`.js-status-cat[data-cat="${cat}"]`);
-                $wrap.find('.status-ok').toggleClass('d-none', over);
-                $wrap.find('.status-over').toggleClass('d-none', !over);
 
                 const cls = pickUsedBadgeClass(used, cap);
                 $(`.js-used[data-cat="${cat}"]`).closest('.badge')
-                    .removeClass('badge-primary badge-warning badge-danger badge-secondary').addClass(cls);
-
-                $(`.js-used-box[data-cat="${cat}"]`)
-                    .removeClass('badge-primary badge-warning badge-danger badge-secondary').addClass(cls);
+                    .removeClass('badge-primary badge-warning badge-danger badge-secondary')
+                    .addClass(cls);
             }
 
             function updateTotal() {
                 const s = buildSummaryFromDom();
-                $('#totalUsed').text(fmt(s.total));
+                // total sekarang tidak ditampilkan (ringkasan dihapus),
+                // tapi fungsi ini tetap dibiarkan jika nanti diperlukan.
             }
 
             function recalcAll() {
                 Object.keys(CAT_CAP).forEach(updateCategoryCard);
                 updateTotal();
-                Object.keys(CAT_CAP).forEach(renderCategoryStatus);
+            }
+
+            function updateExportVisibility() {
+                const hasDraft = $('table.js-table tbody tr').not('.empty-row').length > 0;
+                $('#btnExport').toggleClass('d-none', !hasDraft);
+            }
+
+            /* ====== Status IPP global ====== */
+            function renderIppStatus(status) {
+                const $b = $('#ippStatusBadge');
+                const map = {
+                    'submitted': {
+                        text: 'Submitted',
+                        cls: 'badge-success'
+                    },
+                    'draft': {
+                        text: 'Draft',
+                        cls: 'badge-warning'
+                    },
+                };
+                const info = map[(status || '').toLowerCase()] || {
+                    text: '—',
+                    cls: 'badge-secondary'
+                };
+                $b.removeClass('badge-secondary badge-warning badge-success').addClass(info.cls).text(info.text);
             }
 
             /* ====== OPEN MODAL (CREATE) ====== */
@@ -519,16 +436,11 @@
                         const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
 
                         if (mode === 'create') {
-                            bumpCounter(cat, null, 'draft');
                             $tbody.find('.empty-row').remove();
                             $tbody.append(makeRowHtml(newRowId, rowData));
                         } else {
                             const $old = $(
                                 `table.js-table[data-cat="${cat}"] tbody tr[data-row-id="${rowId}"]`);
-                            const prev = $old.data('status') || null;
-                            bumpCounter(cat, prev, 'draft');
-
-                            // *** FIX: ganti row lama dengan markup BARU ***
                             if ($old.length) {
                                 $old.replaceWith(makeRowHtml(newRowId, rowData));
                             } else {
@@ -540,6 +452,7 @@
                         recalcAll();
                         pointModal.hide();
                         toast(res?.message || 'Draft tersimpan.');
+                        updateExportVisibility();
                         if (res?.locked) applyLockDom(true);
                     })
                     .fail((err) => {
@@ -576,7 +489,6 @@
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
                 const id = $tr.data('row-id');
-                const prev = $tr.data('status') || null;
 
                 if (!id) {
                     $tr.remove();
@@ -587,7 +499,6 @@
                         );
                     }
                     recalcAll();
-                    if (prev) bumpCounter(cat, prev, null);
                     toast('Point dihapus (lokal).', 'warning');
                     return;
                 }
@@ -604,7 +515,7 @@
                             );
                         }
                         recalcAll();
-                        if (prev) bumpCounter(cat, prev, null);
+                        updateExportVisibility();
                         toast(res?.message || 'Point dihapus.');
                     })
                     .fail((err) => toast(err?.responseJSON?.message || 'Gagal menghapus point.', 'danger'));
@@ -637,19 +548,9 @@
                         dataType: "json"
                     })
                     .done((res) => {
-                        Object.keys(CAT_CAP).forEach((cat) => {
-                            const $rows = $(`table.js-table[data-cat="${cat}"] tbody tr`).not(
-                                '.empty-row');
-                            let cnt = 0;
-                            $rows.each(function() {
-                                $(this).attr('data-status', 'submitted');
-                                cnt++;
-                            });
-                            catCounters[cat].submitted = cnt;
-                            catCounters[cat].draft = 0;
-                            renderCategoryStatus(cat);
-                        });
                         applyLockDom(true);
+                        renderIppStatus('submitted');
+                        updateExportVisibility();
                         toast(res?.message || 'IPP berhasil disubmit.');
                     })
                     .fail((err) => toast(err?.responseJSON?.message || 'Gagal submit IPP.', 'danger'))
@@ -695,10 +596,14 @@
                                         status: pt.status || 'draft',
                                     });
                                     $tbody.append(html);
-                                    bumpCounter(cat, null, pt.status || 'draft');
                                 });
                             });
                         }
+
+                        // Status global & Export visibility
+                        const ippStatus = res?.ipp?.status || null;
+                        renderIppStatus(ippStatus);
+                        updateExportVisibility();
 
                         const locked = !!(res?.locked || res?.ipp?.locked || (res?.ipp?.status === 'submitted'));
                         applyLockDom(locked);
@@ -708,6 +613,14 @@
             }
 
             $(document).ready(function() {
+                // Pastikan semua panel terbuka
+                $('#accordionPrograms .accordion-collapse').each(function() {
+                    this.removeAttribute('data-bs-parent');
+                    this.classList.add('show');
+                    const btn = $(this).prev('.accordion-header').find('.accordion-button');
+                    btn.removeClass('collapsed').attr('aria-expanded', 'true');
+                });
+
                 $('table.js-table tbody.js-tbody').each(function() {
                     const $tb = $(this);
                     if ($tb.find('tr').not('.empty-row').length === 0) {
@@ -715,13 +628,6 @@
                             '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
                         );
                     }
-                });
-
-                $('#accordionPrograms .accordion-ctollapse').each(function() {
-                    this.removeAttribute('data-bs-parent');
-                    this.classList.add('show');
-                    const btn = $(this).prev('.accordion-header').find('.accordion-button');
-                    btn.removeClass('collapsed').attr('aria-expanded', 'true');
                 });
 
                 loadInitial();
