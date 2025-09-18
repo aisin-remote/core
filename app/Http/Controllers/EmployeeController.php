@@ -1198,7 +1198,8 @@ class EmployeeController extends Controller
 
         $request->validate([
             'position'    => 'required|string|max:255',
-            'org_scope'   => ['required', 'regex:/^(plant|division|department|section|sub_section)\|\d+$/'],
+            // izinkan pola standar ATAU legacy
+            'org_scope'   => ['required', 'regex:/^(?:(?:plant|division|department|section|sub_section)\|\d+|__legacy__\|.+)$/'],
             'start_date'  => 'required|date',
             'end_date'    => 'nullable|date|after_or_equal:start_date',
             'description' => 'nullable|string',
@@ -1207,25 +1208,36 @@ class EmployeeController extends Controller
         try {
             DB::beginTransaction();
 
-            [$type, $scopeId] = explode('|', $request->input('org_scope'), 2);
+            $org = $request->input('org_scope');
 
-            [$prefix, $name] = match ($type) {
-                'plant'       => ['[Plant] ',       Plant::find($scopeId)?->name],
-                'division'    => ['[Division] ',    Division::find($scopeId)?->name],
-                'department'  => ['[Department] ',  Department::find($scopeId)?->name],
-                'section'     => ['[Section] ',     Section::find($scopeId)?->name],
-                'sub_section' => ['[Sub Section] ', SubSection::find($scopeId)?->name],
-            };
+            if (str_starts_with($org, '__legacy__|')) {
+                // user tidak memilih ulang -> pakai apa adanya dari DB/option legacy
+                $scopedText = substr($org, strlen('__legacy__|'));
+            } else {
+                // pola standar type|id → ambil nama dan bentuk "[Prefix] Nama"
+                [$type, $scopeId] = explode('|', $org, 2);
 
-            if (!$name) {
-                return back()->with('error', 'Organizational scope tidak valid!');
+                [$prefix, $name] = match ($type) {
+                    'plant'        => ['[Plant] ',       \App\Models\Plant::find($scopeId)?->name],
+                    'division'     => ['[Division] ',    \App\Models\Division::find($scopeId)?->name],
+                    'department'   => ['[Department] ',  \App\Models\Department::find($scopeId)?->name],
+                    'section'      => ['[Section] ',     \App\Models\Section::find($scopeId)?->name],
+                    'sub_section'  => ['[Sub Section] ', \App\Models\SubSection::find($scopeId)?->name],
+                    default        => [null, null],
+                };
+
+                if (!$name) {
+                    return back()->with('error', 'Organizational scope tidak valid!');
+                }
+
+                $scopedText = $prefix . $name;
             }
 
             $experience->update([
                 'position'    => $request->position,
-                'department'  => $prefix . $name, // simpan gabungan ke kolom tunggal
-                'start_date'  => $request->start_date ? Carbon::parse($request->start_date) : null,
-                'end_date'    => $request->end_date ? Carbon::parse($request->end_date) : null,
+                'department'  => $scopedText, // tetap simpan ke kolom tunggal
+                'start_date'  => $request->start_date ? \Carbon\Carbon::parse($request->start_date) : null,
+                'end_date'    => $request->end_date ? \Carbon\Carbon::parse($request->end_date) : null,
                 'description' => $request->description,
             ]);
 
@@ -1237,7 +1249,6 @@ class EmployeeController extends Controller
             return back()->with('error', 'Pengalaman kerja gagal diupdate.');
         }
     }
-
 
     public function educationStore(Request $request)
     {

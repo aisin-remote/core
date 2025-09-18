@@ -25,13 +25,28 @@
                         </select>
                     </div>
 
-                    @php $grouped = collect($allOptions)->groupBy('group'); @endphp
+                    @php
+                        $grouped = collect($allOptions)->groupBy('group');
+
+                        // bikin sentinel legacy kalau tidak ada mapping type|id
+                        $legacyValue = null;
+                        if (empty($experience->selected_org_scope) && !empty($experience->department)) {
+                            // kita simpan value dengan prefix __legacy__|<teks lama>
+                            $legacyValue = '__legacy__|' . $experience->department;
+                        }
+                    @endphp
 
                     <div class="mb-3">
                         <label class="form-label">Organizational Scope</label>
                         <select name="org_scope" class="form-select select2-org-scope"
                             data-placeholder="Cari Plant/Division/Department/Section/Sub Section" required>
                             <option value=""></option>
+
+                            @if ($legacyValue)
+                                <option value="{{ $legacyValue }}" selected>[Saved] {{ $experience->department }}
+                                </option>
+                            @endif
+
                             @foreach ($grouped as $group => $items)
                                 <optgroup label="{{ $group }}">
                                     @foreach ($items as $opt)
