@@ -46,7 +46,6 @@
                         </li>
                     @endforeach
                 </ul>
-
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
@@ -70,6 +69,8 @@
                                     'GM', 'Act GM' => $employee->division?->name,
                                     default => $employee->department?->name,
                                 };
+
+                                $userId = (string) $employee->user_id;
                             @endphp
                             <tr class="fs-7" data-position="{{ $employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
@@ -92,7 +93,8 @@
                                             <i class="fa fa-pencil-alt"></i>
                                         </a>
                                     @endif --}}
-                                    <a href="{{ route('employee.show', $employee->npk) }}" class="btn btn-info btn-sm">
+
+                                    <a href="{{ route('employee.show', $userId) }}" class="btn btn-info btn-sm">
                                         <i class="fa fa-eye"></i>
                                     </a>
                                 </td>

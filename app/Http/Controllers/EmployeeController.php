@@ -527,80 +527,96 @@ class EmployeeController extends Controller
     /**
      * Tampilkan detail karyawan
      */
-    public function show($npk)
+    public function show($id) // $id = user_id
     {
-        $promotionHistories = PromotionHistory::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('last_promotion_date', 'desc')  // Urutkan dari yang terbaru
-            ->get();
+        try {
+            // 1) Ambil user & employee berdasarkan user_id
+            $user = User::findOrFail($id);
 
-        $astraTrainings = AstraTraining::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('date_end', 'desc')  // Urut berdasarkan tanggal selesai terbaru
-            ->get();
+            $employee = Employee::with([
+                'subSection.section.department',
+                'leadingSection.department',
+                'leadingDepartment.division',
+                'user'
+            ])
+                ->where('user_id', $user->id)
+                ->firstOrFail();
 
-        $employee    = Employee::where('npk', $npk)->firstOrFail();
-        $humanAssets = Hav::with('employee')
-            ->where('employee_id', $employee->id)  // gunakan ID employee yang sesuai
-            ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
-            ->groupBy('quadrant', 'year')
-            ->orderByDesc('year')
-            ->get();
+            // 2) Ambil data terkait berdasarkan employee_id (lebih tegas daripada by npk)
+            $promotionHistories = PromotionHistory::with('employee')
+                ->where('employee_id', $employee->id)
+                ->orderBy('last_promotion_date', 'desc')
+                ->get();
 
-        $externalTrainings = ExternalTraining::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('date_end', 'desc')  // Urut dari yang terbaru
-            ->get();
+            $astraTrainings = AstraTraining::with('employee')
+                ->where('employee_id', $employee->id)
+                ->orderBy('date_end', 'desc')
+                ->get();
 
-        $educations = EducationalBackground::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('end_date', 'desc')  // Urutkan berdasarkan tanggal akhir terbaru
-            ->get();
+            $externalTrainings = ExternalTraining::with('employee')
+                ->where('employee_id', $employee->id)
+                ->orderBy('date_end', 'desc')
+                ->get();
 
-        $workExperiences = WorkingExperience::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderByRaw('ISNULL(end_date) DESC')  // Prioritaskan null (masih aktif)
-            ->orderByDesc('end_date')              // Lalu urutkan berdasarkan tanggal
-            ->get();
+            $educations = EducationalBackground::with('employee')
+                ->where('employee_id', $employee->id)
+                ->orderBy('end_date', 'desc')
+                ->get();
 
-        $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->orderBy('date', 'desc')  // Urutkan berdasarkan tanggal terbaru
-            ->get();
+            $workExperiences = WorkingExperience::with('employee')
+                ->where('employee_id', $employee->id)
+                ->orderByRaw('ISNULL(end_date) DESC') // untuk MySQL; kalau PostgreSQL pakai "end_date IS NULL DESC"
+                ->orderByDesc('end_date')
+                ->get();
 
-        $assessment = Assessment::with('details.alc', 'employee')
-            ->whereHas('employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->latest()
-            ->first();
+            $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
+                ->where('employee_id', $employee->id)
+                ->orderBy('date', 'desc')
+                ->get();
 
-        $idps = Idp::with('alc', 'assessment.employee')
-            ->whereHas('assessment.employee', function ($query) use ($npk) {
-                $query->where('npk', $npk);
-            })
-            ->get();
+            $assessment = Assessment::with(['details.alc', 'employee'])
+                ->where('employee_id', $employee->id)
+                ->latest()
+                ->first();
 
-        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-            ->where('npk', $npk)
-            ->firstOrFail();
+            $idps = Idp::with(['alc', 'assessment.employee'])
+                ->whereHas('assessment', function ($q) use ($employee) {
+                    $q->where('employee_id', $employee->id);
+                })
+                ->get();
 
-        $departments = Department::all();
-        $divisions   = Division::where('company', $employee->company_name)->get();
-        $plants      = Plant::all();
-        return view('website.employee.show', compact('employee', 'humanAssets', 'promotionHistories', 'educations', 'workExperiences', 'performanceAppraisals', 'departments', 'astraTrainings', 'externalTrainings', 'assessment', 'idps', 'divisions', 'plants'))->with('mode', 'view');;
+            $humanAssets = Hav::with('employee')
+                ->where('employee_id', $employee->id)
+                ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
+                ->groupBy('quadrant', 'year')
+                ->orderByDesc('year')
+                ->get();
+
+            // 3) Master data untuk tampilan
+            $departments = Department::all();
+            $divisions   = Division::where('company', $employee->company_name)->get();
+            $plants      = Plant::all();
+
+            return view('website.employee.show', compact(
+                'employee',
+                'humanAssets',
+                'promotionHistories',
+                'educations',
+                'workExperiences',
+                'performanceAppraisals',
+                'departments',
+                'astraTrainings',
+                'externalTrainings',
+                'assessment',
+                'idps',
+                'divisions',
+                'plants'
+            ))->with('mode', 'view');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return redirect()->back()->with('error', 'Data tidak ditemukan untuk user tersebut.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error Message: ' . $e->getMessage());
+        }
     }
 
     public function edit($userId)
