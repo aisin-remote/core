@@ -48,7 +48,6 @@
                     </button>
                 </div>
             </div>
-
             <div class="card-body">
                 <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
                     style="cursor:pointer">

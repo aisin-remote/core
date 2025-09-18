@@ -113,48 +113,13 @@
                 ['key' => 'crp', 'title' => 'III. CRP', 'cap' => 10],
                 ['key' => 'special_assignment', 'title' => 'IV. Special Assignment & Improvement', 'cap' => 10],
             ];
-            $catCapMap = array_column($categories, 'cap', 'key');
         @endphp
 
-        {{-- RINGKASAN --}}
-        <div class="row g-3">
-            <div class="col-lg-12">
-                <div class="card shadow-sm">
-                    <div class="card-header d-flex align-items-center justify-content-between">
-                        <h6 class="card-title mb-0 fw-bold">Ringkasan Bobot</h6>
-                        <a href="{{ route('ipp.export') }}" class="btn btn-primary">
-                            <i class="bi bi-file-earmark-spreadsheet"></i> Export IPP
-                        </a>
-                    </div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            @foreach ($categories as $cat)
-                                <div class="col-md-6 col-lg-3">
-                                    <div class="border rounded p-3 summary-card h-100" aria-live="polite">
-                                        <div class="title mb-1">{{ $cat['title'] }}</div>
-                                        <div class="cap mb-2">Cap:
-                                            <span class="badge badge-cap">{{ $cat['cap'] }}%</span>
-                                        </div>
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <div>
-                                                <span class="used js-used" data-cat="{{ $cat['key'] }}">0</span>%
-                                                <span class="ms-2 js-status-cat" data-cat="{{ $cat['key'] }}">
-                                                    <span class="status-ok d-none">OK</span>
-                                                    <span class="status-over d-none">Over Cap</span>
-                                                </span>
-                                            </div>
-                                            <div class="small text-muted">
-                                                Sisa: <span class="js-left"
-                                                    data-cat="{{ $cat['key'] }}">{{ $cat['cap'] }}</span>%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                        <span class="small text-muted">Total: <span id="totalUsed">0</span>% (Target 100%)</span>
-                    </div>
-                </div>
+        {{-- BADGE STATUS GLOBAL (diambil dari ipp->status via AJAX init) --}}
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="fw-semibold">Status IPP:</span>
+                <span id="ippStatusBadge" class="badge badge-secondary">—</span>
             </div>
         </div>
 
@@ -162,34 +127,32 @@
         <div class="row g-3">
             <div class="col-lg-12">
                 <div class="accordion mt-3 ipp" id="accordionPrograms">
-                    @foreach ($categories as $i => $cat)
+                    @foreach ($categories as $cat)
                         <div class="accordion-item">
                             <h2 class="accordion-header" id="heading-{{ $cat['key'] }}">
-                                <button class="accordion-button {{ $i > 0 ? 'collapsed' : '' }}" type="button"
-                                    data-bs-toggle="collapse" data-bs-target="#collapse-{{ $cat['key'] }}"
-                                    aria-expanded="{{ $i == 0 ? 'true' : 'false' }}"
+                                <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapse-{{ $cat['key'] }}" aria-expanded="true"
                                     aria-controls="collapse-{{ $cat['key'] }}">
                                     <div class="d-flex flex-column w-100">
                                         <div class="d-flex align-items-center justify-content-between w-100">
                                             <span>{{ $cat['title'] }}</span>
                                             <span class="small text-muted">
-                                                <span class="me-2">Cap <span
-                                                        class="badge badge-cap">{{ $cat['cap'] }}%</span></span>
-                                                <span>Used <span class="badge"><span class="js-used"
-                                                            data-cat="{{ $cat['key'] }}">0</span>%</span></span>
-                                                <span class="ms-2">
-                                                    Status
-                                                    <span class="badge badge-secondary js-cat-status"
-                                                        data-cat="{{ $cat['key'] }}">—</span>
+                                                <span class="me-2">Cap
+                                                    <span class="badge badge-cap js-cap-badge"
+                                                        data-cat="{{ $cat['key'] }}">{{ $cat['cap'] }}%</span>
                                                 </span>
+                                                <span>Used
+                                                    <span class="badge">
+                                                        <span class="js-used" data-cat="{{ $cat['key'] }}">0</span>%
+                                                    </span>
+                                                </span>
+                                                {{-- STATUS PER-ACCORDION DIHAPUS --}}
                                             </span>
                                         </div>
                                     </div>
                                 </button>
                             </h2>
-                            <div id="collapse-{{ $cat['key'] }}"
-                                class="accordion-collapse collapse {{ $i == 0 ? 'show' : '' }}"
-                                data-bs-parent="#accordionPrograms">
+                            <div id="collapse-{{ $cat['key'] }}" class="accordion-collapse collapse show">
                                 <div class="accordion-body">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <button type="button" class="btn btn-sm btn-primary js-open-modal"
@@ -214,8 +177,7 @@
                                             </thead>
                                             <tbody class="js-tbody">
                                                 <tr class="empty-row">
-                                                    <td colspan="5">Belum ada point. Klik "Tambah Point" untuk memulai.
-                                                    </td>
+                                                    <td colspan="5">Klik "Tambah Point" untuk memulai.</td>
                                                 </tr>
                                             </tbody>
                                         </table>
@@ -227,8 +189,11 @@
                     @endforeach
                 </div>
 
-                {{-- Submit All --}}
-                <div class="d-flex justify-content-end mt-3">
+                {{-- Submit + Export (Export muncul hanya jika IPP sudah ada) --}}
+                <div class="d-flex justify-content-end mt-3 gap-2">
+                    <a href="{{ route('ipp.export') }}" class="btn btn-primary d-none" id="btnExport">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export IPP
+                    </a>
                     <button type="button" class="btn btn-success" id="btnSubmitAll">
                         <i class="bi bi-send-check"></i> Submit IPP
                     </button>
@@ -243,7 +208,6 @@
 @push('scripts')
     <script>
         (function($) {
-            // ======= SETTINGS (default; akan di-override dari /ipp/init) =======
             const REQUIRE_TOTAL_100 = true;
             let CAT_CAP = {
                 activity_management: 70,
@@ -254,16 +218,22 @@
 
             const pointModal = new bootstrap.Modal(document.getElementById('pointModal'));
             let autoRowId = 0;
-            let LOCKED = false; // <- akan di-set dari backend
+            let LOCKED = false;
 
-            // counter status (untuk badge per kategori)
-            const catCounters = {};
-            Object.keys(CAT_CAP).forEach(k => catCounters[k] = {
-                draft: 0,
-                submitted: 0
-            });
+            /* ===== Utils kecil ===== */
+            const esc = (s) =>
+                String(s ?? '').replace(/[&<>"'`=\/]/g, (c) => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;',
+                '/': '&#x2F;',
+                '`': '&#x60;',
+                    '=': '&#x3D;',
+                } [c]));
+            const fmt = (n) => (Math.round(n + Number.EPSILON)).toFixed(0);
 
-            // ======= UTIL =======
             function sumWeights(cat) {
                 let sum = 0;
                 $(`table.js-table[data-cat="${cat}"] tbody tr`).each(function() {
@@ -275,13 +245,9 @@
 
             function buildSummaryFromDom() {
                 const s = {};
-                Object.keys(CAT_CAP).forEach(c => s[c] = sumWeights(c));
+                Object.keys(CAT_CAP).forEach((c) => (s[c] = sumWeights(c)));
                 s.total = Object.values(s).reduce((a, b) => a + b, 0);
                 return s;
-            }
-
-            function fmt(n) {
-                return (Math.round((n + Number.EPSILON))).toFixed(0);
             }
 
             function pickUsedBadgeClass(used, cap) {
@@ -292,176 +258,123 @@
                 return 'badge-warning';
             }
 
-            function renderCategoryStatus(cat) {
-                const ctr = catCounters[cat] || {
-                    draft: 0,
-                    submitted: 0
-                };
-                const $b = $(`.js-cat-status[data-cat="${cat}"]`);
-                let label = '—',
-                    cls = 'badge-secondary';
-                if (ctr.submitted > 0) {
-                    label = 'Submitted';
-                    cls = 'badge-primary';
-                } else if (ctr.draft > 0) {
-                    label = 'Draft';
-                    cls = 'badge-warning';
-                }
-                $b.text(label).removeClass('badge-secondary badge-warning badge-primary').addClass(cls);
+            /* ====== builder HTML baris (dipakai create, edit, init) ====== */
+            function makeRowHtml(rowId, data) {
+                const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
+                const oneShort =
+                    (data.target_one || '').length > 110 ?
+                    data.target_one.slice(0, 110) + '…' :
+                    (data.target_one || '-');
+                const dueTxt = data.due_date ? data.due_date : '-';
+
+                return `
+      <tr class="align-middle point-row"
+          data-row-id="${esc(rowId)}"
+          data-activity="${esc(data.activity || '')}"
+          data-mid="${esc(data.target_mid || '')}"
+          data-one="${esc(data.target_one || '')}"
+          data-due="${esc(dueTxt)}"
+          data-status="${esc(data.status || 'draft')}"
+          data-weight="${w}">
+        <td class="fw-semibold">${esc(data.activity || '-')}</td>
+        <td class="text-muted">${esc(oneShort)}</td>
+        <td><span class="badge badge-light">${esc(dueTxt)}</span></td>
+        <td><span>${fmt(w)}</span></td>
+        <td class="text-end">
+          <div class="btn-group btn-group-sm" role="group" aria-label="Aksi baris">
+            <button type="button" class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
+            <button type="button" class="btn btn-danger js-remove" title="Hapus"><i class="bi bi-trash"></i></button>
+          </div>
+        </td>
+      </tr>`;
             }
 
-            function bumpCounter(cat, prevStatus, newStatus) {
-                const ctr = catCounters[cat] || (catCounters[cat] = {
-                    draft: 0,
-                    submitted: 0
-                });
-                if (prevStatus === 'draft') ctr.draft = Math.max(0, ctr.draft - 1);
-                if (prevStatus === 'submitted') ctr.submitted = Math.max(0, ctr.submitted - 1);
-                if (newStatus === 'draft') ctr.draft += 1;
-                if (newStatus === 'submitted') ctr.submitted += 1;
-                renderCategoryStatus(cat);
-            }
-
+            /* ====== ringkasan & warna di header kategori (Cap/Used) ====== */
             function updateCategoryCard(cat) {
                 const used = sumWeights(cat);
                 const cap = CAT_CAP[cat];
-                const left = Math.max(cap - used, 0);
+
                 $(`.js-used[data-cat="${cat}"]`).text(fmt(used));
-                $(`.js-left[data-cat="${cat}"]`).text(fmt(left));
-                const over = used > cap;
-                const $wrap = $(`.js-status-cat[data-cat="${cat}"]`);
-                $wrap.find('.status-ok').toggleClass('d-none', over);
-                $wrap.find('.status-over').toggleClass('d-none', !over);
-                const $badges = $(`.js-used[data-cat="${cat}"]`).closest('.badge');
-                $badges.removeClass('badge-primary badge-warning badge-danger badge-secondary')
-                    .addClass(pickUsedBadgeClass(used, cap));
+
+                const cls = pickUsedBadgeClass(used, cap);
+                $(`.js-used[data-cat="${cat}"]`).closest('.badge')
+                    .removeClass('badge-primary badge-warning badge-danger badge-secondary')
+                    .addClass(cls);
             }
 
             function updateTotal() {
                 const s = buildSummaryFromDom();
-                $('#totalUsed').text(fmt(s.total));
+                // total sekarang tidak ditampilkan (ringkasan dihapus),
+                // tapi fungsi ini tetap dibiarkan jika nanti diperlukan.
             }
 
             function recalcAll() {
                 Object.keys(CAT_CAP).forEach(updateCategoryCard);
                 updateTotal();
-                Object.keys(CAT_CAP).forEach(renderCategoryStatus);
             }
 
-            // ======= RENDER ROW =======
-            function makeRowHtml(rowId, data) {
-                const oneShort = (data.target_one || '').length > 110 ? (data.target_one.slice(0, 110) + '…') : (data
-                    .target_one || '-');
-                const dueTxt = data.due_date ? data.due_date : '-';
-                const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
-                return `
-                        <tr class="align-middle point-row"
-                                data-row-id="${rowId}"
-                                data-activity="${_.escape(data.activity||'')}"
-                                data-mid="${_.escape(data.target_mid||'')}"
-                                data-one="${_.escape(data.target_one||'')}"
-                                data-due="${_.escape(dueTxt)}"
-                                data-status="${_.escape(data.status||'')}"
-                                data-weight="${w}">
-                            <td class="fw-semibold">${_.escape(data.activity||'-')}</td>
-                            <td class="text-muted">${_.escape(oneShort)}</td>
-                            <td><span class="badge badge-light">${_.escape(dueTxt)}</span></td>
-                            <td><span class="">${fmt(w)}</span></td>
-                            <td class="text-end">
-                                <div class="btn-group btn-group-sm" role="group" aria-label="Aksi baris">
-                                <button type="button" class="btn btn-warning js-edit" title="Edit" aria-label="Edit point"><i class="bi bi-pencil-square" aria-hidden="true"></i></button>
-                                <button type="button" class="btn btn-danger js-remove" title="Hapus" aria-label="Hapus point"><i class="bi bi-trash" aria-hidden="true"></i></button>
-                                </div>
-                            </td>
-                        </tr>`;
+            function updateExportVisibility() {
+                const hasDraft = $('table.js-table tbody tr').not('.empty-row').length > 0;
+                $('#btnExport').toggleClass('d-none', !hasDraft);
             }
 
-            // Lodash-escape fallback
-            window._ = window._ || {
-                escape: (s) => String(s).replace(/[&<>"'`=\/]/g, c => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;',
-                '/': '&#x2F;',
-                '`': '&#x60;',
-                    '=': '&#x3D;'
-                } [c]))
-            };
-
-            function ensureNotEmpty($tbody) {
-                const hasRows = $tbody.find('tr').length > 0 && !$tbody.find('.empty-row').length;
-                if (!hasRows) {
-                    const col = $tbody.closest('table').find('thead th').length;
-                    $tbody.html(
-                        `<tr class="empty-row"><td colspan="${col}">Belum ada point. Klik "Tambah Point" untuk memulai.</td></tr>`
-                    );
-                }
+            /* ====== Status IPP global ====== */
+            function renderIppStatus(status) {
+                const $b = $('#ippStatusBadge');
+                const map = {
+                    'submitted': {
+                        text: 'Submitted',
+                        cls: 'badge-success'
+                    },
+                    'draft': {
+                        text: 'Draft',
+                        cls: 'badge-warning'
+                    },
+                };
+                const info = map[(status || '').toLowerCase()] || {
+                    text: '—',
+                    cls: 'badge-secondary'
+                };
+                $b.removeClass('badge-secondary badge-warning badge-success').addClass(info.cls).text(info.text);
             }
 
-            function removeEmptyState($tbody) {
-                $tbody.find('.empty-row').remove();
-            }
-
-            // ======= LOCK UI =======
-            function applyLockDom(locked) {
-                LOCKED = !!locked;
-                // Tambah Point buttons
-                $('.js-open-modal').toggleClass('d-none', LOCKED);
-                // Submit IPP
-                $('#btnSubmitAll').toggleClass('d-none', LOCKED);
-                // Hide last column (Action) on all tables
-                $('table.js-table').each(function() {
-                    const $t = $(this);
-                    $t.find('thead th:last-child').toggleClass('d-none', LOCKED);
-                    $t.find('tbody tr').each(function() {
-                        $(this).find('td:last-child').toggleClass('d-none', LOCKED);
-                    });
-                });
-            }
-
-            // Global guard: kalau locked, cegah klik aksi
-            $(document).on('click', '.js-open-modal, .js-edit, .js-remove', function(e) {
-                if (LOCKED) {
-                    e.preventDefault();
-                    e.stopImmediatePropagation();
-                    return false;
-                }
-            });
-
-            // ======= OPEN MODAL (CREATE) =======
+            /* ====== OPEN MODAL (CREATE) ====== */
             $(document).on('click', '.js-open-modal', function() {
                 const cat = $(this).data('cat');
                 $('#pmCat').val(cat);
                 $('#pmMode').val('create');
                 $('#pmRowId').val('');
-                $('#pointModalLabel').text('Tambah Point — ' + $(this).closest('.accordion-item').find(
-                    '.accordion-button span:first').text());
+                $('#pointModalLabel').text(
+                    'Tambah Point — ' + $(this).closest('.accordion-item').find(
+                        '.accordion-button span:first').text()
+                );
                 $('#pointForm')[0].reset();
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
 
-            // ======= OPEN MODAL (EDIT) =======
+            /* ====== OPEN MODAL (EDIT) ====== */
             $(document).on('click', '.js-edit', function() {
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
+
                 $('#pmCat').val(cat);
                 $('#pmMode').val('edit');
                 $('#pmRowId').val($tr.data('row-id'));
                 $('#pointModalLabel').text('Edit Point');
+
                 $('#pmActivity').val($tr.data('activity'));
                 const $pmTargetMid = $('#pmTargetMid');
                 if ($pmTargetMid.length) $pmTargetMid.val($tr.data('mid'));
                 $('#pmTargetOne').val($tr.data('one'));
                 $('#pmDue').val($tr.data('due'));
                 $('#pmWeight').val($tr.data('weight'));
+
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
 
-            // ======= SUBMIT PER-POINT (SELALU DRAFT) =======
+            /* ====== SUBMIT PER-POINT (CREATE/EDIT) ====== */
             $('#pointForm').on('submit', function(e) {
                 e.preventDefault();
                 if (LOCKED) {
@@ -480,7 +393,7 @@
                     target_mid: $pmTargetMid.length ? ($pmTargetMid.val() || '').toString().trim() : '',
                     target_one: ($('#pmTargetOne').val() || '').toString().trim(),
                     due_date: $('#pmDue').val(),
-                    weight: parseFloat($('#pmWeight').val())
+                    weight: parseFloat($('#pmWeight').val()),
                 };
 
                 if (!data.activity) {
@@ -514,41 +427,35 @@
                         },
                         dataType: "json"
                     })
-                    .done(res => {
+                    .done((res) => {
                         const rowData = {
                             ...data,
                             status: 'draft'
                         };
-                        const newRowId = res?.row_id || res?.id || ('row-' + (++autoRowId));
+                        const newRowId = res?.row_id || res?.id || ('row-' + ++autoRowId);
                         const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
 
                         if (mode === 'create') {
-                            bumpCounter(cat, null, 'draft');
-                            const html = makeRowHtml(newRowId, rowData);
-                            removeEmptyState($tbody);
-                            const $row = $(html).addClass('adding');
-                            $tbody.append($row);
-                            requestAnimationFrame(() => $row.addClass('show').removeClass('adding'));
+                            $tbody.find('.empty-row').remove();
+                            $tbody.append(makeRowHtml(newRowId, rowData));
                         } else {
                             const $old = $(
                                 `table.js-table[data-cat="${cat}"] tbody tr[data-row-id="${rowId}"]`);
-                            const prev = $old.data('status') || null;
-                            bumpCounter(cat, prev, 'draft');
-                            if ($old.length) $old.replaceWith(makeRowHtml(newRowId, rowData));
-                            else {
-                                const html = makeRowHtml(newRowId, rowData);
-                                removeEmptyState($tbody);
-                                $tbody.append(html);
+                            if ($old.length) {
+                                $old.replaceWith(makeRowHtml(newRowId, rowData));
+                            } else {
+                                $tbody.find('.empty-row').remove();
+                                $tbody.append(makeRowHtml(newRowId, rowData));
                             }
                         }
 
                         recalcAll();
                         pointModal.hide();
                         toast(res?.message || 'Draft tersimpan.');
-                        // kalau locked true dari server (skenario tidak mungkin di sini), kunci UI
+                        updateExportVisibility();
                         if (res?.locked) applyLockDom(true);
                     })
-                    .fail(err => {
+                    .fail((err) => {
                         toast(err?.responseJSON?.message || 'Gagal menyimpan. Data tidak ditambahkan.',
                             'danger');
                     })
@@ -559,6 +466,7 @@
                 }
             });
 
+            /* ====== HAPUS ====== */
             function ajaxDeletePoint(id) {
                 const url = "{{ route('ipp.point.destroy', ':id') }}".replace(':id', id);
                 return $.ajax({
@@ -572,7 +480,6 @@
                 });
             }
 
-            // ======= HAPUS =======
             $(document).on('click', '.js-remove', function() {
                 if (LOCKED) {
                     toast('IPP sudah submitted. Tidak bisa menghapus point.', 'danger');
@@ -582,50 +489,43 @@
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
                 const id = $tr.data('row-id');
-                const prev = $tr.data('status') || null;
 
                 if (!id) {
-                    $tr.addClass('removing');
-                    setTimeout(() => {
-                        const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
-                        $tr.remove();
-                        ensureNotEmpty($tbody);
-                        recalcAll();
-                        if (prev) bumpCounter(cat, prev, null);
-                        toast('Point dihapus (lokal).', 'warning');
-                    }, 180);
+                    $tr.remove();
+                    const $tb = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
+                    if ($tb.find('tr').not('.empty-row').length === 0) {
+                        $tb.html(
+                            '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
+                        );
+                    }
+                    recalcAll();
+                    toast('Point dihapus (lokal).', 'warning');
                     return;
                 }
 
                 if (!confirm('Hapus point ini?')) return;
 
-                const $btn = $(this).prop('disabled', true);
-
                 ajaxDeletePoint(id)
-                    .done(res => {
-                        $tr.addClass('removing');
-                        setTimeout(() => {
-                            const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
-                            $tr.remove();
-                            ensureNotEmpty($tbody);
-                            recalcAll();
-                            if (prev) bumpCounter(cat, prev, null);
-                            toast(res?.message || 'Point dihapus.');
-                        }, 180);
+                    .done((res) => {
+                        $tr.remove();
+                        const $tb = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
+                        if ($tb.find('tr').not('.empty-row').length === 0) {
+                            $tb.html(
+                                '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
+                            );
+                        }
+                        recalcAll();
+                        updateExportVisibility();
+                        toast(res?.message || 'Point dihapus.');
                     })
-                    .fail(err => {
-                        toast(err?.responseJSON?.message || 'Gagal menghapus point.', 'danger');
-                    })
-                    .always(() => $btn.prop('disabled', false));
+                    .fail((err) => toast(err?.responseJSON?.message || 'Gagal menghapus point.', 'danger'));
             });
 
-            // ======= SUBMIT ALL =======
+            /* ====== SUBMIT ALL ====== */
             $('#btnSubmitAll').on('click', function() {
-                if (LOCKED) {
-                    return;
-                }
-                const summary = buildSummaryFromDom();
+                if (LOCKED) return;
 
+                const summary = buildSummaryFromDom();
                 for (const cat of Object.keys(CAT_CAP)) {
                     if ((summary[cat] || 0) > CAT_CAP[cat]) {
                         toast(`Bobot kategori "${cat.replace('_',' ')}" melebihi cap ${CAT_CAP[cat]}%.`,
@@ -647,79 +547,93 @@
                         },
                         dataType: "json"
                     })
-                    .done(res => {
-                        // tandai semua row submitted & refresh counters
-                        Object.keys(CAT_CAP).forEach(cat => {
-                            const $rows = $(`table.js-table[data-cat="${cat}"] tbody tr`).not(
-                                '.empty-row');
-                            let count = 0;
-                            $rows.each(function() {
-                                $(this).attr('data-status', 'submitted');
-                                count++;
-                            });
-                            catCounters[cat].submitted = count;
-                            catCounters[cat].draft = 0;
-                            renderCategoryStatus(cat);
-                        });
-                        applyLockDom(true); // <- kunci UI setelah submit sukses
+                    .done((res) => {
+                        applyLockDom(true);
+                        renderIppStatus('submitted');
+                        updateExportVisibility();
                         toast(res?.message || 'IPP berhasil disubmit.');
                     })
-                    .fail(err => {
-                        toast(err?.responseJSON?.message || 'Gagal submit IPP.', 'danger');
-                    })
+                    .fail((err) => toast(err?.responseJSON?.message || 'Gagal submit IPP.', 'danger'))
                     .always(() => $btn.prop('disabled', false));
             });
 
-            // ======= INIT: load data via AJAX (/ipp/init) =======
+            /* ====== Lock tampilan ====== */
+            function applyLockDom(locked) {
+                LOCKED = !!locked;
+                $('.js-open-modal').toggleClass('d-none', LOCKED);
+                $('#btnSubmitAll').toggleClass('d-none', LOCKED);
+                $('table.js-table').each(function() {
+                    const $t = $(this);
+                    $t.find('thead th:last-child').toggleClass('d-none', LOCKED);
+                    $t.find('tbody tr').each(function() {
+                        $(this).find('td:last-child').toggleClass('d-none', LOCKED);
+                    });
+                });
+            }
+
+            /* ====== INIT ====== */
             function loadInitial() {
                 $.ajax({
                         url: "{{ route('ipp.init') }}",
                         method: "GET",
                         dataType: "json"
                     })
-                    .done(res => {
-                        // override CAP dari backend bila tersedia
-                        if (res?.cap) {
-                            CAT_CAP = res.cap;
-                        }
+                    .done((res) => {
+                        if (res?.cap) CAT_CAP = res.cap;
 
-                        // Render points per kategori
                         if (res?.points) {
-                            Object.keys(res.points).forEach(cat => {
+                            Object.keys(res.points).forEach((cat) => {
                                 const list = res.points[cat] || [];
                                 const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
-                                if (list.length) removeEmptyState($tbody);
-                                list.forEach(pt => {
-                                    const html = makeRowHtml(pt.id, pt);
+                                if (list.length) $tbody.find('.empty-row').remove();
+                                list.forEach((pt) => {
+                                    const html = makeRowHtml(pt.id, {
+                                        activity: pt.activity,
+                                        target_mid: pt.target_mid,
+                                        target_one: pt.target_one,
+                                        due_date: pt.due_date,
+                                        weight: pt.weight,
+                                        status: pt.status || 'draft',
+                                    });
                                     $tbody.append(html);
-                                    bumpCounter(cat, null, pt.status || 'draft');
                                 });
                             });
                         }
 
-                        // Lock UI jika backend bilang submitted
+                        // Status global & Export visibility
+                        const ippStatus = res?.ipp?.status || null;
+                        renderIppStatus(ippStatus);
+                        updateExportVisibility();
+
                         const locked = !!(res?.locked || res?.ipp?.locked || (res?.ipp?.status === 'submitted'));
                         applyLockDom(locked);
-
                         recalcAll();
                     })
-                    .fail(() => {
-                        toast('Gagal memuat data awal IPP.', 'danger');
-                    });
+                    .fail(() => toast('Gagal memuat data awal IPP.', 'danger'));
             }
 
-            // ======= DOCUMENT READY =======
             $(document).ready(function() {
-                // empty state awal
+                // Pastikan semua panel terbuka
+                $('#accordionPrograms .accordion-collapse').each(function() {
+                    this.removeAttribute('data-bs-parent');
+                    this.classList.add('show');
+                    const btn = $(this).prev('.accordion-header').find('.accordion-button');
+                    btn.removeClass('collapsed').attr('aria-expanded', 'true');
+                });
+
                 $('table.js-table tbody.js-tbody').each(function() {
                     const $tb = $(this);
-                    if ($tb.find('tr').not('.empty-row').length === 0) ensureNotEmpty($tb);
+                    if ($tb.find('tr').not('.empty-row').length === 0) {
+                        $tb.html(
+                            '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
+                        );
+                    }
                 });
-                // load data awal via AJAX
+
                 loadInitial();
             });
 
-            // ======= TOAST =======
+            /* ====== Toast ====== */
             function toast(msg, type = 'success') {
                 const id = 'toast-' + Date.now();
                 const $t = $(`
@@ -727,7 +641,7 @@
      role="status" aria-live="polite" aria-atomic="true"
      style="position:fixed;top:1rem;right:1rem;z-index:1080;">
   <div class="d-flex">
-    <div class="toast-body">${msg}</div>
+    <div class="toast-body">${esc(msg)}</div>
     <button type="button" class="btn-close btn-close-white me-2 m-auto"
             data-bs-dismiss="toast" aria-label="Tutup"></button>
   </div>
@@ -739,7 +653,6 @@
                 t.show();
                 $t.on('hidden.bs.toast', () => $t.remove());
             }
-
         })(jQuery);
     </script>
 @endpush
