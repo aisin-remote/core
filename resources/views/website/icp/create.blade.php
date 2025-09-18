@@ -38,8 +38,8 @@
 
     <style>
         /* =========================
-                                       ICP Stage – Neutral High-Contrast
-                                       ========================= */
+                                                                                                   ICP Stage – Neutral High-Contrast
+                                                                                                   ========================= */
         :root {
             --stage-border: #3f4a5a;
             /* abu-abu kebiruan gelap */
@@ -233,12 +233,15 @@
                 <div class="card p-4 shadow-sm rounded-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <h3 class="fw-bold mb-0">Development Stage</h3>
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-stage">
-                            <i class="bi bi-plus-lg"></i> Add Tahun
-                        </button>
                     </div>
 
                     <div id="stages-container" class="mt-3 d-grid gap-3"></div>
+
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-stage">
+                            <i class="bi bi-plus-lg"></i> Add Year
+                        </button>
+                    </div>
 
                     {{-- Saran kompetensi (untuk autocomplete optional) --}}
                     <datalist id="techList">
