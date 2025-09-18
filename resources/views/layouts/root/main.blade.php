@@ -100,35 +100,32 @@
         var hostUrl = "{{ asset('assets/index.html') }}";
     </script>
 
-    <!-- ===== JS ORDER: jQuery -> Select2 -> Metronic core -> lainnya -> @stack('scripts') ===== -->
+    <!-- ===== JS ORDER: Metronic(jQuery) -> Select2/DataTables -> Metronic core -> lainnya -> @stack('scripts') ===== -->
 
-    <!-- 1) jQuery (WAJIB untuk Select2) -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <!-- 1) Metronic bundle (SUDAH mengandung jQuery) -->
+    <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
 
-    <!-- 2) Select2 & DataTables (butuh jQuery) -->
+    <!-- 2) Plugin berbasis jQuery (HARUS setelah jQuery di atas) -->
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
 
-    <!-- 3) Metronic bundles (boleh setelah jQuery) -->
-    <script src="{{ asset('assets/plugins/global/plugins.bundle.js') }}"></script>
+    <!-- 3) Metronic core -->
     <script src="{{ asset('assets/js/scripts.bundle.js') }}"></script>
 
-    <!-- 4) Charts (opsional) -->
+    <!-- 4) Charts / libs lain (opsional) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels"></script>
-
-    <!-- 5) Highcharts (opsional) -->
     <script src="https://code.highcharts.com/highcharts.js"></script>
     <script src="https://code.highcharts.com/modules/exporting.js"></script>
     <script src="https://code.highcharts.com/modules/export-data.js"></script>
     <script src="https://code.highcharts.com/modules/accessibility.js"></script>
 
-    <!-- 6) Metronic page vendors -->
+    <!-- 5) Metronic page vendors -->
     <script src="{{ asset('assets/plugins/custom/fullcalendar/fullcalendar.bundle.js') }}"></script>
 
-    <!-- 7) Widgets / Custom -->
+    <!-- 6) Widgets / Custom -->
     <script src="{{ asset('assets/js/widgets.bundle.js') }}"></script>
     <script src="{{ asset('assets/js/custom/widgets.js') }}"></script>
     <script src="{{ asset('assets/js/custom/apps/chat/chat.js') }}"></script>
@@ -137,8 +134,9 @@
     <script src="{{ asset('assets/js/custom/utilities/modals/new-target.js') }}"></script>
     <script src="{{ asset('assets/js/custom/utilities/modals/users-search.js') }}"></script>
 
-    <!-- 8) Page-specific scripts -->
+    <!-- 7) Page-specific scripts -->
     @stack('scripts')
+
 
     @if (session('show_first_login_alert'))
         <script>
