@@ -17,6 +17,12 @@ class Icp extends Model
         'date' => 'date',
     ];
 
+    public const STATUS_REVISE    = 0;
+    public const STATUS_SUBMITTED = 1;
+    public const STATUS_CHECKED   = 2;
+    public const STATUS_APPROVED  = 3;
+    public const STATUS_DRAFT     = 4;
+
     public function employee()
     {
         return $this->belongsTo(Employee::class, 'employee_id', 'id');
