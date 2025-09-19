@@ -3,43 +3,11 @@
 @section('title', $title ?? 'Icp')
 @section('breadcrumbs', $title ?? 'Icp')
 
-@section('main')
-    @if (session()->has('success'))
-        <script>
-            document.addEventListener("DOMContentLoaded", () => Swal.fire({
-                title: "Sukses!",
-                text: @json(session('success')),
-                icon: "success"
-            }));
-        </script>
-    @endif
-    @if (session()->has('error'))
-        <script>
-            document.addEventListener("DOMContentLoaded", () => Swal.fire({
-                title: "Error!",
-                text: @json(session('error')),
-                icon: "error"
-            }));
-        </script>
-    @endif
-    @if ($errors->any())
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                const errs = @json($errors->all());
-                Swal.fire({
-                    title: "Validasi gagal",
-                    html: errs.map(e => `<div style="text-align:left">• ${e}</div>`).join(""),
-                    icon: "error",
-                    confirmButtonText: "OK"
-                });
-            });
-        </script>
-    @endif
-
+@push('custom-css')
     <style>
         /* =========================
-                                                                                                   ICP Stage – Neutral High-Contrast
-                                                                                                   ========================= */
+                                                                                                                                                                                                                                                                                                   ICP Stage – Neutral High-Contrast
+                                                                                                                                                                                                                                                                                                   ========================= */
         :root {
             --stage-border: #3f4a5a;
             /* abu-abu kebiruan gelap */
@@ -163,6 +131,65 @@
             background: #000;
         }
     </style>
+    <style>
+        /* biar Select2 ukuran kecil selaras form-select-sm */
+        .select2-container .select2-selection--single {
+            height: calc(1.5em + .5rem + 2px);
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__rendered {
+            line-height: calc(1.5em + .5rem);
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: calc(1.5em + .5rem);
+        }
+
+        .select2-container .select2-selection--single {
+            border: 1px solid #ced4da;
+            padding: .25rem .5rem;
+        }
+
+        .select2-selection__rendered {
+            font-size: .875rem;
+        }
+
+        /* match .form-select-sm */
+    </style>
+@endpush
+
+@section('main')
+    @if (session()->has('success'))
+        <script>
+            document.addEventListener("DOMContentLoaded", () => Swal.fire({
+                title: "Sukses!",
+                text: @json(session('success')),
+                icon: "success"
+            }));
+        </script>
+    @endif
+    @if (session()->has('error'))
+        <script>
+            document.addEventListener("DOMContentLoaded", () => Swal.fire({
+                title: "Error!",
+                text: @json(session('error')),
+                icon: "error"
+            }));
+        </script>
+    @endif
+    @if ($errors->any())
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                const errs = @json($errors->all());
+                Swal.fire({
+                    title: "Validasi gagal",
+                    html: errs.map(e => `<div style="text-align:left">• ${e}</div>`).join(""),
+                    icon: "error",
+                    confirmButtonText: "OK"
+                });
+            });
+        </script>
+    @endif
 
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <div id="kt_app_content_container" class="app-container container-fluid">
@@ -237,18 +264,11 @@
 
                     <div id="stages-container" class="mt-3 d-grid gap-3"></div>
 
-                    <div class="d-flex justify-content-end mt-3">
-                        <button type="button" class="btn btn-primary btn-sm" id="btn-add-stage">
+                    <div class="d-flex justify-content-center mt-3">
+                        <button type="button" class="btn btn-primary btn-sm w-100" id="btn-add-stage">
                             <i class="bi bi-plus-lg"></i> Add Year
                         </button>
                     </div>
-
-                    {{-- Saran kompetensi (untuk autocomplete optional) --}}
-                    <datalist id="techList">
-                        @foreach ($technicalCompetencies as $tc)
-                            <option value="{{ $tc->competency }}"></option>
-                        @endforeach
-                    </datalist>
                 </div>
 
                 <div class="text-end mt-4">
@@ -304,12 +324,15 @@
 
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <strong>Details</strong>
+                    </div>
+
+                    <div class="details-container d-grid gap-2"></div>
+
+                    <div class="d-flex justify-content-end mt-3">
                         <button type="button" class="btn btn-warning btn-sm btn-add-detail">
                             <i class="bi bi-plus"></i> Add Detail
                         </button>
                     </div>
-
-                    <div class="details-container d-grid gap-2"></div>
                 </div>
             </div>
         </template>
@@ -322,37 +345,46 @@
                 <div class="row g-2">
                     <div class="col-md-4">
                         <label class="form-label">Current Tech</label>
-                        <input type="text" class="form-control form-control-sm"
-                            name="stages[__S__][details][__D__][current_technical]" list="techList" required>
+                        <select class="form-select form-select-sm tech-select"
+                            name="stages[__S__][details][__D__][current_technical]">
+                            <option value=""></option>
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Required Tech</label>
-                        <input type="text" class="form-control form-control-sm"
-                            name="stages[__S__][details][__D__][required_technical]" list="techList" required>
+                        <select class="form-select form-select-sm tech-select"
+                            name="stages[__S__][details][__D__][required_technical]">
+                            <option value=""></option>
+                        </select>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Development Technical</label>
-                        <input type="text" class="form-control form-control-sm"
-                            name="stages[__S__][details][__D__][development_technical]" list="techList" required>
+                        <select class="form-select form-select-sm tech-select"
+                            name="stages[__S__][details][__D__][development_technical]">
+                            <option value=""></option>
+                        </select>
                     </div>
+
+                    <!-- Non-Tech tetap input text -->
                     <div class="col-md-4">
                         <label class="form-label">Current Non-Tech</label>
-                        <input type="text" class="form-control form-control-sm"
+                        <input type="text" class="form-control form-select-sm"
                             name="stages[__S__][details][__D__][current_nontechnical]" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Required Non-Tech</label>
-                        <input type="text" class="form-control form-control-sm"
+                        <input type="text" class="form-control form-select-sm"
                             name="stages[__S__][details][__D__][required_nontechnical]" required>
                     </div>
                     <div class="col-md-4">
                         <label class="form-label">Development Non-Tech</label>
-                        <input type="text" class="form-control form-control-sm"
+                        <input type="text" class="form-control form-select-sm"
                             name="stages[__S__][details][__D__][development_nontechnical]" required>
                     </div>
                 </div>
             </div>
         </template>
+
     @endverbatim
 
     <script>
@@ -381,6 +413,46 @@
             position: @json($employee->position ?? ''),
             level: @json($employee->grade ?? '')
         };
+
+        const TECHS = @json($technicalCompetencies->pluck('competency'));
+
+        function initTechSelects(scope) {
+            // siapkan data: [{id:'Java', text:'Java'}, ...]
+            const data = (TECHS || []).map(t => ({
+                id: t,
+                text: t
+            }));
+
+            $(scope).find('.tech-select').each(function() {
+                const $el = $(this);
+
+                // jika sudah pernah diinisialisasi, destroy dulu (aman untuk re-call)
+                if ($el.hasClass('select2-hidden-accessible')) {
+                    $el.select2('destroy');
+                }
+
+                $el.select2({
+                    data,
+                    tags: true, // boleh ngetik value baru yang belum ada
+                    placeholder: 'Select or type…',
+                    allowClear: true,
+                    width: '100%',
+                });
+
+                // jika mau prefill value lama dari old() (optional): baca data-value attr
+                const preset = $el.attr('data-value');
+                if (preset && !$el.val()) {
+                    // pastikan preset ada di options atau tambahkan sebagai tag
+                    if (!TECHS.includes(preset)) {
+                        const newOpt = new Option(preset, preset, true, true);
+                        $el.append(newOpt).trigger('change');
+                    } else {
+                        $el.val(preset).trigger('change');
+                    }
+                }
+            });
+        }
+
 
         /* ====== Helpers isi opsi ====== */
         function fillOptions(selectEl, items, valueKey = 'v', textKey = 't') {
@@ -474,6 +546,7 @@
             });
 
             detailsBox.appendChild(row);
+            initTechSelects(row);
         }
 
         /* ====== Themes ====== */
