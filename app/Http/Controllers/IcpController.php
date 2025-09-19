@@ -84,17 +84,20 @@ class IcpController extends Controller
 
         return Employee::whereIn('id', $subordinateIds);
     }
+
     private function collectSubordinates($models, $field, $subordinateIds)
     {
         $ids = $models->pluck($field)->filter();
         return $subordinateIds->merge($ids);
     }
+
     private function collectOperators($subSections, $subordinateIds)
     {
         $subSectionIds = $subSections->pluck('id');
         $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
     }
+
     public function index(Request $request, $company = null)
     {
         $title  = 'Employee ICP';
@@ -300,6 +303,7 @@ class IcpController extends Controller
 
         return view('website.icp.create', compact('title', 'employee', 'grades', 'departments', 'employees', 'technicalCompetencies'));
     }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -335,7 +339,7 @@ class IcpController extends Controller
                 'aspiration' => $request->aspiration,
                 'career_target' => $request->career_target,
                 'date' => $request->date,
-                'status' => '1',
+                'status' => Icp::STATUS_DRAFT, // status awal "Draft" (4)
             ]);
             $this->seedStepsForIcp($icp);
 
@@ -367,12 +371,13 @@ class IcpController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil ditambahkan.');
+            return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil disimpan.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
         }
     }
+
     public function show($employee_id)
     {
         $employee = Employee::with('icp')->find($employee_id);
@@ -610,8 +615,6 @@ class IcpController extends Controller
 
         return response()->json(['message' => 'Approved.']);
     }
-
-
     public function revise(Request $request)
     {
         $icp = Icp::with('steps')->findOrFail($request->id);
@@ -672,9 +675,8 @@ class IcpController extends Controller
                 'aspiration'    => $request->aspiration,
                 'career_target' => $request->career_target,
                 'date'          => $request->date,
-                'status'        => "1",
+                'status'        => Icp::STATUS_DRAFT, // 4
             ]);
-            $this->seedStepsForIcp($icp);
 
             // Hapus semua detail lama (bisa diubah kalau ingin granular update)
             $icp->details()->delete();
@@ -786,25 +788,50 @@ class IcpController extends Controller
 
         return response()->json(['message' => 'ICP deleted successfully']);
     }
-
     private function seedStepsForIcp(Icp $icp)
     {
-        $owner = $icp->employee()->first(); //pemilik icp
+        $owner = $icp->employee()->first();
         $chain = ApprovalHelper::expectedChainForEmployee($owner);
 
-        $icp->steps()->delete(); //reset jika update
+        $icp->steps()->delete();
         foreach ($chain as $i => $s) {
             IcpApprovalStep::create([
-                'icp_id' => $icp->id,
+                'icp_id'     => $icp->id,
                 'step_order' => $i + 1,
-                'type' => $s['type'],
-                'role' => $s['role'],
-                'label' => $s['label']
+                'type'       => $s['type'],
+                'role'       => $s['role'],
+                'label'      => $s['label']
             ]);
         }
 
-        //status awal "Submitted" (1) kalau masih ada step; kalau tidak ada -> langsung Approved (3)
-        $icp->status = empty($chain) ? 3 : 1;
-        $icp->save();
+        // kalau chain kosong, langsung approve
+        if (empty($chain)) {
+            $icp->status = Icp::STATUS_APPROVED; // 3
+            $icp->save();
+        }
+    }
+
+    public function submit($id)
+    {
+        $icp = Icp::with('steps', 'employee')->findOrFail($id);
+
+        if ($icp->status !== Icp::STATUS_DRAFT) {
+            return back()->with('error', 'Hanya draft yang bisa disubmit.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // seed steps sesuai chain, lalu set status ringkas:
+            $this->seedStepsForIcp($icp); // method kamu yang sudah ada
+            // override status jadi SUBMITTED (1) agar jelas
+            $icp->status = Icp::STATUS_SUBMITTED; // 1
+            $icp->save();
+
+            DB::commit();
+            return back()->with('success', 'ICP berhasil disubmit untuk approval.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal submit: ' . $e->getMessage());
+        }
     }
 }
