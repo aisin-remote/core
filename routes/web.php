@@ -133,6 +133,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
 
         Route::post('/delete/{id}', [IcpController::class, 'destroy'])->name('icp.destroy');
+        Route::post('/{id}/submit', [IcpController::class, 'submit'])->name('icp.submit');
     });
 
     Route::prefix('hav')->group(function () {
