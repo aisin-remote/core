@@ -120,11 +120,11 @@
 
         @media (min-width:992px) {
             .action-stack {
-                flex-direction: row;
                 flex-wrap: wrap;
+                flex-direction: column;
                 column-gap: .4rem;
                 row-gap: .4rem;
-                min-width: 260px;
+                min-width: 160px;
             }
         }
 
@@ -241,7 +241,7 @@
                                     (optional(optional($e->subSection)->section)->department->name ?? '-');
                             @endphp
 
-                            <tr data-position="{{ $e->position }}">
+                            <tr class="fs-7" data-position="{{ $e->position }}">
                                 <td>{{ $i + 1 }}</td>
                                 <td>{{ $e->npk }}</td>
                                 <td>{{ $e->name }}</td>
@@ -411,7 +411,7 @@
                         <table class="table table-striped table-bordered align-middle table-hover fs-6"
                             id="kt_table_assessments" width="100%">
                             <thead class="table-dark">
-                                <tr class="fs-7">
+                                <tr>
                                     <th class="text-center" width="10%">No</th>
                                     <th class="text-center">Aspiration</th>
                                     <th class="text-center">Career Target</th>

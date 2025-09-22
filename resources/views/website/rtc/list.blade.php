@@ -263,7 +263,7 @@
         window.CONTAINER_ID = @json($divisionId ?? null);
         window.READ_ONLY = @json((bool) ($readOnly ?? false));
         window.ROUTE_FILTER = @json(route('filter.master'));
-        window.ROUTE_SUMMARY = @json(route('rtc.summary'));
+        window.ROUTE_SUMMARY = @json(route('rtc.structure.dabeng'));
         window.IS_COMPANY_SCOPE = @json((bool) ($isCompanyScope ?? false));
         window.DIREKSI_BY_COMPANY = @json($plantsByCompany ?? []);
         window.IS_GM = @json((bool) ($isGM ?? false));
