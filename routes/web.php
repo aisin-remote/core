@@ -308,7 +308,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/list/{company?}', [IppController::class, 'list'])->name('ipp.list');
         Route::get('/data', [IppController::class, 'listJson'])->name('ipp.list.json');
         Route::delete('/point/{point}', [IppController::class, 'destroyPoint'])->name('ipp.point.destroy');
-        Route::get('/export', [IppController::class, 'export'])->name('ipp.export');
+        Route::get('/export/excel/{id?}', [IppController::class, 'exportExcel'])->name('ipp.export.excel');
 
         Route::get('/employee/ipps', [IppController::class, 'employeeIppsJson'])
             ->name('ipp.employee.ipps.json');

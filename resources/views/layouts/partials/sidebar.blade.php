@@ -341,12 +341,6 @@
             opacity: 0
         }
     }
-
-    .disabled {
-        pointer-events: none;
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
 </style>
 
 <div id="kt_app_sidebar" class="app-sidebar">
