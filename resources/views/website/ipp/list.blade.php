@@ -391,16 +391,26 @@
                     const rows = (json.ipps || []).map(item => {
                         const year = item.on_year || '';
                         const stat = item.status || 'unknown';
-                        const openBtn = item.id ?
-                            `<a class="btn btn-sm btn-primary" href="{{ url('/ipp') }}/${item.id}">Open</a>` :
-                            `<span class="text-muted">No form</span>`;
 
+                        let actionBtns = `<span class="text-muted">No IPP</span>`;
+                        if (item.id) {
+                            actionBtns = `
+                                <a href="{{ route('ipp.export.excel') }}/${item.id}"
+                                class="btn btn-sm btn-success me-1">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+                                </a>
+                                <a href="{{ route('ipp.export.excel') }}/${item.id}"
+                                class="btn btn-sm btn-danger disabled">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </a>
+                            `;
+                        }
                         return `
-          <tr>
-            <td><span class="fw-bold">${year}</span></td>
-            <td>${chip(stat)}</td>
-            <td class="text-end">${openBtn}</td>
-          </tr>`;
+                            <tr>
+                                <td><span class="fw-bold">${year}</span></td>
+                                <td>${chip(stat)}</td>
+                                <td class="text-end">${actionBtns}</td>
+                            </tr>`;
                     }).join('');
 
                     tbody.innerHTML = rows ||
