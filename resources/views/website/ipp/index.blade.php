@@ -191,10 +191,13 @@
 
                 {{-- Submit + Export (Export muncul hanya jika IPP sudah ada) --}}
                 <div class="d-flex justify-content-end mt-3 gap-2">
-                    <a href="{{ route('ipp.export.excel') }}" class="btn btn-primary d-none" id="btnExport">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Export IPP
+                    <a href="{{ route('ipp.export.excel') }}" class="btn btn-success d-none" id="btnExportExcel">
+                        <i class="bi bi-file-earmark-spreadsheet"></i> Export Excel
                     </a>
-                    <button type="button" class="btn btn-success" id="btnSubmitAll">
+                    <a href="{{ route('ipp.export.pdf') }}" class="btn btn-danger d-none" id="btnExportPDF">
+                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                    </a>
+                    <button type="button" class="btn btn-warning" id="btnSubmitAll">
                         <i class="bi bi-send-check"></i> Submit IPP
                     </button>
                 </div>
@@ -315,7 +318,8 @@
 
             function updateExportVisibility() {
                 const hasDraft = $('table.js-table tbody tr').not('.empty-row').length > 0;
-                $('#btnExport').toggleClass('d-none', !hasDraft);
+                $('#btnExportExcel').toggleClass('d-none', !hasDraft);
+                $('#btnExportPDF').toggleClass('d-none', !hasDraft);
             }
 
             /* ====== Status IPP global ====== */
