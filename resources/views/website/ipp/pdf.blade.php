@@ -4,105 +4,269 @@
 
 @section('content')
     <style>
+        /* Base */
         body {
-            font-size: 10px;
+            font-size: 10px
         }
 
-        table {
+        /* ===== HEADER (no borders) ===== */
+        .head-table {
             width: 100%;
+            border-collapse: collapse;
+            border-top: 2px solid #000;
+            border-right: 2px solid #000;
+            border-left: 2px solid #000;
+        }
+
+        .head-table td {
+            padding: 2px 4px;
+            vertical-align: middle;
+            border: none
+        }
+
+        .title {
+            font-weight: 700;
+            font-size: 14px;
+            text-align: center
+        }
+
+        .confidential {
+            font-weight: 700;
+            color: #c00;
+            text-align: right;
+            font-style: italic
+        }
+
+        /* ===== IDENT (NAME–DIVISION) : only outer border ===== */
+        .ident-grid {
+            width: 100%;
+            border-collapse: separate;
+            /* biar outer box rapi di dompdf */
+            border-top: 2px solid #000;
+            border-right: 2px solid #000;
+            border-left: 2px solid #000;
+        }
+
+        .ident-grid td {
+            border: none;
+            padding: 2px 6px;
+            vertical-align: top
+        }
+
+        .ident-label,
+        .ident-label-right {
+            width: 18%;
+            font-weight: 700
+        }
+
+        .ident-mid,
+        .ident-right {
+            width: 32%
+        }
+
+        /* ===== MAIN GRID ===== */
+        .table-grid {
+            width: 100%;
+            border-collapse: collapse
+        }
+
+        .table-grid th,
+        .table-grid td {
+            border: 1px solid #000;
+            padding: 4px 6px;
+            vertical-align: top
+        }
+
+        /* Perimeter tebal */
+        .table-grid thead tr:first-child th {
+            border-top-width: 2px
+        }
+
+        .table-grid tbody tr:last-child td {
+            border-bottom-width: 2px
+        }
+
+        .table-grid th:first-child,
+        .table-grid td:first-child {
+            border-left-width: 2px
+        }
+
+        .table-grid th:last-child,
+        .table-grid td:last-child {
+            border-right-width: 2px
+        }
+
+        /* Header row */
+        .grid-head th {
+            background: #cfe6ef;
+            font-weight: 700;
+            text-align: center
+        }
+
+        /* Category bar */
+        .cat-row td {
+            background: #dfead8;
+            font-weight: 700;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            border-top: none;
+            border-bottom: none;
+        }
+
+        .cat-row td:first-child {
+            border-left-width: 2px
+        }
+
+        .cat-row td:last-child {
+            border-right-width: 2px
+        }
+
+        /* Data rows: kiri/kanan saja */
+        .rowdata td {
+            border-top: none !important;
+            border-bottom: none !important;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+        }
+
+        .rowdata td:first-child {
+            border-left-width: 2px
+        }
+
+        .rowdata td:last-child {
+            border-right-width: 2px
+        }
+
+        /* Total row */
+        .total-row td {
+            border-top: 1px solid #000;
+            /* <-- koreksi dari 'none 1px' */
+            border-bottom: 1px solid #000;
+            border-left: 1px solid #000;
+            border-right: 1px solid #000;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .total-row td:first-child {
+            border-left-width: 2px
+        }
+
+        .total-row td:last-child {
+            border-right-width: 2px
+        }
+
+        .total-row td:last-child {
+            border-bottom-width: 2px
+        }
+
+        .total-row td:last-child {
+            border-top-width: 2px
+        }
+
+        /* ===== SIGNATURE BOX ===== */
+        .sig-box {
+            width: 85%;
+            margin: 8px auto 0;
             border-collapse: collapse;
         }
 
-        th,
-        td {
+        .sig-box th,
+        .sig-box td {
             border: 1px solid #000;
             padding: 4px 6px;
-            vertical-align: top;
+            vertical-align: top
         }
 
-        .no-border th,
-        .no-border td {
-            border: none;
+        .sig-box thead tr:first-child th {
+            border-top-width: 2px
         }
 
-        .text-center {
+        .sig-box th:first-child,
+        .sig-box td:first-child {
+            border-left-width: 2px
+        }
+
+        .sig-box th:last-child,
+        .sig-box td:last-child {
+            border-right-width: 2px
+        }
+
+        .sig-box tbody tr:last-child td {
+            border-bottom-width: 2px
+        }
+
+        .sig-box thead th {
+            background: #cfe6ef;
             text-align: center;
+            font-weight: 700
         }
 
-        .fw-bold {
-            font-weight: bold;
+        .sig-space td {
+            height: 70px;
+            width: 50px;
+            border-top: none !important;
+            border-bottom: none !important;
         }
 
-        .bg-lightgreen {
-            background-color: #92CDDC;
-        }
-
-        .border-none td,
-        .border-none th {
-            border: none;
-        }
-
-        .signature-cell {
-            height: 60px;
-            text-align: center;
+        .sig-date td {
+            border-top: 1px solid #000;
         }
     </style>
 
-    <table class="no-border" style="margin-bottom: 5px;">
+    {{-- ======= HEADER ======= --}}
+    <table class="head-table">
         <tr>
-            <td rowspan="3" style="width:20%">
-                <img src="{{ $logo }}" height="40">
-            </td>
-            <!-- Judul di tengah, span 2 kolom kanan -->
-            <td class="text-center fw-bold" style="font-size:14px" colspan="1">
-                INDIVIDUAL PERFORMANCE PLAN
-            </td>
+            <td rowspan="3" style="width:20%"><img src="{{ $logo }}" height="40"></td>
+            <td class="title" colspan="1">INDIVIDUAL PERFORMANCE PLAN</td>
+            <td class="confidential">PERSONAL &amp; CONFIDENTIAL</td>
         </tr>
-        <tr>
-            <!-- No FORM tepat di bawah judul -->
-            <td class="text-center" style="font-size:9px">
-                <strong>No FORM:</strong> FRM-HRD-S3-012-00
+        <tr class="fw-bold">
+            <td class="text-center" style="font-size:10px">
+                <strong style="font-size:10px">NO FORM:</strong> FRM-HRD-S3-012-00
             </td>
-            <!-- Kolom kanan dikosongkan di baris ini -->
             <td style="width:25%"></td>
         </tr>
         <tr>
-            <!-- ON YEAR di bawah No FORM -->
-            <td class="text-center fw-bold">
-                ON YEAR : {{ $ipp->on_year }}
-            </td>
-            <!-- Info tanggal & PIC di sisi kanan -->
-            <td style="font-size: 9px">
-                <div><strong>Date of review</strong>: {{ $ipp->review_date ?? '-' }}</div>
-                <div><strong>PIC Review</strong>: {{ $ipp->pic_review ?? '-' }}</div>
-            </td>
+            <td class="text-center" style="font-weight:700; padding-bottom: 15px;">ON YEAR : {{ $ipp->on_year }}</td>
+            <td></td>
         </tr>
     </table>
 
-    <table style="margin-bottom: 8px;">
+    {{-- ======= NAME – DIVISION (outer border only) ======= --}}
+    <table class="ident-grid">
         <tr>
-            <td class="fw-bold" style="width:15%">NAME</td>
-            <td style="width:35%">{{ $owner->name }}</td>
-            <td class="fw-bold" style="width:15%">Date</td>
-            <td>{{ \Carbon\Carbon::now()->format('Y-m-d') }}</td>
+            <td class="ident-label">NAME</td>
+            <td>:</td>
+            <td class="ident-mid">{{ $identitas['nama'] }}</td>
+            <td class="ident-label-right">Date</td>
+            <td>:</td>
+            <td class="ident-right">{{ \Carbon\Carbon::now()->format('Y-m-d') }}</td>
         </tr>
         <tr>
-            <td class="fw-bold">DEPARTMENT</td>
-            <td>{{ $owner->bagian ?? '-' }}</td>
-            <td class="fw-bold">PIC Review</td>
-            <td>{{ $ipp->pic_review ?? '-' }}</td>
+            <td class="ident-label">DEPARTMENT</td>
+            <td>:</td>
+            <td class="ident-mid">{{ $identitas['department'] ?? '-' }}</td>
+            <td class="ident-label-right">PIC Review</td>
+            <td>:</td>
+            <td class="ident-right">{{ $ipp->pic_review ?? '-' }}</td>
         </tr>
         <tr>
-            <td class="fw-bold">SECTION / SUB</td>
-            <td>{{ $owner->sub_bagian ?? '-' }}</td>
-            <td class="fw-bold">DIVISION</td>
-            <td>{{ $owner->divisi ?? '-' }}</td>
+            <td class="ident-label">SECTION / SUB</td>
+            <td>:</td>
+            <td class="ident-mid">{{ $identitas['section'] ?? '-' }}</td>
+        </tr>
+        <tr>
+            <td class="ident-label-right">DIVISION</td>
+            <td>:</td>
+            <td class="ident-right">{{ $identitas['division'] ?? '-' }}</td>
         </tr>
     </table>
 
-    <table>
-        <thead>
-            <tr class="text-center">
+    {{-- ======= MAIN GRID ======= --}}
+    <table class="table-grid">
+        <thead class="grid-head">
+            <tr>
                 <th style="width:4%">#</th>
                 <th style="width:36%">PROGRAM / ACTIVITY</th>
                 <th style="width:8%">WEIGHT (%)</th>
@@ -113,23 +277,37 @@
         </thead>
         <tbody>
             @php
+                $numbers = [
+                    'activity_management' => 'I',
+                    'people_development' => 'II',
+                    'crp' => 'III',
+                    'special_assignment' => 'IV',
+                ];
                 $labels = [
-                    'activity_management' => 'I. ACTIVITY MANAGEMENT',
-                    'people_management' => 'II. PEOPLE MANAGEMENT',
-                    'crp' => 'III. CRP',
-                    'special_assignment' => 'IV. SPECIAL ASSIGNMENT',
+                    'activity_management' => 'ACTIVITY MANAGEMENT',
+                    'people_development' => 'PEOPLE MANAGEMENT',
+                    'crp' => 'CRP',
+                    'special_assignment' => 'SPECIAL ASSIGNMENT',
                 ];
                 $no = 1;
             @endphp
 
             @foreach ($grouped as $cat => $items)
                 @if (count($items))
-                    <tr class="bg-lightgreen fw-bold">
-                        <td colspan="6">{{ $labels[$cat] ?? strtoupper($cat) }} — {{ $summary[$cat] ?? '0%' }}</td>
+                    {{-- Baris kategori: kolom pertama berisi angka romawi + titik, kolom kedua judul --}}
+                    <tr class="cat-row">
+                        <td class="text-center">
+                            {{ ($numbers[$cat] ?? '') !== '' ? $numbers[$cat] . '.' : '' }}
+                        </td>
+                        <td>{{ $labels[$cat] ?? strtoupper($cat) }} — {{ $summary[$cat] ?? '0' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
 
                     @foreach ($items as $row)
-                        <tr>
+                        <tr class="rowdata">
                             <td class="text-center">{{ $no++ }}</td>
                             <td>{{ $row['activity'] }}</td>
                             <td class="text-center">{{ $row['weight'] }}%</td>
@@ -141,7 +319,7 @@
                 @endif
             @endforeach
 
-            <tr class="fw-bold text-center">
+            <tr class="total-row">
                 <td colspan="2">TOTAL</td>
                 <td>{{ $summary['total'] ?? '100' }}%</td>
                 <td colspan="3"></td>
@@ -149,9 +327,8 @@
         </tbody>
     </table>
 
-    <br>
-
-    <table class="text-center">
+    {{-- ===== Signatures ===== --}}
+    <table class="sig-box">
         <thead>
             <tr>
                 <th>Superior of Superior</th>
@@ -160,12 +337,12 @@
             </tr>
         </thead>
         <tbody>
-            <tr class="signature-cell">
-                <td style="height: 80px"></td>
-                <td style="height: 80px"></td>
-                <td style="height: 80px"></td>
+            <tr class="sig-space">
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
-            <tr>
+            <tr class="sig-date">
                 <td>Date :</td>
                 <td>Date :</td>
                 <td>Date :</td>
