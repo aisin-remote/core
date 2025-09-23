@@ -389,7 +389,7 @@
             @endphp
 
             @if ($canSeeRtc)
-                <div class="menu-item">
+                <div class="disabled menu-item">
                     <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}"
                         href="{{ route('rtc.list', ['level' => $level, 'id' => $id]) }}">
                         <span class="menu-icon"><i class="fas fa-tasks"></i></span>
@@ -516,7 +516,7 @@
                         </div>
 
                         <div
-                            class="menu-item menu-accordion {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'show' : '' }}">
+                            class="disabled menu-item menu-accordion {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'show' : '' }}">
                             <span
                                 class="menu-link {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'active' : '' }}">
                                 <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
