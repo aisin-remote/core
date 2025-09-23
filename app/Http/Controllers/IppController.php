@@ -735,19 +735,26 @@ class IppController
         }
     }
 
-    public function export(Request $request)
+    public function exportExcel($id = null)
     {
-        $user  = auth()->user();
-        $emp   = $user->employee;
-        $year  = now()->format('Y');
+        $user    = auth()->user();
+        $authEmp = $user->employee;
+        $year = now()->format('Y');
 
-        abort_if(!$emp, 403, 'Employee not found for this account.');
+        abort_if(!$authEmp, 403, 'Employee not found for this account.');
 
-        $ipp = Ipp::where('employee_id', $emp->id)
-            ->where('on_year', $year)
-            ->first();
-
+        if ($id) {
+            $ipp = Ipp::findOrFail($id);
+        } else {
+            $ipp = Ipp::where('employee_id', $authEmp->id)
+                ->first();
+        }
         abort_if(!$ipp, 404, 'IPP not found.');
+
+        // owner
+        $owner = Employee::find($ipp->employee_id);
+        abort_if(!$owner, 404, 'Owner employee not found.');
+
 
         $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
 
@@ -766,18 +773,18 @@ class IppController
                 'target_mid' => (string) ($p->target_mid ?? ''),
                 'target_one' => (string) ($p->target_one ?? ''),
                 'due_date'   => $p->due_date ? substr((string)$p->due_date, 0, 10) : '',
-                'weight'     => (int) $p->weight, // 0..100
+                'weight'     => (int) $p->weight,
             ];
         }
 
-        $assignLevel = method_exists($emp, 'getCreateAuth') ? $emp->getCreateAuth() : null;
-        $pic = $assignLevel && method_exists($emp, 'getSuperiorsByLevel')
-            ? optional($emp->getSuperiorsByLevel($assignLevel)->first())->name
+        $assignLevel = method_exists($owner, 'getCreateAuth') ? $owner->getCreateAuth() : null;
+        $pic = $assignLevel && method_exists($owner, 'getSuperiorsByLevel')
+            ? optional($owner->getSuperiorsByLevel($assignLevel)->first())->name
             : '';
 
         $identitas = [
-            'nama'        => (string)($emp->name ?? $user->name ?? ''),
-            'department'  => (string)($emp->bagian ?? ''),
+            'nama'        => (string)($owner->name ?? $user->name ?? ''),
+            'department'  => (string)($owner->bagian ?? ''),
             'section'     => (string)($ipp->section ?? ''),
             'division'    => (string)($ipp->division ?? ''),
             'date_review' => $ipp->date_review ? substr((string)$ipp->date_review, 0, 10) : '',
@@ -981,7 +988,7 @@ class IppController
             $offset += max(0, $n - 1);
         }
 
-        $fileName = 'IPP_' . $year . '_' . Str::slug((string)($emp->name ?? 'user')) . '.xlsx';
+        $fileName = 'IPP_' . $year . '_' . Str::slug((string)($owner->name ?? 'user')) . '.xlsx';
         $tmp = tempnam(sys_get_temp_dir(), 'ipp_') . '.xlsx';
         IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tmp);
 
