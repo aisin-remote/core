@@ -392,24 +392,32 @@
                         const year = item.on_year || '';
                         const stat = item.status || 'unknown';
 
-                        let actionBtns = `<span class="text-muted">No IPP</span>`;
+                        let actions = '';
+
                         if (item.id) {
-                            actionBtns = `
-                                <a href="{{ route('ipp.export.excel') }}/${item.id}"
-                                class="btn btn-sm btn-success me-1">
-                                    <i class="bi bi-file-earmark-spreadsheet"></i> Excel
-                                </a>
-                                <a href="{{ route('ipp.export.excel') }}/${item.id}"
-                                class="btn btn-sm btn-danger disabled">
-                                    <i class="bi bi-file-earmark-pdf"></i> PDF
-                                </a>
+                            const excelHref =
+                                `{{ route('ipp.export.excel', ['id' => '___ID___']) }}`.replace(
+                                    '___ID___', item.id);
+                            const pdfHref = `{{ route('ipp.export.pdf', ['id' => '___ID___']) }}`
+                                .replace('___ID___', item.id);
+
+                            actions = `
+                            <a class="btn btn-sm btn-success me-2" href="${excelHref}">
+                                <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+                            </a>
+                            <a class="btn btn-sm btn-danger" href="${pdfHref}" rel="noopener">
+                                <i class="bi bi-file-earmark-pdf"></i> PDF
+                            </a>
                             `;
                         }
+                        // else: biarkan kosong, atau pakai ini kalau mau ada teks indikator:
+                        // else { actions = `<span class="text-muted">No form</span>`; }
+
                         return `
                             <tr>
                                 <td><span class="fw-bold">${year}</span></td>
                                 <td>${chip(stat)}</td>
-                                <td class="text-end">${actionBtns}</td>
+                                <td class="text-end">${actions}</td>
                             </tr>`;
                     }).join('');
 

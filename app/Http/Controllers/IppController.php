@@ -9,6 +9,7 @@ use App\Models\Ipp;
 use App\Models\IppPoint;
 use App\Models\Section;
 use App\Models\SubSection;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -75,6 +76,7 @@ class IppController
 
         return view('website.ipp.list', compact('title', 'company', 'visiblePositions', 'filter'));
     }
+
     /**
      * JSON list untuk tabel: bawahan + karyawan yang menunjuk saya sebagai PIC (tahun berjalan),
      * dengan posisi dinormalisasi untuk filter tab.
@@ -119,38 +121,9 @@ class IppController
 
             $aliasesBucket = $this->aliasesByNormalized();
 
-            $baseSelect = [
-                'employees.id',
-                'employees.npk',
-                'employees.name',
-                'employees.position',
-                'employees.grade',
-                'employees.company_name',
-                'employees.photo',
-            ];
-
-            $ippSelects = [
-                'ipp_id' => Ipp::select('id')
-                    ->where('on_year', $year)
-                    ->whereColumn('employee_id', 'employees.id')
-                    ->limit(1),
-                'ipp_on_year' => Ipp::select('on_year')
-                    ->where('on_year', $year)
-                    ->whereColumn('employee_id', 'employees.id')
-                    ->limit(1),
-                'ipp_status' => Ipp::select('status')
-                    ->where('on_year', $year)
-                    ->whereColumn('employee_id', 'employees.id')
-                    ->limit(1),
-                'ipp_department' => Ipp::select('department')
-                    ->where('on_year', $year)
-                    ->whereColumn('employee_id', 'employees.id')
-                    ->limit(1),
-                'ipp_updated_at' => Ipp::select('updated_at')
-                    ->where('on_year', $year)
-                    ->whereColumn('employee_id', 'employees.id')
-                    ->limit(1),
-            ];
+            $empQuery = null;
+            $total    = 0;
+            $records  = collect();
 
             // =========================================================
             //                HRD / DIREKSI  (FULL COMPANY)
@@ -160,41 +133,13 @@ class IppController
                     ->when(in_array($companyParam, ['aii', 'aiia'], true), function ($q) use ($companyParam) {
                         $q->whereRaw('LOWER(company_name) = ?', [$companyParam]);
                     })
-                    ->when($norm !== 'all', function ($q) use ($aliasesBucket, $norm) {
-                        $aliases = $aliasesBucket[$norm] ?? [];
-                        if (!empty($aliases)) {
-                            $q->whereIn(DB::raw('LOWER(position)'), array_map('strtolower', $aliases));
-                        } else {
-                            $q->whereRaw('LOWER(position) = ?', [$norm]);
-                        }
-                    })
-                    ->when($npk, fn($q) => $q->where('npk', 'like', "%{$npk}%"))
-                    ->when($search, function ($q) use ($search) {
-                        $q->where(function ($qq) use ($search) {
-                            $qq->where('name', 'like', "%{$search}%")
-                                ->orWhere('npk', 'like', "%{$search}%")
-                                ->orWhere('position', 'like', "%{$search}%")
-                                ->orWhere('company_name', 'like', "%{$search}%");
-                        });
-                    })
-                    ->select($baseSelect)
-                    ->addSelect($ippSelects);
+                    ->select($this->baseEmpSelect())
+                    ->addSelect($this->ippSelects($year));
 
-                // filter status (termasuk not_created)
-                if ($status !== '') {
-                    if ($status === 'not_created') {
-                        $empQuery->whereNull('ipp_id');
-                    } else {
-                        $empQuery->where('ipp_status', $status);
-                    }
-                }
+                $this->applyCommonFilters($empQuery, $norm, $aliasesBucket, $npk, $search);
+                $this->applyStatusFilter($empQuery, $status);
 
-                // log SQL (opsional, bantu debugging)
-                $sql = vsprintf(
-                    str_replace('?', '%s', $empQuery->toSql()),
-                    collect($empQuery->getBindings())->map(fn($b) => is_string($b) ? "'$b'" : $b)->toArray()
-                );
-                Log::debug('IPP listJson HRD SQL', ['sql' => $sql]);
+                $this->logQuery('IPP listJson HRD SQL', $empQuery);
 
                 $total   = (clone $empQuery)->count();
                 $records = $empQuery
@@ -208,7 +153,6 @@ class IppController
                 //              NON-HRD (HANYA BAWAHAN ∪ PIC)
                 // =========================================================
             } else {
-
                 // hitung bawahan & karyawan yang menunjuk saya sebagai PIC → HANYA untuk non-HRD
                 $subordinateIds = $this->getSubordinatesFromStructure($me)->pluck('id')->toArray();
 
@@ -228,43 +172,14 @@ class IppController
 
                 $empQuery = Employee::query()
                     ->whereIn('id', $targetEmployeeIds)
-                    // filter posisi
-                    ->when($norm !== 'all', function ($q) use ($aliasesBucket, $norm) {
-                        $aliases = $aliasesBucket[$norm] ?? [];
-                        if (!empty($aliases)) {
-                            $q->whereIn(DB::raw('LOWER(position)'), array_map('strtolower', $aliases));
-                        } else {
-                            $q->whereRaw('LOWER(position) = ?', [$norm]);
-                        }
-                    })
-                    ->when($npk, fn($q) => $q->where('npk', 'like', "%{$npk}%"))
-                    ->when($search, function ($q) use ($search) {
-                        $q->where(function ($qq) use ($search) {
-                            $qq->where('name', 'like', "%{$search}%")
-                                ->orWhere('npk', 'like', "%{$search}%")
-                                ->orWhere('position', 'like', "%{$search}%")
-                                ->orWhere('company_name', 'like', "%{$search}%");
-                        });
-                    })
-                    // batasi ke company user
-                    ->where('company_name', $me->company_name)
-                    ->select($baseSelect)
-                    ->addSelect($ippSelects);
+                    ->where('company_name', $me->company_name) // batasi ke company user
+                    ->select($this->baseEmpSelect())
+                    ->addSelect($this->ippSelects($year));
 
-                if ($status !== '') {
-                    if ($status === 'not_created') {
-                        $empQuery->whereNull('ipp_id');
-                    } else {
-                        $empQuery->where('ipp_status', $status);
-                    }
-                }
+                $this->applyCommonFilters($empQuery, $norm, $aliasesBucket, $npk, $search);
+                $this->applyStatusFilter($empQuery, $status);
 
-                // log SQL (opsional)
-                $sql = vsprintf(
-                    str_replace('?', '%s', $empQuery->toSql()),
-                    collect($empQuery->getBindings())->map(fn($b) => is_string($b) ? "'$b'" : $b)->toArray()
-                );
-                Log::debug('IPP listJson Non-HRD SQL', ['sql' => $sql]);
+                $this->logQuery('IPP listJson Non-HRD SQL', $empQuery);
 
                 $total   = (clone $empQuery)->count();
                 $records = $empQuery
@@ -735,268 +650,373 @@ class IppController
         }
     }
 
-    public function exportExcel($id = null)
+    public function exportExcel(?int $id = null)
     {
-        $user    = auth()->user();
-        $authEmp = $user->employee;
-        $year = now()->format('Y');
+        try {
+            // (opsional) beri waktu lebih panjang jika dataset besar
+            @set_time_limit(120);
 
-        abort_if(!$authEmp, 403, 'Employee not found for this account.');
+            $user    = auth()->user();
+            $authEmp = $user->employee;
+            $year    = now()->format('Y');
 
-        if ($id) {
-            $ipp = Ipp::findOrFail($id);
-        } else {
-            $ipp = Ipp::where('employee_id', $authEmp->id)
-                ->first();
-        }
-        abort_if(!$ipp, 404, 'IPP not found.');
+            abort_if(!$authEmp, 403, 'Employee not found for this account.');
 
-        // owner
-        $owner = Employee::find($ipp->employee_id);
-        abort_if(!$owner, 404, 'Owner employee not found.');
+            $ipp = $id
+                ? Ipp::findOrFail($id)
+                : Ipp::where('employee_id', $authEmp->id)->first();
 
+            abort_if(!$ipp, 404, 'IPP not found.');
 
-        $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
+            // owner
+            $owner = Employee::find($ipp->employee_id);
+            abort_if(!$owner, 404, 'Owner employee not found.');
 
-        // Grouping
-        $grouped = [
-            'activity_management' => [],
-            'people_development'  => [],
-            'crp'                 => [],
-            'special_assignment'  => [],
-        ];
-        foreach ($points as $p) {
-            $cat = $p->category;
-            if (!isset($grouped[$cat])) continue;
-            $grouped[$cat][] = [
-                'activity'   => (string) $p->activity,
-                'target_mid' => (string) ($p->target_mid ?? ''),
-                'target_one' => (string) ($p->target_one ?? ''),
-                'due_date'   => $p->due_date ? substr((string)$p->due_date, 0, 10) : '',
-                'weight'     => (int) $p->weight,
+            $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
+
+            // Grouping
+            $grouped = [
+                'activity_management' => [],
+                'people_development'  => [],
+                'crp'                 => [],
+                'special_assignment'  => [],
             ];
-        }
+            foreach ($points as $p) {
+                $cat = $p->category;
+                if (!isset($grouped[$cat])) continue;
+                $grouped[$cat][] = [
+                    'activity'   => (string) $p->activity,
+                    'target_mid' => (string) ($p->target_mid ?? ''),
+                    'target_one' => (string) ($p->target_one ?? ''),
+                    'due_date'   => $p->due_date ? substr((string)$p->due_date, 0, 10) : '',
+                    'weight'     => (int) $p->weight,
+                ];
+            }
 
-        $assignLevel = method_exists($owner, 'getCreateAuth') ? $owner->getCreateAuth() : null;
-        $pic = $assignLevel && method_exists($owner, 'getSuperiorsByLevel')
-            ? optional($owner->getSuperiorsByLevel($assignLevel)->first())->name
-            : '';
+            $assignLevel = method_exists($owner, 'getCreateAuth') ? $owner->getCreateAuth() : null;
+            $pic = $assignLevel && method_exists($owner, 'getSuperiorsByLevel')
+                ? optional($owner->getSuperiorsByLevel($assignLevel)->first())->name
+                : '';
 
-        $identitas = [
-            'nama'        => (string)($owner->name ?? $user->name ?? ''),
-            'department'  => (string)($owner->bagian ?? ''),
-            'section'     => (string)($ipp->section ?? ''),
-            'division'    => (string)($ipp->division ?? ''),
-            'date_review' => $ipp->date_review ? substr((string)$ipp->date_review, 0, 10) : '',
-            'pic_review'  => $pic,
-            'on_year'     => (string)$ipp->on_year,
-        ];
+            $identitas = [
+                'nama'        => (string)($owner->name ?? $user->name ?? ''),
+                'department'  => (string)($owner->bagian ?? ''),
+                'section'     => (string)($ipp->section ?? ''),
+                'division'    => (string)($ipp->division ?? ''),
+                'date_review' => $ipp->date_review ? substr((string)$ipp->date_review, 0, 10) : '',
+                'pic_review'  => $pic,
+                'on_year'     => (string)$ipp->on_year,
+            ];
 
-        // === Open template
-        $template = public_path('assets/file/Template IPP.xlsx');
-        abort_unless(is_file($template), 500, 'Template file not found on server.');
-        $spreadsheet = IOFactory::load($template);
-        /** @var Worksheet $sheet */
-        $sheet = $spreadsheet->getSheetByName('IPP form') ?? $spreadsheet->getActiveSheet();
+            // === Open template
+            $template = public_path('assets/file/Template IPP.xlsx');
+            abort_unless(is_file($template), 500, 'Template file not found on server.');
+            $spreadsheet = IOFactory::load($template);
+            /** @var Worksheet $sheet */
+            $sheet = $spreadsheet->getSheetByName('IPP form') ?? $spreadsheet->getActiveSheet();
 
-        // Tahun (AA4:AC4) – sesuai template kamu
-        $sheet->mergeCells('AA4:AC4');
-        $sheet->setCellValue('AA4', $identitas['on_year']);
-        $sheet->getStyle("AA4:AC4")->applyFromArray([
-            'alignment' => [
-                'horizontal' => Alignment::HORIZONTAL_LEFT,
-                'vertical'   => Alignment::VERTICAL_TOP,
-                'wrapText'   => true,
-            ],
-            'font' => ['name' => 'Tahoma', 'size' => 14],
-        ]);
-
-        // Header identitas
-        $sheet->setCellValue('J7',  $identitas['nama']);
-        $sheet->setCellValue('J8',  $identitas['department']);
-        $sheet->setCellValue('J9',  $identitas['section']);
-        $sheet->setCellValue('J10', $identitas['division']);
-        $sheet->setCellValue('AV7', $identitas['date_review']);
-        $sheet->setCellValue('AV8', $identitas['pic_review']);
-        foreach (['J7', 'J8', 'J9', 'J10'] as $addr) {
-            $sheet->getStyle($addr)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        }
-
-        // Blok kolom tetap
-        $R_ACTIVITY_FROM = 'B';
-        $R_ACTIVITY_TO = 'Q';
-        $R_WEIGHT_FROM   = 'R';
-        $R_WEIGHT_TO   = 'T';
-        $R_MID_FROM      = 'U';
-        $R_MID_TO      = 'AH';
-        $R_ONE_FROM      = 'AI';
-        $R_ONE_TO      = 'AU';
-        $R_DUE_FROM      = 'AV';
-        $R_DUE_TO      = 'BA';
-
-        // Helper border outline
-        $outlineThin = function (string $range) use ($sheet) {
-            $sheet->getStyle($range)->applyFromArray([
-                'borders' => [
-                    'right'  => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color'       => ['rgb' => '000000'],
-                    ],
-                    'left'   => [
-                        'borderStyle' => Border::BORDER_THIN,
-                        'color'       => ['rgb' => '000000'],
-                    ],
+            // Tahun (AA4:AC4)
+            $sheet->mergeCells('AA4:AC4');
+            $sheet->setCellValue('AA4', $identitas['on_year']);
+            $sheet->getStyle("AA4:AC4")->applyFromArray([
+                'alignment' => [
+                    'horizontal' => Alignment::HORIZONTAL_LEFT,
+                    'vertical'   => Alignment::VERTICAL_TOP,
+                    'wrapText'   => true,
                 ],
+                'font' => ['name' => 'Tahoma', 'size' => 14],
             ]);
-        };
-        $outlineMedium = function (string $range) use ($sheet) {
-            $sheet->getStyle($range)->applyFromArray([
-                'borders' => [
-                    'right' => [
-                        'borderStyle' => Border::BORDER_MEDIUM,
-                        'color'       => ['rgb' => '000000'],
+
+            // Header identitas
+            $sheet->setCellValue('J7',  $identitas['nama']);
+            $sheet->setCellValue('J8',  $identitas['department']);
+            $sheet->setCellValue('J9',  $identitas['section']);
+            $sheet->setCellValue('J10', $identitas['division']);
+            $sheet->setCellValue('AV7', $identitas['date_review']);
+            $sheet->setCellValue('AV8', $identitas['pic_review']);
+            foreach (['J7', 'J8', 'J9', 'J10'] as $addr) {
+                $sheet->getStyle($addr)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+            }
+
+            // Blok kolom tetap
+            $R_ACTIVITY_FROM = 'B';
+            $R_ACTIVITY_TO   = 'Q';
+            $R_WEIGHT_FROM   = 'R';
+            $R_WEIGHT_TO     = 'T';
+            $R_MID_FROM      = 'U';
+            $R_MID_TO        = 'AH';
+            $R_ONE_FROM      = 'AI';
+            $R_ONE_TO        = 'AU';
+            $R_DUE_FROM      = 'AV';
+            $R_DUE_TO        = 'BA';
+
+            // Helper border outline
+            $outlineThin = function (string $range) use ($sheet) {
+                $sheet->getStyle($range)->applyFromArray([
+                    'borders' => [
+                        'right'  => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => '000000']],
+                        'left'   => ['borderStyle' => Border::BORDER_THIN,   'color' => ['rgb' => '000000']],
                     ],
-                ],
-            ]);
-        };
+                ]);
+            };
+            $outlineMedium = function (string $range) use ($sheet) {
+                $sheet->getStyle($range)->applyFromArray([
+                    'borders' => [
+                        'right' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '000000']],
+                    ],
+                ]);
+            };
 
-        $lastColLtr = 'BA';
-        $lastColIdx = $this->colIndex($lastColLtr);
+            $lastColLtr = 'BA';
+            $lastColIdx = $this->colIndex($lastColLtr);
 
-        // Posisi header kategori pada template
-        $HEADER = [
-            'activity_management' => 14,
-            'people_development'  => 18,
-            'crp'                 => 23,
-            'special_assignment'  => 27,
-        ];
-        $order = ['activity_management', 'people_development', 'crp', 'special_assignment'];
+            // Posisi header kategori pada template
+            $HEADER = [
+                'activity_management' => 14,
+                'people_development'  => 18,
+                'crp'                 => 23,
+                'special_assignment'  => 27,
+            ];
+            $order = ['activity_management', 'people_development', 'crp', 'special_assignment'];
 
-        $BASE_FONT_NAME = 'Tahoma';
-        $BASE_FONT_SIZE = 14;
+            $BASE_FONT_NAME = 'Tahoma';
+            $BASE_FONT_SIZE = 14;
 
+            $offset = 0;
+            foreach ($order as $cat) {
+                $items = $grouped[$cat] ?? [];
+                $n = count($items);
+                if ($n === 0) continue;
 
-        $offset = 0;
-        foreach ($order as $cat) {
-            $items = $grouped[$cat] ?? [];
-            $n = count($items);
-            if ($n === 0) continue;
+                $headerAnchor = ($HEADER[$cat] ?? 13) + $offset;
+                $baseRow      = $headerAnchor + 1;
 
-            $headerAnchor = ($HEADER[$cat] ?? 13) + $offset;
-            $baseRow      = $headerAnchor + 1;
+                // sisip baris tambahan (n-1) & cloning style dasar
+                if ($n > 1) {
+                    $sheet->insertNewRowBefore($baseRow + 1, $n - 1);
+                    for ($r = $baseRow + 1; $r <= $baseRow + $n - 1; $r++) {
+                        $sheet->duplicateStyle(
+                            $sheet->getStyle("B{$baseRow}:{$lastColLtr}{$baseRow}"),
+                            "B{$r}:{$lastColLtr}{$r}"
+                        );
+                        $sheet->getRowDimension($r)->setRowHeight(-1);
+                    }
+                }
 
-            // sisip baris tambahan (n-1) & cloning style dasar (agar grid rapi)
-            if ($n > 1) {
-                $sheet->insertNewRowBefore($baseRow + 1, $n - 1);
-                for ($r = $baseRow + 1; $r <= $baseRow + $n - 1; $r++) {
-                    $sheet->duplicateStyle(
-                        $sheet->getStyle("B{$baseRow}:{$lastColLtr}{$baseRow}"),
-                        "B{$r}:{$lastColLtr}{$r}"
+                for ($i = 0; $i < $n; $i++) {
+                    $r   = $baseRow + $i;
+                    $row = $items[$i];
+
+                    // bersihkan isi row
+                    for ($c = 2; $c <= $lastColIdx; $c++) {
+                        $sheet->setCellValueByColumnAndRow($c, $r, null);
+                    }
+
+                    $sheet->getStyle("B{$r}:{$lastColLtr}{$r}")
+                        ->getBorders()->getInside()->setBorderStyle(Border::BORDER_NONE);
+                    $sheet->getStyle("B{$r}:{$lastColLtr}{$r}")
+                        ->getFont()->setName($BASE_FONT_NAME)->setSize($BASE_FONT_SIZE);
+
+                    // Normalisasi & hitung baris
+                    $activity = $this->xlText($row['activity']   ?? '');
+                    $mid      = $this->xlText($row['target_mid'] ?? '');
+                    $one      = $this->xlText($row['target_one'] ?? '');
+
+                    $maxLines = max(
+                        $this->countLines($activity),
+                        $this->countLines($mid),
+                        $this->countLines($one),
+                        1
                     );
-                    // biarkan Excel auto-fit tinggi baris (nanti kita set manual)
-                    $sheet->getRowDimension($r)->setRowHeight(-1);
+
+                    // PROGRAM / ACTIVITY
+                    $sheet->mergeCells("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
+                    $sheet->setCellValue("{$R_ACTIVITY_FROM}{$r}", $activity);
+                    $sheet->getStyle("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}")
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                        ->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+                    $outlineThin("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
+
+                    // WEIGHT (R:T)
+                    $sheet->mergeCells("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}");
+                    $sheet->setCellValue("{$R_WEIGHT_FROM}{$r}", ((int)($row['weight'] ?? 0)) / 100);
+                    $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                        ->setVertical(Alignment::VERTICAL_CENTER);
+                    $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")
+                        ->getNumberFormat()->setFormatCode('0%');
+                    $outlineThin("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}");
+
+                    // MID YEAR (U:AH)
+                    $sheet->mergeCells("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
+                    $sheet->setCellValue("{$R_MID_FROM}{$r}", $mid);
+                    $sheet->getStyle("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}")
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                        ->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+                    $outlineThin("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
+
+                    // ONE YEAR (AI:AU)
+                    $sheet->mergeCells("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
+                    $sheet->setCellValue("{$R_ONE_FROM}{$r}", $one);
+                    $sheet->getStyle("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}")
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                        ->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+                    $outlineThin("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
+
+                    // DUE DATE (AV:BA)
+                    $sheet->mergeCells("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}");
+                    $sheet->setCellValue("{$R_DUE_FROM}{$r}", (string)($row['due_date'] ?? ''));
+                    $sheet->getStyle("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}")
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                        ->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+                    $outlineMedium("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}", 'right');
+
+                    // tinggi baris
+                    $sheet->getRowDimension($r)->setRowHeight(
+                        $this->calcRowHeight($maxLines, 18.0, 4.0)
+                    );
                 }
+
+                // Tambah offset baris sisipan
+                $offset += max(0, $n - 1);
             }
 
-            for ($i = 0; $i < $n; $i++) {
-                $r   = $baseRow + $i;
-                $row = $items[$i];
+            $fileName = 'IPP_' . $year . '_' . Str::slug((string)($owner->name ?? 'user')) . '.xlsx';
+            $tmp = tempnam(sys_get_temp_dir(), 'ipp_') . '.xlsx';
+            IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tmp);
 
-                // bersihkan isi row
-                for ($c = 2; $c <= $lastColIdx; $c++) {
-                    $sheet->setCellValueByColumnAndRow($c, $r, null);
-                }
+            return response()->download(
+                $tmp,
+                $fileName,
+                ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
+            )->deleteFileAfterSend(true);
+        } catch (\Throwable $e) {
+            Log::error('IPP exportExcel failed', [
+                'id'      => $id,
+                'user_id' => auth()->id(),
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
 
-                $sheet->getStyle("B{$r}:{$lastColLtr}{$r}")
-                    ->getBorders()->getInside()->setBorderStyle(Border::BORDER_NONE);
-                // Samakan font dasar seluruh baris
-                $sheet->getStyle("B{$r}:{$lastColLtr}{$r}")
-                    ->getFont()->setName($BASE_FONT_NAME)->setSize($BASE_FONT_SIZE);
-
-                // --- Normalisasi teks (ganti \r\n jadi \n) dan hitung baris ---
-                $activity = $this->xlText($row['activity']   ?? '');
-                $mid      = $this->xlText($row['target_mid'] ?? '');
-                $one      = $this->xlText($row['target_one'] ?? '');
-
-                // berapa baris yang perlu ditampilin? ambil maksimum dari 3 kolom teks
-                $maxLines = max(
-                    $this->countLines($activity),
-                    $this->countLines($mid),
-                    $this->countLines($one),
-                    1
-                );
-
-                // PROGRAM / ACTIVITY (wrap & merge)
-                $sheet->mergeCells("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
-                $sheet->setCellValue("{$R_ACTIVITY_FROM}{$r}", $activity);
-                $sheet->getStyle("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                    ->setVertical(Alignment::VERTICAL_TOP)
-                    ->setWrapText(true);
-                $outlineThin("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
-
-                // WEIGHT (R:T) sebagai persen
-                $sheet->mergeCells("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}");
-                $sheet->setCellValue("{$R_WEIGHT_FROM}{$r}", ((int)($row['weight'] ?? 0)) / 100);
-                $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                    ->setVertical(Alignment::VERTICAL_CENTER);
-                $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")
-                    ->getNumberFormat()->setFormatCode('0%');
-                $outlineThin("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}");
-
-                // MID YEAR (U:AH)
-                $sheet->mergeCells("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
-                $sheet->setCellValue("{$R_MID_FROM}{$r}", $mid);
-                $sheet->getStyle("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                    ->setVertical(Alignment::VERTICAL_TOP)
-                    ->setWrapText(true);
-                $outlineThin("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
-
-                // ONE YEAR (AI:AU)
-                $sheet->mergeCells("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
-                $sheet->setCellValue("{$R_ONE_FROM}{$r}", $one);
-                $sheet->getStyle("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                    ->setVertical(Alignment::VERTICAL_TOP)
-                    ->setWrapText(true);
-                $outlineThin("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
-
-                // DUE DATE (AV:BA) – tulis plain text yyyy-mm-dd
-                $sheet->mergeCells("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}");
-                $sheet->setCellValue("{$R_DUE_FROM}{$r}", (string)($row['due_date'] ?? ''));
-                $sheet->getStyle("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}")
-                    ->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                    ->setVertical(Alignment::VERTICAL_CENTER)
-                    ->setWrapText(true);
-                $outlineMedium("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}", 'right');
-
-                // --- Set tinggi baris berdasarkan jumlah line break ---
-                // perkiraan: ~18pt per baris (Tahoma 14). Silakan adjust kalau perlu.
-                $sheet->getRowDimension($r)->setRowHeight(
-                    $this->calcRowHeight($maxLines, 18.0, 4.0) // 18pt/line + 4pt padding
-                );
+            if (request()->wantsJson()) {
+                return response()->json(['message' => 'Gagal mengekspor Excel. Silakan coba lagi.'], 500);
             }
 
-            // Tambah offset baris sisipan
-            $offset += max(0, $n - 1);
+            return redirect()->back()->with('warning', 'Gagal mengekspor Excel: ' . $e->getMessage());
         }
+    }
 
-        $fileName = 'IPP_' . $year . '_' . Str::slug((string)($owner->name ?? 'user')) . '.xlsx';
-        $tmp = tempnam(sys_get_temp_dir(), 'ipp_') . '.xlsx';
-        IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tmp);
+    public function exportPdf(?int $id = null)
+    {
+        try {
+            @set_time_limit(120);
 
-        return response()->download(
-            $tmp,
-            $fileName,
-            ['Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']
-        )->deleteFileAfterSend(true);
+            $user    = auth()->user();
+            $authEmp = $user->employee;
+
+            abort_if(!$authEmp, 403, 'Employee not found for this account.');
+
+            // 1) Ambil header IPP
+            $ipp = $id
+                ? Ipp::find($id)
+                : Ipp::where('employee_id', $authEmp->id)->where('on_year', now()->format('Y'))->first();
+
+            abort_if(!$ipp, 404, 'IPP not found.');
+
+            // 2) Owner IPP
+            $owner = Employee::find($ipp->employee_id);
+            abort_if(!$owner, 404, 'Owner employee not found.');
+
+            // 3) Points
+            $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
+
+            // 4) Grouping + summary
+            $grouped = [
+                'activity_management' => [],
+                'people_development'  => [],
+                'crp'                 => [],
+                'special_assignment'  => [],
+            ];
+            foreach ($points as $p) {
+                if (!array_key_exists($p->category, $grouped)) continue;
+                $grouped[$p->category][] = [
+                    'activity'   => (string) $p->activity,
+                    'target_mid' => (string) ($p->target_mid ?? ''),
+                    'target_one' => (string) ($p->target_one ?? ''),
+                    'due_date'   => $p->due_date ? substr((string)$p->due_date, 0, 10) : '',
+                    'weight'     => (int) $p->weight,
+                ];
+            }
+            $summary = [
+                'activity_management' => array_sum(array_column($grouped['activity_management'], 'weight')),
+                'people_development'  => array_sum(array_column($grouped['people_development'], 'weight')),
+                'crp'                 => array_sum(array_column($grouped['crp'], 'weight')),
+                'special_assignment'  => array_sum(array_column($grouped['special_assignment'], 'weight')),
+            ];
+            $summary['total'] = array_sum($summary);
+
+            // 5) PIC name
+            $assignLevel = method_exists($owner, 'getCreateAuth') ? $owner->getCreateAuth() : null;
+            $pic = $assignLevel && method_exists($owner, 'getSuperiorsByLevel')
+                ? optional($owner->getSuperiorsByLevel($assignLevel)->first())->name
+                : '';
+
+            // 6) Identitas
+            $identitas = [
+                'nama'        => (string) ($owner->name ?? ''),
+                'department'  => (string) ($owner->bagian ?? $ipp->department ?? ''),
+                'section'     => (string) ($ipp->section ?? ''),
+                'division'    => (string) ($ipp->division ?? ''),
+                'date_review' => $ipp->date_review ? substr((string)$ipp->date_review, 0, 10) : '',
+                'pic_review'  => $pic,
+                'on_year'     => (string) $ipp->on_year,
+                'company'     => (string) ($owner->company_name ?? ''),
+                'grade'       => (string) ($owner->grade ?? ''),
+                'npk'         => (string) ($owner->npk ?? ''),
+                'position'    => (string) ($owner->position ?? ''),
+            ];
+
+
+            // 7) Render Blade → PDF
+
+            $logoPath = public_path('assets/media/logos/aisin.png');
+            $logoSrc  = null;
+            if (is_file($logoPath)) {
+                $type = pathinfo($logoPath, PATHINFO_EXTENSION);
+                $logoSrc = 'data:image/' . $type . ';base64,' . base64_encode(file_get_contents($logoPath));
+            }
+            // dd($logoSrc);
+            $pdf = Pdf::loadView('website.ipp.pdf', [
+                'ipp'       => $ipp,
+                'owner'     => $owner,
+                'identitas' => $identitas,
+                'grouped'   => $grouped,
+                'summary'   => $summary,
+                'logo'      => $logoSrc
+            ])->setPaper('a4', 'landscape');
+
+            $pdf->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled'      => true,
+                'defaultFont'          => 'DejaVu Sans',
+            ]);
+
+            $filename = 'IPP_' . $ipp->on_year . '_' . Str::slug($owner->name ?? 'user') . '.pdf';
+            return $pdf->download($filename);
+        } catch (\Throwable $e) {
+            Log::error('IPP exportPdf failed', [
+                'id'      => $id,
+                'user_id' => auth()->id(),
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+            ]);
+
+            if (request()->wantsJson()) {
+                return response()->json(['message' => 'Gagal mengekspor PDF. Silakan coba lagi.'], 500);
+            }
+
+            return redirect()->back()->with('warning', 'Gagal mengekspor PDF: ' . $e->getMessage());
+        }
     }
 
     /** ===== Helpers ===== */
@@ -1133,5 +1153,92 @@ class IppController
             'jp'         => ['jp', 'act jp'],
             'operator'   => ['operator'],
         ];
+    }
+
+    /** ===== Helper ekstra untuk optimasi listJson ===== */
+
+    private function baseEmpSelect(): array
+    {
+        return [
+            'employees.id',
+            'employees.npk',
+            'employees.name',
+            'employees.position',
+            'employees.grade',
+            'employees.company_name',
+            'employees.photo',
+        ];
+    }
+
+    private function ippSelects(string $year): array
+    {
+        return [
+            'ipp_id' => Ipp::select('id')
+                ->where('on_year', $year)
+                ->whereColumn('employee_id', 'employees.id')
+                ->limit(1),
+            'ipp_on_year' => Ipp::select('on_year')
+                ->where('on_year', $year)
+                ->whereColumn('employee_id', 'employees.id')
+                ->limit(1),
+            'ipp_status' => Ipp::select('status')
+                ->where('on_year', $year)
+                ->whereColumn('employee_id', 'employees.id')
+                ->limit(1),
+            'ipp_department' => Ipp::select('department')
+                ->where('on_year', $year)
+                ->whereColumn('employee_id', 'employees.id')
+                ->limit(1),
+            'ipp_updated_at' => Ipp::select('updated_at')
+                ->where('on_year', $year)
+                ->whereColumn('employee_id', 'employees.id')
+                ->limit(1),
+        ];
+    }
+
+    private function applyCommonFilters($builder, string $norm, array $aliasesBucket, string $npk, string $search): void
+    {
+        $builder
+            ->when($norm !== 'all', function ($q) use ($aliasesBucket, $norm) {
+                $aliases = $aliasesBucket[$norm] ?? [];
+                if (!empty($aliases)) {
+                    $q->whereIn(DB::raw('LOWER(position)'), array_map('strtolower', $aliases));
+                } else {
+                    $q->whereRaw('LOWER(position) = ?', [$norm]);
+                }
+            })
+            ->when($npk, fn($q) => $q->where('npk', 'like', "%{$npk}%"))
+            ->when($search, function ($q) use ($search) {
+                $q->where(function ($qq) use ($search) {
+                    $qq->where('name', 'like', "%{$search}%")
+                        ->orWhere('npk', 'like', "%{$search}%")
+                        ->orWhere('position', 'like', "%{$search}%")
+                        ->orWhere('company_name', 'like', "%{$search}%");
+                });
+            });
+    }
+
+    private function applyStatusFilter($builder, string $status): void
+    {
+        if ($status === '') return;
+
+        if ($status === 'not_created') {
+            $builder->whereNull('ipp_id');
+        } else {
+            $builder->where('ipp_status', $status);
+        }
+    }
+
+    private function logQuery(string $label, $builder): void
+    {
+        try {
+            $sql = vsprintf(
+                str_replace('?', '%s', $builder->toSql()),
+                collect($builder->getBindings())->map(fn($b) => is_string($b) ? "'$b'" : $b)->toArray()
+            );
+            Log::debug($label, ['sql' => $sql]);
+        } catch (\Throwable $e) {
+            Log::debug($label . ' (failed to render SQL)', ['error' => $e->getMessage()]);
+        }
     }
 }
