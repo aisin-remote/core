@@ -2,19 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Department;
+use App\Models\Division;
+use App\Models\Employee;
 use App\Models\Ipp;
 use App\Models\IppPoint;
+use App\Models\Section;
+use App\Models\SubSection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 use PhpOffice\PhpSpreadsheet\Style\Border;
-
-
 
 class IppController
 {
@@ -31,9 +34,374 @@ class IppController
         return view('website.ipp.index', compact('title'));
     }
 
+    public function list(Request $request, $company = null)
+    {
+        $title  = 'IPP List';
+        $user   = auth()->user();
+        $emp    = $user->employee;
+        $filter = $request->query('filter', 'all');
+
+        $allPositions = [
+            'President',
+            'VPD',
+            'Direktur',
+            'GM',
+            'Manager',
+            'Coordinator',
+            'Section Head',
+            'Supervisor',
+            'Leader',
+            'JP',
+            'Operator',
+        ];
+
+        $currentNormalized = $emp && method_exists($emp, 'getNormalizedPosition')
+            ? strtolower($emp->getNormalizedPosition())
+            : 'operator';
+
+        $normMap = [];
+        foreach ($allPositions as $label) {
+            $normMap[$label] = $this->mapTabToNormalized($label);
+        }
+
+        $positionIndex = 0;
+        foreach ($allPositions as $i => $label) {
+            if ($normMap[$label] === $currentNormalized) {
+                $positionIndex = $i;
+                break;
+            }
+        }
+        $visiblePositions = array_slice($allPositions, $positionIndex);
+
+        return view('website.ipp.list', compact('title', 'company', 'visiblePositions', 'filter'));
+    }
     /**
-     * Load initial data (AJAX)
+     * JSON list untuk tabel: bawahan + karyawan yang menunjuk saya sebagai PIC (tahun berjalan),
+     * dengan posisi dinormalisasi untuk filter tab.
      */
+    public function listJson(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $me   = $user->employee;
+
+            if (!$me) {
+                Log::warning('IPP listJson: user tidak punya relasi employee', ['user_id' => $user->id ?? null]);
+                return response()->json([
+                    'data' => [],
+                    'meta' => ['total' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1]
+                ]);
+            }
+
+            $search   = (string) $request->query('search', '');
+            $npk      = (string) $request->query('npk', '');
+            $filterUi = (string) $request->query('filter', 'all');
+            $norm     = $this->mapTabToNormalized($filterUi);
+            $year     = (string) $request->query('filter_year', now()->format('Y'));
+            $status   = (string) $request->query('status', '');
+            $page     = max(1, (int) $request->query('page', 1));
+            $perPage  = min(100, max(5, (int) $request->query('per_page', 20)));
+
+            $companyParam = strtolower((string) $request->query('company', ''));
+            $isHRDTop = method_exists($user, 'isHRDorDireksi') ? $user->isHRDorDireksi() : false;
+
+            Log::info('IPP listJson params', [
+                'user_id'      => $user->id,
+                'employee_id'  => $me->id,
+                'isHRDTop'     => $isHRDTop,
+                'companyParam' => $companyParam,
+                'filterUi'     => $filterUi,
+                'normalized'   => $norm,
+                'status'       => $status,
+                'page'         => $page,
+                'per_page'     => $perPage,
+            ]);
+
+            $aliasesBucket = $this->aliasesByNormalized();
+
+            $baseSelect = [
+                'employees.id',
+                'employees.npk',
+                'employees.name',
+                'employees.position',
+                'employees.grade',
+                'employees.company_name',
+                'employees.photo',
+            ];
+
+            $ippSelects = [
+                'ipp_id' => Ipp::select('id')
+                    ->where('on_year', $year)
+                    ->whereColumn('employee_id', 'employees.id')
+                    ->limit(1),
+                'ipp_on_year' => Ipp::select('on_year')
+                    ->where('on_year', $year)
+                    ->whereColumn('employee_id', 'employees.id')
+                    ->limit(1),
+                'ipp_status' => Ipp::select('status')
+                    ->where('on_year', $year)
+                    ->whereColumn('employee_id', 'employees.id')
+                    ->limit(1),
+                'ipp_department' => Ipp::select('department')
+                    ->where('on_year', $year)
+                    ->whereColumn('employee_id', 'employees.id')
+                    ->limit(1),
+                'ipp_updated_at' => Ipp::select('updated_at')
+                    ->where('on_year', $year)
+                    ->whereColumn('employee_id', 'employees.id')
+                    ->limit(1),
+            ];
+
+            // =========================================================
+            //                HRD / DIREKSI  (FULL COMPANY)
+            // =========================================================
+            if ($isHRDTop) {
+                $empQuery = Employee::query()
+                    ->when(in_array($companyParam, ['aii', 'aiia'], true), function ($q) use ($companyParam) {
+                        $q->whereRaw('LOWER(company_name) = ?', [$companyParam]);
+                    })
+                    ->when($norm !== 'all', function ($q) use ($aliasesBucket, $norm) {
+                        $aliases = $aliasesBucket[$norm] ?? [];
+                        if (!empty($aliases)) {
+                            $q->whereIn(DB::raw('LOWER(position)'), array_map('strtolower', $aliases));
+                        } else {
+                            $q->whereRaw('LOWER(position) = ?', [$norm]);
+                        }
+                    })
+                    ->when($npk, fn($q) => $q->where('npk', 'like', "%{$npk}%"))
+                    ->when($search, function ($q) use ($search) {
+                        $q->where(function ($qq) use ($search) {
+                            $qq->where('name', 'like', "%{$search}%")
+                                ->orWhere('npk', 'like', "%{$search}%")
+                                ->orWhere('position', 'like', "%{$search}%")
+                                ->orWhere('company_name', 'like', "%{$search}%");
+                        });
+                    })
+                    ->select($baseSelect)
+                    ->addSelect($ippSelects);
+
+                // filter status (termasuk not_created)
+                if ($status !== '') {
+                    if ($status === 'not_created') {
+                        $empQuery->whereNull('ipp_id');
+                    } else {
+                        $empQuery->where('ipp_status', $status);
+                    }
+                }
+
+                // log SQL (opsional, bantu debugging)
+                $sql = vsprintf(
+                    str_replace('?', '%s', $empQuery->toSql()),
+                    collect($empQuery->getBindings())->map(fn($b) => is_string($b) ? "'$b'" : $b)->toArray()
+                );
+                Log::debug('IPP listJson HRD SQL', ['sql' => $sql]);
+
+                $total   = (clone $empQuery)->count();
+                $records = $empQuery
+                    ->orderByRaw('CASE WHEN ipp_updated_at IS NULL THEN 1 ELSE 0 END ASC')
+                    ->orderByDesc('ipp_updated_at')
+                    ->orderBy('employees.name')
+                    ->forPage($page, $perPage)
+                    ->get();
+
+                // =========================================================
+                //              NON-HRD (HANYA BAWAHAN ∪ PIC)
+                // =========================================================
+            } else {
+
+                // hitung bawahan & karyawan yang menunjuk saya sebagai PIC → HANYA untuk non-HRD
+                $subordinateIds = $this->getSubordinatesFromStructure($me)->pluck('id')->toArray();
+
+                $picEmployeeIds = Ipp::where('on_year', $year)
+                    ->where('pic_review_id', $me->id)
+                    ->pluck('employee_id')
+                    ->toArray();
+
+                $targetEmployeeIds = array_values(array_unique(array_merge($subordinateIds, $picEmployeeIds)));
+                if (empty($targetEmployeeIds)) {
+                    Log::info('IPP listJson: non-HRD, targetEmployeeIds kosong', ['employee_id' => $me->id]);
+                    return response()->json([
+                        'data' => [],
+                        'meta' => ['total' => 0, 'page' => $page, 'per_page' => $perPage, 'last_page' => 1],
+                    ]);
+                }
+
+                $empQuery = Employee::query()
+                    ->whereIn('id', $targetEmployeeIds)
+                    // filter posisi
+                    ->when($norm !== 'all', function ($q) use ($aliasesBucket, $norm) {
+                        $aliases = $aliasesBucket[$norm] ?? [];
+                        if (!empty($aliases)) {
+                            $q->whereIn(DB::raw('LOWER(position)'), array_map('strtolower', $aliases));
+                        } else {
+                            $q->whereRaw('LOWER(position) = ?', [$norm]);
+                        }
+                    })
+                    ->when($npk, fn($q) => $q->where('npk', 'like', "%{$npk}%"))
+                    ->when($search, function ($q) use ($search) {
+                        $q->where(function ($qq) use ($search) {
+                            $qq->where('name', 'like', "%{$search}%")
+                                ->orWhere('npk', 'like', "%{$search}%")
+                                ->orWhere('position', 'like', "%{$search}%")
+                                ->orWhere('company_name', 'like', "%{$search}%");
+                        });
+                    })
+                    // batasi ke company user
+                    ->where('company_name', $me->company_name)
+                    ->select($baseSelect)
+                    ->addSelect($ippSelects);
+
+                if ($status !== '') {
+                    if ($status === 'not_created') {
+                        $empQuery->whereNull('ipp_id');
+                    } else {
+                        $empQuery->where('ipp_status', $status);
+                    }
+                }
+
+                // log SQL (opsional)
+                $sql = vsprintf(
+                    str_replace('?', '%s', $empQuery->toSql()),
+                    collect($empQuery->getBindings())->map(fn($b) => is_string($b) ? "'$b'" : $b)->toArray()
+                );
+                Log::debug('IPP listJson Non-HRD SQL', ['sql' => $sql]);
+
+                $total   = (clone $empQuery)->count();
+                $records = $empQuery
+                    ->orderByRaw('CASE WHEN ipp_updated_at IS NULL THEN 1 ELSE 0 END ASC')
+                    ->orderByDesc('ipp_updated_at')
+                    ->orderBy('employees.name')
+                    ->forPage($page, $perPage)
+                    ->get();
+            }
+
+            // --- mapping output (dipakai kedua branch) ---
+            $data = $records->values()->map(function (Employee $row, $idx) use ($page, $perPage, $year) {
+                $hasIpp     = !is_null($row->ipp_id);
+                $normalized = method_exists($row, 'getNormalizedPosition')
+                    ? strtolower($row->getNormalizedPosition())
+                    : strtolower($row->position ?? '');
+
+                $department = $row->ipp_department ?: $row->bagian;
+
+                return [
+                    'no'       => ($page - 1) * $perPage + $idx + 1,
+                    'id'       => $row->ipp_id,
+                    'employee' => [
+                        'id'                  => $row->id,
+                        'npk'                 => (string) $row->npk,
+                        'name'                => (string) $row->name,
+                        'photo'               => $row->photo ? asset('storage/' . $row->photo) : null,
+                        'company'             => (string) $row->company_name,
+                        'position'            => (string) $row->position,
+                        'normalized_position' => $normalized,
+                        'department'          => (string) $department,
+                        'grade'               => (string) $row->grade,
+                    ],
+                    'on_year'    => $hasIpp ? (string) $row->ipp_on_year : $year,
+                    'status'     => $hasIpp ? (string) $row->ipp_status : 'not_created',
+                    'summary'    => [],
+                    'updated_at' => $hasIpp && $row->ipp_updated_at ? (string) $row->ipp_updated_at : null,
+                ];
+            });
+
+            return response()->json([
+                'data' => $data,
+                'meta' => [
+                    'total'     => (int) $total,
+                    'page'      => $page,
+                    'per_page'  => $perPage,
+                    'last_page' => (int) ceil(((int)$total ?: 0) / $perPage),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('IPP listJson error: ' . $e->getMessage(), [
+                'trace' => $e->getTraceAsString(),
+            ]);
+            return response()->json([
+                'data' => [],
+                'meta' => ['total' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1],
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * BARU: List semua IPP milik satu employee (untuk modal "Show").
+     * Params: employee_id (wajib)
+     * Return: array IPP (per tahun): id, on_year, status, summary (ringkas), updated_at
+     * - Tambahkan entri sintetis tahun berjalan bila belum ada (status: not_created).
+     * - Akses dibatasi: hanya boleh lihat bawahan atau employee yang pernah menunjuk saya sebagai PIC.
+     */
+    public function employeeIppsJson(Request $request)
+    {
+        $user = auth()->user();
+        $me   = $user->employee;
+        if (!$me) {
+            return response()->json(['message' => 'Employee not found for this account.'], 403);
+        }
+
+        $employeeId = (int) $request->query('employee_id', 0);
+        if ($employeeId <= 0) {
+            return response()->json(['message' => 'employee_id is required'], 422);
+        }
+
+        // Authorization: bawahan saya ATAU pernah menunjuk saya sebagai PIC
+        $subordinateIds = $this->getSubordinatesFromStructure($me)->pluck('id')->toArray();
+        $asPicIds = Ipp::where('pic_review_id', $me->id)->pluck('employee_id')->unique()->toArray();
+
+        if (!in_array($employeeId, $subordinateIds) && !in_array($employeeId, $asPicIds) && $employeeId !== (int)$me->id) {
+            return response()->json(['message' => 'Forbidden'], 403);
+        }
+
+        $emp = Employee::find($employeeId);
+        if (!$emp) {
+            return response()->json(['message' => 'Employee not found'], 404);
+        }
+
+        $ipps = Ipp::where('employee_id', $employeeId)
+            ->orderByDesc('on_year')
+            ->get();
+
+        $nowYear = now()->format('Y');
+        $haveCurrent = $ipps->contains(fn($x) => (string)$x->on_year === $nowYear);
+
+        $rows = $ipps->map(function (Ipp $ipp) {
+            return [
+                'id'         => $ipp->id,
+                'on_year'    => (string) $ipp->on_year,
+                'status'     => (string) $ipp->status,
+                'summary'    => is_array($ipp->summary) ? $ipp->summary : [],
+                'updated_at' => $ipp->updated_at?->toDateTimeString(),
+            ];
+        })->values()->all();
+
+        // entri sintetis kalau tahun berjalan belum ada
+        if (!$haveCurrent) {
+            array_unshift($rows, [
+                'id'         => null,
+                'on_year'    => $nowYear,
+                'status'     => 'not_created',
+                'summary'    => [],
+                'updated_at' => null,
+            ]);
+        }
+
+        return response()->json([
+            'employee' => [
+                'id'       => $emp->id,
+                'npk'      => (string) $emp->npk,
+                'name'     => (string) $emp->name,
+                'position' => (string) $emp->position,
+                'photo'    => $emp->photo ? asset('storage/' . $emp->photo) : null,
+                'company'  => (string) $emp->company_name,
+                'grade'    => (string) $emp->grade,
+            ],
+            'ipps' => $rows,
+        ]);
+    }
+
+    /** ====== INIT / STORE / SUBMIT / DELETE / EXPORT (tetap) ====== */
     public function init(Request $request)
     {
         $user  = auth()->user();
@@ -41,7 +409,6 @@ class IppController
         $year  = now()->format('Y');
         $empId = (int) ($emp->id ?? 0);
 
-        // Tentukan PIC review (atasan) berdasarkan business rule
         $picReviewId = null;
         try {
             $assignLevel = method_exists($emp, 'getCreateAuth') ? $emp->getCreateAuth() : null;
@@ -85,7 +452,6 @@ class IppController
                 ->where('on_year', $year)
                 ->first();
 
-            // Jika header ada tapi belum ada pic_review_id, isi dari kalkulasi init
             if ($ipp && !$ipp->pic_review_id && $picReviewId) {
                 $ipp->update(['pic_review_id' => $picReviewId]);
             }
@@ -93,9 +459,7 @@ class IppController
             if ($ipp) {
                 $locked = ($ipp->status === 'submitted');
 
-                $points = IppPoint::where('ipp_id', $ipp->id)
-                    ->orderBy('id')
-                    ->get();
+                $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
 
                 foreach ($points as $p) {
                     $item = [
@@ -114,7 +478,8 @@ class IppController
                     }
                 }
 
-                $summary['total'] = ($summary['activity_management'] ?? 0)
+                $summary['total'] =
+                    ($summary['activity_management'] ?? 0)
                     + ($summary['people_development'] ?? 0)
                     + ($summary['crp'] ?? 0)
                     + ($summary['special_assignment'] ?? 0);
@@ -122,7 +487,7 @@ class IppController
                 $header = [
                     'id'            => $ipp->id,
                     'employee_id'   => $ipp->employee_id,
-                    'pic_review_id' => $ipp->pic_review_id,         // << expose ke FE bila perlu
+                    'pic_review_id' => $ipp->pic_review_id,
                     'status'        => (string) $ipp->status,
                     'summary'       => $ipp->summary ?: $summary,
                     'locked'        => $locked,
@@ -151,7 +516,6 @@ class IppController
         return response()->json(['message' => 'Unsupported payload form. Kirim via modal per-point'], 422);
     }
 
-    /** === SIMPAN 1 POINT (SELALU draft dari modal) === */
     private function storeSinglePoint(Request $request, array $payload)
     {
         $v = validator($payload, [
@@ -171,7 +535,7 @@ class IppController
         }
 
         $mode   = $payload['mode'];
-        $status = 'draft';                     // FE pakai draft; backend paksa draft juga
+        $status = 'draft';
         $cat    = $payload['cat'];
         $rowId  = $payload['row_id'] ?? null;
         $p      = $payload['point'];
@@ -185,7 +549,6 @@ class IppController
             return response()->json(['message' => 'Employee tidak ditemukan pada akun ini.'], 422);
         }
 
-        // Hitung PIC reviewer (jaga-jaga kalau belum ada header)
         $picReviewId = null;
         try {
             $assignLevel = method_exists($emp, 'getCreateAuth') ? $emp->getCreateAuth() : null;
@@ -196,6 +559,7 @@ class IppController
             $picReviewName = (string) ($superior->name ?? '');
         } catch (\Throwable $e) {
             $picReviewId = null;
+            $picReviewName = '';
         }
 
         $headerAttrs = ['employee_id' => $empId, 'on_year' => $year];
@@ -211,15 +575,14 @@ class IppController
                     'division'      => (string)($emp->department->division->name ?? ''),
                     'section'       => (string)($emp->leadingSection->name ?? ''),
                     'date_review'   => null,
-                    'pic_review'    => $picReviewName,                                     // legacy field (biarkan kosong)
-                    'pic_review_id' => $picReviewId,                                       // << simpan relasi PIC
+                    'pic_review'    => $picReviewName,
+                    'pic_review_id' => $picReviewId,
                     'no_form'       => '',
                     'status'        => 'draft',
                     'summary'       => [],
                 ]
             );
 
-            // Kalau header sudah ada tapi belum ada pic_review_id, isi sekarang
             if (!$ipp->pic_review_id && $picReviewId) {
                 $ipp->pic_review_id = $picReviewId;
                 $ipp->save();
@@ -234,7 +597,7 @@ class IppController
                     'target_one' => $p['target_one'] ?? null,
                     'due_date'   => $p['due_date'],
                     'weight'     => (int)$p['weight'],
-                    'status'     => $status,                    // draft
+                    'status'     => $status,
                 ]);
             } else {
                 $point = IppPoint::where('id', $rowId)->first();
@@ -242,13 +605,10 @@ class IppController
                     DB::rollBack();
                     return response()->json(['message' => 'Point not found'], 404);
                 }
-
-                // Cek kepemilikan
                 if ((int) $point->ipp->employee_id !== $empId || (string)$point->ipp->on_year !== $year) {
                     DB::rollBack();
                     return response()->json(['message' => 'Tidak diizinkan mengubah point ini.'], 403);
                 }
-
                 $point->update([
                     'category'   => $cat,
                     'activity'   => $p['activity'],
@@ -256,11 +616,10 @@ class IppController
                     'target_one' => $p['target_one'] ?? null,
                     'due_date'   => $p['due_date'],
                     'weight'     => (int)$p['weight'],
-                    'status'     => $status,                    // tetap draft
+                    'status'     => $status,
                 ]);
             }
 
-            // Update summary
             $summary = IppPoint::where('ipp_id', $ipp->id)
                 ->selectRaw('category, SUM(weight) as used')
                 ->groupBy('category')
@@ -286,7 +645,6 @@ class IppController
         }
     }
 
-    /** === SUBMIT ALL (ubah seluruh IPP jadi submitted) === */
     public function submit(Request $request)
     {
         $user  = auth()->user();
@@ -305,7 +663,6 @@ class IppController
             return response()->json(['message' => 'Tambahkan minimal satu point sebelum submit.'], 422);
         }
 
-        // Validasi cap per kategori
         $summary = [];
         foreach (self::CAP as $cat => $cap) {
             $used          = (int) $points->where('category', $cat)->sum('weight');
@@ -317,7 +674,6 @@ class IppController
             }
         }
 
-        // Total harus 100%
         $summary['total'] = array_sum($summary);
         if ($summary['total'] !== 100) {
             return response()->json(['message' => 'Total bobot harus tepat 100% sebelum submit.'], 422);
@@ -328,14 +684,12 @@ class IppController
             $ipp->update([
                 'status'  => 'submitted',
                 'summary' => $summary,
-                // pastikan header punya pic_review_id (biarkan null kalau memang tidak ketemu)
             ]);
         });
 
         return response()->json(['message' => 'Berhasil submit IPP.', 'summary' => $summary]);
     }
 
-    /** === DELETE POINT IPP === */
     public function destroyPoint(Request $request, IppPoint $point)
     {
         $user  = auth()->user();
@@ -638,25 +992,22 @@ class IppController
         )->deleteFileAfterSend(true);
     }
 
-    /** Ganti \r\n / \r menjadi \n agar Excel paham line break. */
+    /** ===== Helpers ===== */
     private function xlText(?string $s): string
     {
         $s = (string)$s;
         return str_replace(["\r\n", "\r"], "\n", $s);
     }
 
-    /** Hitung jumlah baris tampilan berdasarkan banyaknya "\n". */
     private function countLines(string $s): int
     {
         return max(1, substr_count($s, "\n") + 1);
     }
 
-    /** Estimasi tinggi baris (point). */
     private function calcRowHeight(int $lines, float $perLine = 18.0, float $padding = 4.0): float
     {
         return max($perLine, $lines * $perLine + $padding);
     }
-
 
     private function colIndex(string $letters): int
     {
@@ -666,5 +1017,114 @@ class IppController
             $n = $n * 26 + (ord($letters[$i]) - 64);
         }
         return $n;
+    }
+
+    private function getSubordinatesFromStructure(Employee $employee)
+    {
+        $subordinateIds = collect();
+
+        if ($employee->leadingPlant && $employee->leadingPlant->director_id === $employee->id) {
+            $divisions = Division::where('plant_id', $employee->leadingPlant->id)->get();
+            $subordinateIds = $this->collectSubordinates($divisions, 'gm_id', $subordinateIds);
+
+            $departments = Department::whereIn('division_id', $divisions->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->leadingDivision && $employee->leadingDivision->gm_id === $employee->id) {
+            $departments = Department::where('division_id', $employee->leadingDivision->id)->get();
+            $subordinateIds = $this->collectSubordinates($departments, 'manager_id', $subordinateIds);
+
+            $sections = Section::whereIn('department_id', $departments->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->leadingDepartment && $employee->leadingDepartment->manager_id === $employee->id) {
+            $sections = Section::where('department_id', $employee->leadingDepartment->id)->get();
+            $subordinateIds = $this->collectSubordinates($sections, 'supervisor_id', $subordinateIds);
+
+            $subSections = SubSection::whereIn('section_id', $sections->pluck('id'))->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->leadingSection && $employee->leadingSection->supervisor_id === $employee->id) {
+            $subSections = SubSection::where('section_id', $employee->leadingSection->id)->get();
+            $subordinateIds = $this->collectSubordinates($subSections, 'leader_id', $subordinateIds);
+
+            $subordinateIds = $this->collectOperators($subSections, $subordinateIds);
+        } elseif ($employee->subSection && $employee->subSection->leader_id === $employee->id) {
+            $employeesInSameSubSection = Employee::where('sub_section_id', $employee->sub_section_id)
+                ->where('id', '!=', $employee->id)
+                ->pluck('id');
+
+            $subordinateIds = $subordinateIds->merge($employeesInSameSubSection);
+        }
+
+        if ($subordinateIds->isEmpty()) {
+            return Employee::whereRaw('1=0'); // kosong
+        }
+
+        return Employee::whereIn('id', $subordinateIds);
+    }
+
+    private function collectSubordinates($models, $field, $subordinateIds)
+    {
+        $ids = $models->pluck($field)->filter();
+        return $subordinateIds->merge($ids);
+    }
+
+    private function collectOperators($subSections, $subordinateIds)
+    {
+        $subSectionIds = $subSections->pluck('id');
+        $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
+        return $subordinateIds->merge($operatorIds);
+    }
+
+    /** Map label tab → normalized bucket (lowercase) */
+    private function mapTabToNormalized(string $label): string
+    {
+        $label = strtolower(trim($label));
+        $map = [
+            'president'    => 'president',
+            'vpd'          => 'vpd',
+            'direktur'     => 'direktur',
+            'director'     => 'direktur',
+            'gm'           => 'gm',
+            'manager'      => 'manager',
+            'coordinator'  => 'manager',       // grouped to manager
+            'section head' => 'supervisor',    // grouped to supervisor
+            'supervisor'   => 'supervisor',
+            'leader'       => 'leader',
+            'staff'        => 'leader',        // grouped to leader
+            'jp'           => 'jp',
+            'operator'     => 'operator',
+            'all'          => 'all',
+        ];
+        return $map[$label] ?? $label;
+    }
+
+    /** Alias per normalized bucket */
+    private function aliasesByNormalized(): array
+    {
+        return [
+            'president'  => ['president'],
+            'vpd'        => ['vpd'],
+            'direktur'   => ['direktur', 'director'],
+            'gm'         => ['gm', 'act gm'],
+            'manager'    => ['manager', 'act manager', 'coordinator', 'act coordinator'],
+            'supervisor' => ['supervisor', 'section head', 'act section head', 'act supervisor'],
+            'leader'     => ['leader', 'act leader', 'staff'],
+            'jp'         => ['jp', 'act jp'],
+            'operator'   => ['operator'],
+        ];
     }
 }
