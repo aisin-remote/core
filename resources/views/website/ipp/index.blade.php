@@ -191,7 +191,7 @@
 
                 {{-- Submit + Export (Export muncul hanya jika IPP sudah ada) --}}
                 <div class="d-flex justify-content-end mt-3 gap-2">
-                    <a href="{{ route('ipp.export') }}" class="btn btn-primary d-none" id="btnExport">
+                    <a href="{{ route('ipp.export.excel') }}" class="btn btn-primary d-none" id="btnExport">
                         <i class="bi bi-file-earmark-spreadsheet"></i> Export IPP
                     </a>
                     <button type="button" class="btn btn-success" id="btnSubmitAll">

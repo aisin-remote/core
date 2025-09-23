@@ -305,9 +305,13 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/init', [IppController::class, 'init'])->name('ipp.init');
         Route::post('/', [IppController::class, 'store'])->name('ipp.store');
         Route::post('/submit', [IppController::class, 'submit'])->name('ipp.submit');
-        Route::get('/list/{company}', [IppController::class, 'list'])->name('ipp.list');
+        Route::get('/list/{company?}', [IppController::class, 'list'])->name('ipp.list');
+        Route::get('/data', [IppController::class, 'listJson'])->name('ipp.list.json');
         Route::delete('/point/{point}', [IppController::class, 'destroyPoint'])->name('ipp.point.destroy');
-        Route::get('/export', [IppController::class, 'export'])->name('ipp.export');
+        Route::get('/export/excel/{id?}', [IppController::class, 'exportExcel'])->name('ipp.export.excel');
+        Route::get('/export/pdf/{id?}', [IppController::class, 'exportPdf'])->name('ipp.export.pdf');
+        Route::get('/employee/ipps', [IppController::class, 'employeeIppsJson'])
+            ->name('ipp.employee.ipps.json');
     });
 
     Route::prefix('ipa')->group(function () {
