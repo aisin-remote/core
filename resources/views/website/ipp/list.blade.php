@@ -192,35 +192,36 @@
         </div>
     </div>
 
-    {{-- Modal: daftar IPP si karyawan --}}
+    {{-- Modal: daftar IPP si karyawan (width ngikutin konten) --}}
     <div class="modal fade" id="ippShowModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: fit-content; margin: auto;">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
                         IPP - <span id="ippShowEmpName">Employee</span>
-                        <small class="text-muted ms-2" id="ippShowEmpMeta"></small>
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
                 <div class="modal-body py-0">
                     <div class="table-responsive">
-                        <table class="table table-sm align-middle">
+                        <table class="table table-sm align-middle mb-0">
                             <thead>
                                 <tr class="text-muted text-uppercase fs-7">
-                                    <th style="width:90px">Year</th>
-                                    <th style="width:160px">Status</th>
-                                    <th class="text-end" style="width:150px">Action</th>
+                                    <th style="width: 200px;">Year</th>
+                                    <th style="width: 200px;">Status</th>
+                                    <th style="width: 200px;" class="text-end">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="ippShowRows">
                                 <tr class="fs-7">
-                                    <td colspan="5" class="text-muted">Loading...</td>
+                                    <td colspan="3" class="text-muted">Loading...</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
                 </div>
+
                 <div class="modal-footer">
                     <button class="btn btn-light" data-bs-dismiss="modal">Close</button>
                 </div>
@@ -243,6 +244,22 @@
             const year = params.get('filter_year') || (new Date().getFullYear());
             const status = params.get('status') || '';
 
+            // --- data employee yg login (buat prepend baris sendiri) ---
+            @php
+                $me = auth()->user()->employee;
+                $mePhoto = $me && $me->photo ? asset('storage/' . $me->photo) : null;
+            @endphp
+            const selfEmp = {
+                id: @json($me->id ?? null),
+                npk: @json($me->npk ?? ''),
+                name: @json($me->name ?? ''),
+                photo: @json($mePhoto),
+                company: @json($me->company_name ?? ''),
+                position: @json($me->position ?? ''),
+                department: @json($me->bagian ?? ''),
+                grade: @json($me->grade ?? ''),
+            };
+
             if (!searchInput.value) searchInput.value = initialSearch;
 
             function statusLabel(s) {
@@ -263,12 +280,12 @@
 
             function actionBtn(r) {
                 return `
-      <button type="button" class="btn btn-sm btn-secondary btn-show"
-              data-employee-id="${r.employee?.id ?? ''}"
-              data-employee='${encodeURIComponent(JSON.stringify(r.employee||{}))}'
-              data-current-year="${r.on_year || ''}">
-        Show
-      </button>`;
+        <button type="button" class="btn btn-sm btn-secondary btn-show"
+                data-employee-id="${r.employee?.id ?? ''}"
+                data-employee='${encodeURIComponent(JSON.stringify(r.employee || {}))}'
+                data-current-year="${r.on_year || ''}">
+          Show
+        </button>`;
             }
 
             // === INIT DATATABLES ===
@@ -299,13 +316,38 @@
                         })
                         .then(res => res.json())
                         .then(json => {
-                            const rows = (json.data || []).map(r => {
+                            let data = json.data || [];
+
+                            // --- prepend baris milik user sendiri jika belum ada ---
+                            if (selfEmp.id) {
+                                const already = data.some(r => (r.employee && r.employee.id) === selfEmp
+                                    .id);
+                                if (!already) {
+                                    data.unshift({
+                                        no: '—', // biar tampil paling atas; tidak ikut penomoran server
+                                        employee: {
+                                            id: selfEmp.id,
+                                            npk: selfEmp.npk,
+                                            name: selfEmp.name,
+                                            photo: selfEmp.photo,
+                                            company: selfEmp.company,
+                                            position: selfEmp.position,
+                                            department: selfEmp.department,
+                                            grade: selfEmp.grade,
+                                        },
+                                        on_year: year,
+                                        status: 'not_created', // biar chip tampil netral; modal tetap bisa "Show"
+                                    });
+                                }
+                            }
+
+                            const rows = data.map(r => {
                                 const emp = r.employee || {};
                                 const photo = emp.photo ?
                                     `<img src="${emp.photo}" class="emp-photo" alt="${emp.name||''}">` :
                                     `<div class="emp-fallback">${(emp.name||'?').slice(0,2)}</div>`;
                                 return [
-                                    r.no,
+                                    r.no ?? '—',
                                     photo,
                                     emp.npk ?? '-',
                                     `<span class="sticky-col">${emp.name ?? '-'}</span>`,
@@ -319,8 +361,8 @@
 
                             callback({
                                 draw: d.draw,
-                                recordsTotal: json.meta?.total ?? 0,
-                                recordsFiltered: json.meta?.total ?? 0,
+                                recordsTotal: (json.meta?.total ?? rows.length),
+                                recordsFiltered: (json.meta?.total ?? rows.length),
                                 data: rows
                             });
                         })
@@ -366,8 +408,6 @@
                 const emp = JSON.parse(decodeURIComponent(empRaw) || '{}');
 
                 document.getElementById('ippShowEmpName').textContent = emp.name || '-';
-                document.getElementById('ippShowEmpMeta').textContent =
-                    `${emp.npk || ''} · ${emp.position || ''} · ${emp.company || ''}`;
 
                 const modalEl = document.getElementById('ippShowModal');
                 const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
@@ -377,7 +417,7 @@
                 url.searchParams.set('employee_id', employeeId);
 
                 const tbody = document.getElementById('ippShowRows');
-                tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Loading...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="text-muted">Loading...</td></tr>`;
 
                 try {
                     const res = await fetch(url.toString(), {
@@ -393,25 +433,22 @@
                         const stat = item.status || 'unknown';
 
                         let actions = '';
-
                         if (item.id) {
                             const excelHref =
                                 `{{ route('ipp.export.excel', ['id' => '___ID___']) }}`.replace(
                                     '___ID___', item.id);
                             const pdfHref = `{{ route('ipp.export.pdf', ['id' => '___ID___']) }}`
                                 .replace('___ID___', item.id);
-
                             actions = `
-                            <a class="btn btn-sm btn-success me-2" href="${excelHref}">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> Excel
-                            </a>
-                            <a class="btn btn-sm btn-danger" href="${pdfHref}" rel="noopener">
-                                <i class="bi bi-file-earmark-pdf"></i> PDF
-                            </a>
-                            `;
+                                <a class="btn btn-sm btn-success me-2" href="${excelHref}">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+                                </a>
+                                <a class="btn btn-sm btn-danger" href="${pdfHref}" rel="noopener">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </a>`;
+                        } else {
+                            actions = `<span class="text-muted">No Data</span>`;
                         }
-                        // else: biarkan kosong, atau pakai ini kalau mau ada teks indikator:
-                        // else { actions = `<span class="text-muted">No form</span>`; }
 
                         return `
                             <tr>
@@ -422,10 +459,10 @@
                     }).join('');
 
                     tbody.innerHTML = rows ||
-                        `<tr><td colspan="5" class="text-muted">Belum ada IPP</td></tr>`;
+                        `<tr><td colspan="3" class="text-muted">Belum ada IPP</td></tr>`;
                 } catch (err) {
                     tbody.innerHTML =
-                        `<tr><td colspan="5" class="text-danger">Gagal memuat data IPP</td></tr>`;
+                        `<tr><td colspan="3" class="text-danger">Gagal memuat data IPP</td></tr>`;
                 }
             });
         })();
