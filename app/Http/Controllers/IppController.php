@@ -365,6 +365,7 @@ class IppController
         if ($empId) {
             $ipp = Ipp::where('employee_id', $empId)
                 ->where('on_year', $year)
+                ->where('status', '!=', 'approved')
                 ->first();
 
             if ($ipp && !$ipp->pic_review_id && $picReviewId) {
