@@ -192,7 +192,7 @@
         </div>
     </div>
 
-    {{-- Modal: daftar IPP si karyawan --}}
+    {{-- Modal: daftar IPP si karyawan (width ngikutin konten) --}}
     <div class="modal fade" id="ippShowModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width: fit-content; margin: auto;">
             <div class="modal-content">
@@ -244,6 +244,22 @@
             const year = params.get('filter_year') || (new Date().getFullYear());
             const status = params.get('status') || '';
 
+            // --- data employee yg login (buat prepend baris sendiri) ---
+            @php
+                $me = auth()->user()->employee;
+                $mePhoto = $me && $me->photo ? asset('storage/' . $me->photo) : null;
+            @endphp
+            const selfEmp = {
+                id: @json($me->id ?? null),
+                npk: @json($me->npk ?? ''),
+                name: @json($me->name ?? ''),
+                photo: @json($mePhoto),
+                company: @json($me->company_name ?? ''),
+                position: @json($me->position ?? ''),
+                department: @json($me->bagian ?? ''),
+                grade: @json($me->grade ?? ''),
+            };
+
             if (!searchInput.value) searchInput.value = initialSearch;
 
             function statusLabel(s) {
@@ -266,9 +282,9 @@
                 return `
         <button type="button" class="btn btn-sm btn-secondary btn-show"
                 data-employee-id="${r.employee?.id ?? ''}"
-                data-employee='${encodeURIComponent(JSON.stringify(r.employ ee||{}))}'
-                data-current-year="${r.on_year || ''}"  >
-        Show
+                data-employee='${encodeURIComponent(JSON.stringify(r.employee || {}))}'
+                data-current-year="${r.on_year || ''}">
+          Show
         </button>`;
             }
 
@@ -300,13 +316,38 @@
                         })
                         .then(res => res.json())
                         .then(json => {
-                            const rows = (json.data || []).map(r => {
+                            let data = json.data || [];
+
+                            // --- prepend baris milik user sendiri jika belum ada ---
+                            if (selfEmp.id) {
+                                const already = data.some(r => (r.employee && r.employee.id) === selfEmp
+                                    .id);
+                                if (!already) {
+                                    data.unshift({
+                                        no: '—', // biar tampil paling atas; tidak ikut penomoran server
+                                        employee: {
+                                            id: selfEmp.id,
+                                            npk: selfEmp.npk,
+                                            name: selfEmp.name,
+                                            photo: selfEmp.photo,
+                                            company: selfEmp.company,
+                                            position: selfEmp.position,
+                                            department: selfEmp.department,
+                                            grade: selfEmp.grade,
+                                        },
+                                        on_year: year,
+                                        status: 'not_created', // biar chip tampil netral; modal tetap bisa "Show"
+                                    });
+                                }
+                            }
+
+                            const rows = data.map(r => {
                                 const emp = r.employee || {};
                                 const photo = emp.photo ?
                                     `<img src="${emp.photo}" class="emp-photo" alt="${emp.name||''}">` :
                                     `<div class="emp-fallback">${(emp.name||'?').slice(0,2)}</div>`;
                                 return [
-                                    r.no,
+                                    r.no ?? '—',
                                     photo,
                                     emp.npk ?? '-',
                                     `<span class="sticky-col">${emp.name ?? '-'}</span>`,
@@ -320,8 +361,8 @@
 
                             callback({
                                 draw: d.draw,
-                                recordsTotal: json.meta?.total ?? 0,
-                                recordsFiltered: json.meta?.total ?? 0,
+                                recordsTotal: (json.meta?.total ?? rows.length),
+                                recordsFiltered: (json.meta?.total ?? rows.length),
                                 data: rows
                             });
                         })
@@ -376,7 +417,7 @@
                 url.searchParams.set('employee_id', employeeId);
 
                 const tbody = document.getElementById('ippShowRows');
-                tbody.innerHTML = `<tr><td colspan="5" class="text-muted">Loading...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="3" class="text-muted">Loading...</td></tr>`;
 
                 try {
                     const res = await fetch(url.toString(), {
@@ -392,22 +433,19 @@
                         const stat = item.status || 'unknown';
 
                         let actions = '';
-
                         if (item.id) {
                             const excelHref =
                                 `{{ route('ipp.export.excel', ['id' => '___ID___']) }}`.replace(
                                     '___ID___', item.id);
                             const pdfHref = `{{ route('ipp.export.pdf', ['id' => '___ID___']) }}`
                                 .replace('___ID___', item.id);
-
                             actions = `
-                            <a class="btn btn-sm btn-success me-2" href="${excelHref}">
-                                <i class="bi bi-file-earmark-spreadsheet"></i> Excel
-                            </a>
-                            <a class="btn btn-sm btn-danger" href="${pdfHref}" rel="noopener">
-                                <i class="bi bi-file-earmark-pdf"></i> PDF
-                            </a>
-                            `;
+                                <a class="btn btn-sm btn-success me-2" href="${excelHref}">
+                                    <i class="bi bi-file-earmark-spreadsheet"></i> Excel
+                                </a>
+                                <a class="btn btn-sm btn-danger" href="${pdfHref}" rel="noopener">
+                                    <i class="bi bi-file-earmark-pdf"></i> PDF
+                                </a>`;
                         } else {
                             actions = `<span class="text-muted">No Data</span>`;
                         }
@@ -421,10 +459,10 @@
                     }).join('');
 
                     tbody.innerHTML = rows ||
-                        `<tr><td colspan="5" class="text-muted">Belum ada IPP</td></tr>`;
+                        `<tr><td colspan="3" class="text-muted">Belum ada IPP</td></tr>`;
                 } catch (err) {
                     tbody.innerHTML =
-                        `<tr><td colspan="5" class="text-danger">Gagal memuat data IPP</td></tr>`;
+                        `<tr><td colspan="3" class="text-danger">Gagal memuat data IPP</td></tr>`;
                 }
             });
         })();
