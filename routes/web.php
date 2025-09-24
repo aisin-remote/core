@@ -170,9 +170,14 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
         Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
+
         Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
         Route::get('/icp/{id}', [IcpController::class, 'approve'])->name('icp.approve');
         Route::post('icp/revise', [IcpController::class, 'revise'])->name('icp.revise');
+
+        Route::get('/ipp', [IppController::class, 'approval'])->name('ipp.approval');
+        Route::post('/ipp/{id}', [IppController::class, 'approve'])->name('ipp.approve');
+        Route::post('/ipp/revise/{id}', [IppController::class, 'revise'])->name('ipp.revise');
     });
 
     Route::prefix('employee')->group(function () {
@@ -312,6 +317,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/export/pdf/{id?}', [IppController::class, 'exportPdf'])->name('ipp.export.pdf');
         Route::get('/employee/ipps', [IppController::class, 'employeeIppsJson'])
             ->name('ipp.employee.ipps.json');
+        Route::get('/approval/json', [IppController::class, 'approvalJson'])->name('ipp.approval.json');
     });
 
     Route::prefix('ipa')->group(function () {

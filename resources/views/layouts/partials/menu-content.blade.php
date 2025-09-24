@@ -1226,6 +1226,12 @@
                     <span class="menu-title">ICP</span>
                 </a>
             </div>
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/ipp') ? 'active' : '' }}"
+                    href="{{ route('ipp.approval') }}">
+                    <span class="menu-title">IPP</span>
+                </a>
+            </div>
         </div>
 
         {{-- FLYOUT --}}

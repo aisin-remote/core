@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Str;
+use Illuminate\Http\JsonResponse;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
@@ -651,6 +652,253 @@ class IppController
         }
     }
 
+    /** ====== APPROVAL / REVISE ====== */
+    public function approval(Request $request, $company = null)
+    {
+        $title  = 'Approval';
+        $filter = (string) $request->query('filter', 'all');
+
+        return view('website.approval.ipp.index', [
+            'title'   => $title,
+            'company' => $company,
+            'filter'  => $filter,
+        ]);
+    }
+
+    /**
+     * Data bawahan untuk halaman approval.
+     * HRD/President/VPD => semua employee (boleh filter posisi & company).
+     * Lainnya => bawahan struktur ∪ yang menunjuk saya sebagai PIC.
+     * Selalu taruh baris "saya sendiri" paling atas.
+     */
+    public function approvalJson(Request $request)
+    {
+        try {
+            $user = auth()->user();
+            $me   = $user->employee;
+
+            if (!$me) {
+                return response()->json([
+                    'data' => [],
+                    'meta' => ['total' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1]
+                ]);
+            }
+
+            // Query params
+            $year   = (string) $request->query('filter_year', now()->format('Y'));
+            $search = trim((string) $request->query('search', ''));
+            $page   = max(1, (int) $request->query('page', 1));
+            $perPage = min(100, max(5, (int) $request->query('per_page', 10)));
+
+            // Levels (guard if null / methods not exist)
+            $checkLevel   = method_exists($me, 'getFirstApproval') ? $me->getFirstApproval() : null;
+            $approveLevel = method_exists($me, 'getFinalApproval') ? $me->getFinalApproval() : null;
+
+            $subCheckIds = collect();
+            $subApproveIds = collect();
+
+            if ($checkLevel && method_exists($me, 'getSubordinatesByLevel')) {
+                $subCheckIds = $me->getSubordinatesByLevel($checkLevel)->pluck('id');
+            }
+            if ($approveLevel && method_exists($me, 'getSubordinatesByLevel')) {
+                $subApproveIds = $me->getSubordinatesByLevel($approveLevel)->pluck('id');
+            }
+
+            // Helpers: common constraints
+            $baseIPP = Ipp::with(['employee.user'])
+                ->where('on_year', $year)
+                ->where('employee_id', '!=', $me->id) // jangan tampilkan milik saya sendiri
+                // skip owner role HRD
+                ->whereHas('employee.user', function ($q) {
+                    $q->whereRaw('UPPER(role) != ?', ['HRD']);
+                })
+                // optional search by owner
+                ->when($search !== '', function ($q) use ($search) {
+                    $q->whereHas('employee', function ($qq) use ($search) {
+                        $qq->where('name', 'like', "%{$search}%")
+                            ->orWhere('npk', 'like', "%{$search}%")
+                            ->orWhere('position', 'like', "%{$search}%")
+                            ->orWhere('company_name', 'like', "%{$search}%");
+                    });
+                });
+
+            // === Stage 1: CHECK (subordinates at check level) ===
+            $checkIpps = collect();
+            if ($subCheckIds->isNotEmpty()) {
+                $checkIpps = (clone $baseIPP)
+                    ->where('status', 'submitted')
+                    ->whereHas('employee', function ($q) use ($subCheckIds) {
+                        // IMPORTANT: filter by employees.id (not employee_id)
+                        $q->whereIn('id', $subCheckIds->all());
+                    })
+                    ->get()
+                    ->map(function (Ipp $ipp) {
+                        $ipp->stage = 'check';
+                        return $ipp;
+                    });
+            }
+
+            // === Stage 2: APPROVE (subordinates at final approval level), excluding ones already in CHECK ===
+            $approveIpps = collect();
+            if ($subApproveIds->isNotEmpty()) {
+                $approveIpps = (clone $baseIPP)
+                    ->where('status', 'checked')
+                    ->whereHas('employee', function ($q) use ($subApproveIds) {
+                        $q->whereIn('id', $subApproveIds->all());
+                    })
+                    ->whereNotIn('id', $checkIpps->pluck('id')->all())
+                    ->get()
+                    ->map(function (Ipp $ipp) {
+                        $ipp->stage = 'approve';
+                        return $ipp;
+                    });
+            }
+
+            // Merge both stages, latest updated first
+            $all = $checkIpps->merge($approveIpps)
+                ->sortByDesc(fn(Ipp $x) => $x->updated_at ?? $x->created_at)
+                ->values();
+
+            $total = $all->count();
+
+            // Pagination on collection
+            $paged = $all->forPage($page, $perPage)->values();
+
+            // Map to rows
+            $rows = $paged->map(function (Ipp $ipp, $idx) use ($page, $perPage) {
+                $e = $ipp->employee;
+                return [
+                    'no'        => ($page - 1) * $perPage + $idx + 1,
+                    'id'        => $ipp->id,
+                    'stage'     => $ipp->stage,            // 'check' or 'approve'
+                    'status'    => (string) $ipp->status,  // 'submitted' or 'checked'
+                    'on_year'   => (string) $ipp->on_year,
+                    'updated_at' => optional($ipp->updated_at)->toDateTimeString(),
+                    'employee'  => [
+                        'id'        => $e->id,
+                        'npk'       => (string) $e->npk,
+                        'name'      => (string) $e->name,
+                        'company'   => (string) $e->company_name,
+                        'position'  => (string) $e->position,
+                        'department' => (string) ($e->bagian ?? ''),
+                        'grade'     => (string) ($e->grade ?? ''),
+                        'role'      => optional($e->user)->role, // for reference (already filtered != HRD)
+                    ],
+                ];
+            });
+
+            return response()->json([
+                'data' => $rows,
+                'meta' => [
+                    'total'     => (int) $total,
+                    'page'      => (int) $page,
+                    'per_page'  => (int) $perPage,
+                    'last_page' => (int) max(1, (int) ceil($total / $perPage)),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'data' => [],
+                'meta' => ['total' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1],
+                'error' => 'Internal error',
+            ], 500);
+        }
+    }
+
+    public function approve(int $id): JsonResponse
+    {
+        try {
+            $ipp = Ipp::findOrFail($id);
+            $from = strtolower((string) $ipp->status);
+            $to   = null;
+
+            if ($from === 'submitted') {
+                $to = 'checked';
+            } elseif ($from === 'checked') {
+                $to = 'approved';
+            } elseif ($from === 'approved') {
+                // Sudah final
+                return response()->json([
+                    'message' => 'IPP already approved (final state).',
+                    'id'      => $ipp->id,
+                    'status'  => $ipp->status,
+                ], 409);
+            } else {
+                // State tidak valid untuk approve flow
+                return response()->json([
+                    'message' => "Current status '{$ipp->status}' is not eligible for approval.",
+                    'id'      => $ipp->id,
+                    'status'  => $ipp->status,
+                ], 422);
+            }
+
+            $updatePoints = 0;
+            DB::transaction(function () use ($ipp, $to, &$updatePoints) {
+                $ipp->update(['status' => $to]);
+
+                // update semua point IPP sesuai status
+                $updatePoints = IppPoint::where('ipp_id', $ipp->id)
+                    ->update(['status' => $to]);
+            });
+
+            return response()->json([
+                'message'        => 'IPP status updated.',
+                'id'             => $ipp->id,
+                'from'           => $from,
+                'to'             => $to,
+                'points_updated' => $updatePoints,
+                'updated_at'     => optional($ipp->updated_at)->toDateTimeString(),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'IPP not found.',
+            ], 404);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'message' => 'Failed to approve IPP. Please try again.',
+            ], 500);
+        }
+    }
+
+    public function revise(int $id)
+    {
+        try {
+            $ipp = Ipp::findOrFail($id);
+            $from = strtolower((string) $ipp->status);
+            $to   = "draft";
+
+            $updatePoints = 0;
+            DB::transaction(function () use ($ipp, $to, &$updatePoints) {
+                $ipp->update(['status' => $to]);
+
+                // update semua point IPP sesuai status
+                $updatePoints = IppPoint::where('ipp_id', $ipp->id)
+                    ->update(['status' => $to]);
+            });
+
+            return response()->json([
+                'message'        => 'IPP status updated.',
+                'id'             => $ipp->id,
+                'from'           => $from,
+                'to'             => $to,
+                'points_updated' => $updatePoints,
+                'updated_at'     => optional($ipp->updated_at)->toDateTimeString(),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'message' => 'IPP not found.',
+            ], 404);
+        } catch (\Throwable $e) {
+            report($e);
+            return response()->json([
+                'message' => 'Failed to revise IPP. Please try again.',
+            ], 500);
+        }
+    }
+
+    /** ====== EXPORT EXCEL DAN PDF ====== */
     public function exportExcel(?int $id = null)
     {
         try {
