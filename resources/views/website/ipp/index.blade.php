@@ -606,7 +606,10 @@
                 crp: 10,
                 special_assignment: 10
             };
-            const pointModal = new bootstrap.Modal(document.getElementById('pointModal'));
+            const pointModal = new bootstrap.Modal(document.getElementById('pointModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
             let autoRowId = 0,
                 LOCKED = false;
 
