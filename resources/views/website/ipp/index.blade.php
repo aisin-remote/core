@@ -12,6 +12,14 @@
             --ipp-row-alt: #fbfdff;
             --ipp-row-hover: #eef2ff;
             --ipp-text: #111827;
+
+            --noteNew-bgTop: #eff6ff;
+            --noteNew-bgBot: #3d67ff;
+            --noteNew-border: #bfdbfe;
+            --noteNew-dot: #3b82f6;
+            --noteNew-ring: #93c5fd;
+            --noteNew-text: #ffffff;
+            --noteNew-shadow: rgba(59, 130, 246, .10);
         }
 
         .accordion.ipp .accordion-item {
@@ -101,34 +109,43 @@
             font-style: italic
         }
 
-        /* ===== COMMENT HISTORY — modal & timeline (polish) ===== */
+        /* ===== COMMENT HISTORY — modal & timeline (polished + animated) ===== */
         .comment-modal .modal-dialog {
-            max-width: 820px;
+            max-width: 860px;
         }
 
         .comment-modal .modal-content {
-            border-radius: 12px;
-            border: 1px solid #e5e7eb;
-            box-shadow: 0 12px 30px rgba(2, 6, 23, .12);
+            border-radius: 14px;
+            border: 1px solid #e6e8ee;
+            box-shadow: 0 20px 50px rgba(2, 6, 23, .12);
         }
 
+        /* sticky header + subtle gradient */
         .comment-modal .modal-header {
-            padding: .85rem 1rem;
-            border-bottom: 1px solid #eef2f7;
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: .9rem 1rem;
+            background: linear-gradient(180deg, #fbfcfe 0%, #f7f9fc 100%);
+            border-bottom: 1px solid #e9eef5;
         }
 
         .comment-modal .modal-title {
-            font-weight: 700;
+            font-weight: 800;
             letter-spacing: .2px;
         }
 
+        /* timeline rail */
         .cmt-timeline {
             position: relative;
             margin: .25rem 0 0 0;
-            padding: .25rem 0 .25rem 1.25rem;
+            padding: .25rem 0 .25rem 1.6rem;
             max-height: min(62vh, 560px);
             overflow: auto;
             scrollbar-gutter: stable;
+            /* fade top/btm scroll shadow */
+            -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
         }
 
         .cmt-timeline::-webkit-scrollbar {
@@ -137,50 +154,68 @@
         }
 
         .cmt-timeline::-webkit-scrollbar-thumb {
-            background: #d1d5db;
+            background: #d2d8e3;
             border-radius: 9999px
         }
 
         .cmt-timeline::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af
+            background: #b9c1cf
         }
 
         .cmt-timeline::before {
             content: "";
             position: absolute;
-            left: .45rem;
-            top: .6rem;
-            bottom: .6rem;
-            width: 2px;
-            background: linear-gradient(180deg, #eef2f7, #e5e7eb);
+            left: .6rem;
+            top: .8rem;
+            bottom: .8rem;
+            width: 3px;
+            background: linear-gradient(180deg, #eef2f7, #e5e9f0);
+            border-radius: 9999px;
+            animation: railGlow 3.2s ease-in-out infinite;
         }
 
+        /* each comment as a card */
         .cmt-item {
             position: relative;
-            padding: .9rem 0 1rem .25rem;
+            padding: .9rem 1rem 1rem 1rem;
+            margin-left: .35rem;
+            border: 1px solid #eef2f7;
+            border-radius: 12px;
+            background: #fff;
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+            animation: itemEnter .24s ease-out both;
+            /* animasi masuk */
         }
 
         .cmt-item+.cmt-item {
-            border-top: 1px dashed #eef2f7;
+            margin-top: .7rem;
         }
 
+        .cmt-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 22px rgba(2, 6, 23, .08);
+            border-color: #e5eaf3;
+        }
+
+        /* round dot on the rail */
         .cmt-dot {
             position: absolute;
-            left: -.13rem;
-            top: 1.2rem;
-            width: .62rem;
-            height: .62rem;
+            left: -1.1rem;
+            top: 1.15rem;
+            width: .72rem;
+            height: .72rem;
             border-radius: 9999px;
             border: 2px solid #fff;
-            box-shadow: 0 0 0 2px #e5e7eb, 0 0 0 6px rgba(2, 132, 199, 0);
-            transition: box-shadow .25s ease;
+            box-shadow: 0 0 0 2px #e6ebf3;
             background: #94a3b8;
+            transition: box-shadow .25s ease;
         }
 
         .cmt-item:hover .cmt-dot {
-            box-shadow: 0 0 0 2px #e5e7eb, 0 0 0 6px rgba(2, 132, 199, .08);
+            box-shadow: 0 0 0 2px #dfe7f5, 0 0 0 8px rgba(30, 64, 175, .06);
         }
 
+        /* status color dots (opsional, tetap) */
         .cmt-dot.revise {
             background: #ef4444
         }
@@ -201,33 +236,30 @@
             background: #94a3b8
         }
 
+        /* header row inside item */
         .cmt-head {
             display: flex;
             flex-wrap: wrap;
             align-items: center;
-            gap: .5rem .65rem;
+            gap: .5rem .7rem;
             line-height: 1.15;
-            margin-left: .75rem;
         }
 
         .cmt-name {
-            font-weight: 700;
+            font-weight: 800;
             color: #0f172a;
         }
 
         .cmt-meta {
-            color: #64748b;
-            font-size: .84rem;
+            color: #475569;
+            font-size: .8rem;
+            background: #f1f5f9;
+            border: 1px solid #e2e8f0;
+            padding: .16rem .55rem;
+            border-radius: 9999px;
         }
 
-        .cmt-status {
-            display: flex;
-            align-items: center;
-            gap: .4rem;
-            margin-top: .35rem;
-            flex-wrap: wrap;
-        }
-
+        /* status chip */
         .cmt-badge {
             background: #f8fafc;
             color: #334155;
@@ -273,7 +305,7 @@
             margin-top: .55rem;
             color: #0f172a;
             font-size: .95rem;
-            line-height: 1.55;
+            line-height: 1.6;
             word-break: break-word;
         }
 
@@ -285,18 +317,106 @@
             white-space: nowrap;
         }
 
+        /* ===== NEW highlight (pakai warna yang kamu pilih) ===== */
+        .cmt-item.is-new {
+            background: var(--noteNew-bgBot) !important;
+            border-color: var(--noteNew-border) !important;
+            box-shadow: 0 10px 26px var(--noteNew-shadow);
+            animation: itemEnter .22s ease-out both, newPulse 1.2s ease-out 0s 2;
+        }
+
+        .cmt-item.is-new .cmt-dot {
+            background: var(--noteNew-dot);
+            animation: dotPing 1.4s cubic-bezier(.2, .8, .2, 1) 0s 2;
+        }
+
+        /* === buttons in header === */
         .comment-modal .modal-header .btn {
-            border-radius: 8px;
+            border-radius: 10px;
         }
 
         .comment-modal .modal-header .btn-light {
             background: #f8fafc;
             border: 1px solid #e5e7eb;
             color: #0f172a;
+            transition: transform .15s ease, box-shadow .15s ease;
         }
 
         .comment-modal .modal-header .btn-light:hover {
             background: #f3f4f6;
+            transform: translateY(-1px);
+            box-shadow: 0 6px 14px rgba(2, 6, 23, .08);
+        }
+
+        /* === Keyframes === */
+        @keyframes itemEnter {
+            from {
+                opacity: 0;
+                transform: translateY(8px)
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0)
+            }
+        }
+
+        @keyframes newPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, .28)
+            }
+
+            70% {
+                box-shadow: 0 0 0 18px rgba(59, 130, 246, 0)
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0)
+            }
+        }
+
+        @keyframes dotPing {
+            0% {
+                transform: scale(1);
+                opacity: 1
+            }
+
+            70% {
+                transform: scale(1.22);
+                opacity: .65
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1
+            }
+        }
+
+        @keyframes railGlow {
+
+            0%,
+            100% {
+                filter: brightness(1)
+            }
+
+            50% {
+                filter: brightness(1.06)
+            }
+        }
+
+        /* === Accessibility: respect reduced motion === */
+        @media (prefers-reduced-motion: reduce) {
+
+            .cmt-item,
+            .cmt-item.is-new,
+            .comment-modal .modal-header .btn-light {
+                animation: none !important;
+                transition: none !important;
+            }
+
+            .cmt-timeline::before {
+                animation: none !important;
+            }
         }
 
         /* header badge “Comments” */
@@ -383,7 +503,7 @@
             <div class="d-flex align-items-center gap-2">
                 <button type="button" id="btnComments" class="btn btn-primary btn-sm btn-comment-indicator d-none"
                     onclick="openCommentsModal(window.__currentIppId)">
-                    <i class="bi bi-chat-left-text me-1"></i> Comments
+                    <i class="bi bi-chat-left-text me-1"></i> Notes
                     <span id="commentCount" class="count">0</span>
                 </button>
                 <span id="commentPulse" class="pulse d-none" title="Ada komentar baru"></span>
@@ -471,30 +591,7 @@
     </div>
 
     {{-- ===== Comment History Modal ===== --}}
-    <div class="modal fade comment-modal" id="commentModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div class="d-flex align-items-center gap-2">
-                        <i class="bi bi-chat-left-text fs-5 text-primary"></i>
-                        <h5 class="modal-title mb-0">Comment History</h5>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" id="btnRefreshComments" class="btn btn-sm btn-light">
-                            <i class="bi bi-arrow-clockwise me-1"></i> Refresh
-                        </button>
-                        <button type="button" class="btn btn-sm btn-icon" data-bs-dismiss="modal" aria-label="Close">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
-                </div>
-                <div class="modal-body">
-                    <ul id="commentTimeline" class="cmt-timeline list-unstyled mb-0"></ul>
-                    <div id="commentEmpty" class="text-muted fst-italic">Belum ada komentar.</div>
-                </div>
-            </div>
-        </div>
-    </div>
+    @include('website.ipp.modal.history-comment')
 
     @include('website.ipp.modal.create')
 @endsection
@@ -652,12 +749,26 @@
             function renderComments(list) {
                 const $ul = $('#commentTimeline').empty();
                 const $empty = $('#commentEmpty');
-                if (!list || list.length === 0) {
+
+                if (!Array.isArray(list) || list.length === 0) {
                     $empty.removeClass('d-none');
                     return;
                 }
                 $empty.addClass('d-none');
-                list.forEach(c => {
+
+                // ambil last_seen_id dari localStorage (per IPP)
+                const ippId = window.__currentIppId;
+                const lastSeenId = Number(localStorage.getItem(lastIdKey(ippId)) || 0);
+
+                // pastikan terbaru di atas – pakai id (fallback ke created_at kalau perlu)
+                const items = [...list].sort((a, b) => {
+                    const ida = Number(a.id) || 0,
+                        idb = Number(b.id) || 0;
+                    if (idb !== ida) return idb - ida; // id lebih besar = lebih baru
+                    return String(b.created_at || '').localeCompare(String(a.created_at || ''));
+                });
+
+                items.forEach(c => {
                     const dotCls = statusClass(c.status_to) || 'draft';
                     const who = esc(c.employee?.name || c.user?.name || 'User');
                     const at = esc(c.created_at || '');
@@ -665,24 +776,26 @@
                     const short = raw.length > 220 ? raw.slice(0, 220) : raw;
                     const needMore = raw.length > 220;
                     const itemId = 'cmt-' + (c.id || Math.random().toString(36).slice(2));
+
+                    // ⬇️ penanda baru
+                    const isNew = (Number(c.id) || 0) > lastSeenId;
+
                     const $li = $(`
-        <li class="cmt-item">
-          <span class="cmt-dot ${dotCls}"></span>
-          <div class="cmt-head">
-            <span class="cmt-name">${who}</span>
-            <span class="cmt-meta">• ${at}</span>
-          </div>
-          <div class="cmt-status">
-            ${statusChip(c.status_from||'-')} <i class="bi bi-arrow-right-short"></i> ${statusChip(c.status_to||'-')}
-          </div>
-          <div class="cmt-body" id="${itemId}">
-            <span class="text">${toHtmlWithBreak(short)}</span>
-            ${needMore ? `<span class="more" data-full="${esc(raw)}">…more</span>` : ``}
-          </div>
-        </li>`);
+                        <li class="cmt-item ${isNew ? 'is-new' : ''}">
+                        <span class="cmt-dot ${dotCls}"></span>
+                        <div class="cmt-head">
+                            <span class="cmt-name ${isNew ? 'text-white' : ''}">${who}</span>
+                            <span class="cmt-meta">• ${at}</span>
+                        </div>
+                        <div class="cmt-body ${isNew ? 'text-white' : ''}" id="${itemId}">
+                            <span class="text">${toHtmlWithBreak(short)}</span>
+                            ${needMore ? `<span class="more" data-full="${esc(raw)}">…more</span>` : ``}
+                        </div>
+                        </li>`);
                     $ul.append($li);
                 });
             }
+
 
             // expand/less comment
             document.addEventListener('click', (e) => {
@@ -709,6 +822,10 @@
                 return `ipp:${ippId}:comments_seen`;
             }
 
+            function lastIdKey(ippId) {
+                return `ipp:${ippId}:last_seen_id`;
+            }
+
             function setCommentIndicator(ippId, totalCount) {
                 const $btn = $('#btnComments');
                 const $count = $('#commentCount');
@@ -733,9 +850,12 @@
                 $pulse.toggleClass('d-none', !hasNew);
             }
 
-            function markCommentsSeen(ippId, totalCount) {
+            function markCommentsSeen(ippId, totalCount, latestId) {
                 try {
                     localStorage.setItem(seenKey(ippId), String(Number(totalCount) || 0));
+                    if (latestId !== undefined) {
+                        localStorage.setItem(lastIdKey(ippId), String(Number(latestId) || 0));
+                    }
                 } catch (e) {}
                 setCommentIndicator(ippId, totalCount);
             }
@@ -751,32 +871,48 @@
                     const json = await res.json();
                     const list = json.data || [];
                     renderComments(list);
-                    return list.length; // return count
+
+                    const ids = list.map(x => Number(x.id) || 0);
+                    const latestId = ids.length ? Math.max(...ids) : 0;
+                    return {
+                        count: list.length,
+                        latestId
+                    };
                 } catch (_) {
                     renderComments([]);
-                    return 0;
+                    return {
+                        count: 0,
+                        latestId: 0
+                    };
                 }
             }
 
             // dipanggil tombol
             window.openCommentsModal = async function(ippId) {
                 if (!ippId) return;
-                const total = await loadComments(ippId);
+                const {
+                    count,
+                    latestId
+                } = await loadComments(ippId);
                 const el = document.getElementById('commentModal');
                 const modal = bootstrap.Modal.getOrCreateInstance(el, {
                     backdrop: true,
                     keyboard: true
                 });
                 modal.show();
-                // dianggap sudah dilihat
-                markCommentsSeen(ippId, total);
+
+                // setelah modal dibuka, anggap sudah dilihat
+                markCommentsSeen(ippId, count, latestId);
             };
 
             document.getElementById('btnRefreshComments')?.addEventListener('click', async () => {
                 const ippId = window.__currentIppId;
                 if (!ippId) return;
-                const total = await loadComments(ippId);
-                markCommentsSeen(ippId, total);
+                const {
+                    count,
+                    latestId
+                } = await loadComments(ippId);
+                markCommentsSeen(ippId, count, latestId);
             });
 
             /* ===== OPEN/EDIT modal point ===== */

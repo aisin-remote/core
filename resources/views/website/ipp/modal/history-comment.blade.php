@@ -1,18 +1,23 @@
-<div class="modal fade" id="commentsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-md">
+<div class="modal fade comment-modal" id="commentModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header py-2">
-                <h5 class="modal-title"><i class="bi bi-chat-dots me-2"></i>Comment History</h5>
+            <div class="modal-header">
                 <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-light" id="btnRefreshComments">
-                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    <i class="bi bi-chat-left-text fs-5 text-primary"></i>
+                    <h5 class="modal-title mb-0">Note History</h5>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" id="btnRefreshComments" class="btn btn-sm btn-light">
+                        <i class="bi bi-arrow-clockwise me-1"></i> Refresh
                     </button>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn btn-sm btn-icon" data-bs-dismiss="modal" aria-label="Close">
+                        <i class="bi bi-x-lg"></i>
+                    </button>
                 </div>
             </div>
             <div class="modal-body">
-                <ul id="commentTimeline" class="timeline list-unstyled mb-0"></ul>
-                <div id="commentEmpty" class="comment-empty">Belum ada komentar.</div>
+                <ul id="commentTimeline" class="cmt-timeline list-unstyled mb-0"></ul>
+                <div id="commentEmpty" class="text-muted fst-italic">There are no notes yet.</div>
             </div>
         </div>
     </div>
