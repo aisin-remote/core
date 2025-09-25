@@ -375,7 +375,7 @@ class IppController
             }
 
             if ($ipp) {
-                $locked = ($ipp->status === 'submitted');
+                $locked = ($ipp->status === 'submitted' || $ipp->status === 'checked');
 
                 $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
 
@@ -918,7 +918,7 @@ class IppController
     {
         $comments = $ipp->comments()
             ->with('employee:id,name')
-            ->orderBy('created_at')
+            ->orderBy('created_at', 'desc')
             ->get()
             ->map(function ($c) {
                 return [
