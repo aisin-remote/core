@@ -576,12 +576,16 @@
 
                 {{-- Submit + Export --}}
                 <div class="d-flex justify-content-end mt-3 gap-2">
-                    <a href="{{ route('ipp.export.excel') }}" class="btn btn-success d-none" id="btnExportExcel">
+                    <a href="#" class="btn btn-success d-none" id="btnExportExcel"
+                        data-href-template="{{ route('ipp.export.excel', '__ID__') }}">
                         <i class="bi bi-file-earmark-spreadsheet"></i> Export Excel
                     </a>
-                    <a href="{{ route('ipp.export.pdf') }}" class="btn btn-danger d-none" id="btnExportPDF">
+
+                    <a href="#" class="btn btn-danger d-none" id="btnExportPDF"
+                        data-href-template="{{ route('ipp.export.pdf', '__ID__') }}">
                         <i class="bi bi-file-earmark-pdf"></i> Export PDF
                     </a>
+
                     <button type="button" class="btn btn-warning" id="btnSubmitAll">
                         <i class="bi bi-send-check"></i> Submit IPP
                     </button>
@@ -694,8 +698,10 @@
 
             function updateExportVisibility() {
                 const hasRows = $('table.js-table tbody tr').not('.empty-row').length > 0;
-                $('#btnExportExcel').toggleClass('d-none', !hasRows);
-                $('#btnExportPDF').toggleClass('d-none', !hasRows);
+                const hasId = !!window.__currentIppId;
+                const show = hasRows && hasId;
+                $('#btnExportExcel').toggleClass('d-none', !show);
+                $('#btnExportPDF').toggleClass('d-none', !show);
             }
 
             /* ===== Status badge ===== */
@@ -798,6 +804,22 @@
                     $ul.append($li);
                 });
             }
+
+            function syncExportLinks(ippId) {
+                const $excel = $('#btnExportExcel');
+                const $pdf = $('#btnExportPDF');
+                const tExcel = $excel.data('href-template');
+                const tPdf = $pdf.data('href-template');
+
+                if (ippId) {
+                    $excel.attr('href', String(tExcel || '').replace('__ID__', ippId));
+                    $pdf.attr('href', String(tPdf || '').replace('__ID__', ippId));
+                } else {
+                    $excel.attr('href', '#');
+                    $pdf.attr('href', '#');
+                }
+            }
+
 
 
             // expand/less comment
@@ -1156,23 +1178,71 @@
                             });
                         }
 
-                        const ippStatus = res?.ipp?.status || null;
+                        const ippStatus = res?.ipp?.status || 'draft';
                         renderIppStatus(ippStatus);
-                        updateExportVisibility();
 
                         const locked = !!(res?.locked || res?.ipp?.locked || (res?.ipp?.status === 'submitted'));
                         applyLockDom(locked);
 
-                        // Indikator komentar
                         const ippId = res?.ipp?.id || null;
                         window.__currentIppId = ippId;
+                        syncExportLinks(ippId);
+
                         const totalComments = Number(res?.comments_count || 0);
                         setCommentIndicator(ippId, totalComments);
 
+                        if (!res?.ipp && res?.has_approved) {
+                            const year = res?.identitas?.on_year || '';
+                            const bannerKey = (y) => `ipp:${y}:approved_banner_dismissed`;
+
+                            if (localStorage.getItem(bannerKey(year)) !== '1') {
+                                if (!document.getElementById('ippApprovedBanner')) {
+                                    const banner = $(`
+                                            <div id="ippApprovedBanner"
+                                                class="alert alert-info alert-dismissible fade show d-flex align-items-center"
+                                                role="alert" style="border-radius:12px;">
+                                            <i class="bi bi-info-circle me-2 fs-5"></i>
+                                            <div class="me-3">
+                                                <div class="fw-bold mb-0">
+                                                Anda sudah memiliki IPP ${year} yang <span class="text-success">APPROVED</span>.
+                                                </div>
+                                                <small class="text-muted">
+                                                Halaman ini untuk memulai IPP baru (siklus berikutnya). Silakan tambah point dan submit.
+                                                </small>
+                                            </div>
+                                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                                            </div>
+                                        `);
+                                    $('.accordion.mt-3.ipp').before(banner);
+
+                                    // saat banner ditutup, simpan state agar tidak muncul lagi
+                                    banner.on('closed.bs.alert', () => {
+                                        try {
+                                            localStorage.setItem(bannerKey(year), '1');
+                                        } catch (_) {}
+                                    });
+                                }
+                            }
+
+                            // pastikan tabel kosong, siap input baru
+                            $('table.js-table tbody.js-tbody').each(function() {
+                                if ($(this).find('tr').not('.empty-row').length === 0) {
+                                    $(this).html(
+                                        '<tr class="empty-row"><td colspan="5">Klik "Tambah Point" untuk memulai.</td></tr>'
+                                    );
+                                }
+                            });
+
+                            // sembunyikan export saat belum ada data
+                            $('#btnExportExcel, #btnExportPDF').addClass('d-none');
+                        }
+
                         recalcAll();
+                        updateExportVisibility();
                     })
                     .fail(() => toast('Gagal memuat data awal IPP.', 'danger'));
             }
+
 
             $(document).ready(function() {
                 // buka semua panel

@@ -361,24 +361,49 @@ class IppController
             'special_assignment'  => 0,
             'total'               => 0,
         ];
-        $header = null;
-        $locked = false;
+
+        $header         = null;      // draft/aktif yang bisa diedit
+        $locked         = false;     // default: tidak ngunci
+        $commentsCount  = 0;
+        $hasApproved    = false;
+        $approvedHeader = null;
 
         if ($empId) {
+            // Cari IPP yang masih bisa diedit (bukan approved)
             $ipp = Ipp::where('employee_id', $empId)
                 ->where('on_year', $year)
                 ->where('status', '!=', 'approved')
                 ->first();
+
+            // Cari IPP yang approved (info saja)
+            $approved = Ipp::where('employee_id', $empId)
+                ->where('on_year', $year)
+                ->where('status', 'approved')
+                ->first();
+
+            if ($approved) {
+                $hasApproved    = true;
+                $approvedHeader = [
+                    'id'            => $approved->id,
+                    'employee_id'   => $approved->employee_id,
+                    'pic_review_id' => $approved->pic_review_id,
+                    'status'        => 'approved',
+                    'summary'       => $approved->summary ?: null,
+                    'locked'        => true,
+                    // (opsional) tambahkan url jika ada:
+                    // 'url_show'   => route('ipp.show', $approved->id),
+                ];
+                $commentsCount = $approved->comments->count();
+            }
 
             if ($ipp && !$ipp->pic_review_id && $picReviewId) {
                 $ipp->update(['pic_review_id' => $picReviewId]);
             }
 
             if ($ipp) {
-                $locked = ($ipp->status === 'submitted' || $ipp->status === 'checked');
+                $locked = in_array($ipp->status, ['submitted', 'checked'], true);
 
                 $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
-
                 foreach ($points as $p) {
                     $item = [
                         'id'         => $p->id,
@@ -392,15 +417,15 @@ class IppController
                     ];
                     if (isset($pointByCat[$p->category])) {
                         $pointByCat[$p->category][] = $item;
-                        $summary[$p->category]      = ($summary[$p->category] ?? 0) + (int) $p->weight;
+                        $summary[$p->category]      += (int) $p->weight;
                     }
                 }
 
                 $summary['total'] =
-                    ($summary['activity_management'] ?? 0)
-                    + ($summary['people_development'] ?? 0)
-                    + ($summary['crp'] ?? 0)
-                    + ($summary['special_assignment'] ?? 0);
+                    $summary['activity_management']
+                    + $summary['people_development']
+                    + $summary['crp']
+                    + $summary['special_assignment'];
 
                 $header = [
                     'id'            => $ipp->id,
@@ -416,14 +441,17 @@ class IppController
         }
 
         return response()->json([
-            'identitas'      => $identitas,
-            'ipp'            => $header,
-            'points'         => $pointByCat,
-            'cap'            => self::CAP,
-            'locked'         => $locked,
-            'comments_count' => $commentsCount
+            'identitas'       => $identitas,
+            'ipp'             => $header,
+            'points'          => $pointByCat,
+            'cap'             => self::CAP,
+            'locked'          => $locked,
+            'comments_count'  => $commentsCount,
+            'has_approved'    => $hasApproved,
+            'approved'        => $approvedHeader,
         ]);
     }
+
 
     public function store(Request $request)
     {
@@ -944,14 +972,12 @@ class IppController
 
             $user    = auth()->user();
             $authEmp = $user->employee;
-            $year    = now()->format('Y');
 
             abort_if(!$authEmp, 403, 'Employee not found for this account.');
 
             $ipp = $id
-                ? Ipp::findOrFail($id)
-                : Ipp::where('employee_id', $authEmp->id)->first();
-
+                ? Ipp::find($id)
+                : Ipp::where('employee_id', $authEmp->id)->where('on_year', now()->format('Y'))->first();
             abort_if(!$ipp, 404, 'IPP not found.');
 
             // owner
@@ -1167,7 +1193,7 @@ class IppController
                 $offset += max(0, $n - 1);
             }
 
-            $fileName = 'IPP_' . $year . '_' . Str::slug((string)($owner->name ?? 'user')) . '.xlsx';
+            $fileName = 'IPP_' . $identitas['on_year'] . '_' . Str::slug((string)($owner->name ?? 'user')) . '.xlsx';
             $tmp = tempnam(sys_get_temp_dir(), 'ipp_') . '.xlsx';
             IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tmp);
 
@@ -1206,7 +1232,6 @@ class IppController
             $ipp = $id
                 ? Ipp::find($id)
                 : Ipp::where('employee_id', $authEmp->id)->where('on_year', now()->format('Y'))->first();
-
             abort_if(!$ipp, 404, 'IPP not found.');
 
             // 2) Owner IPP
