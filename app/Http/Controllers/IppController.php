@@ -410,15 +410,18 @@ class IppController
                     'summary'       => $ipp->summary ?: $summary,
                     'locked'        => $locked,
                 ];
+
+                $commentsCount = $ipp->comments->count();
             }
         }
 
         return response()->json([
-            'identitas' => $identitas,
-            'ipp'       => $header,
-            'points'    => $pointByCat,
-            'cap'       => self::CAP,
-            'locked'    => $locked,
+            'identitas'      => $identitas,
+            'ipp'            => $header,
+            'points'         => $pointByCat,
+            'cap'            => self::CAP,
+            'locked'         => $locked,
+            'comments_count' => $commentsCount
         ]);
     }
 
@@ -874,7 +877,7 @@ class IppController
 
             $ipp = Ipp::findOrFail($id);
             $from = strtolower((string) $ipp->status);
-            $to   = "draft";
+            $to   = "revised";
 
             $updatePoints = 0;
             DB::transaction(function () use ($data, $empId, $ipp, $from, $to, &$updatePoints) {
@@ -916,10 +919,21 @@ class IppController
         $comments = $ipp->comments()
             ->with('employee:id,name')
             ->orderBy('created_at')
-            ->get();
+            ->get()
+            ->map(function ($c) {
+                return [
+                    'id'          => $c->id,
+                    'employee'    => $c->employee,
+                    'comment'     => $c->comment,
+                    'status_from' => $c->status_from,
+                    'status_to'   => $c->status_to,
+                    'created_at'  => optional($c->created_at)->timezone('Asia/Jakarta')->format('d M Y H:i'),
+                ];
+            });
 
         return response()->json(['data' => $comments]);
     }
+
 
     /** ====== EXPORT EXCEL DAN PDF ====== */
     public function exportExcel(?int $id = null)
