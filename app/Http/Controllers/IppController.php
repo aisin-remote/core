@@ -6,6 +6,7 @@ use App\Models\Department;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Ipp;
+use App\Models\IppComment;
 use App\Models\IppPoint;
 use App\Models\Section;
 use App\Models\SubSection;
@@ -862,24 +863,36 @@ class IppController
         }
     }
 
-    public function revise(int $id)
+    public function revise(Request $request, int $id)
     {
         try {
+            $data = $request->validate([
+                'note' => 'required|string|max:1000',
+            ]);
+
+            $empId = $request->user()->employee->id;
+
             $ipp = Ipp::findOrFail($id);
             $from = strtolower((string) $ipp->status);
             $to   = "draft";
 
             $updatePoints = 0;
-            DB::transaction(function () use ($ipp, $to, &$updatePoints) {
-                $ipp->update(['status' => $to]);
+            DB::transaction(function () use ($data, $empId, $ipp, $from, $to, &$updatePoints) {
+                IppComment::create([
+                    'ipp_id'      => $ipp->id,
+                    'employee_id' => $empId,
+                    'status_from' => $from,
+                    'status_to'   => $to,
+                    'comment'     => $data['note'],
+                ]);
 
-                // update semua point IPP sesuai status
+                $ipp->update(['status' => $to]);
                 $updatePoints = IppPoint::where('ipp_id', $ipp->id)
                     ->update(['status' => $to]);
             });
 
             return response()->json([
-                'message'        => 'IPP status updated.',
+                'message'        => 'IPP revised and comment saved.',
                 'id'             => $ipp->id,
                 'from'           => $from,
                 'to'             => $to,
@@ -896,6 +909,16 @@ class IppController
                 'message' => 'Failed to revise IPP. Please try again.',
             ], 500);
         }
+    }
+
+    public function getComment(Ipp $ipp)
+    {
+        $comments = $ipp->comments()
+            ->with('employee:id,name')
+            ->orderBy('created_at')
+            ->get();
+
+        return response()->json(['data' => $comments]);
     }
 
     /** ====== EXPORT EXCEL DAN PDF ====== */

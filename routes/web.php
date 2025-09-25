@@ -318,6 +318,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/employee/ipps', [IppController::class, 'employeeIppsJson'])
             ->name('ipp.employee.ipps.json');
         Route::get('/approval/json', [IppController::class, 'approvalJson'])->name('ipp.approval.json');
+        Route::get('/{ipp}/comments', [IppController::class, 'getComment'])->name('ipp.comments');
     });
 
     Route::prefix('ipa')->group(function () {

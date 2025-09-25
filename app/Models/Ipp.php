@@ -40,4 +40,9 @@ class Ipp extends Model
     {
         return $this->hasMany(IppPoint::class);
     }
+
+    public function comments()
+    {
+        return $this->hasMany(IppComment::class);
+    }
 }
