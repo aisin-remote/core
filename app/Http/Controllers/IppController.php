@@ -1422,23 +1422,74 @@ class IppController
                 'position'    => (string) ($owner->position ?? ''),
             ];
 
+            // ===== SIGNATURES (build data URI + tanggal berdasarkan status) =====
+            $resolveSignaturePath = function (?Employee $emp): ?string {
+                if (!$emp) return null;
 
-            // 7) Render Blade → PDF
+                if (!empty($emp->signature_path)) {
+                    $p = storage_path('app/public/' . ltrim($emp->signature_path, '/'));
+                    if (is_file($p)) return $p;
+                }
+                $p2 = public_path('storage/signatures/' . $emp->id . '.png');
+                if (is_file($p2)) return $p2;
 
+                return null;
+            };
+
+            $toDataUri = function (?string $path): ?string {
+                if (!$path || !is_file($path)) return null;
+                $mime = 'image/' . strtolower(pathinfo($path, PATHINFO_EXTENSION) ?: 'png');
+                $data = base64_encode(@file_get_contents($path));
+                return $data ? "data:{$mime};base64,{$data}" : null;
+            };
+
+            $status = strtolower((string) $ipp->status);
+
+            $checkedBy   = method_exists($ipp, 'checkedBy')  ? $ipp->checkedBy  : ($ipp->checked_by  ? Employee::find($ipp->checked_by)  : null);
+            $approvedBy  = method_exists($ipp, 'approvedBy') ? $ipp->approvedBy : ($ipp->approved_by ? Employee::find($ipp->approved_by) : null);
+
+            $submitAt    = $ipp->last_submitted_at ?? $ipp->submitted_at;
+            $checkedAt   = $ipp->checked_at;
+            $approvedAt  = $ipp->approved_at;
+
+            $sig = [
+                // Superior of Superior (approved_by)
+                'approved' => [
+                    'img'  => in_array($status, ['approved'], true) ? $toDataUri($resolveSignaturePath($approvedBy)) : null,
+                    'date' => $approvedAt ? substr((string)$approvedAt, 0, 10) : null,
+                    'name' => $approvedBy?->name,
+                ],
+                // Superior (checked_by)
+                'checked' => [
+                    'img'  => in_array($status, ['checked', 'approved'], true) ? $toDataUri($resolveSignaturePath($checkedBy)) : null,
+                    'date' => $checkedAt ? substr((string)$checkedAt, 0, 10) : null,
+                    'name' => $checkedBy?->name,
+                ],
+                // Employee (owner)
+                'employee' => [
+                    'img'  => in_array($status, ['submitted', 'checked', 'approved'], true) ? $toDataUri($resolveSignaturePath($owner)) : null,
+                    'date' => $submitAt ? substr((string)$submitAt, 0, 10) : null,
+                    'name' => $owner?->name,
+                ],
+            ];
+
+            // 7) Logo
             $logoPath = public_path('assets/media/logos/aisin.png');
             $logoSrc  = null;
             if (is_file($logoPath)) {
                 $type = pathinfo($logoPath, PATHINFO_EXTENSION);
                 $logoSrc = 'data:image/' . $type . ';base64,' . base64_encode(file_get_contents($logoPath));
             }
-            // dd($logoSrc);
+
+            // 8) Render Blade → PDF
             $pdf = Pdf::loadView('website.ipp.pdf', [
                 'ipp'       => $ipp,
                 'owner'     => $owner,
                 'identitas' => $identitas,
                 'grouped'   => $grouped,
                 'summary'   => $summary,
-                'logo'      => $logoSrc
+                'logo'      => $logoSrc,
+                'sig'       => $sig,      // <— kirim signatures
             ])->setPaper('a4', 'landscape');
 
             $pdf->setOptions([
