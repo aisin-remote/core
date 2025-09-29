@@ -21,6 +21,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Border;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class IppController
 {
@@ -263,17 +264,31 @@ class IppController
             return response()->json(['message' => 'employee_id is required'], 422);
         }
 
-        // Authorization: bawahan saya ATAU pernah menunjuk saya sebagai PIC
-        $subordinateIds = $this->getSubordinatesFromStructure($me)->pluck('id')->toArray();
-        $asPicIds = Ipp::where('pic_review_id', $me->id)->pluck('employee_id')->unique()->toArray();
-
-        if (!in_array($employeeId, $subordinateIds) && !in_array($employeeId, $asPicIds) && $employeeId !== (int)$me->id) {
-            return response()->json(['message' => 'Forbidden'], 403);
-        }
-
+        // Ambil target employee lebih awal agar bisa cek posisi
         $emp = Employee::find($employeeId);
         if (!$emp) {
             return response()->json(['message' => 'Employee not found'], 404);
+        }
+
+        // Exemption:
+        // - Jika user adalah HRD -> bypass
+        // - Jika target employee posisinya President atau VPD -> bypass
+        $isHrd = isset($user->role) && strtoupper($user->role) === 'HRD';
+        $targetPosition = strtoupper(trim((string) $emp->position));
+        $targetIsExempt = in_array($targetPosition, ['PRESIDENT', 'VPD'], true);
+
+        if (!$isHrd && !$targetIsExempt) {
+            // Authorization: bawahan saya ATAU pernah menunjuk saya sebagai PIC ATAU diri sendiri
+            $subordinateIds = $this->getSubordinatesFromStructure($me)->pluck('id')->toArray();
+            $asPicIds = Ipp::where('pic_review_id', $me->id)->pluck('employee_id')->unique()->toArray();
+
+            if (
+                !in_array($employeeId, $subordinateIds, true) &&
+                !in_array($employeeId, $asPicIds, true) &&
+                $employeeId !== (int) $me->id
+            ) {
+                return response()->json(['message' => 'Forbidden'], 403);
+            }
         }
 
         $ipps = Ipp::where('employee_id', $employeeId)
@@ -631,8 +646,9 @@ class IppController
         DB::transaction(function () use ($ipp, $summary) {
             IppPoint::where('ipp_id', $ipp->id)->update(['status' => 'submitted']);
             $ipp->update([
-                'status'  => 'submitted',
-                'summary' => $summary,
+                'status'       => 'submitted',
+                'summary'      => $summary,
+                'submitted_at' => now(),
             ]);
         });
 
@@ -841,7 +857,7 @@ class IppController
     public function approve(int $id): JsonResponse
     {
         try {
-            $ipp = Ipp::findOrFail($id);
+            $ipp  = Ipp::findOrFail($id);
             $from = strtolower((string) $ipp->status);
             $to   = null;
 
@@ -850,14 +866,12 @@ class IppController
             } elseif ($from === 'checked') {
                 $to = 'approved';
             } elseif ($from === 'approved') {
-                // Sudah final
                 return response()->json([
                     'message' => 'IPP already approved (final state).',
                     'id'      => $ipp->id,
                     'status'  => $ipp->status,
                 ], 409);
             } else {
-                // State tidak valid untuk approve flow
                 return response()->json([
                     'message' => "Current status '{$ipp->status}' is not eligible for approval.",
                     'id'      => $ipp->id,
@@ -866,10 +880,22 @@ class IppController
             }
 
             $updatePoints = 0;
-            DB::transaction(function () use ($ipp, $to, &$updatePoints) {
-                $ipp->update(['status' => $to]);
 
-                // update semua point IPP sesuai status
+            DB::transaction(function () use ($ipp, $to, &$updatePoints) {
+                // siapkan payload update status + cap waktu sesuai transisi
+                $updates = ['status' => $to];
+
+                if ($to === 'checked' && is_null($ipp->checked_at)) {
+                    $updates['checked_at'] = now();
+                    $updates['checked_by'] = auth()->user()->employee->id ?? null;
+                } elseif ($to === 'approved' && is_null($ipp->approved_at)) {
+                    $updates['approved_at'] = now();
+                    $updates['approved_by'] = auth()->user()->employee->id ?? null;
+                }
+
+                $ipp->update($updates);
+
+                // sinkronkan status semua point
                 $updatePoints = IppPoint::where('ipp_id', $ipp->id)
                     ->update(['status' => $to]);
             });
@@ -881,18 +907,18 @@ class IppController
                 'to'             => $to,
                 'points_updated' => $updatePoints,
                 'updated_at'     => optional($ipp->updated_at)->toDateTimeString(),
+                'submitted_at'   => optional($ipp->submitted_at)->toDateTimeString(),
+                'checked_at'     => optional($ipp->checked_at)->toDateTimeString(),
+                'approved_at'    => optional($ipp->approved_at)->toDateTimeString(),
             ]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-            return response()->json([
-                'message' => 'IPP not found.',
-            ], 404);
+            return response()->json(['message' => 'IPP not found.'], 404);
         } catch (\Throwable $e) {
             report($e);
-            return response()->json([
-                'message' => 'Failed to approve IPP. Please try again.',
-            ], 500);
+            return response()->json(['message' => 'Failed to approve IPP. Please try again.'], 500);
         }
     }
+
 
     public function revise(Request $request, int $id)
     {
@@ -1181,18 +1207,126 @@ class IppController
                     $sheet->getStyle("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}")
                         ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)
                         ->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
-                    $outlineMedium("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}", 'right');
-
-                    // tinggi baris
-                    $sheet->getRowDimension($r)->setRowHeight(
-                        $this->calcRowHeight($maxLines, 18.0, 4.0)
-                    );
+                    $outlineMedium("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}");
                 }
 
                 // Tambah offset baris sisipan
                 $offset += max(0, $n - 1);
             }
 
+            // ===========================
+            //  SIGNATURES BY STATUS
+            // ===========================
+
+            // Helper: render tanda tangan ke range + tanggal
+            $renderSignature = function (string $rect, string $anchor, ?string $imgPath, ?string $date, string $dateRect) use ($sheet) {
+                // merge cell area utk gambar & tanggal
+                $sheet->mergeCells($rect);
+                $sheet->mergeCells($dateRect);
+
+                // tanggal (kalau ada)
+                if (!empty($date)) {
+                    $sheet->setCellValue(explode(':', $dateRect)[0], $date);
+                    $sheet->getStyle($dateRect)->applyFromArray([
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_LEFT,
+                            'vertical'   => Alignment::VERTICAL_CENTER,
+                            'wrapText'   => false,
+                        ],
+                        'font' => ['name' => 'Tahoma', 'size' => 12],
+                    ]);
+                }
+
+                // gambar tanda tangan (kalau ada)
+                if ($imgPath && is_file($imgPath)) {
+                    $drw = new Drawing();
+                    $drw->setName('Signature');
+                    $drw->setDescription('Signature');
+                    $drw->setPath($imgPath);
+                    $drw->setCoordinates($anchor);
+                    $drw->setResizeProportional(true);
+                    $drw->setHeight(165);
+                    $drw->setOffsetX(49);
+                    $drw->setOffsetY(-10);
+                    $drw->setWorksheet($sheet);
+                }
+            };
+
+            // Helper: resolve path signature dari employee
+            $resolveSignaturePath = function (?Employee $emp): ?string {
+                if (!$emp) return null;
+
+                // Contoh 1: kolom signature_path di storage/app/public
+                if (!empty($emp->signature_path)) {
+                    $p = storage_path('app/public/' . ltrim($emp->signature_path, '/'));
+                    if (is_file($p)) return $p;
+                }
+
+                // Contoh 2: fallback folder public/storage/signatures/{id}.png
+                $p2 = public_path('storage/signatures/' . $emp->id . '.png');
+                if (is_file($p2)) return $p2;
+
+                return null;
+            };
+
+            // Area (silakan sesuaikan dgn template jika perlu)
+            $AREAS = [
+                'approved' => [ // kiri
+                    'rect'   => 'H34:Q35',
+                    'anchor' => 'H34',
+                    'date'   => 'I42:S42',
+                ],
+                'checked' => [  // tengah
+                    'rect'   => 'V34',
+                    'anchor' => 'V34',
+                    'date'   => 'U42:AG42',
+                ],
+                'employee' => [ // kanan (tetap)
+                    'rect'   => 'AK34',
+                    'anchor' => 'AK34',
+                    'date'   => 'AJ42:AU42'
+                ],
+            ];
+
+            // Ambil entity & tanggal
+            $status = strtolower((string)$ipp->status);
+
+            // Relasi untuk checked/approved by (pastikan sudah ada di model)
+            $checkedByEmp   = method_exists($ipp, 'checkedBy')  ? $ipp->checkedBy : null;
+            $approvedByEmp  = method_exists($ipp, 'approvedBy') ? $ipp->approvedBy : null;
+
+            // Tanggal (pakai last_submitted_at jika ada)
+            $submitAt   = $ipp->last_submitted_at ?? $ipp->submitted_at;
+            $checkedAt  = $ipp->checked_at;
+            $approvedAt = $ipp->approved_at;
+
+            $submitDate   = $submitAt   ? substr((string)$submitAt,   0, 10) : null;
+            $checkedDate  = $checkedAt  ? substr((string)$checkedAt,  0, 10) : null;
+            $approvedDate = $approvedAt ? substr((string)$approvedAt, 0, 10) : null;
+
+            // Resolve file path tanda tangan
+            $ownerSig    = $resolveSignaturePath($owner);
+            $checkedSig  = $resolveSignaturePath($checkedByEmp);
+            $approvedSig = $resolveSignaturePath($approvedByEmp);
+
+            // Render sesuai status
+            if ($status === 'submitted') {
+                // hanya employee
+                $renderSignature($AREAS['employee']['rect'], $AREAS['employee']['anchor'], $ownerSig, $submitDate, $AREAS['employee']['date']);
+            } elseif ($status === 'checked') {
+                // employee + checked_by
+                $renderSignature($AREAS['employee']['rect'], $AREAS['employee']['anchor'], $ownerSig,   $submitDate,  $AREAS['employee']['date']);
+                $renderSignature($AREAS['checked']['rect'],  $AREAS['checked']['anchor'],  $checkedSig, $checkedDate, $AREAS['checked']['date']);
+            } elseif ($status === 'approved') {
+                // employee + checked_by + approved_by
+                $renderSignature($AREAS['employee']['rect'],  $AREAS['employee']['anchor'],  $ownerSig,    $submitDate,   $AREAS['employee']['date']);
+                $renderSignature($AREAS['checked']['rect'],   $AREAS['checked']['anchor'],   $checkedSig,  $checkedDate,  $AREAS['checked']['date']);
+                $renderSignature($AREAS['approved']['rect'],  $AREAS['approved']['anchor'],  $approvedSig, $approvedDate, $AREAS['approved']['date']);
+            }
+
+            // ===========================
+            //  OUTPUT FILE
+            // ===========================
             $fileName = 'IPP_' . $identitas['on_year'] . '_' . Str::slug((string)($owner->name ?? 'user')) . '.xlsx';
             $tmp = tempnam(sys_get_temp_dir(), 'ipp_') . '.xlsx';
             IOFactory::createWriter($spreadsheet, 'Xlsx')->save($tmp);
@@ -1217,6 +1351,7 @@ class IppController
             return redirect()->back()->with('warning', 'Gagal mengekspor Excel: ' . $e->getMessage());
         }
     }
+
 
     public function exportPdf(?int $id = null)
     {
