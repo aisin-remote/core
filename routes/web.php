@@ -23,6 +23,7 @@ use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IppController;
+use App\Http\Controllers\SignatureController;
 use Illuminate\Support\Facades\Request;
 
 /*
@@ -191,6 +192,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
         Route::post('/status/{id}', [EmployeeController::class, 'status'])->name('employee.status');
+
+        // signature
+        Route::post('/{employee}/signature', [SignatureController::class, 'store'])
+            ->name('employees.signature.store');
+        Route::delete('/{employee}/signature', [SignatureController::class, 'destroy'])
+            ->name('employees.signature.destroy');
 
         // promotion
         Route::prefix('promotion')->group(function () {
