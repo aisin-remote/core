@@ -23,6 +23,7 @@ use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\IppController;
+use App\Http\Controllers\SignatureController;
 use Illuminate\Support\Facades\Request;
 
 /*
@@ -170,9 +171,14 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
         Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
+
         Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
         Route::get('/icp/{id}', [IcpController::class, 'approve'])->name('icp.approve');
         Route::post('icp/revise', [IcpController::class, 'revise'])->name('icp.revise');
+
+        Route::get('/ipp', [IppController::class, 'approval'])->name('ipp.approval');
+        Route::post('/ipp/{id}', [IppController::class, 'approve'])->name('ipp.approve');
+        Route::post('/ipp/revise/{id}', [IppController::class, 'revise'])->name('ipp.revise');
     });
 
     Route::prefix('employee')->group(function () {
@@ -186,6 +192,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
         Route::post('/status/{id}', [EmployeeController::class, 'status'])->name('employee.status');
+
+        // signature
+        Route::post('/{employee}/signature', [SignatureController::class, 'store'])
+            ->name('employees.signature.store');
+        Route::delete('/{employee}/signature', [SignatureController::class, 'destroy'])
+            ->name('employees.signature.destroy');
 
         // promotion
         Route::prefix('promotion')->group(function () {
@@ -258,6 +270,19 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/list/{id?}', [RtcController::class, 'list'])->name('rtc.list');
         Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
+
+        // routes/web.php
+        Route::get('/structure', [RtcController::class, 'summary'])
+            ->name('rtc.structure'); // yang sekarang
+
+        // Page khusus chart dabeng (re-use summary backend)
+        Route::get('/structure/dabeng', [RtcController::class, 'structureDabeng'])
+            ->name('rtc.structure.dabeng');
+
+        // JSON data untuk dabeng (pakai summary yg sama, cukup ?as_json=1)
+        Route::get('/structure.json', [RtcController::class, 'summary'])
+            ->name('rtc.structure.json'); // panggil dengan ?as_json=1
+
     });
 
     Route::prefix('idp')->group(function () {
@@ -292,9 +317,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/init', [IppController::class, 'init'])->name('ipp.init');
         Route::post('/', [IppController::class, 'store'])->name('ipp.store');
         Route::post('/submit', [IppController::class, 'submit'])->name('ipp.submit');
-        Route::get('/list/{company}', [IppController::class, 'list'])->name('ipp.list');
+        Route::get('/list/{company?}', [IppController::class, 'list'])->name('ipp.list');
+        Route::get('/data', [IppController::class, 'listJson'])->name('ipp.list.json');
         Route::delete('/point/{point}', [IppController::class, 'destroyPoint'])->name('ipp.point.destroy');
-        Route::get('/export', [IppController::class, 'export'])->name('ipp.export');
+        Route::get('/export/excel/{id?}', [IppController::class, 'exportExcel'])->name('ipp.export.excel');
+        Route::get('/export/pdf/{id?}', [IppController::class, 'exportPdf'])->name('ipp.export.pdf');
+        Route::get('/employee/ipps', [IppController::class, 'employeeIppsJson'])
+            ->name('ipp.employee.ipps.json');
+        Route::get('/approval/json', [IppController::class, 'approvalJson'])->name('ipp.approval.json');
+        Route::get('/{ipp}/comments', [IppController::class, 'getComment'])->name('ipp.comments');
     });
 
     Route::prefix('ipa')->group(function () {

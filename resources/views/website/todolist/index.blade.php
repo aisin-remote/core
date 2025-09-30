@@ -648,6 +648,85 @@
                 </div>
             </div>
 
+            {{-- ===================== IPP ===================== --}}
+            @php $isUser = auth()->user()->role === 'User'; @endphp
+            @if ($isUser)
+                <div class="col-12 col-xl-6 col-xxl-4">
+                    <div class="panel shadow-sm">
+                        <div class="panel-head">
+                            <h3 class="text-white"><i class="fas fa-user-check"></i><span class="fw-bold">IPP</span></h3>
+                        </div>
+
+                        <div class="panel-body panel-scroll">
+                            @php
+                                $ippTasks = $allIppTasks['ippTasks'];
+                            @endphp
+                            @php
+                                $status = [
+                                    'unassigned' => [
+                                        'tone' => 'err',
+                                        'status' => 'status-err',
+                                        'icon' => 'fa-exclamation-circle',
+                                        'label' => 'To Be Assign',
+                                    ],
+                                    'submitted' => [
+                                        'tone' => 'warn',
+                                        'status' => 'status-warn',
+                                        'icon' => 'fa-clipboard-check',
+                                        'label' => 'Need Check',
+                                    ],
+                                    'draft' => [
+                                        'tone' => 'warn',
+                                        'status' => 'status-warn',
+                                        'icon' => 'fa-pen',
+                                        'label' => 'Need Submit',
+                                    ],
+                                    'checked' => [
+                                        'tone' => 'info',
+                                        'status' => 'status-info',
+                                        'icon' => 'fa-hourglass-half',
+                                        'label' => 'Need Approve',
+                                    ],
+                                    'revise' => [
+                                        'tone' => 'err',
+                                        'status' => 'status-err',
+                                        'icon' => 'fa-rotate-left',
+                                        'label' => 'Need Revise',
+                                    ],
+                                ];
+                                $cfg = $status[$ippTasks['status']] ?? [
+                                    'tone' => 'muted',
+                                    'status' => 'status-muted',
+                                    'icon' => 'fa-circle-question',
+                                    'label' => 'Unknown',
+                                ];
+
+                                $href = in_array($ippTasks['status'], ['submitted', 'checked'])
+                                    ? route('ipp.approval')
+                                    : route('ipp.index', [
+                                        'company' => $ippTasks['employee_company'],
+                                        'npk' => $ippTasks['employee_npk'],
+                                    ]);
+                            @endphp
+
+                            <a class="link-plain" href="{{ $href }}">
+                                <div class="task-row hover-shadow stagger">
+                                    <div class="tone tone-{{ $cfg['tone'] }}"></div>
+
+                                    <div>
+                                        <h5 class="task-title mb-1">{{ $ippTasks['employee_name'] }}</h5>
+                                        <div class="task-sub">{{ $ippTasks['employee_company'] ?? '-' }}</div>
+                                    </div>
+
+                                    <span class="status-chip {{ $cfg['status'] }}">
+                                        <i class="fas {{ $cfg['icon'] }}"></i>{{ $cfg['label'] }}
+                                    </span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
             {{-- ================= Assessment (HRD only) ================= --}}
             @if (auth()->user()->role === 'HRD')
                 <div class="col-12 col-xl-6 col-xxl-4">

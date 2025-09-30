@@ -42,6 +42,12 @@
         .modal .select2-container .select2-dropdown {
             z-index: 2056
         }
+
+        .disabled {
+            pointer-events: none;
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 

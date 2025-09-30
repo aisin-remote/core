@@ -189,7 +189,7 @@
 
                         @if (auth()->user())
                             <div class="menu-item px-5">
-                                <a href="/employee/detail/{{ auth()->user()->employee->npk }}" class="menu-link px-5">My
+                                <a href="/employee/detail/{{ auth()->user()->id }}" class="menu-link px-5">My
                                     Profile</a>
                             </div>
                             <div class="menu-item px-5">

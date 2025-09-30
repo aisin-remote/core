@@ -202,7 +202,7 @@
                                         <td class="text-center">
                                             {{-- Detail untuk level Company → ke list plant --}}
                                             @if ($table === 'Company')
-                                                <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
+                                                <a href="{{ route('rtc.structure.dabeng', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
                                                     Preview
                                                 </a>
@@ -212,7 +212,7 @@
                                                 </a>
                                             @elseif ($table === 'Plant')
                                                 <a class="btn btn-sm btn-info"
-                                                    href="{{ route('rtc.summary', ['id' => $division->id]) }}?filter=plant"
+                                                    href="{{ route('rtc.structure.dabeng', ['id' => $division->id]) }}?filter=plant"
                                                     title="RTC Summary" target="_blank">
                                                     Preview
                                                 </a>
@@ -221,7 +221,7 @@
                                                     Detail
                                                 </a>
                                             @else
-                                                <a href="{{ route('rtc.summary', ['id' => $division->id, 'filter' => $table]) }}"
+                                                <a href="{{ route('rtc.structure.dabeng', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
                                                     Preview
                                                 </a>
@@ -296,6 +296,9 @@
     @if ($showPlanColumns)
         <script>
             let currentDivisionId = null;
+
+            $filterParam = strtolower(str_replace(' ', '_', $table));
+
 
             $(document).on('click', '.open-add-plan-modal', function() {
                 currentDivisionId = $(this).data('id');

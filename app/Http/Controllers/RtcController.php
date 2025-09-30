@@ -1100,9 +1100,156 @@ class RtcController extends Controller
                 abort(404, 'Unsupported filter');
         }
 
+        if ($request->expectsJson() || $request->boolean('as_json') || $request->query('format') === 'json') {
+            return response()->json([
+                'main'          => $main,
+                'managers'      => $managers,
+                'title'         => $title,
+                'hideMainPlans' => $hideMainPlans,
+                'noRoot'        => $noRoot,
+                'groupTop'      => $groupTop,
+            ]);
+        }
+
         // return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
         return view('website.rtc.structure', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
     }
+
+    public function structureDabeng(Request $request)
+    {
+        $title = 'Org Chart';
+        return view('website.rtc.orgchart-dabeng', compact('title'));
+    }
+
+    /**
+     * Ubah struktur {main, managers} (bersarang) menjadi flat array [{id,pid,name,title,...}]
+     * agar cocok dengan dabeng/OrgChart.
+     */
+    private function flattenForDabeng(array $main, array $managers, bool $hideMainPlans, bool $noRoot, bool $groupTop): array
+    {
+        $nodes = [];
+        $nextId = 1;
+        $newId = fn() => $nextId++;
+
+        $clamp = function (?string $s, int $max = 64) {
+            $s = (string)($s ?? '');
+            return mb_strlen($s) > $max ? (mb_substr($s, 0, $max - 1) . '…') : $s;
+        };
+
+        // builder node
+        $make = function ($title, $person, $color, $plans) use ($clamp) {
+            $name  = $clamp($person['name'] ?? '-', 48);
+            $grade = $person['grade'] ?? '-';
+            $age   = $person['age'] ?? '-';
+            $los   = $person['los'] ?? '-';
+            $lcp   = $person['lcp'] ?? '-';
+            $img   = $person['photo'] ?? null;
+
+            // content multiline (pakai \n supaya kebaca di CSS white-space:pre-line)
+            $content = "Grade: {$grade}\nAge: {$age}\nLOS: {$los}\nLCP: {$lcp}";
+            if ($plans) {
+                $st = $plans['short'] ?? '';
+                $mt = $plans['mid']   ?? '';
+                $lt = $plans['long']  ?? '';
+                if ($st || $mt || $lt) {
+                    $content .= "\nS/T: {$st}\nM/T: {$mt}\nL/T: {$lt}";
+                }
+            }
+
+            return [
+                'title'      => (string)$title, // akan ditaruh di bar atas node
+                'name'       => $name,          // judul node
+                'content'    => $content,       // nodeContent
+                'image'      => (string)$img,
+            ];
+        };
+
+        // serializer kandidat
+        $fmtCand = function ($c) {
+            if (!$c) return '';
+            $nm = $c['name'] ?? '-';
+            $gr = $c['grade'] ?? '-';
+            $age = $c['age'] ?? '-';
+            return "{$nm} ({$gr}, {$age})";
+        };
+
+        // emit subtree standard
+        $emit = function ($node, $pid) use (&$nodes, &$newId, &$emit, $make, $fmtCand) {
+            $id = $newId();
+
+            $plans = $node['no_plans'] ?? false ? null : [
+                'short' => $fmtCand($node['shortTerm'] ?? null),
+                'mid'   => $fmtCand($node['midTerm']   ?? null),
+                'long'  => $fmtCand($node['longTerm']  ?? null),
+            ];
+
+            $item = $make(
+                $node['title'] ?? '-',
+                $node['person'] ?? [],
+                $node['colorClass'] ?? 'color-1',
+                $plans
+            );
+            $item['id']  = $id;
+            if ($pid) $item['pid'] = $pid;
+
+            $nodes[] = $item;
+
+            foreach (($node['supervisors'] ?? []) as $ch) {
+                $emit($ch, $id);
+            }
+            return $id;
+        };
+
+        // === MODE "groupTop" (company) ===
+        if ($groupTop) {
+            $rootId = $newId();
+            $nodes[] = [
+                'id'      => $rootId,
+                'title'   => 'Top Management',
+                'name'    => 'President & VPD',
+                'content' => '',
+                'image'   => '',
+            ];
+
+            // Dua kepala (index 0 & 1)
+            $headA = $managers[0] ?? null;
+            $headB = $managers[1] ?? null;
+
+            if ($headA) {
+                $idA = $emit($headA, $rootId);
+                // subtree “shared” diambil dari supervisors headA
+                // (di backendmu, plantTrees disimpan di $managers[0]['supervisors'])
+                // Sudah ikut ke $emit($headA, ...) di atas.
+            }
+            if ($headB) {
+                $emit($headB, $rootId);
+            }
+
+            return $nodes;
+        }
+
+        // === MODE NORMAL (plant/division/department/section/sub_section)
+        $parentId = null;
+        if (!$noRoot) {
+            $rootId = $newId();
+            $plans = $hideMainPlans ? null : [
+                'short' => $fmtCand($main['shortTerm'] ?? null),
+                'mid'   => $fmtCand($main['midTerm']   ?? null),
+                'long'  => $fmtCand($main['longTerm']  ?? null),
+            ];
+            $root = $make($main['title'] ?? '-', $main['person'] ?? [], $main['colorClass'] ?? 'color-1', $plans);
+            $root['id'] = $rootId;
+            $nodes[] = $root;
+            $parentId = $rootId;
+        }
+
+        foreach ($managers as $m) {
+            $emit($m, $parentId);
+        }
+
+        return $nodes;
+    }
+
     public function update(Request $request)
     {
         try {

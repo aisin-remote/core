@@ -562,4 +562,14 @@ class Employee extends Model
         $actGmPositions = ['Act GM'];
         return in_array($this->position, $actGmPositions);
     }
+
+    public function ipps()
+    {
+        return $this->hasMany(Ipp::class);
+    }
+
+    public function ippComments()
+    {
+        return $this->hasMany(IppComment::class);
+    }
 }
