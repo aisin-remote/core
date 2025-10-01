@@ -7,6 +7,7 @@ use App\Http\Controllers\HavController;
 use App\Http\Controllers\IcpController;
 use App\Http\Controllers\IdpController;
 use App\Http\Controllers\RtcController;
+use App\Http\Controllers\IpaController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlantController;
@@ -328,10 +329,13 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/{ipp}/comments', [IppController::class, 'getComment'])->name('ipp.comments');
     });
 
-    Route::prefix('ipa')->group(function () {
-        Route::get('/', [IppController::class, 'create'])->name('ipa.index');
-        Route::post('/', [IppController::class, 'store'])->name('ipa.store');
-        Route::get('/list/{company}', [IppController::class, 'list'])->name('ipa.list');
+    Route::prefix('ipa')->name('ipa.')->group(function () {
+        Route::get('/',                [IpaController::class, 'index'])->name('index');
+        Route::get('/{id}/edit',       [IpaController::class, 'edit'])->name('edit');
+        Route::get('/{id}/data',       [IpaController::class, 'getData'])->name('data');
+        Route::put('/{id}',            [IpaController::class, 'update'])->name('update');
+        Route::post('/{id}/recalc',    [IpaController::class, 'recalc'])->name('recalc');
+        Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
     });
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])

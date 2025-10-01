@@ -14,8 +14,11 @@ class IpaAchievement extends Model
 
     protected $fillable = [
         'ipa_id',
+        'ipp_point_id',
         'title',
         'description',
+        'one_year_target',
+        'one_year_achievement',
         'weight',
         'self_score',
         'calc_score',
