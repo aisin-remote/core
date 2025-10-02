@@ -15,7 +15,6 @@ class IpaAchievement extends Model
     protected $fillable = [
         'ipa_id',
         'ipp_point_id',
-        'title',
         'description',
         'one_year_target',
         'one_year_achievement',
@@ -24,6 +23,8 @@ class IpaAchievement extends Model
         'calc_score',
         'evidence',
         'position',
+        'title',
+        'category'
     ];
 
     // ==== Relationships ====

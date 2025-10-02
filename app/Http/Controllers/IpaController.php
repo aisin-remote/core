@@ -12,12 +12,6 @@ use Illuminate\Support\Facades\DB;
 
 class IpaController extends Controller
 {
-    /**
-     * Flow index:
-     * - Cek IPP tahun ini milik user.
-     * - Jika tidak ada / belum approved: tampilkan alert & CTA ke IPP.
-     * - Jika approved: pastikan IPA 1:1 (buat jika belum), redirect ke /ipa/{id}/edit.
-     */
     public function index(Request $request)
     {
         $user = auth()->user();
@@ -104,39 +98,61 @@ class IpaController extends Controller
         ]);
     }
 
-    /** JSON: data lengkap untuk halaman edit (termasuk ipp_points untuk dropdown program/activity) */
+    /** JSON: data lengkap untuk halaman edit */
     public function getData(int $id)
     {
         $ipa = IpaHeader::with([
             'employee',
             'activities' => function ($q) {
-                $q->withTrashed(false)->select('id', 'ipa_id', 'category', 'description', 'weight', 'self_score', 'calc_score', 'evidence', 'source');
+                $q->withTrashed(false)
+                    ->select('id', 'ipa_id', 'category', 'description', 'weight', 'self_score', 'calc_score', 'evidence', 'source');
             },
             'achievements' => function ($q) {
-                $q->withTrashed(false)->select('id', 'ipa_id', 'ipp_point_id', 'title', 'one_year_target', 'one_year_achievement', 'weight', 'self_score', 'calc_score', 'evidence');
+                // tambahkan category & title jika kolom tersedia (lihat migration di bawah)
+                $q->withTrashed(false)
+                    ->select('id', 'ipa_id', 'ipp_point_id', 'category', 'title', 'one_year_target', 'one_year_achievement', 'weight', 'self_score', 'calc_score', 'evidence');
             },
             'ipp' => function ($q) {
                 $q->select('id', 'on_year', 'status', 'employee_id');
             },
             'ipp.points' => function ($q) {
-                // pastikan kolom-kolom ini tersedia di tabel ipp_points:
-                // id, ipp_id, category, activity (atau title), target_one, weight
                 $q->select('id', 'ipp_id', 'category', 'activity', 'target_one', 'weight');
             }
         ])->findOrFail($id);
 
-        $ippPoints = ($ipa->ipp && $ipa->ipp->points)
-            ? $ipa->ipp->points->map(function ($p) {
+        // Map IPP points untuk fallback kategori/title achievement berbasis IPP
+        $ippPoints = collect();
+        if ($ipa->ipp && $ipa->ipp->points) {
+            $ippPoints = $ipa->ipp->points->map(function ($p) {
                 return [
                     'id'         => (int)$p->id,
                     'category'   => $p->category,
-                    // fallback ke title jika kamu memang pakai 'title'
                     'activity'   => $p->activity ?? $p->title ?? '',
                     'target_one' => $p->target_one ?? '',
                     'weight'     => (float)($p->weight ?? 0),
                 ];
-            })->values()->all()
-            : [];
+            })->keyBy('id');
+        }
+
+        $achievements = $ipa->achievements->map(function ($c) use ($ippPoints) {
+            $p = $c->ipp_point_id ? $ippPoints->get((int)$c->ipp_point_id) : null;
+
+            return [
+                'id'                   => (int)$c->id,
+                'ipp_point_id'         => $c->ipp_point_id ? (int)$c->ipp_point_id : null,
+                // category & title:
+                // - custom: ambil dari kolom achievement (butuh migration)
+                // - dari IPP: fallback dari IPP point
+                'category'             => $c->category ?? ($p['category'] ?? null),
+                'title'                => $c->title ?? ($p['activity'] ?? null),
+                'one_year_target'      => $c->one_year_target ?? ($p['target_one'] ?? null),
+                'one_year_achievement' => $c->one_year_achievement,
+                'weight'               => (float)$c->weight,
+                'self_score'           => (float)$c->self_score,
+                'calc_score'           => (float)$c->calc_score,
+                'evidence'             => $c->evidence,
+            ];
+        })->values()->all();
 
         return response()->json([
             'ok'   => true,
@@ -148,35 +164,23 @@ class IpaController extends Controller
                 ],
                 'activities'   => $ipa->activities->map(function ($a) {
                     return [
-                        'id'         => (int)$a->id,
-                        'category'   => $a->category,
+                        'id'          => (int)$a->id,
+                        'category'    => $a->category,
                         'description' => $a->description,
-                        'weight'     => (float)$a->weight,
-                        'self_score' => (float)$a->self_score,
-                        'calc_score' => (float)$a->calc_score,
-                        'evidence'   => $a->evidence,
-                        'source'     => $a->source,
+                        'weight'      => (float)$a->weight,
+                        'self_score'  => (float)$a->self_score,
+                        'calc_score'  => (float)$a->calc_score,
+                        'evidence'    => $a->evidence,
+                        'source'      => $a->source,
                     ];
                 })->values()->all(),
-                'achievements' => $ipa->achievements->map(function ($c) {
-                    return [
-                        'id'                   => (int)$c->id,
-                        'ipp_point_id'         => (int)$c->ipp_point_id,
-                        'title'                => $c->title,
-                        'one_year_target'      => $c->one_year_target,
-                        'one_year_achievement' => $c->one_year_achievement,
-                        'weight'               => (float)$c->weight,
-                        'self_score'           => (float)$c->self_score,
-                        'calc_score'           => (float)$c->calc_score,
-                        'evidence'             => $c->evidence,
-                    ];
-                })->values()->all(),
-                'ipp_points'   => $ippPoints,
+                'achievements' => $achievements,
+                'ipp_points'   => $ippPoints->values()->all(),
             ]
         ]);
     }
 
-    /** UPDATE: sinkron penuh + field achievement baru */
+    /** UPDATE: upsert (tanpa menghapus data lain) + dukung custom achievement */
     public function update(Request $request, int $id)
     {
         $ipa = IpaHeader::with(['activities', 'achievements'])->find($id);
@@ -185,46 +189,60 @@ class IpaController extends Controller
         $validated = $request->validate([
             'notes' => 'nullable|string',
 
-            'activities'                   => 'nullable|array',
-            'activities.*.id'              => 'nullable|integer|exists:ipa_activities,id',
-            'activities.*.category'        => 'nullable|string|max:100',
-            'activities.*.description'     => 'nullable|string',
-            'activities.*.weight'          => 'nullable|numeric|min:0',
-            'activities.*.self_score'      => 'nullable|numeric|min:0',
-            'activities.*.evidence'        => 'nullable|string',
-            'activities.*.source'          => 'nullable|in:from_ipp,custom',
+            // optional; kita proses hanya jika dikirim
+            'activities'                        => 'sometimes|array',
+            'activities.*.id'                   => 'nullable|integer|exists:ipa_activities,id',
+            'activities.*.category'             => 'nullable|string',
+            'activities.*.description'          => 'required_with:activities|string',
+            'activities.*.weight'               => 'required_with:activities|numeric|min:0',
+            'activities.*.self_score'           => 'nullable|numeric|min:0',
+            'activities.*.evidence'             => 'nullable|string',
+            'activities.*.source'               => 'nullable|string',
 
-            'achievements'                        => 'array',
+            'achievements'                        => 'sometimes|array',
             'achievements.*.id'                   => 'nullable|integer|exists:ipa_achievements,id',
             'achievements.*.ipp_point_id'         => 'nullable|integer',
-            'achievements.*.title'                => 'required|string|max:200',
-            'achievements.*.one_year_target'      => 'nullable|string',
-            'achievements.*.one_year_achievement' => 'nullable|string',
+            // tambahkan dukungan custom
+            'achievements.*.category'             => 'nullable|string',
+            'achievements.*.title'                => 'nullable|string',
             'achievements.*.weight'               => 'required|numeric|min:0',
             'achievements.*.self_score'           => 'required|numeric|min:0',
+            'achievements.*.one_year_target'      => 'nullable|string',
+            'achievements.*.one_year_achievement' => 'nullable|string',
             'achievements.*.evidence'             => 'nullable|string',
         ]);
 
         DB::beginTransaction();
         try {
             // Header
-            $ipa->update(['notes' => $validated['notes'] ?? $ipa->notes]);
-
-            // ===== Activities (W × R where W is %, so calc = (W/100)*R)
-            $acts = collect($validated['activities'] ?? []);
-            $keepActIds = $acts->pluck('id')->filter()->map(fn($v) => (int)$v)->values();
-            if ($ipa->activities()->exists()) {
-                IpaActivity::where('ipa_id', $ipa->id)->whereNotIn('id', $keepActIds)->delete();
+            if (array_key_exists('notes', $validated)) {
+                $ipa->update(['notes' => $validated['notes']]);
             }
-            foreach ($acts as $row) {
-                $w = (float)($row['weight'] ?? 0);
-                $r = (float)($row['self_score'] ?? 0);
-                $calc = ($w / 100.0) * $r;
 
-                if (!empty($row['id'])) {
-                    $act = IpaActivity::where('ipa_id', $ipa->id)->find($row['id']);
-                    if ($act) {
-                        $act->update([
+            // ===== Activities: upsert HANYA jika dikirim (tidak menghapus yg lain)
+            if (array_key_exists('activities', $validated)) {
+                foreach ($validated['activities'] as $row) {
+                    $w = (float)($row['weight'] ?? 0);
+                    $r = (float)($row['self_score'] ?? 0);
+                    $calc = ($w / 100.0) * $r;
+
+                    if (!empty($row['id'])) {
+                        $act = IpaActivity::where('ipa_id', $ipa->id)->find($row['id']);
+                        if ($act) {
+                            $act->update([
+                                'category'    => $row['category'] ?? $act->category,
+                                'description' => $row['description'] ?? $act->description,
+                                'weight'      => $w,
+                                'self_score'  => $r,
+                                'calc_score'  => $calc,
+                                'evidence'    => $row['evidence'] ?? $act->evidence,
+                                'source'      => $row['source']   ?? $act->source,
+                            ]);
+                        }
+                    } else {
+                        IpaActivity::create([
+                            'ipa_id'      => $ipa->id,
+                            'source'      => $row['source'] ?? 'custom',
                             'category'    => $row['category'] ?? null,
                             'description' => $row['description'],
                             'weight'      => $w,
@@ -233,37 +251,40 @@ class IpaController extends Controller
                             'evidence'    => $row['evidence'] ?? null,
                         ]);
                     }
-                } else {
-                    IpaActivity::create([
-                        'ipa_id'      => $ipa->id,
-                        'source'      => $row['source'] ?? 'custom',
-                        'category'    => $row['category'] ?? null,
-                        'description' => $row['description'],
-                        'weight'      => $w,
-                        'self_score'  => $r,
-                        'calc_score'  => $calc,
-                        'evidence'    => $row['evidence'] ?? null,
-                    ]);
                 }
             }
 
-            // ===== Achievements (W × R where W is %, so calc = (W/100)*R)
-            $achs = collect($validated['achievements'] ?? []);
-            $keepAchIds = $achs->pluck('id')->filter()->map(fn($v) => (int)$v)->values();
-            if ($ipa->achievements()->exists()) {
-                IpaAchievement::where('ipa_id', $ipa->id)->whereNotIn('id', $keepAchIds)->delete();
-            }
-            foreach ($achs as $row) {
-                $w = (float)($row['weight'] ?? 0);
-                $r = (float)($row['self_score'] ?? 0);
-                $calc = ($w / 100.0) * $r;
+            // ===== Achievements: upsert HANYA yg dikirim (tanpa delete others)
+            if (array_key_exists('achievements', $validated)) {
+                foreach ($validated['achievements'] as $row) {
+                    $w = (float)($row['weight'] ?? 0);
+                    $r = (float)($row['self_score'] ?? 0);
+                    $calc = ($w / 100.0) * $r;
 
-                if (!empty($row['id'])) {
-                    $ach = IpaAchievement::where('ipa_id', $ipa->id)->find($row['id']);
-                    if ($ach) {
-                        $ach->update([
+
+                    if (!empty($row['id'])) {
+                        $ach = IpaAchievement::where('ipa_id', $ipa->id)->find($row['id']);
+                        if ($ach) {
+                            $ach->update([
+                                'ipp_point_id'         => $row['ipp_point_id'] ?? $ach->ipp_point_id,
+                                // kolom opsional untuk custom:
+                                'category'             => $row['category'] ?? $ach->category ?? null,
+                                'title'                => $row['title']    ?? $ach->title    ?? null,
+                                'one_year_target'      => $row['one_year_target'] ?? $ach->one_year_target,
+                                'one_year_achievement' => $row['one_year_achievement'] ?? $ach->one_year_achievement,
+                                'weight'               => $w,
+                                'self_score'           => $r,
+                                'calc_score'           => $calc,
+                                'evidence'             => $row['evidence'] ?? $ach->evidence,
+                            ]);
+                        }
+                    } else {
+                        IpaAchievement::create([
+                            'ipa_id'               => $ipa->id,
                             'ipp_point_id'         => $row['ipp_point_id'] ?? null,
-                            'title'                => $row['title'],
+                            // untuk custom, simpan category & title:
+                            'category'             => $row['category'] ?? null,
+                            'title'                => $row['title'] ?? null,
                             'one_year_target'      => $row['one_year_target'] ?? null,
                             'one_year_achievement' => $row['one_year_achievement'] ?? null,
                             'weight'               => $w,
@@ -272,28 +293,16 @@ class IpaController extends Controller
                             'evidence'             => $row['evidence'] ?? null,
                         ]);
                     }
-                } else {
-                    IpaAchievement::create([
-                        'ipa_id'               => $ipa->id,
-                        'ipp_point_id'         => $row['ipp_point_id'] ?? null,
-                        'title'                => $row['title'],
-                        'one_year_target'      => $row['one_year_target'] ?? null,
-                        'one_year_achievement' => $row['one_year_achievement'] ?? null,
-                        'weight'               => $w,
-                        'self_score'           => $r,
-                        'calc_score'           => $calc,
-                        'evidence'             => $row['evidence'] ?? null,
-                    ]);
                 }
             }
 
-            // Scores from DB (akurasi)
+            // Totals from DB (akurasi)
             $actScore = (float) IpaActivity::where('ipa_id', $ipa->id)->sum('self_score');
             $achScore = (float) IpaAchievement::where('ipa_id', $ipa->id)->sum('self_score');
 
-            // Totals from DB (akurasi)
             $actTotal = (float) IpaActivity::where('ipa_id', $ipa->id)->sum('calc_score');
             $achTotal = (float) IpaAchievement::where('ipa_id', $ipa->id)->sum('calc_score');
+
             $ipa->update([
                 'activity_total'    => $actTotal,
                 'achievement_total' => $achTotal,
@@ -318,7 +327,7 @@ class IpaController extends Controller
         }
     }
 
-    /** Opsional: tombol Recalc dari UI */
+    /** Recalc (ikutkan grand_score) */
     public function recalc(int $id)
     {
         $ipa = IpaHeader::findOrFail($id);
@@ -326,10 +335,14 @@ class IpaController extends Controller
         $actTotal = (float) IpaActivity::where('ipa_id', $ipa->id)->sum(DB::raw('calc_score'));
         $achTotal = (float) IpaAchievement::where('ipa_id', $ipa->id)->sum(DB::raw('calc_score'));
 
+        $actScore = (float) IpaActivity::where('ipa_id', $ipa->id)->sum('self_score');
+        $achScore = (float) IpaAchievement::where('ipa_id', $ipa->id)->sum('self_score');
+
         $ipa->update([
             'activity_total'    => $actTotal,
             'achievement_total' => $achTotal,
             'grand_total'       => $actTotal + $achTotal,
+            'grand_score'       => $actScore + $achScore,
         ]);
 
         return response()->json([
@@ -338,14 +351,11 @@ class IpaController extends Controller
                 'activity_total'    => $actTotal,
                 'achievement_total' => $achTotal,
                 'grand_total'       => $actTotal + $achTotal,
+                'grand_score'       => $actScore + $achScore,
             ]
         ]);
     }
 
-    /**
-     * (Opsional) Jika ada tombol "Create IPA" dari halaman list (index awal versi lama)
-     * Pastikan hanya membuat 1 IPA per IPP (unique).
-     */
     public function createFromIpp(Request $request)
     {
         $request->validate([
@@ -355,12 +365,10 @@ class IpaController extends Controller
         $user = auth()->user();
         $ipp  = Ipp::findOrFail($request->ipp_id);
 
-        // guard employee pemilik IPP
         if ($ipp->employee_id !== optional($user->employee)->id) {
             abort(403, 'Forbidden.');
         }
 
-        // pastikan 1:1
         $ipa = IpaHeader::firstOrCreate(
             ['ipp_id' => $ipp->id],
             [
@@ -370,7 +378,6 @@ class IpaController extends Controller
             ]
         );
 
-        // jika baru dibuat: prefill activities dari points
         if ($ipa->wasRecentlyCreated) {
             $points = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
             $bulk = [];
