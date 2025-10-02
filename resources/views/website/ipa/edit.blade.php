@@ -13,6 +13,9 @@
 @endphp
 
 @push('custom-css')
+    {{-- Toastr (toast) --}}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+
     <style>
         .container-xxl {
             max-width: 1360px
@@ -42,16 +45,6 @@
             font-size: .75rem
         }
 
-        .badge-src {
-            background: #f1f5f9;
-            color: #334155;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: .05rem .4rem;
-            font-weight: 600;
-            font-size: .7rem
-        }
-
         .badge-cat {
             background: #eef2ff;
             color: #3730a3;
@@ -60,6 +53,16 @@
             padding: .15rem .55rem;
             font-weight: 700;
             font-size: .72rem
+        }
+
+        .badge-src {
+            background: #ecfeff;
+            color: #075985;
+            border: 1px solid #a5f3fc;
+            border-radius: 8px;
+            padding: .05rem .4rem;
+            font-weight: 700;
+            font-size: .7rem
         }
 
         .table.ipp-table {
@@ -105,26 +108,16 @@
             border-radius: 10px
         }
 
-        .btn-add {
-            background: #2563eb;
-            color: #fff;
-            border: 1px solid #2563eb
-        }
-
         .btn-edit {
             background: #f8fafc;
             color: #0f172a;
             border: 1px solid #e5e7eb
         }
 
-        .btn-del {
-            background: #fef2f2;
-            color: #7f1d1d;
-            border: 1px solid #fecaca
-        }
-
-        .calc-cell {
-            font-variant-numeric: tabular-nums
+        .btn-add {
+            background: #2563eb;
+            color: #fff;
+            border: 1px solid #2563eb
         }
 
         .mini-bar {
@@ -142,22 +135,6 @@
             transition: width .25s ease
         }
 
-        /* Number inputs compact & accessible */
-        .num-in {
-            max-width: 110px
-        }
-
-        .num-in input {
-            height: 40px;
-            font-size: 1rem;
-            text-align: right
-        }
-
-        .num-in input:focus {
-            box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .15)
-        }
-
-        /* Accordion (mirip IPP) */
         .accordion.ipa .accordion-item {
             border: 1px solid #e5e7eb;
             border-radius: 12px;
@@ -182,7 +159,6 @@
             box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .2)
         }
 
-        /* Modals */
         .modal .form-label {
             font-weight: 600
         }
@@ -192,6 +168,33 @@
                 max-width: calc(100% - 1rem);
                 margin: .5rem auto
             }
+        }
+    </style>
+    <style>
+        /* Fallback warna toast bila text-bg-* belum ada */
+        .badge-success {
+            background-color: #22c55e;
+            color: #fff;
+        }
+
+        .badge-danger {
+            background-color: #ef4444;
+            color: #fff;
+        }
+
+        .badge-warning {
+            background-color: #f59e0b;
+            color: #212529;
+        }
+
+        .badge-info {
+            background-color: #0ea5e9;
+            color: #212529;
+        }
+
+        .badge-dark {
+            background-color: #212529;
+            color: #fff;
         }
     </style>
 @endpush
@@ -204,32 +207,16 @@
         {{-- Header --}}
         <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
             <div>
-                <h3 class="mb-1">Individual Performance Achievement</h3>
-                <div class="small-muted">
-                    Employee: <strong>{{ optional($ipa->employee)->name }}</strong>
-                    <span class="mx-2">•</span>
-                    Tahun: <strong id="hdr-year">{{ $ipa->on_year }}</strong>
-                    <span class="mx-2">•</span>
-                    IPP: <span class="badge-tag">#{{ $ipa->ipp_id }}</span>
-                    <span class="mx-2">•</span>
-                    IPA: <span class="badge-tag">#{{ $ipa->id }}</span>
-                </div>
+                <h3 class="mb-1">Individual Performance Appraisal</h3>
             </div>
             <div class="d-flex gap-2">
+                <button class="btn btn-add btn-sm" id="btn-add-activity">+ Tambah Activity</button>
                 <button class="btn btn-light btn-sm" id="btn-recalc" title="Recalc dari server">Recalc</button>
                 <button class="btn btn-primary btn-sm" id="btn-save">Simpan</button>
             </div>
         </div>
 
-        {{-- Notes --}}
-        <div class="card mb-3">
-            <div class="card-body">
-                <label class="form-label fw-bold">Catatan</label>
-                <textarea class="form-control" id="fld-notes" rows="2" placeholder="Catatan umum (opsional)...">{{ $ipa->notes }}</textarea>
-            </div>
-        </div>
-
-        {{-- ====== ACCORDION PER KATEGORI ====== --}}
+        {{-- ====== ACCORDION PER KATEGORI (LIST IPP POINT + CUSTOM) ====== --}}
         <div class="accordion ipa" id="accordionIPA">
             @foreach ($categories as $cat)
                 <div class="accordion-item" data-cat="{{ $cat['key'] }}">
@@ -237,84 +224,39 @@
                         <button class="accordion-button" type="button" data-bs-toggle="collapse"
                             data-bs-target="#col-{{ $cat['key'] }}" aria-expanded="true"
                             aria-controls="col-{{ $cat['key'] }}">
-                            <div class="d-flex flex-column w-100">
-                                <div class="d-flex align-items-center justify-content-between w-100">
-                                    <span>{{ $cat['title'] }}</span>
-                                    <span class="small-muted">Cap <span
-                                            class="badge badge-cat">{{ $cat['cap'] }}%</span></span>
-                                </div>
+                            <div class="d-flex align-items-center justify-content-between w-100">
+                                <span>{{ $cat['title'] }}</span>
                             </div>
                         </button>
                     </h2>
+
                     <div id="col-{{ $cat['key'] }}" class="accordion-collapse collapse show">
                         <div class="accordion-body">
-
-                            {{-- A. Activities (Custom) --}}
-                            <div class="card mb-3">
-                                <div
-                                    class="card-header bg-light border-0 d-flex justify-content-between align-items-center">
-                                    <div class="fw-bold">Activities (Custom) — <span
-                                            class="badge-cat">{{ $cat['title'] }}</span></div>
-                                    <button class="btn btn-sm btn-add btn-mini js-add-activity"
-                                        data-cat="{{ $cat['key'] }}">+ Tambah Activity</button>
-                                </div>
+                            <div class="card">
                                 <div class="table-responsive">
-                                    <table class="table table-sm align-middle ipp-table mb-0 js-tbl-acts"
+                                    <table class="table table-bordered align-middle mb-0 ipp-table js-tbl-ipp"
                                         data-cat="{{ $cat['key'] }}">
                                         <thead>
                                             <tr>
-                                                <th class="sticky" style="width:280px">Program/Activity</th>
+                                                <th class="sticky" style="width:280px">Program / Activity</th>
                                                 <th class="sticky">One Year Target</th>
-                                                <th class="sticky" style="width:140px">Weight (W, %)</th>
+                                                <th class="sticky">Weight</th>
+                                                <th class="sticky">Score</th>
                                                 <th class="sticky" style="width:120px">Aksi</th>
                                             </tr>
                                         </thead>
-                                        <tbody class="js-tbody-acts">
+                                        <tbody class="js-tbody-ipp">
                                             <tr class="empty-row">
-                                                <td colspan="4">Belum ada activities.</td>
+                                                <td colspan="5">Memuat...</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="px-3 py-2 help-line">Tip: Activity yang kamu tambah akan muncul sebagai baris
-                                    <b>Custom</b> di tabel Achievements kategori ini. W (%) bawaan dari sini, tetapi tetap
-                                    bisa diubah di Achievements.
+                                <div class="px-3 py-2 help-line">
+                                    Baris bertanda <span class="badge-src">Custom</span> adalah activity yang kamu tambahkan
+                                    di IPA (tidak mengubah IPP).
                                 </div>
                             </div>
-
-                            {{-- B. Achievements --}}
-                            <div class="card mb-2">
-                                <div class="card-header bg-light border-0">
-                                    <div class="fw-bold">One Year Achievements — <span
-                                            class="badge-cat">{{ $cat['title'] }}</span></div>
-                                    <div class="help-line mt-1">Isi <b>Achievement</b>, ubah <b>Weight (W, %)</b> dan
-                                        <b>Score (R)</b> jika perlu. Total dihitung otomatis: (W/100) × R.
-                                    </div>
-                                </div>
-                                <div class="table-responsive">
-                                    <table class="table table-sm align-middle ipp-table mb-0 js-tbl-achs"
-                                        data-cat="{{ $cat['key'] }}">
-                                        <thead>
-                                            <tr>
-                                                <th class="sticky" style="width:340px">Program/Activity <span
-                                                        class="small-muted">(sumber)</span></th>
-                                                <th class="sticky">One Year Target</th>
-                                                <th class="sticky" style="width:150px">Weight (W, %)</th>
-                                                <th class="sticky">One Year Achievement</th>
-                                                <th class="sticky" style="width:150px">Score (R)</th>
-                                                <th class="sticky" style="width:160px">Total (W × R ÷ 100)</th>
-                                                <th class="sticky" style="width:120px">Aksi</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="js-tbody-achs">
-                                            <tr class="empty-row">
-                                                <td colspan="7">Memuat...</td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-
                         </div>
                     </div>
                 </div>
@@ -350,113 +292,18 @@
         </div>
     </div>
 
-    {{-- ===== Modals ===== --}}
+    {{-- ===== Modal Detail (IPP & Custom; langsung editable) ===== --}}
+    @include('website.ipa.modal.point')
 
-    {{-- Activity Modal (Custom) --}}
-    <div class="modal fade" id="modal-activity" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="mdlActTitle">Tambah Activity</h5>
-                    <button type="button" class="btn btn-light btn-sm" data-bs-dismiss="modal">Tutup</button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="act-id">
-                    <input type="hidden" id="act-cat">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Program/Activity <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="act-program"
-                                placeholder="Nama program / aktivitas">
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Kategori</label>
-                            <input type="text" class="form-control" id="act-category-name" readonly>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">One Year Target <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="act-target" rows="3" placeholder="Target tahunan..."></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Weight (W, %)</label>
-                            <input type="number" step="0.01" class="form-control" id="act-weight" value="0">
-                            <div class="help-line">Contoh: 5, 7.5, 10</div>
-                        </div>
-                        <div class="col-md-6 d-flex align-items-end">
-                            <div class="help-line">Nilai W ini juga menjadi nilai awal di tabel Achievements (baris
-                                Custom),
-                                dan <b>tetap bisa diubah</b> di sana.</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer justify-content-between">
-                    <span class="small-muted" id="act-hint">Tambah activity baru</span>
-                    <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                        <button type="button" class="btn btn-primary" id="act-save">Simpan</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Fill/Edit Achievement Modal (teks & evidence) --}}
-    <div class="modal fade" id="modal-fill" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="mdlFillTitle">Isi / Edit Achievement</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <input type="hidden" id="fill-ach-id">
-                    <input type="hidden" id="fill-ipp-point-id">
-                    <input type="hidden" id="fill-source">
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <label class="form-label">Program/Activity</label>
-                            <input type="text" class="form-control" id="fill-program" readonly>
-                            <div class="small-muted" id="fill-subtitle"></div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Weight (W, %)</label>
-                            <input type="text" class="form-control" id="fill-weight" readonly>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">One Year Target</label>
-                            <textarea class="form-control" id="fill-target" rows="2" readonly></textarea>
-                        </div>
-                        <div class="col-12">
-                            <label class="form-label">One Year Achievement <span class="text-danger">*</span></label>
-                            <textarea class="form-control" id="fill-achv" rows="3" placeholder="Capaian selama setahun..."></textarea>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Score (R)</label>
-                            <input type="number" step="0.01" class="form-control" id="fill-score" value="0">
-                            <div class="help-line">Kamu juga bisa ubah R langsung di tabel.</div>
-                        </div>
-                        <div class="col-md-6">
-                            <label class="form-label">Notes / Evidence (opsional)</label>
-                            <input type="text" class="form-control" id="fill-evidence" placeholder="Link / catatan">
-                        </div>
-                        <div class="col-12">
-                            <div class="small-muted">Total dihitung: <strong>(W/100) × R</strong>.</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer justify-content-between">
-                    <span class="small-muted" id="fill-hint"></span>
-                    <div>
-                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Batal</button>
-                        <button type="button" class="btn btn-primary" id="btn-save-fill">Simpan</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    {{-- ===== Modal Tambah Activity (Custom) ===== --}}
+    @include('website.ipa.modal.achievement')
 @endsection
 
 @push('scripts')
+    {{-- jQuery + Toastr --}}
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
     <script>
         (function() {
             const $root = $('#ipa-edit');
@@ -464,7 +311,27 @@
             const URL_UPDATE = $root.data('url-update');
             const URL_RECALC = $root.data('url-recalc');
 
-            const $notes = $('#fld-notes');
+            // Toast (pakai Bootstrap Toast dengan kelas badge-*)
+            function toast(msg, type = 'success') {
+                const id = 'toast-' + Date.now();
+                const $t = $(`
+<div class="toast align-items-center badge-${type} border-0" id="${id}"
+     role="status" aria-live="polite" aria-atomic="true"
+     style="position:fixed;top:1rem;right:1rem;z-index:1080;">
+  <div class="d-flex">
+    <div class="toast-body">${esc(msg)}</div>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto"
+            data-bs-dismiss="toast" aria-label="Tutup"></button>
+  </div>
+</div>`);
+                $('body').append($t);
+                const t = new bootstrap.Toast($t[0], {
+                    delay: 2500
+                });
+                t.show();
+                $t.on('hidden.bs.toast', () => $t.remove());
+            }
+
             const $tAch = $('#total-achievement');
             const $tGnd = $('#total-grand');
             const $tGScore = $('#total-grand-score');
@@ -472,13 +339,13 @@
             const $barG = $('#bar-grand');
             const $barGS = $('#bar-gscore');
 
-            let mdlAct = new bootstrap.Modal(document.getElementById('modal-activity'));
-            let mdlFill = new bootstrap.Modal(document.getElementById('modal-fill'));
+            // cache
+            let IPP_POINTS = []; // {id, category, activity/title, target_one, weight}
+            let
+        ACHS = []; // {id, ipp_point_id|null, category?, title?, one_year_target?, weight, self_score, one_year_achievement}
 
-            // cache data
-            let IPP_POINTS = []; // {id, activity/title, target_one, weight, category}
-            let ACTIVITIES = []; // ipa_activities (custom)
-            let ACHS = []; // ipa_achievements existing
+            let mdlDetail = new bootstrap.Modal(document.getElementById('modal-ipp-detail'));
+            let mdlAdd = new bootstrap.Modal(document.getElementById('modal-add-activity'));
 
             // utils
             const esc = (s) => String(s || '').replace(/[&<>"']/g, m => ({
@@ -503,416 +370,356 @@
                 const num = parseFloat(s);
                 return isNaN(num) ? 0 : num;
             }
+            const $tbody = (cat) => $(`.js-tbl-ipp[data-cat="${cat}"] .js-tbody-ipp`);
 
-            function $tbodyActs(cat) {
-                return $(`.js-tbl-acts[data-cat="${cat}"] .js-tbody-acts`);
+            // helpers: Score & Weight resolusi
+            function scoreForIpp(id) {
+                const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id));
+                return nloc(ex?.self_score ?? 0); // IPP tidak punya score -> 0
             }
 
-            function $tbodyAchs(cat) {
-                return $(`.js-tbl-achs[data-cat="${cat}"] .js-tbody-achs`);
+            function weightForIpp(id) {
+                const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id));
+                if (ex && ex.weight != null) return nloc(ex.weight);
+                const p = IPP_POINTS.find(pp => Number(pp.id) === Number(id));
+                return nloc(p?.weight ?? 0); // fallback ke IPP weight
             }
 
-            // ===== Activities renderer =====
-            function rowActHtml(a) {
-                return `<tr data-type="activity" ${a.id?`data-id="${a.id}"`:''}>
-            <td><div class="fw-semibold">${esc(a.description || a.title || a.activity || '-')}</div></td>
-            <td>${esc(a.target_one || a.one_year_target || '')}</td>
-            <td class="num-in"><input type="number" step="0.01" class="form-control js-act-weight" value="${esc(a.weight ?? 0)}" aria-label="Weight persen"></td>
-            <td class="text-end">
-                <button class="btn btn-sm btn-edit btn-mini js-edit-act">Edit</button>
-                <button class="btn btn-sm btn-del  btn-mini js-del-act ms-1">Hapus</button>
-            </td>
-        </tr>`;
+            function scoreForCustom(a) {
+                return nloc(a.self_score ?? 0);
             }
 
-            function renderActivitiesByCat(cat) {
-                const rows = ACTIVITIES.filter(a => (a.category || '') === cat);
-                const $tb = $tbodyActs(cat);
-                if (!rows.length) {
-                    $tb.html('<tr class="empty-row"><td colspan="4">Belum ada activities.</td></tr>');
-                    return;
-                }
-                $tb.html(rows.map(rowActHtml).join(''));
+            function weightForCustom(a) {
+                return nloc(a.weight ?? 0);
             }
 
-            // ===== Achievements renderer (IPP + Custom) =====
-            function rowAchHtmlFromIpp(p, ex, cat) {
-                const W = nloc(ex?.weight ?? p.weight ?? 0);
-                const R = nloc(ex?.self_score ?? 0);
-                const calc = (W / 100) * R;
-                return `<tr data-type="achievement" data-source="ipp"
-                    data-ipp-point-id="${p.id}"
-                    ${ex?.id?`data-id="${ex.id}"`:''}
-                    ${ex?.evidence?`data-evidence="${esc(ex.evidence)}"`:''}>
-            <td><div class="fw-semibold">${esc(p.activity||p.title||'(tanpa judul)')}</div>
-                <div class="small-muted"><span class="badge-src">IPP Point</span> • Kategori: ${esc(cat)}</div>
-            </td>
-            <td>${esc(p.target_one||'')}</td>
-            <td class="num-in"><input type="number" step="0.01" class="form-control js-w" value="${esc(W)}" aria-label="Weight persen"></td>
-            <td class="js-achv">${esc(ex?.one_year_achievement||ex?.description||'')}</td>
-            <td class="num-in"><input type="number" step="0.01" class="form-control js-r" value="${esc(R)}" aria-label="Score"></td>
-            <td class="calc-cell text-end js-calc"><strong>${toFixed2(calc)}</strong></td>
-            <td class="text-end">
-                <button class="btn btn-sm btn-edit btn-mini js-fill-ach">Isi/Edit</button>
-            </td>
-        </tr>`;
+            // ----- RENDER LIST -----
+            function rowIPPHtml(p) {
+                const score = scoreForIpp(p.id);
+                const weight = weightForIpp(p.id);
+                return `<tr data-source="ipp" data-ipp-id="${p.id}" data-cat="${esc(p.category||'')}">
+                    <td>${esc(p.activity||'-')}</td>
+                    <td><div class="fw-semibold">${esc(p.target_one||'(tanpa judul)')}</div></td>
+                    <td>${toFixed2(weight)}</td>
+                    <td>${toFixed2(score)}</td>
+                    <td><button class="btn btn-sm btn-edit btn-mini js-row-detail">Detail</button></td>
+                </tr>`;
             }
 
-            function rowAchHtmlFromCustom(a, ex, cat) {
-                const W = nloc(ex?.weight ?? a.weight ?? 0);
-                const R = nloc(ex?.self_score ?? 0);
-                const calc = (W / 100) * R;
-                return `<tr data-type="achievement" data-source="custom"
-                    ${a.id?`data-custom-activity-id="${a.id}"`:''}
-                    ${ex?.id?`data-id="${ex.id}"`:''}
-                    ${ex?.evidence?`data-evidence="${esc(ex.evidence)}"`:''}>
-            <td><div class="fw-semibold">${esc(a.description || a.title || a.activity || '')}</div>
-                <div class="small-muted"><span class="badge-src">Custom</span> • Kategori: ${esc(cat)}</div>
-            </td>
-            <td>${esc(a.target_one || a.one_year_target || '')}</td>
-            <td class="num-in"><input type="number" step="0.01" class="form-control js-w" value="${esc(W)}" aria-label="Weight persen"></td>
-            <td class="js-achv">${esc(ex?.one_year_achievement||'')}</td>
-            <td class="num-in"><input type="number" step="0.01" class="form-control js-r" value="${esc(R)}" aria-label="Score"></td>
-            <td class="calc-cell text-end js-calc"><strong>${toFixed2(calc)}</strong></td>
-            <td class="text-end">
-                <button class="btn btn-sm btn-edit btn-mini js-fill-ach">Isi/Edit</button>
-            </td>
-        </tr>`;
+            function rowCustomHtml(a) {
+                const key = a.__key || a.id || '';
+                const score = scoreForCustom(a);
+                const weight = weightForCustom(a);
+                return `<tr data-source="custom" data-ach-key="${esc(key)}" data-cat="${esc(a.category||'')}">
+                    <td>${esc(a.title||'(tanpa judul)')} <span class="ms-1 badge-src">Custom</span></td>
+                    <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
+                    <td>${toFixed2(weight)}</td>
+                    <td>${toFixed2(score)}</td>
+                    <td><button class="btn btn-sm btn-edit btn-mini js-row-detail">Detail</button></td>
+                </tr>`;
             }
 
-            function renderAchievementsByCat(cat) {
-                const $tb = $tbodyAchs(cat);
+            function renderByCat(cat) {
+                const $tb = $tbody(cat);
                 const ippRows = IPP_POINTS.filter(p => (p.category || '') === cat);
-                const customRows = ACTIVITIES.filter(a => (a.category || '') === cat);
+                const custRows = ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat);
 
-                const mapByIpp = {};
-                const mapByCustom = {};
-                ACHS.forEach(x => {
-                    if (x.ipp_point_id) mapByIpp[Number(x.ipp_point_id)] = x;
-                    else if (x.custom_activity_id) mapByCustom[Number(x.custom_activity_id)] = x;
-                    else if (!x.ipp_point_id && x.title) {
-                        mapByCustom['title:' + x.title] = x;
-                    }
-                });
+                let html = '';
+                if (ippRows.length) html += ippRows.map(rowIPPHtml).join('');
+                if (custRows.length) html += custRows.map(rowCustomHtml).join('');
+                if (!html) html = '<tr class="empty-row"><td colspan="5">Belum ada item.</td></tr>';
 
-                const ippHtml = ippRows.map(p => rowAchHtmlFromIpp(p, mapByIpp[Number(p.id)] || null, cat)).join('');
-                const custHtml = customRows.map(a => {
-                    const ex = (a.id && mapByCustom[Number(a.id)]) || mapByCustom['title:' + (a.description ||
-                        '')] || null;
-                    return rowAchHtmlFromCustom(a, ex, cat);
-                }).join('');
-                const html = (ippHtml + custHtml);
-                $tb.html(html || '<tr class="empty-row"><td colspan="7">Tidak ada baris.</td></tr>');
+                $tb.html(html);
             }
 
             function renderAll() {
                 $('[data-cat]').each(function() {
                     const cat = $(this).data('cat');
-                    renderActivitiesByCat(cat);
-                    renderAchievementsByCat(cat);
+                    renderByCat(cat);
                 });
                 recalcTotals();
             }
 
-            // ===== Totals =====
+            // ----- TOTALS -----
             function recalcTotals() {
                 let total = 0,
                     sumR = 0;
-                $('.js-tbl-achs .js-tbody-achs tr[data-type="achievement"]').each(function() {
-                    const W = nloc($(this).find('.js-w').val());
-                    const R = nloc($(this).find('.js-r').val());
+
+                // IPP-based
+                IPP_POINTS.forEach(p => {
+                    const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
+                    const W = nloc(ex?.weight ?? p.weight ?? 0);
+                    const R = nloc(ex?.self_score ?? 0);
                     total += (W / 100) * R;
                     sumR += R;
-                    $(this).find('.js-calc').html(`<strong>${toFixed2((W/100)*R)}</strong>`);
                 });
+
+                // Custom-based
+                ACHS.filter(x => !x.ipp_point_id).forEach(c => {
+                    const W = nloc(c.weight ?? 0);
+                    const R = nloc(c.self_score ?? 0);
+                    total += (W / 100) * R;
+                    sumR += R;
+                });
+
                 $tAch.text(toFixed2(total));
                 $tGnd.text(toFixed2(total));
                 $tGScore.text(toFixed2(sumR));
-
                 const scale = v => Math.max(0, Math.min(100, (v / 10) * 100));
-                $('#bar-ach').css('width', scale(total) + '%');
-                $('#bar-grand').css('width', scale(total) + '%');
-                $('#bar-gscore').css('width', Math.max(0, Math.min(100, (sumR / 10) * 100)) + '%');
+                $barAch.css('width', scale(total) + '%');
+                $barG.css('width', scale(total) + '%');
+                $barGS.css('width', Math.max(0, Math.min(100, (sumR / 10) * 100)) + '%');
             }
 
-            // ===== Init Load =====
+            // ----- LOAD -----
             function initLoad() {
-                $('.js-tbody-acts').html('<tr class="empty-row"><td colspan="4">Memuat...</td></tr>');
-                $('.js-tbody-achs').html('<tr class="empty-row"><td colspan="7">Memuat...</td></tr>');
-
+                $('.js-tbody-ipp').html('<tr class="empty-row"><td colspan="5">Memuat...</td></tr>');
                 $.getJSON(URL_DATA).done(function(res) {
                     if (!res || !res.ok) {
-                        $('.js-tbody-acts').html(
-                            '<tr class="empty-row"><td colspan="4">Gagal memuat.</td></tr>');
-                        $('.js-tbody-achs').html(
-                            '<tr class="empty-row"><td colspan="7">Gagal memuat.</td></tr>');
+                        toast('Gagal memuat data.', 'danger');
                         return;
                     }
                     const d = res.data || {};
-                    $('#hdr-year').text(d.header?.on_year || $('#hdr-year').text());
-                    $notes.val(d.header?.notes || '');
 
                     IPP_POINTS = Array.isArray(d.ipp_points) ? d.ipp_points.map(p => ({
                         id: p.id,
                         activity: p.activity || p.title,
                         title: p.title,
                         target_one: p.target_one,
-                        weight: p.weight,
+                        weight: nloc(p.weight || 0),
                         category: p.category
                     })) : [];
 
-                    ACTIVITIES = Array.isArray(d.activities) ? d.activities.map(a => ({
-                        id: a.id || null,
-                        description: a.description || a.title || a.activity,
-                        target_one: a.target_one || a.one_year_target || '',
-                        weight: nloc(a.weight ?? 0), // ambil kalau ada
-                        category: a.category || '',
-                    })) : [];
-
                     ACHS = Array.isArray(d.achievements) ? d.achievements.map(x => ({
-                        id: x.id,
+                        id: x.id || null,
                         ipp_point_id: x.ipp_point_id || null,
-                        custom_activity_id: x.custom_activity_id || null,
-                        title: x.title,
+                        category: x.category || null,
+                        title: x.title || null,
                         one_year_target: x.one_year_target || '',
                         one_year_achievement: x.one_year_achievement || x.description || '',
-                        weight: nloc(x.weight || 0),
+                        weight: nloc(x.weight ?? 0),
                         self_score: nloc(x.self_score || 0),
-                        evidence: x.evidence || ''
                     })) : [];
 
                     renderAll();
                 }).fail(function() {
-                    $('.js-tbody-acts').html('<tr class="empty-row"><td colspan="4">Error server.</td></tr>');
-                    $('.js-tbody-achs').html('<tr class="empty-row"><td colspan="7">Error server.</td></tr>');
+                    toast('Error server saat memuat.', 'danger');
                 });
             }
 
-            // ===== Activities CRUD (modal) =====
-            let EDIT_ACT_REF = null;
-            $(document).on('click', '.js-add-activity', function() {
-                const cat = $(this).data('cat');
-                $('#act-id').val('');
-                $('#act-cat').val(cat);
-                $('#act-category-name').val($(`[data-cat="${cat}"] .accordion-button span:first`).text()
-            .trim());
-                $('#act-program').val('');
-                $('#act-target').val('');
-                $('#act-weight').val('0');
-                $('#mdlActTitle').text('Tambah Activity');
-                $('#act-hint').text('Tambah activity baru');
-                EDIT_ACT_REF = null;
-                mdlAct.show();
-            });
-
-            $(document).on('click', '.js-edit-act', function() {
+            // ----- DETAIL (open) -----
+            $(document).on('click', '.js-row-detail', function() {
                 const $tr = $(this).closest('tr');
-                const $card = $tr.closest('[data-cat]');
-                const cat = $card.data('cat');
-                const program = $tr.find('td').eq(0).text().trim();
-                const target = $tr.find('td').eq(1).text().trim();
-                const w = $tr.find('.js-act-weight').val();
+                const source = ($tr.data('source') || '').toString();
+                $('#ippd-source').val(source);
+                $('#ippd-ach-key').val('');
+                $('#ippd-id').val('');
 
-                $('#act-id').val($tr.data('id') || '');
-                $('#act-cat').val(cat);
-                $('#act-category-name').val($(`[data-cat="${cat}"] .accordion-button span:first`).text()
-            .trim());
-                $('#act-program').val(program);
-                $('#act-target').val(target);
-                $('#act-weight').val(nloc(w));
-                $('#mdlActTitle').text('Edit Activity');
-                $('#act-hint').text($tr.data('id') ? `Editing activity #${$tr.data('id')}` :
-                    'Editing (belum tersimpan)');
-                EDIT_ACT_REF = $tr;
-                mdlAct.show();
-            });
-
-            $('#act-save').on('click', function() {
-                const id = $('#act-id').val() || null;
-                const cat = $('#act-cat').val();
-                const program = ($('#act-program').val() || '').trim();
-                const target = ($('#act-target').val() || '').trim();
-                const weight = nloc($('#act-weight').val());
-                if (!program) {
-                    alert('Program/Activity wajib diisi.');
-                    return;
-                }
-                if (!cat) {
-                    alert('Kategori tidak diketahui.');
-                    return;
-                }
-
-                // update cache
-                if (EDIT_ACT_REF) {
-                    const rowId = EDIT_ACT_REF.data('id') || null;
-                    if (rowId) {
-                        const idx = ACTIVITIES.findIndex(a => a.id === rowId);
-                        if (idx >= 0) {
-                            ACTIVITIES[idx].description = program;
-                            ACTIVITIES[idx].target_one = target;
-                            ACTIVITIES[idx].weight = weight;
-                        }
-                    } else {
-                        const name = EDIT_ACT_REF.find('td').eq(0).text().trim();
-                        const idx = ACTIVITIES.findIndex(a => !a.id && a.category === cat && (a.description ||
-                            '') === name);
-                        if (idx >= 0) {
-                            ACTIVITIES[idx].description = program;
-                            ACTIVITIES[idx].target_one = target;
-                            ACTIVITIES[idx].weight = weight;
-                        }
+                if (source === 'ipp') {
+                    const id = $tr.data('ipp-id');
+                    const p = IPP_POINTS.find(x => Number(x.id) === Number(id));
+                    if (!p) {
+                        toast('Data tidak ditemukan.', 'danger');
+                        return;
                     }
+                    const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id)) || null;
+
+                    $('#ippd-id').val(id);
+                    $('#ippd-category').val(p.category || '').prop('readonly', true);
+                    $('#ippd-activity').val(p.activity || p.title || '').prop('readonly', true);
+                    $('#ippd-target').val(p.target_one || '').prop('readonly', true);
+
+                    // prefer weight dari achievement jika ada
+                    $('#ippd-weight').val(toFixed2(nloc(ex?.weight ?? p.weight ?? 0)));
+                    $('#ippd-score').val(nloc(ex?.self_score || 0));
+                    $('#ippd-achv').val(ex?.one_year_achievement || '');
+                    $('#ippd-hint').text('Mode IPP: edit Weight, Score, Achievement. IPP tidak berubah.');
                 } else {
-                    ACTIVITIES.push({
-                        id: null,
-                        category: cat,
-                        description: program,
-                        target_one: target,
-                        weight: weight
-                    });
+                    const key = ($tr.data('ach-key') || '').toString();
+                    const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
+                        key)));
+                    if (!a) {
+                        toast('Custom activity tidak ditemukan.', 'danger');
+                        return;
+                    }
+
+                    $('#ippd-ach-key').val(a.__key || a.id || '');
+                    $('#ippd-category').val(a.category || '').prop('readonly', true);
+                    $('#ippd-activity').val(a.title || '').prop('readonly', false);
+                    $('#ippd-target').val(a.one_year_target || '').prop('readonly', false);
+
+                    $('#ippd-weight').val(toFixed2(nloc(a.weight || 0)));
+                    $('#ippd-score').val(nloc(a.self_score || 0));
+                    $('#ippd-achv').val(a.one_year_achievement || '');
+                    $('#ippd-hint').text('Mode Custom: edit Activity, Target, Weight, Score, Achievement.');
                 }
 
-                renderActivitiesByCat(cat);
-                renderAchievementsByCat(cat);
-                recalcTotals();
-                mdlAct.hide();
-                EDIT_ACT_REF = null;
+                mdlDetail.show();
             });
 
-            $(document).on('click', '.js-del-act', function() {
-                const $tr = $(this).closest('tr');
-                const $card = $tr.closest('[data-cat]');
-                const cat = $card.data('cat');
-                const rowId = $tr.data('id') || null;
-                const name = $tr.find('td').eq(0).text().trim();
+            // ----- DETAIL (save -> PUT IPA) -----
+            $('#ippd-btn-save').on('click', function() {
+                const source = ($('#ippd-source').val() || '').toString();
 
-                if (rowId) {
-                    ACTIVITIES = ACTIVITIES.filter(a => a.id !== rowId);
-                    ACHS = ACHS.filter(x => x.custom_activity_id !== rowId);
-                } else {
-                    ACTIVITIES = ACTIVITIES.filter(a => !(!a.id && a.category === cat && (a.description ||
-                        '') === name));
-                    ACHS = ACHS.filter(x => !(!x.ipp_point_id && x.title === name));
-                }
-                renderActivitiesByCat(cat);
-                renderAchievementsByCat(cat);
-                recalcTotals();
-            });
+                if (source === 'ipp') {
+                    const id = Number($('#ippd-id').val());
+                    const W = nloc($('#ippd-weight').val());
+                    const R = nloc($('#ippd-score').val());
+                    const target = ($('#ippd-target').val() || '').trim();
+                    const ach = ($('#ippd-achv').val() || '').trim();
 
-            // ===== Achievements inline W/R change =====
-            $(document).on('input', '.js-tbl-achs .js-w, .js-tbl-achs .js-r', function() {
-                recalcTotals();
-            });
-
-            // ===== Fill Achievement Modal (teks & evidence) =====
-            let EDIT_ACH_REF = null;
-            $(document).on('click', '.js-fill-ach', function() {
-                const $tr = $(this).closest('tr');
-                EDIT_ACH_REF = $tr;
-                const t = $tr.children();
-                const source = $tr.data('source') || 'ipp';
-                const program = t.eq(0).find('.fw-semibold').text().trim() || t.eq(0).text().trim();
-                const target = t.eq(1).text().trim();
-                const W = nloc($tr.find('.js-w').val());
-                const achv = t.eq(3).text().trim();
-                const R = nloc($tr.find('.js-r').val());
-                const ev = ($tr.data('evidence') || '').toString();
-
-                $('#fill-source').val(source);
-                $('#fill-ach-id').val($tr.data('id') || '');
-                $('#fill-ipp-point-id').val($tr.data('ipp-point-id') || '');
-                $('#fill-program').val(program);
-                $('#fill-target').val(target);
-                $('#fill-weight').val(toFixed2(W));
-                $('#fill-achv').val(achv);
-                $('#fill-score').val(R);
-                $('#fill-evidence').val(ev);
-                $('#fill-subtitle').html(source === 'ipp' ? '<span class="badge-src">IPP Point</span>' :
-                    '<span class="badge-src">Custom</span>');
-                $('#fill-hint').text($tr.data('id') ? `Editing achievement #${$tr.data('id')}` : (source ===
-                    'ipp' ? 'Baris IPP' : 'Baris Custom'));
-                mdlFill.show();
-            });
-
-            $('#btn-save-fill').on('click', function() {
-                if (!EDIT_ACH_REF || !EDIT_ACH_REF.length) return;
-                const achId = $('#fill-ach-id').val() || null;
-                const achv = ($('#fill-achv').val() || '').trim();
-                const R = nloc($('#fill-score').val());
-                const ev = ($('#fill-evidence').val() || '').trim();
-                if (achId) EDIT_ACH_REF.attr('data-id', achId);
-                if (ev) EDIT_ACH_REF.attr('data-evidence', ev);
-                else EDIT_ACH_REF.removeAttr('data-evidence');
-                EDIT_ACH_REF.find('.js-achv').text(achv);
-                EDIT_ACH_REF.find('.js-r').val(R);
-                recalcTotals();
-                mdlFill.hide();
-                EDIT_ACH_REF = null;
-            });
-
-            // ===== Save (PUT) =====
-            function collectPayload() {
-                // activities (custom)
-                const activities = [];
-                $('.js-tbl-acts .js-tbody-acts tr[data-type="activity"]').each(function() {
-                    const $tr = $(this),
-                        t = $tr.children();
-                    const cat = $tr.closest('[data-cat]').data('cat');
-                    const program = t.eq(0).text().trim();
-                    const target = t.eq(1).text().trim();
-                    const w = nloc($tr.find('.js-act-weight').val());
-                    activities.push({
-                        id: $tr.data('id') || null,
-                        category: cat,
-                        description: program,
-                        one_year_target: target,
-                        weight: w, // disimpan agar saat reload tetap muncul
-                        self_score: 0,
-                        evidence: null,
-                        source: 'custom'
-                    });
-                });
-
-                // achievements
-                const achievements = [];
-                $('.js-tbl-achs .js-tbody-achs tr[data-type="achievement"]').each(function() {
-                    const $tr = $(this),
-                        t = $tr.children();
-                    const source = $tr.data('source') || 'ipp';
-                    const program = t.eq(0).find('.fw-semibold').text().trim() || t.eq(0).text().trim();
-                    const target = t.eq(1).text().trim();
-                    const W = nloc($tr.find('.js-w').val());
-                    const achv = t.eq(3).text().trim();
-                    const R = nloc($tr.find('.js-r').val());
-                    const ev = ($tr.data('evidence') || '').toString();
-
-                    if (achv || R > 0 || ($tr.data('id') || null)) {
-                        const row = {
-                            id: $tr.data('id') || null,
-                            ipp_point_id: source === 'ipp' ? ($tr.data('ipp-point-id') || null) : null,
-                            title: program,
-                            one_year_target: target,
-                            one_year_achievement: achv,
+                    const payload = {
+                        achievements: [{
+                            id: (ACHS.find(x => Number(x.ipp_point_id) === id)?.id) || null,
+                            ipp_point_id: id,
+                            one_year_target: target, // tetap hanya simpan ke IPA
                             weight: W,
                             self_score: R,
-                            evidence: ev
-                        };
-                        if (source === 'custom' && $tr.data('custom-activity-id')) {
-                            row.custom_activity_id = $tr.data('custom-activity-id');
+                            one_year_achievement: ach
+                        }]
+                    };
+
+                    $.ajax({
+                        url: URL_UPDATE,
+                        method: 'PUT',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        data: payload,
+                        dataType: 'json'
+                    }).done(function(res) {
+                        if (res && res.ok) {
+                            let ex = ACHS.find(x => Number(x.ipp_point_id) === id);
+                            if (ex) {
+                                ex.weight = W;
+                                ex.self_score = R;
+                                ex.one_year_achievement = ach;
+                                ex.one_year_target = target;
+                            } else {
+                                ACHS.push({
+                                    id: null,
+                                    ipp_point_id: id,
+                                    weight: W,
+                                    self_score: R,
+                                    one_year_achievement: ach,
+                                    one_year_target: target
+                                });
+                            }
+                            // re-render kategori agar kolom Weight & Score langsung update
+                            const p = IPP_POINTS.find(x => Number(x.id) === id);
+                            if (p && p.category) renderByCat(p.category);
+
+                            recalcTotals();
+                            toast('Tersimpan ke IPA.');
+                            mdlDetail.hide();
+                        } else {
+                            toast(res?.message || 'Gagal menyimpan.', 'warning');
                         }
-                        achievements.push(row);
+                    }).fail(function(xhr) {
+                        toast(xhr.responseJSON?.message || 'Error server.', 'danger');
+                    });
+
+                } else {
+                    // custom
+                    const key = ($('#ippd-ach-key').val() || '').toString();
+                    const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
+                        key)));
+                    if (!a) {
+                        toast('Custom activity tidak ditemukan.', 'danger');
+                        return;
                     }
-                });
 
-                return {
-                    notes: ($notes.val() || '').trim(),
-                    activities,
-                    achievements
+                    const title = ($('#ippd-activity').val() || '').trim();
+                    const target = ($('#ippd-target').val() || '').trim();
+                    const W = nloc($('#ippd-weight').val());
+                    const R = nloc($('#ippd-score').val());
+                    const ach = ($('#ippd-achv').val() || '').trim();
+
+                    const payload = {
+                        achievements: [{
+                            id: a.id || null,
+                            category: a.category,
+                            title: title,
+                            one_year_target: target,
+                            weight: W,
+                            self_score: R,
+                            one_year_achievement: ach
+                        }]
+                    };
+
+                    $.ajax({
+                        url: URL_UPDATE,
+                        method: 'PUT',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        data: payload,
+                        dataType: 'json'
+                    }).done(function(res) {
+                        if (res && res.ok) {
+                            a.title = title;
+                            a.one_year_target = target;
+                            a.weight = W;
+                            a.self_score = R;
+                            a.one_year_achievement = ach;
+                            renderByCat(a.category);
+                            recalcTotals();
+                            toast('Custom activity diperbarui.');
+                            mdlDetail.hide();
+                        } else {
+                            toast(res?.message || 'Gagal menyimpan.', 'warning');
+                        }
+                    }).fail(function(xhr) {
+                        toast(xhr.responseJSON?.message || 'Error server.', 'danger');
+                    });
+                }
+            });
+
+            // ----- ADD ACTIVITY (open)
+            $('#btn-add-activity').on('click', function() {
+                $('#add-cat').val('');
+                $('#add-activity').val('');
+                $('#add-target').val('');
+                $('#add-weight').val('0');
+                $('#add-score').val('0');
+                $('#add-achv').val('');
+                mdlAdd.show();
+            });
+
+            // ----- ADD ACTIVITY (save -> PUT IPA)
+            $('#add-btn-save').on('click', function() {
+                const cat = ($('#add-cat').val() || '').toString();
+                const tit = ($('#add-activity').val() || '').trim();
+                const tgt = ($('#add-target').val() || '').trim();
+                const W = nloc($('#add-weight').val());
+                const R = nloc($('#add-score').val());
+                const ach = ($('#add-achv').val() || '').trim();
+
+                if (!cat) {
+                    toast('Kategori wajib dipilih.', 'warning');
+                    return;
+                }
+                if (!tit) {
+                    toast('Activity wajib diisi.', 'warning');
+                    return;
+                }
+                if (!tgt) {
+                    toast('One Year Target wajib diisi.', 'warning');
+                    return;
+                }
+
+                const payload = {
+                    achievements: [{
+                        id: null,
+                        category: cat,
+                        title: tit,
+                        one_year_target: tgt,
+                        weight: W,
+                        self_score: R,
+                        one_year_achievement: ach
+                    }]
                 };
-            }
 
-            function saveAll() {
-                const payload = collectPayload();
                 $.ajax({
                     url: URL_UPDATE,
                     method: 'PUT',
@@ -923,32 +730,72 @@
                     dataType: 'json'
                 }).done(function(res) {
                     if (res && res.ok) {
-                        initLoad();
+                        const key = 'tmp_' + Date.now() + '_' + Math.random().toString(16).slice(2);
+                        ACHS.push({
+                            id: null,
+                            __key: key,
+                            ipp_point_id: null,
+                            category: cat,
+                            title: tit,
+                            one_year_target: tgt,
+                            weight: W,
+                            self_score: R,
+                            one_year_achievement: ach
+                        });
+                        renderByCat(cat);
+                        recalcTotals();
+                        toast('Custom activity ditambahkan.');
+                        mdlAdd.hide();
                     } else {
-                        alert(res?.message || 'Gagal menyimpan.');
+                        toast(res?.message || 'Gagal menambah activity.', 'warning');
                     }
                 }).fail(function(xhr) {
-                    alert(xhr.responseJSON?.message || 'Error server.');
+                    toast(xhr.responseJSON?.message || 'Error server.', 'danger');
+                });
+            });
+
+            // Save (global button) — semua perubahan via modal
+            function saveAll() {
+                $.ajax({
+                    url: URL_UPDATE,
+                    method: 'PUT',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    data: {
+                        achievements: [],
+                        activities: []
+                    },
+                    dataType: 'json'
+                }).done(function(res) {
+                    if (res && res.ok) {
+                        toast('Tersimpan.');
+                        initLoad();
+                    } else {
+                        toast(res?.message || 'Gagal menyimpan.', 'warning');
+                    }
+                }).fail(function(xhr) {
+                    toast(xhr.responseJSON?.message || 'Error server.', 'danger');
                 });
             }
-
             $('#btn-save, #btn-save-bottom').on('click', saveAll);
 
+            // Recalc (opsional)
             $('#btn-recalc').on('click', function() {
                 $.post({
-                        url: URL_RECALC,
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        dataType: 'json'
-                    })
-                    .done(function(res) {
-                        if (res && res.ok && res.totals) {
-                            $tAch.text(toFixed2(res.totals.achievement_total));
-                            $tGnd.text(toFixed2(res.totals.achievement_total));
-                            $tGScore.text(toFixed2(res.totals.grand_score || 0));
-                        }
-                    });
+                    url: URL_RECALC,
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                    },
+                    dataType: 'json'
+                }).done(function(res) {
+                    if (res && res.ok && res.totals) {
+                        $tAch.text(toFixed2(res.totals.achievement_total));
+                        $tGnd.text(toFixed2(res.totals.achievement_total));
+                        $tGScore.text(toFixed2(res.totals.grand_score || 0));
+                        toast('Recalc selesai.');
+                    }
+                });
             });
 
             // buka semua accordion
