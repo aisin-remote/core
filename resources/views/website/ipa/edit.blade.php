@@ -171,6 +171,61 @@
         }
     </style>
     <style>
+        /* === CAP badge (status per kategori) === */
+        .cap-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 9999px;
+            padding: .15rem .6rem;
+            font-weight: 700;
+            font-size: .72rem;
+            background: #fff;
+            color: #374151;
+        }
+
+        .cap-badge .dot {
+            width: .5rem;
+            height: .5rem;
+            border-radius: 9999px;
+            display: inline-block;
+        }
+
+        .cap-warn {
+            background: #fff7ed;
+            color: #9a3412;
+            border-color: #fed7aa;
+        }
+
+        /* kuning */
+        .cap-warn .dot {
+            background: #f59e0b;
+        }
+
+        .cap-ok {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #a7f3d0;
+        }
+
+        /* hijau */
+        .cap-ok .dot {
+            background: #10b981;
+        }
+
+        .cap-over {
+            background: #fef2f2;
+            color: #991b1b;
+            border-color: #fecaca;
+        }
+
+        /* merah */
+        .cap-over .dot {
+            background: #ef4444;
+        }
+    </style>
+    <style>
         /* Fallback warna toast bila text-bg-* belum ada */
         .badge-success {
             background-color: #22c55e;
@@ -219,13 +274,17 @@
         {{-- ====== ACCORDION PER KATEGORI (LIST IPP POINT + CUSTOM) ====== --}}
         <div class="accordion ipa" id="accordionIPA">
             @foreach ($categories as $cat)
-                <div class="accordion-item" data-cat="{{ $cat['key'] }}">
+                <div class="accordion-item" data-cat="{{ $cat['key'] }}" data-cap="{{ $cat['cap'] }}">
+                    <!-- NEW: data-cap -->
                     <h2 class="accordion-header" id="head-{{ $cat['key'] }}">
                         <button class="accordion-button" type="button" data-bs-toggle="collapse"
                             data-bs-target="#col-{{ $cat['key'] }}" aria-expanded="true"
                             aria-controls="col-{{ $cat['key'] }}">
                             <div class="d-flex align-items-center justify-content-between w-100">
                                 <span>{{ $cat['title'] }}</span>
+                                <!-- NEW: badge placeholder -->
+                                <span class="cap-badge ms-2" data-cat="{{ $cat['key'] }}">0.00 /
+                                    {{ $cat['cap'] }}</span>
                             </div>
                         </button>
                     </h2>
@@ -242,12 +301,13 @@
                                                 <th class="sticky">One Year Target</th>
                                                 <th class="sticky">Weight</th>
                                                 <th class="sticky">Score</th>
+                                                <th class="sticky">Total Score</th>
                                                 <th class="sticky" style="width:120px">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody class="js-tbody-ipp">
                                             <tr class="empty-row">
-                                                <td colspan="5">Memuat...</td>
+                                                <td colspan="6">Memuat...</td>
                                             </tr>
                                         </tbody>
                                     </table>
@@ -342,7 +402,7 @@
             // cache
             let IPP_POINTS = []; // {id, category, activity/title, target_one, weight}
             let
-        ACHS = []; // {id, ipp_point_id|null, category?, title?, one_year_target?, weight, self_score, one_year_achievement}
+                ACHS = []; // {id, ipp_point_id|null, category?, title?, one_year_target?, weight, self_score, one_year_achievement}
 
             let mdlDetail = new bootstrap.Modal(document.getElementById('modal-ipp-detail'));
             let mdlAdd = new bootstrap.Modal(document.getElementById('modal-add-activity'));
@@ -352,18 +412,29 @@
                 '&': '&amp;',
                 '<': '&lt;',
                 '>': '&gt;',
-                '"': '&quot;'
+                '"': '&quot;',
+                '\'': '&#39;'
             } [m]));
             const toFixed2 = (n) => Number(n || 0).toLocaleString(undefined, {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
             });
 
+            function fmt(n) {
+                const num = Number(n || 0);
+                return num.toLocaleString(undefined, {
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 2
+                });
+            }
+
+            // nloc: baca angka lokal; "10" dianggap 10 (== 10%), "10%" juga aman
             function nloc(v) {
                 if (typeof v === 'number') return v;
                 if (v == null) return 0;
                 let s = String(v).trim();
                 if (!s) return 0;
+                s = s.replace('%', ''); // support input dengan tanda %
                 if (s.includes('.') && s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
                 else if (s.includes(',')) s = s.replace(',', '.');
                 s = s.replace(/[^\d.-]/g, '');
@@ -372,17 +443,17 @@
             }
             const $tbody = (cat) => $(`.js-tbl-ipp[data-cat="${cat}"] .js-tbody-ipp`);
 
-            // helpers: Score & Weight resolusi
+            // ===== Helpers: Score & Weight resolusi =====
             function scoreForIpp(id) {
                 const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id));
-                return nloc(ex?.self_score ?? 0); // IPP tidak punya score -> 0
+                return nloc(ex?.self_score ?? 0);
             }
 
             function weightForIpp(id) {
                 const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id));
                 if (ex && ex.weight != null) return nloc(ex.weight);
                 const p = IPP_POINTS.find(pp => Number(pp.id) === Number(id));
-                return nloc(p?.weight ?? 0); // fallback ke IPP weight
+                return nloc(p?.weight ?? 0);
             }
 
             function scoreForCustom(a) {
@@ -393,15 +464,22 @@
                 return nloc(a.weight ?? 0);
             }
 
-            // ----- RENDER LIST -----
+            function rowTotal(weightPercent, score) {
+                // Total Score per baris = (W% * R) / 100
+                return (nloc(weightPercent) / 100) * nloc(score);
+            }
+
+            // ====== RENDER LIST ======
             function rowIPPHtml(p) {
                 const score = scoreForIpp(p.id);
-                const weight = weightForIpp(p.id);
+                const weight = weightForIpp(p.id); // dibaca sebagai persen
+                const total = rowTotal(weight, score);
                 return `<tr data-source="ipp" data-ipp-id="${p.id}" data-cat="${esc(p.category||'')}">
                     <td>${esc(p.activity||'-')}</td>
                     <td><div class="fw-semibold">${esc(p.target_one||'(tanpa judul)')}</div></td>
-                    <td>${toFixed2(weight)}</td>
-                    <td>${toFixed2(score)}</td>
+                    <td>${fmt(weight)}%</td>
+                    <td>${fmt(score)}</td>
+                    <td>${fmt(total)}</td>
                     <td><button class="btn btn-sm btn-edit btn-mini js-row-detail">Detail</button></td>
                 </tr>`;
             }
@@ -409,14 +487,68 @@
             function rowCustomHtml(a) {
                 const key = a.__key || a.id || '';
                 const score = scoreForCustom(a);
-                const weight = weightForCustom(a);
+                const weight = weightForCustom(a); // persen
+                const total = rowTotal(weight, score);
                 return `<tr data-source="custom" data-ach-key="${esc(key)}" data-cat="${esc(a.category||'')}">
                     <td>${esc(a.title||'(tanpa judul)')} <span class="ms-1 badge-src">Custom</span></td>
                     <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
-                    <td>${toFixed2(weight)}</td>
-                    <td>${toFixed2(score)}</td>
+                    <td>${fmt(weight)}%</td>
+                    <td>${fmt(score)}</td>
+                    <td>${fmt(total)}</td>
                     <td><button class="btn btn-sm btn-edit btn-mini js-row-detail">Detail</button></td>
                 </tr>`;
+            }
+
+            // ====== CAP BADGE: perhitungan & update ======
+            function totalWeightByCat(cat) {
+                let sum = 0;
+
+                // IPP: gunakan override weight dari ACHS jika ada
+                IPP_POINTS.filter(p => (p.category || '') === cat).forEach(p => {
+                    const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
+                    const W = nloc(ex?.weight ?? p.weight ?? 0); // persen
+                    sum += W;
+                });
+
+                // Custom: bukan turunan IPP
+                ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat).forEach(c => {
+                    const W = nloc(c.weight ?? 0); // persen
+                    sum += W;
+                });
+
+                return sum;
+            }
+
+            function updateCapBadges() {
+                $('.accordion-item[data-cat][data-cap]').each(function() {
+                    const cat = String($(this).data('cat') || '');
+                    const cap = nloc($(this).data('cap')); // persen
+                    const sum = totalWeightByCat(cat); // persen
+
+                    const $badge = $('.cap-badge[data-cat="' + cat + '"]');
+                    if ($badge.length === 0) return;
+
+                    // reset kelas
+                    $badge.removeClass('cap-warn cap-ok cap-over');
+
+                    const EPS = 0.0001;
+                    let cls = 'cap-warn'; // default: kuning (belum penuh)
+                    if (sum > cap + EPS) cls = 'cap-over';
+                    else if (Math.abs(sum - cap) <= EPS) cls = 'cap-ok';
+
+                    $badge.addClass(cls);
+
+                    // inject dot jika belum ada
+                    if ($badge.find('.dot').length === 0) {
+                        $badge.prepend('<span class="dot"></span>');
+                    }
+
+                    // tampilkan "xx.xx% / yy.yy%"
+                    $badge.contents().filter(function() {
+                        return this.nodeType === 3;
+                    }).remove();
+                    $badge.append(document.createTextNode(' ' + fmt(sum) + '% / ' + fmt(cap) + '%'));
+                });
             }
 
             function renderByCat(cat) {
@@ -427,9 +559,12 @@
                 let html = '';
                 if (ippRows.length) html += ippRows.map(rowIPPHtml).join('');
                 if (custRows.length) html += custRows.map(rowCustomHtml).join('');
-                if (!html) html = '<tr class="empty-row"><td colspan="5">Belum ada item.</td></tr>';
+                if (!html) html = '<tr class="empty-row"><td colspan="6">Belum ada item.</td></tr>';
 
                 $tb.html(html);
+
+                // update badge untuk kategori ini
+                updateCapBadges();
             }
 
             function renderAll() {
@@ -438,9 +573,10 @@
                     renderByCat(cat);
                 });
                 recalcTotals();
+                updateCapBadges();
             }
 
-            // ----- TOTALS -----
+            // ====== TOTALS (tetap: Σ(W/100×R)) ======
             function recalcTotals() {
                 let total = 0,
                     sumR = 0;
@@ -448,32 +584,35 @@
                 // IPP-based
                 IPP_POINTS.forEach(p => {
                     const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
-                    const W = nloc(ex?.weight ?? p.weight ?? 0);
-                    const R = nloc(ex?.self_score ?? 0);
+                    const W = nloc(ex?.weight ?? p.weight ?? 0); // persen
+                    const R = nloc(ex?.self_score ?? 0); // angka
                     total += (W / 100) * R;
                     sumR += R;
                 });
 
                 // Custom-based
                 ACHS.filter(x => !x.ipp_point_id).forEach(c => {
-                    const W = nloc(c.weight ?? 0);
+                    const W = nloc(c.weight ?? 0); // persen
                     const R = nloc(c.self_score ?? 0);
                     total += (W / 100) * R;
                     sumR += R;
                 });
 
-                $tAch.text(toFixed2(total));
-                $tGnd.text(toFixed2(total));
-                $tGScore.text(toFixed2(sumR));
+                $tAch.text(fmt(total));
+                $tGnd.text(fmt(total));
+                $tGScore.text(fmt(sumR));
+
                 const scale = v => Math.max(0, Math.min(100, (v / 10) * 100));
                 $barAch.css('width', scale(total) + '%');
                 $barG.css('width', scale(total) + '%');
                 $barGS.css('width', Math.max(0, Math.min(100, (sumR / 10) * 100)) + '%');
+
+                updateCapBadges();
             }
 
-            // ----- LOAD -----
+            // ====== LOAD ======
             function initLoad() {
-                $('.js-tbody-ipp').html('<tr class="empty-row"><td colspan="5">Memuat...</td></tr>');
+                $('.js-tbody-ipp').html('<tr class="empty-row"><td colspan="6">Memuat...</td></tr>');
                 $.getJSON(URL_DATA).done(function(res) {
                     if (!res || !res.ok) {
                         toast('Gagal memuat data.', 'danger');
@@ -486,7 +625,7 @@
                         activity: p.activity || p.title,
                         title: p.title,
                         target_one: p.target_one,
-                        weight: nloc(p.weight || 0),
+                        weight: nloc(p.weight || 0), // persen
                         category: p.category
                     })) : [];
 
@@ -497,8 +636,8 @@
                         title: x.title || null,
                         one_year_target: x.one_year_target || '',
                         one_year_achievement: x.one_year_achievement || x.description || '',
-                        weight: nloc(x.weight ?? 0),
-                        self_score: nloc(x.self_score || 0),
+                        weight: nloc(x.weight ?? 0), // persen
+                        self_score: nloc(x.self_score || 0), // angka
                     })) : [];
 
                     renderAll();
@@ -507,7 +646,7 @@
                 });
             }
 
-            // ----- DETAIL (open) -----
+            // ====== DETAIL (open) ======
             $(document).on('click', '.js-row-detail', function() {
                 const $tr = $(this).closest('tr');
                 const source = ($tr.data('source') || '').toString();
@@ -529,11 +668,12 @@
                     $('#ippd-activity').val(p.activity || p.title || '').prop('readonly', true);
                     $('#ippd-target').val(p.target_one || '').prop('readonly', true);
 
-                    // prefer weight dari achievement jika ada
-                    $('#ippd-weight').val(toFixed2(nloc(ex?.weight ?? p.weight ?? 0)));
-                    $('#ippd-score').val(nloc(ex?.self_score || 0));
+                    $('#ippd-weight').val(fmt(nloc(ex?.weight ?? p.weight ??
+                        0))); // persen (tanpa % di input)
+                    $('#ippd-score').val(nloc(ex?.self_score || 0)); // angka biasa
                     $('#ippd-achv').val(ex?.one_year_achievement || '');
-                    $('#ippd-hint').text('Mode IPP: edit Weight, Score, Achievement. IPP tidak berubah.');
+                    $('#ippd-hint').text(
+                        'Mode IPP: edit Weight (%) , Score (angka), Achievement. IPP tidak berubah.');
                 } else {
                     const key = ($tr.data('ach-key') || '').toString();
                     const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
@@ -548,23 +688,24 @@
                     $('#ippd-activity').val(a.title || '').prop('readonly', false);
                     $('#ippd-target').val(a.one_year_target || '').prop('readonly', false);
 
-                    $('#ippd-weight').val(toFixed2(nloc(a.weight || 0)));
-                    $('#ippd-score').val(nloc(a.self_score || 0));
+                    $('#ippd-weight').val(fmt(nloc(a.weight || 0))); // persen
+                    $('#ippd-score').val(nloc(a.self_score || 0)); // angka
                     $('#ippd-achv').val(a.one_year_achievement || '');
-                    $('#ippd-hint').text('Mode Custom: edit Activity, Target, Weight, Score, Achievement.');
+                    $('#ippd-hint').text(
+                        'Mode Custom: edit Activity, Target, Weight (%) , Score (angka), Achievement.');
                 }
 
                 mdlDetail.show();
             });
 
-            // ----- DETAIL (save -> PUT IPA) -----
+            // ====== DETAIL (save -> PUT IPA) ======
             $('#ippd-btn-save').on('click', function() {
                 const source = ($('#ippd-source').val() || '').toString();
 
                 if (source === 'ipp') {
                     const id = Number($('#ippd-id').val());
-                    const W = nloc($('#ippd-weight').val());
-                    const R = nloc($('#ippd-score').val());
+                    const W = nloc($('#ippd-weight').val()); // persen (boleh ketik "10" atau "10%")
+                    const R = nloc($('#ippd-score').val()); // angka
                     const target = ($('#ippd-target').val() || '').trim();
                     const ach = ($('#ippd-achv').val() || '').trim();
 
@@ -572,7 +713,7 @@
                         achievements: [{
                             id: (ACHS.find(x => Number(x.ipp_point_id) === id)?.id) || null,
                             ipp_point_id: id,
-                            one_year_target: target, // tetap hanya simpan ke IPA
+                            one_year_target: target,
                             weight: W,
                             self_score: R,
                             one_year_achievement: ach
@@ -605,7 +746,6 @@
                                     one_year_target: target
                                 });
                             }
-                            // re-render kategori agar kolom Weight & Score langsung update
                             const p = IPP_POINTS.find(x => Number(x.id) === id);
                             if (p && p.category) renderByCat(p.category);
 
@@ -631,8 +771,8 @@
 
                     const title = ($('#ippd-activity').val() || '').trim();
                     const target = ($('#ippd-target').val() || '').trim();
-                    const W = nloc($('#ippd-weight').val());
-                    const R = nloc($('#ippd-score').val());
+                    const W = nloc($('#ippd-weight').val()); // persen
+                    const R = nloc($('#ippd-score').val()); // angka
                     const ach = ($('#ippd-achv').val() || '').trim();
 
                     const payload = {
@@ -675,24 +815,24 @@
                 }
             });
 
-            // ----- ADD ACTIVITY (open)
+            // ====== ADD ACTIVITY (open)
             $('#btn-add-activity').on('click', function() {
                 $('#add-cat').val('');
                 $('#add-activity').val('');
                 $('#add-target').val('');
-                $('#add-weight').val('0');
-                $('#add-score').val('0');
+                $('#add-weight').val('0'); // persen
+                $('#add-score').val('0'); // angka
                 $('#add-achv').val('');
                 mdlAdd.show();
             });
 
-            // ----- ADD ACTIVITY (save -> PUT IPA)
+            // ====== ADD ACTIVITY (save -> PUT IPA)
             $('#add-btn-save').on('click', function() {
                 const cat = ($('#add-cat').val() || '').toString();
                 const tit = ($('#add-activity').val() || '').trim();
                 const tgt = ($('#add-target').val() || '').trim();
-                const W = nloc($('#add-weight').val());
-                const R = nloc($('#add-score').val());
+                const W = nloc($('#add-weight').val()); // persen (boleh isi dengan %)
+                const R = nloc($('#add-score').val()); // angka
                 const ach = ($('#add-achv').val() || '').trim();
 
                 if (!cat) {
@@ -790,9 +930,10 @@
                     dataType: 'json'
                 }).done(function(res) {
                     if (res && res.ok && res.totals) {
-                        $tAch.text(toFixed2(res.totals.achievement_total));
-                        $tGnd.text(toFixed2(res.totals.achievement_total));
-                        $tGScore.text(toFixed2(res.totals.grand_score || 0));
+                        $tAch.text(fmt(res.totals.achievement_total));
+                        $tGnd.text(fmt(res.totals.achievement_total));
+                        $tGScore.text(fmt(res.totals.grand_score || 0));
+                        updateCapBadges(); // pastikan badge ikut update
                         toast('Recalc selesai.');
                     }
                 });
