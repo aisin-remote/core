@@ -24,8 +24,11 @@ class IpaAchievement extends Model
         'evidence',
         'position',
         'title',
-        'category'
+        'category',
+        'status'
     ];
+
+    public const STATUSES = ['draft', 'submitted', 'checked', 'approved'];
 
     // ==== Relationships ====
     public function ipa()

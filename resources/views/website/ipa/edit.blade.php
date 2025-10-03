@@ -13,58 +13,191 @@
 @endphp
 
 @push('custom-css')
+    {{-- Bootstrap Icons untuk ikon ringan --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
     {{-- Toastr (toast) --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
 
     <style>
+        :root {
+            --bg-soft: #f6f9fc;
+            --card: #ffffff;
+            --ink: #0f172a;
+            --muted: #6b7280;
+            --primary: #2563eb;
+            --primary-600: #1d4ed8;
+            --ring: #b3c7ff;
+            --row-hover: #eef2ff;
+            --row-alt: #fbfdff;
+            --ok: #10b981;
+            --warn: #f59e0b;
+            --over: #ef4444;
+        }
+
+        /* ====== Layout & Header ====== */
+        body {
+            background: var(--bg-soft);
+        }
+
         .container-xxl {
             max-width: 1360px
         }
 
-        .card-header.bg-light {
-            background: #f8fafc !important
+        .page-head {
+            background: linear-gradient(90deg, #eaf2ff, #fff);
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 6px 20px rgba(24, 39, 75, .06);
         }
 
-        .small-muted {
-            color: #6b7280;
-            font-size: .9rem
+        .page-title {
+            margin: 0;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: .2px;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
         }
 
-        .help-line {
-            color: #64748b;
-            font-size: .85rem
+        .page-title .bi {
+            font-size: 1.4rem;
+            color: var(--primary);
         }
 
-        .badge-tag {
-            background: #f1f5f9;
-            color: #334155;
+        .toolbar {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap
+        }
+
+        .toolbar .btn {
+            border-radius: 12px;
+            padding: .55rem .9rem;
+            font-weight: 700;
+            letter-spacing: .2px
+        }
+
+        .toolbar .btn.btn-light {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            color: #0f172a
+        }
+
+        .toolbar .btn.btn-add {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff
+        }
+
+        .toolbar .btn.btn-add:hover {
+            background: var(--primary-600);
+            border-color: var(--primary-600)
+        }
+
+        .toolbar .btn.btn-primary {
+            padding: .55rem 1.05rem
+        }
+
+        /* ====== Accordion / Category ====== */
+        .accordion.ipa .accordion-item {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            background: var(--card);
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 0 rgba(17, 24, 39, .03)
+        }
+
+        .accordion.ipa .accordion-button {
+            background: #fafafa;
+            color: var(--ink);
+            font-weight: 800;
+            padding: 0.85rem 1rem
+        }
+
+        .accordion.ipa .accordion-button:focus {
+            box-shadow: 0 0 0 .2rem rgba(37, 99, 235, .18)
+        }
+
+        .accordion.ipa .accordion-button:not(.collapsed) {
+            background: #f5f7fb;
+            box-shadow: inset 0 -1px 0 #e5e7eb
+        }
+
+        /* Warna strip kiri per kategori (mudah dikenali semua umur) */
+        .accordion-item[data-cat="activity_management"] {
+            border-left: 6px solid #2563eb
+        }
+
+        .accordion-item[data-cat="people_development"] {
+            border-left: 6px solid #10b981
+        }
+
+        .accordion-item[data-cat="crp"] {
+            border-left: 6px solid #f59e0b
+        }
+
+        .accordion-item[data-cat="special_assignment"] {
+            border-left: 6px solid #8b5cf6
+        }
+
+        /* ====== CAP badge ====== */
+        .cap-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
             border: 1px solid #e5e7eb;
             border-radius: 9999px;
-            padding: .15rem .5rem;
-            font-weight: 600;
-            font-size: .75rem
+            padding: .22rem .65rem;
+            font-weight: 800;
+            font-size: .72rem;
+            background: #fff;
+            color: #111827
         }
 
-        .badge-cat {
-            background: #eef2ff;
-            color: #3730a3;
-            border: 1px solid #c7d2fe;
+        .cap-badge .dot {
+            width: .55rem;
+            height: .55rem;
             border-radius: 9999px;
-            padding: .15rem .55rem;
-            font-weight: 700;
-            font-size: .72rem
+            display: inline-block
         }
 
-        .badge-src {
-            background: #ecfeff;
-            color: #075985;
-            border: 1px solid #a5f3fc;
-            border-radius: 8px;
-            padding: .05rem .4rem;
-            font-weight: 700;
-            font-size: .7rem
+        .cap-warn {
+            background: #fff7ed;
+            border-color: #fed7aa;
+            color: #9a3412
         }
 
+        .cap-warn .dot {
+            background: var(--warn)
+        }
+
+        .cap-ok {
+            background: #ecfdf5;
+            border-color: #a7f3d0;
+            color: #065f46
+        }
+
+        .cap-ok .dot {
+            background: var(--ok)
+        }
+
+        .cap-over {
+            background: #fef2f2;
+            border-color: #fecaca;
+            color: #991b1b
+        }
+
+        .cap-over .dot {
+            background: var(--over)
+        }
+
+        /* ====== Tables ====== */
         .table.ipp-table {
             border-color: #e5e7eb;
             font-size: 1rem
@@ -73,16 +206,16 @@
         .table.ipp-table thead th {
             background: #f0f5ff !important;
             color: #111827;
-            font-weight: 700;
+            font-weight: 800;
             border-bottom: 1px solid #e5e7eb
         }
 
         .table.ipp-table tbody tr:nth-child(even) {
-            background: #fbfdff
+            background: var(--row-alt)
         }
 
         .table.ipp-table tbody tr:hover {
-            background: #eef2ff
+            background: var(--row-hover)
         }
 
         .table.ipp-table td,
@@ -91,21 +224,34 @@
             vertical-align: middle
         }
 
-        th.sticky {
-            position: sticky;
-            top: 0;
-            z-index: 1
-        }
-
         .empty-row td {
             padding: 1rem !important;
             color: #6c757d;
             font-style: italic
         }
 
+        /* Status strip di kiri baris (tanpa mengubah kolom) */
+        tr[data-status="draft"] {
+            box-shadow: inset 4px 0 0 #facc15
+        }
+
+        tr[data-status="submitted"] {
+            box-shadow: inset 4px 0 0 #60a5fa
+        }
+
+        tr[data-status="checked"] {
+            box-shadow: inset 4px 0 0 #22d3ee
+        }
+
+        tr[data-status="approved"] {
+            box-shadow: inset 4px 0 0 #34d399
+        }
+
+        /* Buttons kecil */
         .btn-mini {
             padding: .5rem .7rem;
-            border-radius: 10px
+            border-radius: 10px;
+            font-weight: 700
         }
 
         .btn-edit {
@@ -114,16 +260,35 @@
             border: 1px solid #e5e7eb
         }
 
-        .btn-add {
-            background: #2563eb;
-            color: #fff;
-            border: 1px solid #2563eb
+        .btn-edit .bi {
+            margin-right: .25rem
+        }
+
+        .btn-del {
+            background: #fff1f2;
+            color: #991b1b;
+            border: 1px solid #fecaca
+        }
+
+        .btn-del .bi {
+            margin-right: .25rem
+        }
+
+        .btn-del:hover {
+            filter: brightness(.98)
+        }
+
+        /* Totals Card */
+        .totals-card {
+            min-width: 360px;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px
         }
 
         .mini-bar {
-            height: 6px;
+            height: 8px;
             background: #e5e7eb;
-            border-radius: 8px;
+            border-radius: 99px;
             overflow: hidden
         }
 
@@ -131,125 +296,86 @@
             display: block;
             height: 100%;
             width: 0%;
-            background: #2563eb;
+            background: var(--primary);
             transition: width .25s ease
         }
 
-        .accordion.ipa .accordion-item {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            overflow: hidden;
-            background: #fff;
-            margin-bottom: .875rem;
-            box-shadow: 0 1px 0 rgba(17, 24, 39, .02)
+        /* Helper/Legend */
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem
         }
 
-        .accordion.ipa .accordion-button {
-            background: #fafafa;
-            color: #111827;
-            font-weight: 700
-        }
-
-        .accordion.ipa .accordion-button:not(.collapsed) {
-            background: #f5f7fb;
-            box-shadow: inset 0 -1px 0 #e5e7eb
-        }
-
-        .accordion.ipa .accordion-button:focus {
-            box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .2)
-        }
-
-        .modal .form-label {
-            font-weight: 600
-        }
-
-        @media (max-width:576px) {
-            .modal .modal-dialog {
-                max-width: calc(100% - 1rem);
-                margin: .5rem auto
-            }
-        }
-    </style>
-    <style>
-        /* === CAP badge (status per kategori) === */
-        .cap-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
+        .legend .pill {
             border: 1px solid #e5e7eb;
             border-radius: 9999px;
+            background: #fff;
             padding: .15rem .6rem;
             font-weight: 700;
             font-size: .72rem;
-            background: #fff;
             color: #374151;
+            display: flex;
+            align-items: center;
+            gap: .4rem
         }
 
-        .cap-badge .dot {
-            width: .5rem;
-            height: .5rem;
+        .legend .dot {
+            width: .55rem;
+            height: .55rem;
             border-radius: 9999px;
-            display: inline-block;
+            display: inline-block
         }
 
-        .cap-warn {
-            background: #fff7ed;
-            color: #9a3412;
-            border-color: #fed7aa;
+        .legend .d-draft {
+            background: #facc15
         }
 
-        /* kuning */
-        .cap-warn .dot {
-            background: #f59e0b;
+        .legend .d-submitted {
+            background: #60a5fa
         }
 
-        .cap-ok {
-            background: #ecfdf5;
-            color: #065f46;
-            border-color: #a7f3d0;
+        .legend .d-checked {
+            background: #22d3ee
         }
 
-        /* hijau */
-        .cap-ok .dot {
-            background: #10b981;
+        .legend .d-approved {
+            background: #34d399
         }
 
-        .cap-over {
-            background: #fef2f2;
-            color: #991b1b;
-            border-color: #fecaca;
-        }
-
-        /* merah */
-        .cap-over .dot {
-            background: #ef4444;
-        }
-    </style>
-    <style>
-        /* Fallback warna toast bila text-bg-* belum ada */
+        /* Toast fallback */
         .badge-success {
             background-color: #22c55e;
-            color: #fff;
+            color: #fff
         }
 
         .badge-danger {
             background-color: #ef4444;
-            color: #fff;
+            color: #fff
         }
 
         .badge-warning {
             background-color: #f59e0b;
-            color: #212529;
+            color: #212529
         }
 
         .badge-info {
             background-color: #0ea5e9;
-            color: #212529;
+            color: #212529
         }
 
         .badge-dark {
             background-color: #212529;
-            color: #fff;
+            color: #fff
+        }
+
+        /* Utility */
+        .hidden {
+            display: none !important
+        }
+
+        .muted {
+            color: var(--muted)
         }
     </style>
 @endpush
@@ -260,38 +386,49 @@
         data-url-recalc="{{ route('ipa.recalc', $ipa->id) }}">
 
         {{-- Header --}}
-        <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
-            <div>
-                <h3 class="mb-1">Individual Performance Appraisal</h3>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-add btn-sm" id="btn-add-activity">+ Tambah Activity</button>
-                <button class="btn btn-light btn-sm" id="btn-recalc" title="Recalc dari server">Recalc</button>
-                <button class="btn btn-primary btn-sm" id="btn-save">Simpan</button>
+        <div class="page-head mb-3">
+            <h3 class="page-title">
+                <i class="bi bi-clipboard2-check"></i>
+                <span>Individual Performance Appraisal</span>
+            </h3>
+            <div class="toolbar">
+                <button class="btn btn-add btn-sm" id="btn-add-activity" title="Tambah Activity">
+                    <i class="bi bi-plus-lg text-white"></i> Tambah Activity
+                </button>
             </div>
         </div>
 
-        {{-- ====== ACCORDION PER KATEGORI (LIST IPP POINT + CUSTOM) ====== --}}
+        {{-- Legend Status & Info singkat --}}
+        <div class="legend mb-3">
+            <span class="pill"><span class="dot d-draft"></span> Draft</span>
+            <span class="pill"><span class="dot d-submitted"></span> Submitted</span>
+            <span class="pill"><span class="dot d-checked"></span> Checked</span>
+            <span class="pill"><span class="dot d-approved"></span> Approved</span>
+            <span class="pill"><span class="dot" style="background:var(--ok)"></span> CAP Pas</span>
+            <span class="pill"><span class="dot" style="background:var(--warn)"></span> CAP Belum Penuh</span>
+            <span class="pill"><span class="dot" style="background:var(--over)"></span> Melebihi CAP</span>
+        </div>
+
+        {{-- ====== ACCORDION PER KATEGORI ====== --}}
         <div class="accordion ipa" id="accordionIPA">
             @foreach ($categories as $cat)
                 <div class="accordion-item" data-cat="{{ $cat['key'] }}" data-cap="{{ $cat['cap'] }}">
-                    <!-- NEW: data-cap -->
                     <h2 class="accordion-header" id="head-{{ $cat['key'] }}">
                         <button class="accordion-button" type="button" data-bs-toggle="collapse"
                             data-bs-target="#col-{{ $cat['key'] }}" aria-expanded="true"
                             aria-controls="col-{{ $cat['key'] }}">
                             <div class="d-flex align-items-center justify-content-between w-100">
                                 <span>{{ $cat['title'] }}</span>
-                                <!-- NEW: badge placeholder -->
-                                <span class="cap-badge ms-2" data-cat="{{ $cat['key'] }}">0.00 /
-                                    {{ $cat['cap'] }}</span>
+                                <span class="cap-badge ms-2" data-cat="{{ $cat['key'] }}" title="Total Weight / CAP">
+                                    0.00 / {{ $cat['cap'] }}
+                                </span>
                             </div>
                         </button>
                     </h2>
 
                     <div id="col-{{ $cat['key'] }}" class="accordion-collapse collapse show">
                         <div class="accordion-body">
-                            <div class="card">
+                            <div class="card" style="border-radius:12px;border:1px solid #e5e7eb">
                                 <div class="table-responsive">
                                     <table class="table table-bordered align-middle mb-0 ipp-table js-tbl-ipp"
                                         data-cat="{{ $cat['key'] }}">
@@ -302,17 +439,18 @@
                                                 <th class="sticky">Weight</th>
                                                 <th class="sticky">Score</th>
                                                 <th class="sticky">Total Score</th>
-                                                <th class="sticky" style="width:120px">Aksi</th>
+                                                <th class="sticky">Status</th>
+                                                <th class="sticky" style="width:160px">Aksi</th>
                                             </tr>
                                         </thead>
                                         <tbody class="js-tbody-ipp">
                                             <tr class="empty-row">
-                                                <td colspan="6">Memuat...</td>
+                                                <td colspan="7">Memuat...</td>
                                             </tr>
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="px-3 py-2 help-line">
+                                <div class="px-3 py-2 help-line muted">
                                     Baris bertanda <span class="badge-src">Custom</span> adalah activity yang kamu tambahkan
                                     di IPA (tidak mengubah IPP).
                                 </div>
@@ -325,34 +463,36 @@
 
         {{-- Totals --}}
         <div class="mt-3 d-flex flex-wrap gap-3 justify-content-end">
-            <div class="card shadow-sm" style="min-width:360px">
+            <div class="card shadow-sm totals-card">
                 <div class="card-body py-2">
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div>Achievement Total (Σ(W/100×R))</div>
+                        <div><i class="bi bi-trophy"></i> Achievement Total (Σ(W/100×R))</div>
                         <div><strong id="total-achievement">0,00</strong></div>
                     </div>
                     <div class="mini-bar mb-2"><span id="bar-ach"></span></div>
 
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div>Grand Score (Σ R)</div>
+                        <div><i class="bi bi-graph-up"></i> Grand Score (Σ R)</div>
                         <div><strong id="total-grand-score">0,00</strong></div>
                     </div>
                     <div class="mini-bar mb-2"><span id="bar-gscore"></span></div>
 
                     <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div>Grand Total</div>
+                        <div><i class="bi bi-star"></i> Grand Total</div>
                         <div><strong id="total-grand">0,00</strong></div>
                     </div>
                     <div class="mini-bar"><span id="bar-grand"></span></div>
                 </div>
             </div>
             <div class="d-flex align-items-end">
-                <button class="btn btn-primary" id="btn-save-bottom">Simpan Perubahan</button>
+                <button class="btn btn-primary" id="btn-save-bottom" title="Kirim sebagai Submitted">
+                    <i class="bi bi-send-check"></i> Submit
+                </button>
             </div>
         </div>
     </div>
 
-    {{-- ===== Modal Detail (IPP & Custom; langsung editable) ===== --}}
+    {{-- ===== Modal Detail (IPP & Custom) ===== --}}
     @include('website.ipa.modal.point')
 
     {{-- ===== Modal Tambah Activity (Custom) ===== --}}
@@ -367,11 +507,12 @@
     <script>
         (function() {
             const $root = $('#ipa-edit');
+            const IPA_ID = Number($root.data('ipa-id') || 0);
             const URL_DATA = $root.data('url-data');
             const URL_UPDATE = $root.data('url-update');
             const URL_RECALC = $root.data('url-recalc');
 
-            // Toast (pakai Bootstrap Toast dengan kelas badge-*)
+            // Toast
             function toast(msg, type = 'success') {
                 const id = 'toast-' + Date.now();
                 const $t = $(`
@@ -380,13 +521,12 @@
      style="position:fixed;top:1rem;right:1rem;z-index:1080;">
   <div class="d-flex">
     <div class="toast-body">${esc(msg)}</div>
-    <button type="button" class="btn-close btn-close-white me-2 m-auto"
-            data-bs-dismiss="toast" aria-label="Tutup"></button>
+    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
   </div>
 </div>`);
                 $('body').append($t);
                 const t = new bootstrap.Toast($t[0], {
-                    delay: 2500
+                    delay: 2200
                 });
                 t.show();
                 $t.on('hidden.bs.toast', () => $t.remove());
@@ -399,42 +539,41 @@
             const $barG = $('#bar-grand');
             const $barGS = $('#bar-gscore');
 
+            // permissions dari backend
+            let PERMS = {
+                can_add: true,
+                can_edit: true,
+                can_delete: true,
+                can_recalc: true,
+                can_submit: true
+            };
+
             // cache
-            let IPP_POINTS = []; // {id, category, activity/title, target_one, weight}
-            let
-                ACHS = []; // {id, ipp_point_id|null, category?, title?, one_year_target?, weight, self_score, one_year_achievement}
+            let IPP_POINTS = [];
+            let ACHS = []; // status diambil dari backend (bukan lokal)
 
             let mdlDetail = new bootstrap.Modal(document.getElementById('modal-ipp-detail'));
             let mdlAdd = new bootstrap.Modal(document.getElementById('modal-add-activity'));
 
             // utils
-            const esc = (s) => String(s || '').replace(/[&<>"']/g, m => ({
+            const esc = (s) => String(s || '').replace(/[&<>\"']/g, m => ({
                 '&': '&amp;',
                 '<': '&lt;',
                 '>': '&gt;',
                 '"': '&quot;',
-                '\'': '&#39;'
+                "'": '&#39;'
             } [m]));
-            const toFixed2 = (n) => Number(n || 0).toLocaleString(undefined, {
-                minimumFractionDigits: 2,
+            const fmt = (n) => Number(n || 0).toLocaleString(undefined, {
+                minimumFractionDigits: 0,
                 maximumFractionDigits: 2
             });
 
-            function fmt(n) {
-                const num = Number(n || 0);
-                return num.toLocaleString(undefined, {
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 2
-                });
-            }
-
-            // nloc: baca angka lokal; "10" dianggap 10 (== 10%), "10%" juga aman
             function nloc(v) {
                 if (typeof v === 'number') return v;
                 if (v == null) return 0;
                 let s = String(v).trim();
                 if (!s) return 0;
-                s = s.replace('%', ''); // support input dengan tanda %
+                s = s.replace('%', '');
                 if (s.includes('.') && s.includes(',')) s = s.replace(/\./g, '').replace(',', '.');
                 else if (s.includes(',')) s = s.replace(',', '.');
                 s = s.replace(/[^\d.-]/g, '');
@@ -443,107 +582,131 @@
             }
             const $tbody = (cat) => $(`.js-tbl-ipp[data-cat="${cat}"] .js-tbody-ipp`);
 
-            // ===== Helpers: Score & Weight resolusi =====
-            function scoreForIpp(id) {
-                const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id));
-                return nloc(ex?.self_score ?? 0);
-            }
-
-            function weightForIpp(id) {
+            // helper nilai
+            const scoreForIpp = id => nloc((ACHS.find(x => Number(x.ipp_point_id) === Number(id))?.self_score) ?? 0);
+            const weightForIpp = id => {
                 const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id));
                 if (ex && ex.weight != null) return nloc(ex.weight);
                 const p = IPP_POINTS.find(pp => Number(pp.id) === Number(id));
                 return nloc(p?.weight ?? 0);
+            };
+            const statusForIpp = id => (ACHS.find(x => Number(x.ipp_point_id) === Number(id))?.status) || null;
+
+            const scoreForCustom = a => nloc(a.self_score ?? 0);
+            const weightForCustom = a => nloc(a.weight ?? 0);
+            const rowTotal = (Wpct, R) => (nloc(Wpct) / 100) * nloc(R);
+
+            function statusBadgeHtml(achOrStatus) {
+                const status = (achOrStatus && typeof achOrStatus === 'object') ? (achOrStatus.status || null) : (
+                    achOrStatus || null);
+                if (!status) return '';
+                const map = {
+                    draft: {
+                        bg: '#fefce8',
+                        bd: '#fde68a',
+                        fg: '#854d0e',
+                        txt: 'Draft'
+                    },
+                    submitted: {
+                        bg: '#eff6ff',
+                        bd: '#bfdbfe',
+                        fg: '#1e40af',
+                        txt: 'Submitted'
+                    },
+                    checked: {
+                        bg: '#ecfeff',
+                        bd: '#a5f3fc',
+                        fg: '#0e7490',
+                        txt: 'Checked'
+                    },
+                    approved: {
+                        bg: '#ecfdf5',
+                        bd: '#a7f3d0',
+                        fg: '#065f46',
+                        txt: 'Approved'
+                    }
+                };
+                const s = map[String(status).toLowerCase()] || {
+                    bg: '#f3f4f6',
+                    bd: '#e5e7eb',
+                    fg: '#374151',
+                    txt: String(status)
+                };
+                return `<span class="ms-2" style="background:${s.bg};border:1px solid ${s.bd};color:${s.fg};border-radius:8px;padding:.05rem .4rem;font-weight:700;font-size:.7rem">${s.txt}</span>`;
             }
 
-            function scoreForCustom(a) {
-                return nloc(a.self_score ?? 0);
+            function actionButtonsHtml() {
+                const btnDetail =
+                    `<button class="btn btn-sm btn-edit btn-mini js-row-detail" aria-label="Detail"><i class="bi bi-pencil-square"></i> Detail</button>`;
+                const btnDelete = PERMS.can_delete ?
+                    `<button class="btn btn-sm btn-del btn-mini js-row-delete ms-1" aria-label="Hapus"><i class="bi bi-trash3"></i> Hapus</button>` :
+                    '';
+                return `<span class="text-nowrap">${btnDetail}${btnDelete}</span>`;
             }
 
-            function weightForCustom(a) {
-                return nloc(a.weight ?? 0);
-            }
-
-            function rowTotal(weightPercent, score) {
-                // Total Score per baris = (W% * R) / 100
-                return (nloc(weightPercent) / 100) * nloc(score);
-            }
-
-            // ====== RENDER LIST ======
+            // render row (tambahkan data-status untuk strip warna kiri)
             function rowIPPHtml(p) {
+                const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id)) || null;
                 const score = scoreForIpp(p.id);
-                const weight = weightForIpp(p.id); // dibaca sebagai persen
+                const weight = weightForIpp(p.id);
                 const total = rowTotal(weight, score);
-                return `<tr data-source="ipp" data-ipp-id="${p.id}" data-cat="${esc(p.category||'')}">
+                const st = (ex?.status || '').toString().toLowerCase();
+
+                return `<tr data-source="ipp" data-ipp-id="${p.id}" data-cat="${esc(p.category||'')}" data-status="${esc(st)}">
                     <td>${esc(p.activity||'-')}</td>
                     <td><div class="fw-semibold">${esc(p.target_one||'(tanpa judul)')}</div></td>
                     <td>${fmt(weight)}%</td>
                     <td>${fmt(score)}</td>
                     <td>${fmt(total)}</td>
-                    <td><button class="btn btn-sm btn-edit btn-mini js-row-detail">Detail</button></td>
+                    <td>${statusBadgeHtml(ex)}</td>
+                    <td>${actionButtonsHtml()}</td>
                 </tr>`;
             }
 
             function rowCustomHtml(a) {
                 const key = a.__key || a.id || '';
                 const score = scoreForCustom(a);
-                const weight = weightForCustom(a); // persen
+                const weight = weightForCustom(a);
                 const total = rowTotal(weight, score);
-                return `<tr data-source="custom" data-ach-key="${esc(key)}" data-cat="${esc(a.category||'')}">
+                const st = (a?.status || '').toString().toLowerCase();
+
+                return `<tr data-source="custom" data-ach-key="${esc(key)}" data-cat="${esc(a.category||'')}" data-status="${esc(st)}">
                     <td>${esc(a.title||'(tanpa judul)')} <span class="ms-1 badge-src">Custom</span></td>
                     <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
                     <td>${fmt(weight)}%</td>
                     <td>${fmt(score)}</td>
                     <td>${fmt(total)}</td>
-                    <td><button class="btn btn-sm btn-edit btn-mini js-row-detail">Detail</button></td>
+                    <td>${statusBadgeHtml(a)}</td>
+                    <td>${actionButtonsHtml()}</td>
                 </tr>`;
             }
 
-            // ====== CAP BADGE: perhitungan & update ======
+            // CAP badge
             function totalWeightByCat(cat) {
                 let sum = 0;
-
-                // IPP: gunakan override weight dari ACHS jika ada
                 IPP_POINTS.filter(p => (p.category || '') === cat).forEach(p => {
                     const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
-                    const W = nloc(ex?.weight ?? p.weight ?? 0); // persen
-                    sum += W;
+                    sum += nloc(ex?.weight ?? p.weight ?? 0);
                 });
-
-                // Custom: bukan turunan IPP
-                ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat).forEach(c => {
-                    const W = nloc(c.weight ?? 0); // persen
-                    sum += W;
-                });
-
+                ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat).forEach(c => sum += nloc(c.weight ??
+                    0));
                 return sum;
             }
 
             function updateCapBadges() {
                 $('.accordion-item[data-cat][data-cap]').each(function() {
                     const cat = String($(this).data('cat') || '');
-                    const cap = nloc($(this).data('cap')); // persen
-                    const sum = totalWeightByCat(cat); // persen
-
-                    const $badge = $('.cap-badge[data-cat="' + cat + '"]');
-                    if ($badge.length === 0) return;
-
-                    // reset kelas
+                    const cap = nloc($(this).data('cap'));
+                    const sum = totalWeightByCat(cat);
+                    const $badge = $(`.cap-badge[data-cat="${cat}"]`);
+                    if (!$badge.length) return;
                     $badge.removeClass('cap-warn cap-ok cap-over');
-
                     const EPS = 0.0001;
-                    let cls = 'cap-warn'; // default: kuning (belum penuh)
+                    let cls = 'cap-warn';
                     if (sum > cap + EPS) cls = 'cap-over';
                     else if (Math.abs(sum - cap) <= EPS) cls = 'cap-ok';
-
                     $badge.addClass(cls);
-
-                    // inject dot jika belum ada
-                    if ($badge.find('.dot').length === 0) {
-                        $badge.prepend('<span class="dot"></span>');
-                    }
-
-                    // tampilkan "xx.xx% / yy.yy%"
+                    if ($badge.find('.dot').length === 0) $badge.prepend('<span class="dot"></span>');
                     $badge.contents().filter(function() {
                         return this.nodeType === 3;
                     }).remove();
@@ -551,68 +714,138 @@
                 });
             }
 
+            // Laporan CAP kategori (untuk validasi submit)
+            function getAllCategoriesMeta() {
+                return $('.accordion-item[data-cat][data-cap]').map(function() {
+                    return {
+                        key: String($(this).data('cat')),
+                        cap: nloc($(this).data('cap'))
+                    };
+                }).get();
+            }
+
+            function categoriesCapReport() {
+                const EPS = 0.0001;
+                return getAllCategoriesMeta().map(({
+                    key,
+                    cap
+                }) => {
+                    const sum = totalWeightByCat(key);
+                    let state = 'exact';
+                    if (sum > cap + EPS) state = 'over';
+                    else if (Math.abs(sum - cap) > EPS) state = 'under';
+                    return {
+                        key,
+                        cap,
+                        sum,
+                        ok: state === 'exact',
+                        state
+                    };
+                });
+            }
+
+            function catTitle(key) {
+                const $item = $(`.accordion-item[data-cat="${key}"]`);
+                const title = $item.find('.accordion-button span:first').text().trim();
+                return title || key;
+            }
+
+            function allCategoriesAtCap() {
+                return categoriesCapReport().every(r => r.ok);
+            }
+
             function renderByCat(cat) {
                 const $tb = $tbody(cat);
                 const ippRows = IPP_POINTS.filter(p => (p.category || '') === cat);
                 const custRows = ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat);
-
                 let html = '';
                 if (ippRows.length) html += ippRows.map(rowIPPHtml).join('');
                 if (custRows.length) html += custRows.map(rowCustomHtml).join('');
-                if (!html) html = '<tr class="empty-row"><td colspan="6">Belum ada item.</td></tr>';
-
+                if (!html) html = '<tr class="empty-row"><td colspan="7">Belum ada item.</td></tr>';
                 $tb.html(html);
-
-                // update badge untuk kategori ini
-                updateCapBadges();
             }
 
             function renderAll() {
                 $('[data-cat]').each(function() {
-                    const cat = $(this).data('cat');
-                    renderByCat(cat);
+                    renderByCat($(this).data('cat'));
                 });
                 recalcTotals();
                 updateCapBadges();
+                applyPermissions();
+                updateSubmitButtons();
             }
 
-            // ====== TOTALS (tetap: Σ(W/100×R)) ======
+            // totals
             function recalcTotals() {
                 let total = 0,
                     sumR = 0;
-
-                // IPP-based
                 IPP_POINTS.forEach(p => {
                     const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
-                    const W = nloc(ex?.weight ?? p.weight ?? 0); // persen
-                    const R = nloc(ex?.self_score ?? 0); // angka
-                    total += (W / 100) * R;
-                    sumR += R;
+                    total += (nloc(ex?.weight ?? p.weight ?? 0) / 100) * nloc(ex?.self_score ?? 0);
+                    sumR += nloc(ex?.self_score ?? 0);
                 });
-
-                // Custom-based
                 ACHS.filter(x => !x.ipp_point_id).forEach(c => {
-                    const W = nloc(c.weight ?? 0); // persen
-                    const R = nloc(c.self_score ?? 0);
-                    total += (W / 100) * R;
-                    sumR += R;
+                    total += (nloc(c.weight ?? 0) / 100) * nloc(c.self_score ?? 0);
+                    sumR += nloc(c.self_score ?? 0);
                 });
-
                 $tAch.text(fmt(total));
                 $tGnd.text(fmt(total));
                 $tGScore.text(fmt(sumR));
-
                 const scale = v => Math.max(0, Math.min(100, (v / 10) * 100));
                 $barAch.css('width', scale(total) + '%');
                 $barG.css('width', scale(total) + '%');
                 $barGS.css('width', Math.max(0, Math.min(100, (sumR / 10) * 100)) + '%');
-
-                updateCapBadges();
             }
 
-            // ====== LOAD ======
+            // Submit button rules
+            function areAllPointsDraftStrict() {
+                if (!Array.isArray(ACHS)) return false;
+                const everyIPPHasDraft = IPP_POINTS.every(p => {
+                    const ex = ACHS.find(a => Number(a.ipp_point_id) === Number(p.id));
+                    return !!ex && String(ex.status || '').toLowerCase() === 'draft';
+                });
+                if (!everyIPPHasDraft) return false;
+                const allCustomDraft = ACHS.filter(a => !a.ipp_point_id)
+                    .every(a => String(a.status || '').toLowerCase() === 'draft');
+                return allCustomDraft;
+            }
+
+            function updateSubmitButtons() {
+                const $btns = $('#btn-save, #btn-save-bottom');
+                if (!PERMS.can_submit) {
+                    $btns.addClass('hidden').prop('disabled', true);
+                    return;
+                }
+                $btns.removeClass('hidden');
+
+                const allDraft = areAllPointsDraftStrict();
+                const capsOk = allCategoriesAtCap();
+                const enabled = allDraft && capsOk;
+
+                $btns.prop('disabled', !enabled);
+
+                if (!allDraft && !capsOk) {
+                    $btns.attr('title', 'Semua poin harus Draft dan seluruh kategori harus pas dengan CAP.');
+                } else if (!allDraft) {
+                    $btns.attr('title', 'Semua poin harus berstatus Draft.');
+                } else if (!capsOk) {
+                    $btns.attr('title', 'Seluruh kategori harus pas sesuai CAP.');
+                } else {
+                    $btns.removeAttr('title');
+                }
+            }
+
+            // Permissions dari backend
+            function applyPermissions() {
+                $('#btn-add-activity').toggle(!!PERMS.can_add);
+                $('#btn-recalc').toggle(!!PERMS.can_recalc);
+                $('#btn-save, #btn-save-bottom').toggle(!!PERMS.can_submit);
+                $('#ippd-btn-save').prop('disabled', !PERMS.can_edit);
+            }
+
+            // LOAD
             function initLoad() {
-                $('.js-tbody-ipp').html('<tr class="empty-row"><td colspan="6">Memuat...</td></tr>');
+                $('.js-tbody-ipp').html('<tr class="empty-row"><td colspan="7">Memuat...</td></tr>');
                 $.getJSON(URL_DATA).done(function(res) {
                     if (!res || !res.ok) {
                         toast('Gagal memuat data.', 'danger');
@@ -625,7 +858,7 @@
                         activity: p.activity || p.title,
                         title: p.title,
                         target_one: p.target_one,
-                        weight: nloc(p.weight || 0), // persen
+                        weight: nloc(p.weight || 0),
                         category: p.category
                     })) : [];
 
@@ -636,17 +869,39 @@
                         title: x.title || null,
                         one_year_target: x.one_year_target || '',
                         one_year_achievement: x.one_year_achievement || x.description || '',
-                        weight: nloc(x.weight ?? 0), // persen
-                        self_score: nloc(x.self_score || 0), // angka
+                        weight: nloc(x.weight ?? 0),
+                        self_score: nloc(x.self_score || 0),
+                        status: x.status || null
                     })) : [];
 
+                    PERMS = d.permissions || derivePermsFromHeader(d.header?.status);
                     renderAll();
                 }).fail(function() {
                     toast('Error server saat memuat.', 'danger');
                 });
             }
 
-            // ====== DETAIL (open) ======
+            function derivePermsFromHeader(headerStatus) {
+                const s = String(headerStatus || 'draft').toLowerCase();
+                if (['submitted', 'checked', 'approved'].includes(s)) {
+                    return {
+                        can_add: false,
+                        can_edit: false,
+                        can_delete: false,
+                        can_recalc: false,
+                        can_submit: false
+                    };
+                }
+                return {
+                    can_add: true,
+                    can_edit: true,
+                    can_delete: true,
+                    can_recalc: true,
+                    can_submit: true
+                };
+            }
+
+            // DETAIL
             $(document).on('click', '.js-row-detail', function() {
                 const $tr = $(this).closest('tr');
                 const source = ($tr.data('source') || '').toString();
@@ -667,13 +922,9 @@
                     $('#ippd-category').val(p.category || '').prop('readonly', true);
                     $('#ippd-activity').val(p.activity || p.title || '').prop('readonly', true);
                     $('#ippd-target').val(p.target_one || '').prop('readonly', true);
-
-                    $('#ippd-weight').val(fmt(nloc(ex?.weight ?? p.weight ??
-                        0))); // persen (tanpa % di input)
-                    $('#ippd-score').val(nloc(ex?.self_score || 0)); // angka biasa
+                    $('#ippd-weight').val(fmt(nloc(ex?.weight ?? p.weight ?? 0)));
+                    $('#ippd-score').val(nloc(ex?.self_score || 0));
                     $('#ippd-achv').val(ex?.one_year_achievement || '');
-                    $('#ippd-hint').text(
-                        'Mode IPP: edit Weight (%) , Score (angka), Achievement. IPP tidak berubah.');
                 } else {
                     const key = ($tr.data('ach-key') || '').toString();
                     const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
@@ -687,25 +938,26 @@
                     $('#ippd-category').val(a.category || '').prop('readonly', true);
                     $('#ippd-activity').val(a.title || '').prop('readonly', false);
                     $('#ippd-target').val(a.one_year_target || '').prop('readonly', false);
-
-                    $('#ippd-weight').val(fmt(nloc(a.weight || 0))); // persen
-                    $('#ippd-score').val(nloc(a.self_score || 0)); // angka
+                    $('#ippd-weight').val(fmt(nloc(a.weight || 0)));
+                    $('#ippd-score').val(nloc(a.self_score || 0));
                     $('#ippd-achv').val(a.one_year_achievement || '');
-                    $('#ippd-hint').text(
-                        'Mode Custom: edit Activity, Target, Weight (%) , Score (angka), Achievement.');
                 }
-
+                $('#ippd-btn-save').prop('disabled', !PERMS.can_edit);
                 mdlDetail.show();
             });
 
-            // ====== DETAIL (save -> PUT IPA) ======
+            // DETAIL save
             $('#ippd-btn-save').on('click', function() {
+                if (!PERMS.can_edit) {
+                    toast('Tidak bisa mengedit pada status saat ini.', 'warning');
+                    return;
+                }
                 const source = ($('#ippd-source').val() || '').toString();
 
                 if (source === 'ipp') {
                     const id = Number($('#ippd-id').val());
-                    const W = nloc($('#ippd-weight').val()); // persen (boleh ketik "10" atau "10%")
-                    const R = nloc($('#ippd-score').val()); // angka
+                    const W = nloc($('#ippd-weight').val());
+                    const R = nloc($('#ippd-score').val());
                     const target = ($('#ippd-target').val() || '').trim();
                     const ach = ($('#ippd-achv').val() || '').trim();
 
@@ -716,7 +968,8 @@
                             one_year_target: target,
                             weight: W,
                             self_score: R,
-                            one_year_achievement: ach
+                            one_year_achievement: ach,
+                            status: 'draft'
                         }]
                     };
 
@@ -730,37 +983,13 @@
                         dataType: 'json'
                     }).done(function(res) {
                         if (res && res.ok) {
-                            let ex = ACHS.find(x => Number(x.ipp_point_id) === id);
-                            if (ex) {
-                                ex.weight = W;
-                                ex.self_score = R;
-                                ex.one_year_achievement = ach;
-                                ex.one_year_target = target;
-                            } else {
-                                ACHS.push({
-                                    id: null,
-                                    ipp_point_id: id,
-                                    weight: W,
-                                    self_score: R,
-                                    one_year_achievement: ach,
-                                    one_year_target: target
-                                });
-                            }
-                            const p = IPP_POINTS.find(x => Number(x.id) === id);
-                            if (p && p.category) renderByCat(p.category);
-
-                            recalcTotals();
-                            toast('Tersimpan ke IPA.');
+                            toast('Tersimpan.', 'success');
+                            initLoad();
                             mdlDetail.hide();
-                        } else {
-                            toast(res?.message || 'Gagal menyimpan.', 'warning');
-                        }
-                    }).fail(function(xhr) {
-                        toast(xhr.responseJSON?.message || 'Error server.', 'danger');
-                    });
+                        } else toast(res?.message || 'Gagal menyimpan.', 'warning');
+                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
 
                 } else {
-                    // custom
                     const key = ($('#ippd-ach-key').val() || '').toString();
                     const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
                         key)));
@@ -771,8 +1000,8 @@
 
                     const title = ($('#ippd-activity').val() || '').trim();
                     const target = ($('#ippd-target').val() || '').trim();
-                    const W = nloc($('#ippd-weight').val()); // persen
-                    const R = nloc($('#ippd-score').val()); // angka
+                    const W = nloc($('#ippd-weight').val());
+                    const R = nloc($('#ippd-score').val());
                     const ach = ($('#ippd-achv').val() || '').trim();
 
                     const payload = {
@@ -783,7 +1012,8 @@
                             one_year_target: target,
                             weight: W,
                             self_score: R,
-                            one_year_achievement: ach
+                            one_year_achievement: ach,
+                            status: 'draft'
                         }]
                     };
 
@@ -797,42 +1027,95 @@
                         dataType: 'json'
                     }).done(function(res) {
                         if (res && res.ok) {
-                            a.title = title;
-                            a.one_year_target = target;
-                            a.weight = W;
-                            a.self_score = R;
-                            a.one_year_achievement = ach;
-                            renderByCat(a.category);
-                            recalcTotals();
-                            toast('Custom activity diperbarui.');
+                            toast('Custom activity diperbarui.', 'success');
+                            initLoad();
                             mdlDetail.hide();
-                        } else {
-                            toast(res?.message || 'Gagal menyimpan.', 'warning');
-                        }
-                    }).fail(function(xhr) {
-                        toast(xhr.responseJSON?.message || 'Error server.', 'danger');
-                    });
+                        } else toast(res?.message || 'Gagal menyimpan.', 'warning');
+                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
                 }
             });
 
-            // ====== ADD ACTIVITY (open)
+            // DELETE
+            $(document).on('click', '.js-row-delete', function() {
+                if (!PERMS.can_delete) return;
+                const $tr = $(this).closest('tr');
+                const source = ($tr.data('source') || '').toString();
+                if (!confirm('Hapus item ini?')) return;
+
+                if (source === 'ipp') {
+                    const ippId = Number($tr.data('ipp-id'));
+                    const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(ippId));
+                    if (!ex || !ex.id) {
+                        toast('Tidak ada data IPA terkait untuk dihapus.', 'warning');
+                        return;
+                    }
+
+                    $.ajax({
+                        url: URL_UPDATE,
+                        method: 'PUT',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        data: {
+                            delete_achievements: [ex.id]
+                        },
+                        dataType: 'json'
+                    }).done(res => {
+                        if (res && res.ok) {
+                            toast('Override IPA dihapus.', 'success');
+                            initLoad();
+                        } else toast(res?.message || 'Gagal menghapus.', 'warning');
+                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
+
+                } else {
+                    const key = ($tr.data('ach-key') || '').toString();
+                    const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
+                        key)));
+                    if (!a || !a.id) {
+                        toast('Custom activity tidak ditemukan/ belum tersimpan.', 'warning');
+                        return;
+                    }
+
+                    $.ajax({
+                        url: URL_UPDATE,
+                        method: 'PUT',
+                        headers: {
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        },
+                        data: {
+                            delete_achievements: [a.id]
+                        },
+                        dataType: 'json'
+                    }).done(res => {
+                        if (res && res.ok) {
+                            toast('Custom activity dihapus.', 'success');
+                            initLoad();
+                        } else toast(res?.message || 'Gagal menghapus.', 'warning');
+                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
+                }
+            });
+
+            // ADD open
             $('#btn-add-activity').on('click', function() {
+                if (!PERMS.can_add) return;
                 $('#add-cat').val('');
                 $('#add-activity').val('');
                 $('#add-target').val('');
-                $('#add-weight').val('0'); // persen
-                $('#add-score').val('0'); // angka
+                $('#add-weight').val('0');
+                $('#add-score').val('0');
                 $('#add-achv').val('');
                 mdlAdd.show();
             });
 
-            // ====== ADD ACTIVITY (save -> PUT IPA)
+            // ADD save
             $('#add-btn-save').on('click', function() {
+                if (!PERMS.can_add) return;
+
                 const cat = ($('#add-cat').val() || '').toString();
                 const tit = ($('#add-activity').val() || '').trim();
                 const tgt = ($('#add-target').val() || '').trim();
-                const W = nloc($('#add-weight').val()); // persen (boleh isi dengan %)
-                const R = nloc($('#add-score').val()); // angka
+                const W = nloc($('#add-weight').val());
+                const R = nloc($('#add-score').val());
                 const ach = ($('#add-achv').val() || '').trim();
 
                 if (!cat) {
@@ -856,7 +1139,8 @@
                         one_year_target: tgt,
                         weight: W,
                         self_score: R,
-                        one_year_achievement: ach
+                        one_year_achievement: ach,
+                        status: 'draft'
                     }]
                 };
 
@@ -869,59 +1153,72 @@
                     data: payload,
                     dataType: 'json'
                 }).done(function(res) {
-                    if (res && res.ok) {
-                        const key = 'tmp_' + Date.now() + '_' + Math.random().toString(16).slice(2);
-                        ACHS.push({
-                            id: null,
-                            __key: key,
-                            ipp_point_id: null,
-                            category: cat,
-                            title: tit,
-                            one_year_target: tgt,
-                            weight: W,
-                            self_score: R,
-                            one_year_achievement: ach
-                        });
-                        renderByCat(cat);
-                        recalcTotals();
-                        toast('Custom activity ditambahkan.');
-                        mdlAdd.hide();
-                    } else {
-                        toast(res?.message || 'Gagal menambah activity.', 'warning');
-                    }
-                }).fail(function(xhr) {
-                    toast(xhr.responseJSON?.message || 'Error server.', 'danger');
-                });
+                    toast('Custom activity ditambahkan.', 'success');
+                    initLoad();
+                    mdlAdd.hide();
+                }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
             });
 
-            // Save (global button) — semua perubahan via modal
-            function saveAll() {
+            // Submit All
+            function submitAll() {
+                if (!PERMS.can_submit) {
+                    toast('Tidak dapat submit pada status saat ini.', 'warning');
+                    return;
+                }
+
+                const allDraft = areAllPointsDraftStrict();
+                if (!allDraft) {
+                    toast('Semua poin harus berstatus Draft sebelum bisa Submit.', 'warning');
+                    return;
+                }
+
+                const capIssues = categoriesCapReport().filter(r => !r.ok);
+                if (capIssues.length) {
+                    const msg = 'Cap kategori belum pas: ' + capIssues.map(i =>
+                        `${catTitle(i.key)} (${fmt(i.sum)}% / ${fmt(i.cap)}%)`).join(', ');
+                    toast(msg, 'warning');
+                    return;
+                }
+
+                const achPayload = ACHS.map(a => ({
+                    id: a.id || null,
+                    ipp_point_id: a.ipp_point_id || null,
+                    category: a.category || null,
+                    title: a.title || null,
+                    one_year_target: a.one_year_target || '',
+                    one_year_achievement: a.one_year_achievement || '',
+                    weight: nloc(a.weight ?? 0),
+                    self_score: nloc(a.self_score ?? 0),
+                    status: 'submitted'
+                }));
+                const payload = {
+                    header: {
+                        id: IPA_ID,
+                        status: 'submitted'
+                    },
+                    achievements: achPayload
+                };
+
                 $.ajax({
                     url: URL_UPDATE,
                     method: 'PUT',
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
-                    data: {
-                        achievements: [],
-                        activities: []
-                    },
+                    data: payload,
                     dataType: 'json'
                 }).done(function(res) {
                     if (res && res.ok) {
-                        toast('Tersimpan.');
+                        toast('Berhasil submit.', 'success');
                         initLoad();
-                    } else {
-                        toast(res?.message || 'Gagal menyimpan.', 'warning');
-                    }
-                }).fail(function(xhr) {
-                    toast(xhr.responseJSON?.message || 'Error server.', 'danger');
-                });
+                    } else toast(res?.message || 'Gagal submit.', 'warning');
+                }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
             }
-            $('#btn-save, #btn-save-bottom').on('click', saveAll);
+            $('#btn-save, #btn-save-bottom').off('click').on('click', submitAll);
 
-            // Recalc (opsional)
+            // Recalc
             $('#btn-recalc').on('click', function() {
+                if (!PERMS.can_recalc) return;
                 $.post({
                     url: URL_RECALC,
                     headers: {
@@ -933,13 +1230,13 @@
                         $tAch.text(fmt(res.totals.achievement_total));
                         $tGnd.text(fmt(res.totals.achievement_total));
                         $tGScore.text(fmt(res.totals.grand_score || 0));
-                        updateCapBadges(); // pastikan badge ikut update
+                        updateCapBadges();
                         toast('Recalc selesai.');
                     }
                 });
             });
 
-            // buka semua accordion
+            // buka semua accordion (UX: biar langsung kelihatan)
             $('#accordionIPA .accordion-collapse').each(function() {
                 this.removeAttribute('data-bs-parent');
                 this.classList.add('show');
@@ -947,6 +1244,7 @@
                 btn.removeClass('collapsed').attr('aria-expanded', 'true');
             });
 
+            // init
             initLoad();
         })();
     </script>

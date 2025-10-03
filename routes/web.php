@@ -333,7 +333,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/',                [IpaController::class, 'index'])->name('index');
         Route::get('/{id}/edit',       [IpaController::class, 'edit'])->name('edit');
         Route::get('/{id}/data',       [IpaController::class, 'getData'])->name('data');
-        Route::put('/{id}',            [IpaController::class, 'update'])->name('update');
+        Route::put('/{ipa}',            [IpaController::class, 'update'])->name('update');
         Route::post('/{id}/recalc',    [IpaController::class, 'recalc'])->name('recalc');
         Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
     });

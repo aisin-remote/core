@@ -22,6 +22,7 @@ class IpaHeader extends Model
         'grand_total',
         'grand_score',
         'created_by',
+        'status'
     ];
 
     // ==== Relationships ====
