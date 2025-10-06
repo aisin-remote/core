@@ -23,7 +23,6 @@ return new class extends Migration
                 ->cascadeOnDelete();
 
             // One Year Achievement
-            $table->string('title', 200);
             $table->text('description')->nullable();
 
             // Bobot & skor
@@ -42,7 +41,7 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
 
-            $table->index(['ipa_id', 'title']);
+            $table->index(['ipa_id']);
         });
     }
 

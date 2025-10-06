@@ -403,7 +403,7 @@
                 $userCompany = strtolower(optional(optional(auth()->user())->employee)->company_name ?? 'aii');
             @endphp
             @if ($isUserRole)
-                <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
+                <div class="disabled menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
                     <span
