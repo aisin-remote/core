@@ -472,7 +472,7 @@
                     </div>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="menu-item menu-accordion
+                <div class="disabled menu-item menu-accordion
         {{ request()->routeIs('ipp.list') || request()->routeIs('ipa.list') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
