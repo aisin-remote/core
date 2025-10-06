@@ -890,6 +890,7 @@ class EmployeeController extends Controller
                     'act leader'       => 'leader',
                     'act jp'           => 'jp',
                     'act gm'           => 'gm',
+                    'act director'     => 'director',
                 ];
 
                 $promotionPaths = [
@@ -899,6 +900,7 @@ class EmployeeController extends Controller
                     'supervisor' => ['manager'    => ['table' => 'sections',     'column' => 'supervisor_id', 'key' => 'section_id']],
                     'manager'    => ['gm'         => ['table' => 'departments',  'column' => 'manager_id',    'key' => 'department_id']],
                     'gm'         => ['director'   => ['table' => 'divisions',    'column' => 'gm_id',         'key' => 'division_id']],
+                    'director'   => ['president'   => ['table' => 'plants',    'column' => 'director_id',         'key' => 'plant_id']],
                 ];
 
                 $normalize = function ($position) use ($positionAliasMap) {
@@ -971,7 +973,7 @@ class EmployeeController extends Controller
                         },
                     ],
                     'plant' => [
-                        'roles'  => ['director'],
+                        'roles'  => ['act director', 'director'],
                         'update' => function () use ($validatedData, $employee) {
                             if (!empty($validatedData['plant_id'])) {
                                 DB::table('plants')->where('id', $validatedData['plant_id'])

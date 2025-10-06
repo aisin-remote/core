@@ -69,6 +69,7 @@ class MasterController extends Controller
         $allPositions = [
             'President',
             'Direktur',
+            'Act Director',
             'GM',
             'Act GM',
             'Manager',
