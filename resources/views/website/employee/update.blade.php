@@ -658,6 +658,67 @@
                         {{-- end of appraisal modal --}}
                     </div>
 
+                    <div class="row">
+                        <!-- Signature -->
+                        <div class="col-md-12">
+                            <div class="card mb-5">
+                                <div
+                                    class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center">
+                                    <h3 class="fw-bolder m-0">Signature</h3>
+
+                                    <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#signatureModal">
+                                        Manage Signature
+                                    </button>
+                                </div>
+
+                                <div id="kt_account_settings_signin_method" class="collapse show">
+                                    <div class="card-body border-top p-10">
+
+                                        @push('styles')
+                                            <style>
+                                                /* checkerboard utk gambar transparan */
+                                                .signature-wrap {
+                                                    background:
+                                                        conic-gradient(#0000 90deg, #f1f5f9 0 180deg, #0000 0) 0 0 / 12px 12px,
+                                                        conic-gradient(#0000 90deg, #e2e8f0 0 180deg, #0000 0) 6px 6px / 12px 12px;
+                                                    border-radius: .5rem;
+                                                    padding: .5rem;
+                                                }
+                                            </style>
+                                        @endpush
+
+                                        @php
+                                            $signatureUrl = $employee->signature_path
+                                                ? asset('storage/' . $employee->signature_path)
+                                                : '';
+                                        @endphp
+
+                                        <div id="signature-view" class="signature-wrap">
+                                            <img id="employee-signature-preview" src="{{ $signatureUrl ?: '' }}"
+                                                alt="Signature" class="img-thumbnail {{ $signatureUrl ? '' : 'd-none' }}"
+                                                style="max-height: 180px" />
+
+                                            <span id="signature-empty-state"
+                                                class="badge badge-lg badge-warning {{ $signatureUrl ? 'd-none' : '' }}">
+                                                Please add employee signature here immediately.
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {{-- Modal untuk kelola tanda tangan --}}
+                        @include('website.modal.signature.index', [
+                            'employee_id' => $employee->id,
+                            'has_signature' => (bool) $employee->signature_path,
+                        ]);
+                        {{-- Modal untuk melihat tanda tangan --}}
+                        @include('website.modal.signature.preview')
+                        {{-- end of Signature --}}
+                    </div>
+
                     @if (auth()->user()->role == 'HRD')
                         <div class="row">
                             <!-- Card 2: Historical Human Assets Value -->
@@ -1204,94 +1265,127 @@
     <!-- SweetAlert (kalau belum dimuat di layout) -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    @push('scripts')
-        <script>
-            (function() {
+    <script>
+        (function() {
                 if (typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
                     console.warn(
-                        'jQuery/Select2 belum ter-load. Cek urutan di layout: jQuery -> Select2 -> @stack('scripts')');
-                    return;
-                }
-
-                function formatLabeledOption(state) {
-                    if (!state.id) return state.text;
-                    const m = /^\[(.*?)\]\s*(.*)$/.exec(state.text);
-                    return m ? $('<span><strong>[' + m[1] + ']</strong> ' + m[2] + '</span>') : state.text;
-                }
-
-                function customMatcher(params, data) {
-                    const term = (params.term || '').toLowerCase().trim();
-
-                    // 1) kalau tidak ada kata kunci -> tampilkan apa adanya
-                    if (term === '') return data;
-
-                    // 2) kalau item ini adalah GROUP (punya children), filter anak-anaknya
-                    if (data.children && data.children.length) {
-                        const filteredChildren = [];
-                        for (const child of data.children) {
-                            const match = customMatcher(params, child); // rekursif ke anak
-                            if (match) filteredChildren.push(match);
-                        }
-                        if (filteredChildren.length) {
-                            // kembalikan GROUP dengan anak-anak yang lolos
-                            const modified = $.extend({}, data, true);
-                            modified.children = filteredChildren;
-                            return modified;
-                        }
-                        return null; // tidak ada anak yang match -> buang group
+                        'jQuery/Select2 belum ter-load. Cek urutan di layout: jQuery -> Select2';
+                        return;
                     }
 
-                    // 3) item biasa (OPTION)
-                    if (typeof data.text === 'undefined') return null;
+                    function formatLabeledOption(state) {
+                        if (!state.id) return state.text;
+                        const m = /^\[(.*?)\]\s*(.*)$/.exec(state.text);
+                        return m ? $('<span><strong>[' + m[1] + ']</strong> ' + m[2] + '</span>') : state.text;
+                    }
 
-                    const text = (data.text || '').toLowerCase();
-                    // juga sediakan versi tanpa prefix [Department]/[Section]/dst
-                    const textNoPrefix = text.replace(/^\[[^\]]+\]\s*/, '');
+                    function customMatcher(params, data) {
+                        const term = (params.term || '').toLowerCase().trim();
 
-                    return (text.indexOf(term) > -1 || textNoPrefix.indexOf(term) > -1) ? data : null;
-                }
+                        // 1) kalau tidak ada kata kunci -> tampilkan apa adanya
+                        if (term === '') return data;
 
-                // === init Select2 (pastikan tetap refer ke customMatcher di sini) ===
-                function initSelect2In(modalEl) {
-                    const $modal = $(modalEl);
+                        // 2) kalau item ini adalah GROUP (punya children), filter anak-anaknya
+                        if (data.children && data.children.length) {
+                            const filteredChildren = [];
+                            for (const child of data.children) {
+                                const match = customMatcher(params, child);
+                                if (match) filteredChildren.push(match);
+                            }
+                            if (filteredChildren.length) {
+                                // kembalikan GROUP dengan anak-anak yang lolos
+                                const modified = $.extend({}, data, true);
+                                modified.children = filteredChildren;
+                                return modified;
+                            }
+                            return null; // tidak ada anak yang match -> buang group
+                        }
 
-                    $modal.find('select.select2-basic').each(function() {
-                        if ($(this).hasClass('select2-hidden-accessible')) return;
-                        $(this).select2({
-                            theme: 'bootstrap-5',
-                            width: '100%',
-                            dropdownParent: $modal,
-                            minimumResultsForSearch: 0
+                        // 3) item biasa (OPTION)
+                        if (typeof data.text === 'undefined') return null;
+
+                        const text = (data.text || '').toLowerCase();
+                        // juga sediakan versi tanpa prefix [Department]/[Section]/dst
+                        const textNoPrefix = text.replace(/^\[[^\]]+\]\s*/, '');
+
+                        return (text.indexOf(term) > -1 || textNoPrefix.indexOf(term) > -1) ? data : null;
+                    }
+
+                    // === init Select2 ===
+                    function initSelect2In(modalEl) {
+                        const $modal = $(modalEl);
+
+                        // Destroy existing select2 instances first to prevent duplicates
+                        $modal.find('select.select2-basic, select.select2-org-scope').each(function() {
+                            if ($(this).hasClass('select2-hidden-accessible')) {
+                                $(this).select2('destroy');
+                            }
+                        });
+
+                        $modal.find('select.select2-basic').each(function() {
+                            $(this).select2({
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                dropdownParent: $modal,
+                                minimumResultsForSearch: 0
+                            });
+                        });
+
+                        $modal.find('select.select2-org-scope').each(function() {
+                            $(this).select2({
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                allowClear: true,
+                                placeholder: $(this).data('placeholder') ||
+                                    'Cari Plant/Division/Department/Section/Sub Section',
+                                dropdownParent: $modal,
+                                templateResult: formatLabeledOption,
+                                templateSelection: formatLabeledOption,
+                                matcher: customMatcher,
+                                minimumResultsForSearch: 0
+                            });
+                        });
+                    }
+
+                    // Init select2 on page load for non-modal selects
+                    $(document).ready(function() {
+                        // Init select2 for elements outside modal
+                        $('select.select2-basic').not('.modal select.select2-basic').each(function() {
+                            if ($(this).hasClass('select2-hidden-accessible')) return;
+                            $(this).select2({
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                minimumResultsForSearch: 0
+                            });
+                        });
+
+                        $('select.select2-org-scope').not('.modal select.select2-org-scope').each(function() {
+                            if ($(this).hasClass('select2-hidden-accessible')) return;
+                            $(this).select2({
+                                theme: 'bootstrap-5',
+                                width: '100%',
+                                allowClear: true,
+                                placeholder: $(this).data('placeholder') ||
+                                    'Cari Plant/Division/Department/Section/Sub Section',
+                                templateResult: formatLabeledOption,
+                                templateSelection: formatLabeledOption,
+                                matcher: customMatcher,
+                                minimumResultsForSearch: 0
+                            });
                         });
                     });
 
-                    $modal.find('select.select2-org-scope').each(function() {
-                        if ($(this).hasClass('select2-hidden-accessible')) return;
-                        $(this).select2({
-                            theme: 'bootstrap-5',
-                            width: '100%',
-                            allowClear: true,
-                            placeholder: $(this).data('placeholder') ||
-                                'Cari Plant/Division/Department/Section/Sub Section',
-                            dropdownParent: $modal,
-                            templateResult: formatLabeledOption,
-                            templateSelection: formatLabeledOption,
-                            matcher: customMatcher, // 👈 pakai matcher baru
-                            minimumResultsForSearch: 0
-                        });
+                    // Init saat modal tampil
+                    $(document).on('shown.bs.modal', '.modal', function() {
+                        initSelect2In(this);
                     });
-                }
 
-                // init saat modal tampil
-                $(document).on('shown.bs.modal', '.modal', function() {
-                    initSelect2In(this);
-                });
-                $('.modal.show').each(function() {
-                    initSelect2In(this);
-                });
-            })();
-        </script>
-    @endpush
+                    // Init untuk modal yang sudah show
+                    $('.modal.show').each(function() {
+                        initSelect2In(this);
+                    });
+                })();
+    </script>
 
     <script>
         (function() {
@@ -1306,6 +1400,12 @@
                 const joinInput = document.querySelector('input[name="aisin_entry_date"]');
                 const periodInput = document.querySelector('input[name="working_period"]');
                 if (joinInput && periodInput) {
+                    // Trigger on load if value exists
+                    if (joinInput.value) {
+                        const event = new Event('change');
+                        joinInput.dispatchEvent(event);
+                    }
+
                     joinInput.addEventListener('change', function() {
                         const joinDate = new Date(this.value);
                         const now = new Date();
@@ -1322,60 +1422,79 @@
                     });
                 }
 
-                // === Show more / less (tanpa jQuery) ===
+                // === Show more / less ===
                 document.querySelectorAll('.show-more').forEach(function(btn) {
                     btn.addEventListener('click', function() {
-                        const textContainer = this.parentElement.querySelector('.text-content');
+                        const parent = this.closest('.text-container') || this.parentElement;
+                        const textContainer = parent.querySelector('.text-content');
                         const full = textContainer?.getAttribute('data-fulltext') || '';
-                        textContainer.innerHTML = full;
-                        this.classList.add('d-none');
-                        const less = this.parentElement.querySelector('.show-less');
-                        if (less) less.classList.remove('d-none');
+                        if (textContainer && full) {
+                            textContainer.innerHTML = full;
+                            this.classList.add('d-none');
+                            const less = parent.querySelector('.show-less');
+                            if (less) less.classList.remove('d-none');
+                        }
                     });
                 });
 
                 document.querySelectorAll('.show-less').forEach(function(btn) {
                     btn.addEventListener('click', function() {
-                        const textContainer = this.parentElement.querySelector('.text-content');
+                        const parent = this.closest('.text-container') || this.parentElement;
+                        const textContainer = parent.querySelector('.text-content');
                         const plain = textContainer?.textContent || '';
                         const shortText = plain.length > 200 ? plain.substring(0, 200) + '...' :
                             plain;
-                        textContainer.textContent = shortText;
-                        this.classList.add('d-none');
-                        const more = this.parentElement.querySelector('.show-more');
-                        if (more) more.classList.remove('d-none');
+                        if (textContainer) {
+                            textContainer.textContent = shortText;
+                            this.classList.add('d-none');
+                            const more = parent.querySelector('.show-more');
+                            if (more) more.classList.remove('d-none');
+                        }
                     });
                 });
 
                 // === Toggle select hirarki berdasarkan Position ===
                 function toggleHierarchySelects(position) {
-                    ['subsection-group', 'section-group', 'department-group', 'division-group', 'plant-group']
-                    .forEach(id => document.getElementById(id)?.classList.add('d-none'));
+                    // Hide all hierarchy groups first
+                    ['subsection-group', 'section-group', 'department-group', 'division-group',
+                        'plant-group'
+                    ].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el) el.classList.add('d-none');
+                    });
 
+                    // Show relevant group based on position
+                    let groupToShow = null;
                     if (['Operator', 'Act JP', 'Act Leader', 'Leader'].includes(position)) {
-                        document.getElementById('subsection-group')?.classList.remove('d-none');
-                    } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(
-                            position)) {
-                        document.getElementById('section-group')?.classList.remove('d-none');
+                        groupToShow = 'subsection-group';
+                    } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head']
+                        .includes(position)) {
+                        groupToShow = 'section-group';
                     } else if (['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'].includes(
                             position)) {
-                        document.getElementById('department-group')?.classList.remove('d-none');
+                        groupToShow = 'department-group';
                     } else if (['GM', 'Act GM'].includes(position)) {
-                        document.getElementById('division-group')?.classList.remove('d-none');
+                        groupToShow = 'division-group';
                     } else if (['Direktur'].includes(position)) {
-                        document.getElementById('plant-group')?.classList.remove('d-none');
+                        groupToShow = 'plant-group';
+                    }
+
+                    if (groupToShow) {
+                        const el = document.getElementById(groupToShow);
+                        if (el) el.classList.remove('d-none');
                     }
                 }
 
                 const posSelect = document.getElementById('position-select');
                 if (posSelect) {
+                    // Trigger on load
                     toggleHierarchySelects(posSelect.value || '');
                     posSelect.addEventListener('change', function() {
                         toggleHierarchySelects(this.value);
                     });
                 }
 
-                // === Stacking multiple Bootstrap 5 modals (tanpa jQuery) ===
+                // === Stacking multiple Bootstrap 5 modals ===
                 let modalLevel = 0;
                 document.addEventListener('show.bs.modal', function(ev) {
                     const modal = ev.target;

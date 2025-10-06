@@ -439,7 +439,7 @@
                         </div>
 
                         <div
-                            class="disabled menu-item menu-accordion {{ request()->routeIs('ipa.*') || request()->is('ipa*') ? 'show' : '' }}">
+                            class="menu-item menu-accordion {{ request()->routeIs('ipa.*') || request()->is('ipa*') ? 'show' : '' }}">
                             <span
                                 class="menu-link {{ request()->routeIs('ipa.*') || request()->is('ipa*') ? 'active' : '' }}">
                                 <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
@@ -448,18 +448,13 @@
                             </span>
                             <div class="menu-sub menu-sub-accordion">
                                 <div class="menu-item">
-                                    @if (Route::has('ipa.index'))
-                                        <a href="{{ route('ipa.index') }}"
-                                            class="menu-link {{ request()->routeIs('ipa.index') ? 'active' : '' }}">
-                                        @else
-                                            <a href="{{ url('/ipa') }}"
-                                                class="menu-link {{ request()->is('ipa') ? 'active' : '' }}">
-                                    @endif
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">IPA Assign</span>
+                                    <a href="{{ route('ipa.index') }}"
+                                        class="menu-link {{ request()->routeIs('ipa.index') ? 'active' : '' }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">IPA Assign</span>
                                     </a>
                                 </div>
-                                <div class="menu-item">
+                                <div class="disabled menu-item">
                                     @if (Route::has('ipa.list'))
                                         <a href="{{ route('ipa.list', ['company' => $userCompany]) }}"
                                             class="menu-link {{ request()->routeIs('ipa.list') ? 'active' : '' }}">
@@ -1224,6 +1219,12 @@
                 <a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
                     href="{{ route('icp.approval') }}">
                     <span class="menu-title">ICP</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/ipp') ? 'active' : '' }}"
+                    href="{{ route('ipp.approval') }}">
+                    <span class="menu-title">IPP</span>
                 </a>
             </div>
         </div>

@@ -41,7 +41,6 @@
         .ident-grid {
             width: 100%;
             border-collapse: separate;
-            /* biar outer box rapi di dompdf */
             border-top: 2px solid #000;
             border-right: 2px solid #000;
             border-left: 2px solid #000;
@@ -77,7 +76,6 @@
             vertical-align: top
         }
 
-        /* Perimeter tebal */
         .table-grid thead tr:first-child th {
             border-top-width: 2px
         }
@@ -96,14 +94,12 @@
             border-right-width: 2px
         }
 
-        /* Header row */
         .grid-head th {
             background: #cfe6ef;
             font-weight: 700;
             text-align: center
         }
 
-        /* Category bar */
         .cat-row td {
             background: #dfead8;
             font-weight: 700;
@@ -121,7 +117,6 @@
             border-right-width: 2px
         }
 
-        /* Data rows: kiri/kanan saja */
         .rowdata td {
             border-top: none !important;
             border-bottom: none !important;
@@ -137,10 +132,8 @@
             border-right-width: 2px
         }
 
-        /* Total row */
         .total-row td {
             border-top: 1px solid #000;
-            /* <-- koreksi dari 'none 1px' */
             border-bottom: 1px solid #000;
             border-left: 1px solid #000;
             border-right: 1px solid #000;
@@ -157,10 +150,7 @@
         }
 
         .total-row td:last-child {
-            border-bottom-width: 2px
-        }
-
-        .total-row td:last-child {
+            border-bottom-width: 2px;
             border-top-width: 2px
         }
 
@@ -202,15 +192,40 @@
             font-weight: 700
         }
 
+        /* area gambar tanda tangan */
         .sig-space td {
-            height: 70px;
-            width: 50px;
+            height: 120px;
             border-top: none !important;
             border-bottom: none !important;
         }
 
+        .sig-name td {
+            text-align: center;
+            font-weight: 700;
+            padding-top: 2px;
+        }
+
+        .sig-wrap {
+            height: 140px;
+            width: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .sig-wrap img {
+            height: 140px;
+            object-fit: contain;
+            display: block;
+        }
+
         .sig-date td {
             border-top: 1px solid #000;
+        }
+
+        .sig-date .date-label {
+            width: 45px;
+            white-space: nowrap;
         }
     </style>
 
@@ -294,7 +309,6 @@
 
             @foreach ($grouped as $cat => $items)
                 @if (count($items))
-                    {{-- Baris kategori: kolom pertama berisi angka romawi + titik, kolom kedua judul --}}
                     <tr class="cat-row">
                         <td class="text-center">
                             {{ ($numbers[$cat] ?? '') !== '' ? $numbers[$cat] . '.' : '' }}
@@ -338,14 +352,46 @@
         </thead>
         <tbody>
             <tr class="sig-space">
-                <td></td>
-                <td></td>
-                <td></td>
+                <td>
+                    <div class="sig-wrap">
+                        @if (!empty($sig['approved']['img']))
+                            <img src="{{ $sig['approved']['img'] }}" alt="Approved by">
+                        @endif
+                    </div>
+                </td>
+                <td>
+                    <div class="sig-wrap">
+                        @if (!empty($sig['checked']['img']))
+                            <img src="{{ $sig['checked']['img'] }}" alt="Checked by">
+                        @endif
+                    </div>
+                </td>
+                <td>
+                    <div class="sig-wrap">
+                        @if (!empty($sig['employee']['img']))
+                            <img src="{{ $sig['employee']['img'] }}" alt="Employee">
+                        @endif
+                    </div>
+                </td>
+            </tr>
+            <tr class="sig-name">
+                <td>{{ $sig['approved']['name'] ?? '' }}</td>
+                <td>{{ $sig['checked']['name'] ?? '' }}</td>
+                <td>{{ $sig['employee']['name'] ?? '' }}</td>
             </tr>
             <tr class="sig-date">
-                <td>Date :</td>
-                <td>Date :</td>
-                <td>Date :</td>
+                <td>
+                    <span class="date-label">Date :</span>
+                    {{ $sig['approved']['date'] ?? '' }}
+                </td>
+                <td>
+                    <span class="date-label">Date :</span>
+                    {{ $sig['checked']['date'] ?? '' }}
+                </td>
+                <td>
+                    <span class="date-label">Date :</span>
+                    {{ $sig['employee']['date'] ?? '' }}
+                </td>
             </tr>
         </tbody>
     </table>

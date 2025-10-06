@@ -1,0 +1,32 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::table('ipa_headers', function (Blueprint $table) {
+            $table->decimal('grand_score', 10, 2)->nullable()->default(null)->after('grand_total');
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::table('ipa_headers', function (Blueprint $table) {
+            $table->dropColumn('grand_score');
+        });
+    }
+};

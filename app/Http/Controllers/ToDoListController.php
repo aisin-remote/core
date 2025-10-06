@@ -6,6 +6,7 @@ use App\Models\Hav;
 use App\Models\Idp;
 use App\Models\Rtc;
 use App\Models\Employee;
+use App\Models\Ipp;
 use Illuminate\Http\Request;
 
 class ToDoListController extends Controller
@@ -260,6 +261,59 @@ class ToDoListController extends Controller
             })
             ->get();
 
-        return view('website.todolist.index', compact('allIdpTasks', 'allHavTasks', 'allRtcTasks'));
+        // ===== IPP tasks =====
+        $year = now()->year;
+
+        $ippTasks = [
+            "activity_management" => 0,
+            "crp"                 => 0,
+            "people_development"  => 0,
+            "special_assignment"  => 0,
+            "total"               => 0,
+            "status"              => "",
+            "employee_company"    => "",
+            "employee_npk"        => ""
+
+        ];
+        $message = null;
+        $employeesWithoutIppThisYear = collect();
+
+        $employeeId = $employee->id ?? auth()->user()->employee_id ?? null;
+        $ipp = null;
+        $ipp = Ipp::with('employee')
+            ->where('employee_id', $employeeId)
+            ->where('on_year', $year)
+            ->latest('created_at')
+            ->first();
+
+        if (!$ipp) {
+            $summary = [];
+            $message = "The {$year} IPP has not yet been created.";
+        } else {
+            $summary = is_array($ipp->summary) ? $ipp->summary : (json_decode($ipp->summary, true) ?? []);
+            $message = null;
+        }
+
+        $ippTasks = [
+            "activity_management" => $summary["activity_management"] ?? 0,
+            "crp"                 => $summary["crp"] ?? 0,
+            "people_development"  => $summary["people_development"] ?? 0,
+            "special_assignment"  => $summary["special_assignment"] ?? 0,
+            "total"               => $summary["total"] ?? array_sum([
+                $summary["activity_management"] ?? 0,
+                $summary["crp"] ?? 0,
+                $summary["people_development"] ?? 0,
+                $summary["special_assignment"] ?? 0,
+            ]),
+            "status"            => $ipp->status ?? "Not Created",
+            "employee_name"    => $ipp->employee->name ?? "",
+            "employee_company"    => $ipp->employee->company_name ?? "",
+            "employee_npk"        => $ipp->employee->npk ?? ""
+        ];
+
+        $allIppTasks['ippTasks'] = $ippTasks;
+        $allIppTasks['message']     = $message;
+
+        return view('website.todolist.index', compact('allIdpTasks', 'allHavTasks', 'allRtcTasks', 'allIppTasks'));
     }
 }
