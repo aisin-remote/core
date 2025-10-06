@@ -403,7 +403,7 @@
                 $userCompany = strtolower(optional(optional(auth()->user())->employee)->company_name ?? 'aii');
             @endphp
             @if ($isUserRole)
-                <div class="disabled menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
+                <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
                     <span
@@ -472,7 +472,7 @@
                     </div>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="disabled menu-item menu-accordion
+                <div class="menu-item menu-accordion
         {{ request()->routeIs('ipp.list') || request()->routeIs('ipa.list') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
