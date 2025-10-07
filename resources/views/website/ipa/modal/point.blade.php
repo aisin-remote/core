@@ -1,4 +1,5 @@
-<div class="modal fade" id="modal-ipp-detail" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modal-ipp-detail" tabindex="-1" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
     <div class="modal-dialog modal-lg modal-dialog-scrollable">
         <div class="modal-content">
             <div class="modal-header">
@@ -38,8 +39,7 @@
                     </div>
                 </div>
             </div>
-            <div class="modal-footer justify-content-between">
-                <span class="small-muted" id="ippd-hint">Langsung edit & simpan. IPP tidak berubah.</span>
+            <div class="modal-footer justify-content-end">
                 <div class="d-flex gap-2">
                     <button type="button" class="btn btn-primary" id="ippd-btn-save">Simpan</button>
                 </div>

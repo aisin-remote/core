@@ -278,28 +278,6 @@
             filter: brightness(.98)
         }
 
-        /* Totals Card */
-        .totals-card {
-            min-width: 360px;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px
-        }
-
-        .mini-bar {
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 99px;
-            overflow: hidden
-        }
-
-        .mini-bar>span {
-            display: block;
-            height: 100%;
-            width: 0%;
-            background: var(--primary);
-            transition: width .25s ease
-        }
-
         /* Helper/Legend */
         .legend {
             display: flex;
@@ -395,6 +373,9 @@
                 <button class="btn btn-add btn-sm" id="btn-add-activity" title="Tambah Activity">
                     <i class="bi bi-plus-lg text-white"></i> Tambah Activity
                 </button>
+                <a href="{{ route('ipa.export', $ipa->id) }}" class="btn btn-success btn-sm">
+                    Export Excel
+                </a>
             </div>
         </div>
 
@@ -450,10 +431,6 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="px-3 py-2 help-line muted">
-                                    Baris bertanda <span class="badge-src">Custom</span> adalah activity yang kamu tambahkan
-                                    di IPA (tidak mengubah IPP).
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -463,27 +440,6 @@
 
         {{-- Totals --}}
         <div class="mt-3 d-flex flex-wrap gap-3 justify-content-end">
-            <div class="card shadow-sm totals-card">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div><i class="bi bi-trophy"></i> Achievement Total (Σ(W/100×R))</div>
-                        <div><strong id="total-achievement">0,00</strong></div>
-                    </div>
-                    <div class="mini-bar mb-2"><span id="bar-ach"></span></div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div><i class="bi bi-graph-up"></i> Grand Score (Σ R)</div>
-                        <div><strong id="total-grand-score">0,00</strong></div>
-                    </div>
-                    <div class="mini-bar mb-2"><span id="bar-gscore"></span></div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div><i class="bi bi-star"></i> Grand Total</div>
-                        <div><strong id="total-grand">0,00</strong></div>
-                    </div>
-                    <div class="mini-bar"><span id="bar-grand"></span></div>
-                </div>
-            </div>
             <div class="d-flex align-items-end">
                 <button class="btn btn-primary" id="btn-save-bottom" title="Kirim sebagai Submitted">
                     <i class="bi bi-send-check"></i> Submit
@@ -511,6 +467,11 @@
             const URL_DATA = $root.data('url-data');
             const URL_UPDATE = $root.data('url-update');
             const URL_RECALC = $root.data('url-recalc');
+
+            const pointModal = new bootstrap.Modal(document.getElementById('modal-add-activity'), {
+                backdrop: 'static',
+                keyboard: false
+            });
 
             // Toast
             function toast(msg, type = 'success') {
@@ -635,6 +596,26 @@
                 return `<span class="ms-2" style="background:${s.bg};border:1px solid ${s.bd};color:${s.fg};border-radius:8px;padding:.05rem .4rem;font-weight:700;font-size:.7rem">${s.txt}</span>`;
             }
 
+            function bindEnterToSave(modalSelector, saveBtnSelector) {
+                $(document).on('keydown', modalSelector, function(e) {
+                    const isEnter = (e.key === 'Enter' || e.keyCode === 13);
+                    const $t = $(e.target);
+                    const isTextarea = $t.is('textarea');
+                    const isButton = $t.is('button, [type="button"], [type="submit"]');
+
+                    // Enter tanpa Shift di input biasa -> Simpan
+                    if (isEnter && !e.shiftKey && !isTextarea && !isButton) {
+                        e.preventDefault();
+                        $(saveBtnSelector).trigger('click');
+                    }
+                });
+            }
+
+            // Aktifkan untuk kedua modal
+            bindEnterToSave('#modal-ipp-detail', '#ippd-btn-save');
+            bindEnterToSave('#modal-add-activity', '#add-btn-save');
+
+
             function actionButtonsHtml() {
                 const btnDetail =
                     `<button class="btn btn-sm btn-edit btn-mini js-row-detail" aria-label="Detail"><i class="bi bi-pencil-square"></i> Detail</button>`;
@@ -671,7 +652,7 @@
                 const st = (a?.status || '').toString().toLowerCase();
 
                 return `<tr data-source="custom" data-ach-key="${esc(key)}" data-cat="${esc(a.category||'')}" data-status="${esc(st)}">
-                    <td>${esc(a.title||'(tanpa judul)')} <span class="ms-1 badge-src">Custom</span></td>
+                    <td>${esc(a.title||'(tanpa judul)')}</td>
                     <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
                     <td>${fmt(weight)}%</td>
                     <td>${fmt(score)}</td>
@@ -956,6 +937,8 @@
 
                 if (source === 'ipp') {
                     const id = Number($('#ippd-id').val());
+                    const category = ($('#ippd-category').val() || '').trim();
+                    const title = ($('#ippd-activity').val() || '').trim();
                     const W = nloc($('#ippd-weight').val());
                     const R = nloc($('#ippd-score').val());
                     const target = ($('#ippd-target').val() || '').trim();
@@ -965,6 +948,8 @@
                         achievements: [{
                             id: (ACHS.find(x => Number(x.ipp_point_id) === id)?.id) || null,
                             ipp_point_id: id,
+                            category: category,
+                            title: title,
                             one_year_target: target,
                             weight: W,
                             self_score: R,

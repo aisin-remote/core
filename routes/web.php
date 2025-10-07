@@ -23,6 +23,7 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IpaExportController;
 use App\Http\Controllers\IppController;
 use App\Http\Controllers\SignatureController;
 use Illuminate\Support\Facades\Request;
@@ -337,6 +338,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/{id}/recalc',    [IpaController::class, 'recalc'])->name('recalc');
         Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
     });
+    Route::get('/ipa/{ipa}/export', [IpaExportController::class, 'export'])->name('ipa.export');
+
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
         ->name('idp.exportTemplate');
