@@ -22,6 +22,12 @@ class IpaHeader extends Model
         'grand_total',
         'grand_score',
         'created_by',
+        'created_at',
+        'submitted_at',
+        'checked_by',
+        'checked_at',
+        'approved_by',
+        'approved_at',
         'status'
     ];
 
@@ -48,7 +54,15 @@ class IpaHeader extends Model
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Employee::class, 'created_by');
+    }
+    public function checkedBy()
+    {
+        return $this->belongsTo(Employee::class, 'checked_by');
+    }
+    public function approvedBy()
+    {
+        return $this->belongsTo(Employee::class, 'approved_by');
     }
 
     // ==== Helpers ====

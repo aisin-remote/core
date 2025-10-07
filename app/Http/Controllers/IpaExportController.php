@@ -36,17 +36,18 @@ class IpaExportController extends Controller
 
         try {
             // ========== 1) Ambil data ==========
-            $ipa->loadMissing(['achievements', 'ipp.points', 'employee']);
+            // Tambahkan checkedBy & approvedBy supaya bisa tulis nama tanda tangan
+            $ipa->loadMissing(['achievements', 'ipp.points', 'employee', 'checkedBy', 'approvedBy']);
 
             $ach = collect($ipa->achievements ?: []);
             Log::info('IPA Export: loaded achievements', $ctx + ['count' => $ach->count()]);
 
             // Peta kategori (urutan & CAP untuk judul)
             $catMeta = [
-                'activity_management' => ['roman' => 'I.',  'title' => 'ACTIVITY MANAGEMENT',               'cap' => 70],
-                'people_development'  => ['roman' => 'II.', 'title' => 'PEOPLE MANAGEMENT',                 'cap' => 10],
-                'crp'                 => ['roman' => 'III.', 'title' => 'COST REDUCTION PROGRAM',            'cap' => 10],
-                'special_assignment'  => ['roman' => 'IV.', 'title' => 'SPECIAL ASSIGNMENT & IMPROVEMENT',  'cap' => 10],
+                'activity_management' => ['roman' => 'I.',  'title' => 'ACTIVITY MANAGEMENT',              'cap' => 70],
+                'people_development'  => ['roman' => 'II.', 'title' => 'PEOPLE MANAGEMENT',                'cap' => 10],
+                'crp'                 => ['roman' => 'III.', 'title' => 'COST REDUCTION PROGRAM',           'cap' => 10],
+                'special_assignment'  => ['roman' => 'IV.', 'title' => 'SPECIAL ASSIGNMENT & IMPROVEMENT', 'cap' => 10],
             ];
             $catOrder = array_keys($catMeta);
 
@@ -74,7 +75,7 @@ class IpaExportController extends Controller
                 return $r['category'] ?? '__unknown';
             });
 
-            // Buat urutan final kategori: yang dikenal sesuai $catOrder, sisanya (unknown/others) alfabetis di belakang
+            // Urutan kategori final
             $knownGroups = collect($catOrder)
                 ->filter(fn($k) => $grouped->has($k) && $grouped[$k]->isNotEmpty())
                 ->values();
@@ -87,9 +88,7 @@ class IpaExportController extends Controller
 
             $orderedCats = $knownGroups->merge($otherGroups)->all();
 
-            Log::info('IPA Export: category ordering prepared', $ctx + [
-                'ordered' => $orderedCats,
-            ]);
+            Log::info('IPA Export: category ordering prepared', $ctx + ['ordered' => $orderedCats]);
 
             // ========== 2) Buka template ==========
             $templatePath = public_path('assets/file/Template IPA.xlsx');
@@ -181,7 +180,7 @@ class IpaExportController extends Controller
                     $sheet->setCellValueByColumnAndRow($map['tgt']['c1'],  $r, $it['target']);
                     $sheet->setCellValueByColumnAndRow($map['achv']['c1'], $r, $it['achievement']);
 
-                    // weight (sebagai fraction)
+                    // weight (fraction)
                     $sheet->setCellValueByColumnAndRow($map['w']['c1'], $r, ((float)$it['weight']) / 100);
                     $sheet->getStyleByColumnAndRow($map['w']['c1'], $r)->getNumberFormat()->setFormatCode('0.00%');
                     $sheet->getStyleByColumnAndRow($map['w']['c1'], $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
@@ -248,13 +247,47 @@ class IpaExportController extends Controller
                 ]);
             }
 
-            // ========== 7) Print setup A4 ==========
+            // ========== 7) Tulis nama-nama di baris di atas "Date/Tanggal" ==========
+            $signRow = $this->findSignatureNamesRow($sheet);   // <<-- dinamis
+            Log::info('IPA Export: signature anchor', $ctx + ['sign_row' => $signRow]);
+
+            if ($signRow) {
+                // Ambil nama:
+                $approvedName = $this->safePersonName($ipa, 'approvedBy') ?: '-'; // superior of superior
+                $checkedName  = $this->safePersonName($ipa, 'checkedBy')  ?: '-'; // superior
+                $empName      = $ipa->employee_name ?? optional($ipa->employee)->name ?? '-';
+
+                // I–L (9..12) -> approved_by
+                $sheet->mergeCellsByColumnAndRow(9,  $signRow, 11, $signRow);
+                $sheet->setCellValueByColumnAndRow(9,  $signRow, $approvedName);
+                $sheet->getStyleByColumnAndRow(9,  $signRow)->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+                // M–O (13..15) -> checked_by
+                $sheet->mergeCellsByColumnAndRow(12, $signRow, 16, $signRow);
+                $sheet->setCellValueByColumnAndRow(12, $signRow, $checkedName);
+                $sheet->getStyleByColumnAndRow(12, $signRow)->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+                // Q–U (17..21) -> employee
+                $sheet->mergeCellsByColumnAndRow(17, $signRow, 21, $signRow);
+                $sheet->setCellValueByColumnAndRow(17, $signRow, $empName);
+                $sheet->getStyleByColumnAndRow(17, $signRow)->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)->setVertical(Alignment::VERTICAL_CENTER);
+
+                $sheet->getRowDimension($signRow)->setRowHeight(20);
+            } else {
+                Log::warning('IPA Export: signature row not found; names skipped', $ctx);
+            }
+
+
+            // ========== 8) Print setup A4 ==========
             $sheet->getPageSetup()
                 ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
                 ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
                 ->setFitToWidth(1)->setFitToHeight(0);
 
-            // ========== 8) Download ==========
+            // ========== 9) Download ==========
             $filename = 'IPA-' . $ipa->id . '-' . now()->format('Ymd_His') . '.xlsx';
             $spreadsheet->setActiveSheetIndex($spreadsheet->getIndex($sheet));
             $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
@@ -396,6 +429,69 @@ class IpaExportController extends Controller
         return null;
     }
 
+    /** Cari baris mana saja yang berisi salah satu label (untuk "Date/Tanggal") */
+    /** Cari baris terakhir yang MENGANDUNG salah satu label (case-insensitive). */
+    private function findLastRowByAnyLabelContains(Worksheet $sheet, array $labels): ?int
+    {
+        // Normalisasi: lower, hilangkan ":" dan spasi ganda
+        $norm = function ($s) {
+            $s = mb_strtolower((string)$s);
+            $s = str_replace(':', '', $s);
+            return trim(preg_replace('/\s+/', ' ', $s));
+        };
+
+        $needles = array_map($norm, $labels);
+
+        $maxRow = $sheet->getHighestRow();
+        $maxCol = Coordinate::columnIndexFromString($sheet->getHighestColumn());
+        $last   = null;
+
+        for ($r = 1; $r <= $maxRow; $r++) {
+            for ($c = 1; $c <= $maxCol; $c++) {
+                $val = $sheet->getCellByColumnAndRow($c, $r)->getCalculatedValue();
+                if (!is_string($val)) continue;
+                $hay = $norm($val);
+                foreach ($needles as $needle) {
+                    if ($needle !== '' && str_contains($hay, $needle)) {
+                        $last = max($last ?? 0, $r);
+                        break;
+                    }
+                }
+            }
+        }
+        return $last;
+    }
+
+    /**
+     * Tentukan baris untuk MENULIS NAMA tanda tangan:
+     * - Ambil baris "Date/Tanggal" paling bawah, lalu minus 1.
+     * - Jika tidak ketemu, fallback dari header "Superior of Superior/Superior/Employee".
+     */
+    private function findSignatureNamesRow(Worksheet $sheet): ?int
+    {
+        // Utama: cari semua "Date / Tanggal", ambil yang TERAKHIR
+        $dateRow = $this->findLastRowByAnyLabelContains($sheet, ['date', 'tanggal']);
+        if ($dateRow) {
+            return max(1, $dateRow - 1);
+        }
+
+        // Fallback: cari baris label area tanda tangan
+        $hdrRow = $this->findLastRowByAnyLabelContains($sheet, [
+            'superior of superior',
+            'superior',
+            'employee'
+        ]);
+        if ($hdrRow) {
+            // Pada template umum kamu, nama ada ±6 baris di bawah header label tsb (22 -> 28).
+            // Kalau suatu saat berubah, cukup sesuaikan offset ini.
+            $offset = 6;
+            return $hdrRow + $offset;
+        }
+
+        return null;
+    }
+
+
     /** Buat judul kategori + CAP (mis. "I. ACTIVITY MANAGEMENT (Cap 70%)") */
     private function categoryTitle(?string $key, array $catMeta): string
     {
@@ -407,5 +503,27 @@ class IpaExportController extends Controller
         $safe = strtoupper(str_replace('_', ' ', (string)$key));
         $safe = $safe ?: 'OTHERS';
         return "— {$safe} —";
+    }
+
+    /** Ambil nama dari relasi aman; fallback '-' bila tidak ada */
+    private function safePersonName(IpaHeader $ipa, string $relation): ?string
+    {
+        try {
+            $rel = optional($ipa)->{$relation};
+            // Jika relasi langsung berupa employee model
+            $name = data_get($rel, 'name');
+            if ($name) return $name;
+
+            // Jika relasi adalah user->employee / employee relation
+            $name = data_get($rel, 'employee.name');
+            if ($name) return $name;
+        } catch (\Throwable $e) {
+            Log::warning('IPA Export: safePersonName failed', [
+                'ipa_id'    => $ipa->id ?? null,
+                'relation'  => $relation,
+                'message'   => $e->getMessage(),
+            ]);
+        }
+        return null;
     }
 }
