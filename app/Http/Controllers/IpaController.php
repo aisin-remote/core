@@ -9,6 +9,7 @@ use App\Models\IpaActivity;
 use App\Models\IpaAchievement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
 class IpaController extends Controller
@@ -181,7 +182,8 @@ class IpaController extends Controller
     /** UPDATE: upsert (tanpa menghapus data lain) + dukung custom achievement */
     public function update(Request $req, IpaHeader $ipa)
     {
-        // $this->authorize('update', $ipa);
+        $user = auth()->user();
+        $me   = $user->employee;
 
         $validated = $req->validate([
             'header.status'                       => ['nullable', Rule::in(IpaAchievement::STATUSES)],
@@ -203,7 +205,7 @@ class IpaController extends Controller
         $updatedIds = [];
         $deletedIds = [];
 
-        DB::transaction(function () use ($ipa, $validated, &$createdIds, &$updatedIds, &$deletedIds) {
+        DB::transaction(function () use ($ipa, $validated, &$createdIds, &$updatedIds, &$deletedIds, &$me) {
 
             // 1) Delete achievements (jika diminta)
             if (!empty($validated['delete_achievements'])) {
@@ -259,15 +261,82 @@ class IpaController extends Controller
 
             // 3) Update header status (opsional)
             if (!empty($validated['header']['status'])) {
-                $ipa->status = $validated['header']['status'];
-                $ipa->save();
+                $newStatus = strtolower($validated['header']['status']);
+                $now       = now();
 
-                // Jika header di-set submitted/checked/approved tanpa achievements ikut, kita boleh sync semua
-                if (
-                    in_array($ipa->status, ['submitted', 'checked', 'approved'], true)
-                    && empty($validated['achievements'])
-                ) {
-                    IpaAchievement::where('ipa_id', $ipa->id)->update(['status' => $ipa->status]);
+                if ($newStatus !== 'submitted') {
+                    Log::info('IPA Update: status ignored (this handler only processes submitted)', [
+                        'ipa_id' => $ipa->id,
+                        'incoming_status' => $newStatus,
+                    ]);
+                } else {
+                    $actorUser     = auth()->user();
+                    $actorEmployee = optional($actorUser)->employee;
+
+                    // Helper untuk ambil atasan by level:
+                    // - level 1 -> first()
+                    // - level 3 -> last()
+                    $resolveSuperior = function ($employee, int $level, string $pick) {
+                        if (!$employee || !method_exists($employee, 'getSuperiorsByLevel')) {
+                            Log::warning('IPA Update: getSuperiorsByLevel not available', ['level' => $level]);
+                            return null;
+                        }
+
+                        $res = $employee->getSuperiorsByLevel($level) ?? null;
+
+                        if ($res instanceof \Illuminate\Support\Collection) {
+                            $candidate = $pick === 'last' ? $res->last() : $res->first();
+                        } elseif (is_array($res)) {
+                            $candidate = $pick === 'last'
+                                ? (\count($res) ? end($res) : null)
+                                : (\count($res) ? reset($res) : null);
+                        } else {
+                            $candidate = $res;
+                        }
+
+                        $id = data_get($candidate, 'id')
+                            ?: data_get($candidate, 'employee_id')
+                            ?: data_get($candidate, 'user_id');
+
+                        Log::info('IPA Update: resolved superior', [
+                            'level'       => $level,
+                            'pick'        => $pick,
+                            'superior_id' => $id,
+                        ]);
+
+                        return $id ?: null;
+                    };
+
+                    if (empty($ipa->submitted_at)) {
+                        $ipa->submitted_at = $now;
+                    }
+
+                    $resolvedChecker = $resolveSuperior($actorEmployee, 1, 'first');
+                    if ($resolvedChecker) {
+                        $ipa->checked_by = $resolvedChecker;
+                    }
+
+                    $resolvedApprover = $resolveSuperior($actorEmployee, 3, 'last');
+                    if ($resolvedApprover) {
+                        $ipa->approved_by = $resolvedApprover;
+                    }
+
+                    $ipa->status = 'submitted';
+                    $ipa->save();
+
+                    Log::info('IPA Update: submitted set', [
+                        'ipa_id'       => $ipa->id,
+                        'submitted_at' => $ipa->submitted_at,
+                        'checked_by'   => $ipa->checked_by,
+                        'approved_by'  => $ipa->approved_by,
+                    ]);
+
+                    if (empty($validated['achievements'])) {
+                        Log::info('IPA Update: bulk sync achievements to submitted', ['ipa_id' => $ipa->id]);
+
+                        IpaAchievement::where('ipa_id', $ipa->id)
+                            ->update(['status' => 'submitted']);
+                    }
                 }
             }
         });
