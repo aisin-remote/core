@@ -24,18 +24,17 @@
                         <label class="form-label">One Year Target</label>
                         <textarea class="form-control" id="ippd-target" rows="3" readonly></textarea>
                     </div>
-
-                    <div class="col-md-4">
-                        <label class="form-label">Weight (W, %)</label>
-                        <input type="text" class="form-control" id="ippd-weight">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Score (R)</label>
-                        <input type="number" step="0.01" class="form-control" id="ippd-score">
-                    </div>
                     <div class="col-12">
                         <label class="form-label">One Year Achievement</label>
                         <textarea class="form-control" id="ippd-achv" rows="3" placeholder="Capaian selama setahun..."></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Weight (W, %)</label>
+                        <input type="text" class="form-control" id="ippd-weight">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Score (R)</label>
+                        <input type="number" step="0.01" class="form-control" id="ippd-score">
                     </div>
                 </div>
             </div>

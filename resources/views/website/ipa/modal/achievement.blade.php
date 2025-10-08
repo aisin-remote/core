@@ -25,17 +25,17 @@
                         <label class="form-label">One Year Target <span class="text-danger">*</span></label>
                         <textarea class="form-control" id="add-target" rows="3" placeholder="Target tahunan"></textarea>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Weight (W, %)</label>
-                        <input type="text" class="form-control" id="add-weight">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Score (R)</label>
-                        <input type="number" step="0.01" class="form-control" id="add-score">
-                    </div>
                     <div class="col-12">
                         <label class="form-label">One Year Achievement</label>
                         <textarea class="form-control" id="add-achv" rows="3" placeholder="Capaian selama setahun (opsional)"></textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Weight (W, %)</label>
+                        <input type="text" class="form-control" id="add-weight">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Score (R)</label>
+                        <input type="number" step="0.01" class="form-control" id="add-score">
                     </div>
                 </div>
             </div>
