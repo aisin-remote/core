@@ -23,6 +23,7 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IpaApprovalController;
 use App\Http\Controllers\IpaExportController;
 use App\Http\Controllers\IppController;
 use App\Http\Controllers\SignatureController;
@@ -181,6 +182,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/ipp', [IppController::class, 'approval'])->name('ipp.approval');
         Route::post('/ipp/{id}', [IppController::class, 'approve'])->name('ipp.approve');
         Route::post('/ipp/revise/{id}', [IppController::class, 'revise'])->name('ipp.revise');
+
+        Route::get('/ipa', [IpaApprovalController::class, 'approval'])->name('ipa.approval');
+        Route::post('/ipa/{ipa?}/approve', [IpaApprovalController::class, 'approve'])->name('ipa.approve');
+        Route::post('/ipa/{ipa?}/revise',  [IpaApprovalController::class, 'revise'])->name('ipa.revise');
     });
 
     Route::prefix('employee')->group(function () {
@@ -337,8 +342,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::put('/{ipa}',            [IpaController::class, 'update'])->name('update');
         Route::post('/{id}/recalc',    [IpaController::class, 'recalc'])->name('recalc');
         Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
+
+        Route::get('/approval/json', [IpaApprovalController::class, 'approvalJson'])->name('approval.json');
+        Route::get('/{ipa?}/export', [IpaExportController::class, 'export'])->name('export');
     });
-    Route::get('/ipa/{ipa}/export', [IpaExportController::class, 'export'])->name('ipa.export');
 
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])

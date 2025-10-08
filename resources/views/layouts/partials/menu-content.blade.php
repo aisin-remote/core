@@ -1227,6 +1227,12 @@
                     <span class="menu-title">IPP</span>
                 </a>
             </div>
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/ipa') ? 'active' : '' }}"
+                    href="{{ route('ipa.approval') }}">
+                    <span class="menu-title">IPA</span>
+                </a>
+            </div>
         </div>
 
         {{-- FLYOUT --}}
@@ -1239,6 +1245,10 @@
                     href="{{ route('rtc.approval') }}"><span class="menu-title">RTC</span></a></div>
             <div class="menu-item"><a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
                     href="{{ route('icp.approval') }}"><span class="menu-title">ICP</span></a></div>
+            <div class="menu-item"><a class="menu-link {{ request()->is('approval/ipp') ? 'active' : '' }}"
+                    href="{{ route('ipp.approval') }}"><span class="menu-title">ICP</span></a></div>
+            <div class="menu-item"><a class="menu-link {{ request()->is('approval/ipa') ? 'active' : '' }}"
+                    href="{{ route('ipa.approval') }}"><span class="menu-title">ICP</span></a></div>
         </div>
     </div>
     <!-- ===== END APPROVAL ===== -->
