@@ -2,7 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Employee;
 use App\Models\IpaHeader;
+use Carbon\Carbon;
+use DateTimeInterface;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -70,6 +73,30 @@ class IpaExportController extends Controller
                 ];
             });
 
+            // Format tanggal
+            $fmt = function ($dt) {
+                if (empty($dt)) return null;
+
+                // Sudah objek tanggal?
+                if ($dt instanceof DateTimeInterface) {
+                    return $dt->timezone(config('app.timezone'))->format('d M Y');
+                }
+
+                // Kadang string "0000-00-00 00:00:00" atau spasi kosong
+                $s = trim((string)$dt);
+                if ($s === '' || $s === '0000-00-00' || $s === '0000-00-00 00:00:00') {
+                    return null;
+                }
+
+                try {
+                    return Carbon::parse($s)->timezone(config('app.timezone'))->format('d M Y');
+                } catch (\Throwable $e) {
+                    // Kalau gagal parse, bisa kamu log untuk investigasi
+                    // Log::warning('Failed to parse date', ['val' => $dt, 'msg' => $e->getMessage()]);
+                    return null;
+                }
+            };
+
             // Kelompokkan per kategori (null/unknown taruh di ujung)
             $grouped = $rows->groupBy(function ($r) {
                 return $r['category'] ?? '__unknown';
@@ -112,11 +139,17 @@ class IpaExportController extends Controller
                 $drawing->setWorksheet($sheet);
             }
 
-            // Header identitas pakai anchor (optional)
-            $this->setByAnchor($sheet, '[[EMPLOYEE_NAME]]', $ipa->employee_name ?? optional($ipa->employee)->name ?? '-');
-            $this->setByAnchor($sheet, '[[NIK]]',          $ipa->employee_nik ?? '-');
-            $this->setByAnchor($sheet, '[[DEPARTMENT]]',   $ipa->department_name ?? '-');
-            $this->setByAnchor($sheet, '[[PERIOD]]',       $ipa->period ?? ($ipa->year ?? date('Y')));
+            // Header identitas
+            // dd($ipa->employee->company_name);
+            $sheet->setCellValue('D6',  $ipa->employee->name);
+            $sheet->setCellValue('D7',  $ipa->employee?->department?->name);
+            $sheet->setCellValue('D8',  $ipa->employee?->division?->name);
+
+            $sheet->setCellValue('S4',  $fmt($ipa->submitted_at));
+            $sheet->setCellValue('S6', $ipa->employee?->company_name);
+            $sheet->setCellValue('S7', $ipa?->checked_at);
+            $checkedName  = $this->safePersonName($ipa, 'checkedBy')  ?: '-';
+            $sheet->setCellValue('S8', $checkedName);
 
             // ========== 3) Mapping kolom & baris start ==========
             $map = [
@@ -166,8 +199,9 @@ class IpaExportController extends Controller
                 if ($items->isEmpty()) continue;
 
                 // --- baris header kategori ---
-                $title = $this->categoryTitle($catKey, $catMeta);
-                $this->writeCategoryRow($sheet, $r, $title, $map, $firstCol, $lastCol);
+                $roman = $catMeta[$catKey]['roman'] ?? '';
+                $label = $this->categoryLabel($catKey, $catMeta);
+                $this->writeCategoryRow($sheet, $r, $roman, $label, $map, $firstCol, $lastCol);
                 $r++;
 
                 // --- baris data dalam kategori ---
@@ -182,12 +216,12 @@ class IpaExportController extends Controller
 
                     // weight (fraction)
                     $sheet->setCellValueByColumnAndRow($map['w']['c1'], $r, ((float)$it['weight']) / 100);
-                    $sheet->getStyleByColumnAndRow($map['w']['c1'], $r)->getNumberFormat()->setFormatCode('0.00%');
+                    $sheet->getStyleByColumnAndRow($map['w']['c1'], $r)->getNumberFormat()->setFormatCode('0%');
                     $sheet->getStyleByColumnAndRow($map['w']['c1'], $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                     // score
                     $sheet->setCellValueByColumnAndRow($map['score']['c1'], $r, (float)$it['score']);
-                    $sheet->getStyleByColumnAndRow($map['score']['c1'], $r)->getNumberFormat()->setFormatCode('0.00');
+                    $sheet->getStyleByColumnAndRow($map['score']['c1'], $r)->getNumberFormat()->setFormatCode('0');
                     $sheet->getStyleByColumnAndRow($map['score']['c1'], $r)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                     // total = weight * score
@@ -217,7 +251,7 @@ class IpaExportController extends Controller
                     $totalRow,
                     sprintf('=SUM(%s:%s)', $this->addr($map['w']['c1'], $rowStart), $this->addr($map['w']['c1'], $lastDataRow))
                 );
-                $sheet->getStyleByColumnAndRow($map['w']['c1'], $totalRow)->getNumberFormat()->setFormatCode('0.00%');
+                $sheet->getStyleByColumnAndRow($map['w']['c1'], $totalRow)->getNumberFormat()->setFormatCode('0%');
                 $sheet->getStyleByColumnAndRow($map['w']['c1'], $totalRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 // kolom Score
@@ -226,7 +260,7 @@ class IpaExportController extends Controller
                     $totalRow,
                     sprintf('=SUM(%s:%s)', $this->addr($map['score']['c1'], $rowStart), $this->addr($map['score']['c1'], $lastDataRow))
                 );
-                $sheet->getStyleByColumnAndRow($map['score']['c1'], $totalRow)->getNumberFormat()->setFormatCode('0.00');
+                $sheet->getStyleByColumnAndRow($map['score']['c1'], $totalRow)->getNumberFormat()->setFormatCode('0');
                 $sheet->getStyleByColumnAndRow($map['score']['c1'], $totalRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 // kolom Total
@@ -281,6 +315,137 @@ class IpaExportController extends Controller
             }
 
 
+            // ===========================
+            //  SIGNATURES BY STATUS
+            // ===========================
+            // 1) Temukan baris header label & baris tanggal
+            $hdrRow  = $this->findLastRowByAnyLabelContains($sheet, ['superior of superior', 'superior', 'employee']);
+            $dateRow = $this->findLastRowByAnyLabelContains($sheet, ['date', 'tanggal']);
+            $signRow = $this->findSignatureNamesRow($sheet); // sudah dihitung di atas
+
+            // Jika ketemu semua jangkar utama, siapkan area gambar & tanggalnya
+            if ($hdrRow && $signRow && $dateRow) {
+                $imgTop    = max($hdrRow + 1, 1);       // baris mulai gambar
+                $imgBottom = max($signRow - 1, $imgTop); // baris akhir gambar
+
+                // Util: buat rectangle "A1:C3" dari kol,baris
+                $rect = function (int $c1, int $r1, int $c2, int $r2): string {
+                    return \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c1) . $r1 . ':' .
+                        \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c2) . $r2;
+                };
+
+                // Area per peran (kolom 1-based)
+                $C = [
+                    'approved' => ['c1' => 9,  'c2' => 11], // I..K
+                    'checked'  => ['c1' => 12, 'c2' => 16], // L..P
+                    'employee' => ['c1' => 17, 'c2' => 21], // Q..U
+                ];
+
+                // Util: tulis tanggal di baris dateRow, rata kiri
+                $writeDate = function (Worksheet $sheet, int $c1, int $c2, int $dateRow, ?string $text) use ($rect): void {
+                    if (!$text) return;
+                    $range = $rect($c1, $dateRow, $c2, $dateRow);
+                    $sheet->mergeCells($range);
+                    $sheet->setCellValueByColumnAndRow($c1, $dateRow, $text);
+                    $sheet->getStyle($range)->applyFromArray([
+                        'alignment' => [
+                            'horizontal' => Alignment::HORIZONTAL_LEFT,
+                            'vertical'   => Alignment::VERTICAL_CENTER,
+                            'wrapText'   => false,
+                        ],
+                        'font' => ['name' => 'Tahoma', 'size' => 11],
+                    ]);
+                };
+
+                // Util: pasang gambar tanda tangan di pojok kiri atas area (anchor)
+                $placeSignature = function (Worksheet $sheet, int $c1, int $c2, int $rTop, int $rBottom, ?string $imgPath) use ($rect): void {
+                    if (!$imgPath || !is_file($imgPath)) return;
+                    // Merge area agar bersih
+                    $area = $rect($c1, $rTop, $c2, $rBottom);
+                    $sheet->mergeCells($area);
+
+                    // Anchor di kiri-atas area
+                    $anchorCell = \PhpOffice\PhpSpreadsheet\Cell\Coordinate::stringFromColumnIndex($c1) . $rTop;
+
+                    $drw = new Drawing();
+                    $drw->setName('Signature');
+                    $drw->setDescription('Signature');
+                    $drw->setPath($imgPath);
+                    $drw->setCoordinates($anchorCell);
+                    $drw->setResizeProportional(true);
+                    // Tinggi kira-kira menyesuaikan blok (silakan tweak jika perlu)
+                    $drw->setHeight(120);
+                    $drw->setOffsetX(8);
+                    $drw->setOffsetY(0);
+                    $drw->setWorksheet($sheet);
+                };
+
+                // Helper: resolve path tanda tangan dari Employee (punya kamu sudah ada)
+                $resolveSignaturePath = function (?Employee $emp): ?string {
+                    if (!$emp) return null;
+                    if (!empty($emp->signature_path)) {
+                        $p = storage_path('app/public/' . ltrim($emp->signature_path, '/'));
+                        if (is_file($p)) return $p;
+                    }
+                    $p2 = public_path('storage/signatures/' . $emp->id . '.png');
+                    return is_file($p2) ? $p2 : null;
+                };
+
+                // Tarik model utk ttd
+                $emp      = optional($ipa)->employee;
+                $checker  = optional($ipa)->checkedBy;
+                $approver = optional($ipa)->approvedBy;
+
+                // Path gambar
+                $empSign      = $resolveSignaturePath($emp);
+                $checkerSign  = $resolveSignaturePath($checker);
+                $approverSign = $resolveSignaturePath($approver);
+
+                $submittedAt = $fmt($ipa->submitted_at ?? null);
+                $checkedAt   = $fmt($ipa->checked_at ?? null);
+                $approvedAt  = $fmt($ipa->approved_at ?? null);
+
+                // Gambar & tanggal sesuai status
+                switch ($ipa->status) {
+                    case 'submitted':
+                        // employee only
+                        $placeSignature($sheet, $C['employee']['c1'], $C['employee']['c2'], $imgTop, $imgBottom, $empSign);
+                        $writeDate($sheet,  $C['employee']['c1'], $C['employee']['c2'], $dateRow, $submittedAt);
+                        break;
+
+                    case 'checked':
+                        // employee + checker
+                        $placeSignature($sheet, $C['employee']['c1'], $C['employee']['c2'], $imgTop, $imgBottom, $empSign);
+                        $writeDate($sheet,  $C['employee']['c1'], $C['employee']['c2'], $dateRow, $submittedAt);
+
+                        $placeSignature($sheet, $C['checked']['c1'],  $C['checked']['c2'],  $imgTop, $imgBottom, $checkerSign);
+                        $writeDate($sheet,  $C['checked']['c1'],  $C['checked']['c2'],  $dateRow, $checkedAt);
+                        break;
+
+                    case 'approved':
+                        // employee + checker + approver
+                        $placeSignature($sheet, $C['employee']['c1'], $C['employee']['c2'], $imgTop, $imgBottom, $empSign);
+                        $writeDate($sheet,  $C['employee']['c1'], $C['employee']['c2'], $dateRow, $submittedAt);
+
+                        $placeSignature($sheet, $C['checked']['c1'],  $C['checked']['c2'],  $imgTop, $imgBottom, $checkerSign);
+                        $writeDate($sheet,  $C['checked']['c1'],  $C['checked']['c2'],  $dateRow, $checkedAt);
+
+                        $placeSignature($sheet, $C['approved']['c1'], $C['approved']['c2'], $imgTop, $imgBottom, $approverSign);
+                        $writeDate($sheet,  $C['approved']['c1'], $C['approved']['c2'], $dateRow, $approvedAt);
+                        break;
+
+                    default:
+                        // Draft/revise: kosongkan (atau bisa tulis watermark "Draft")
+                        break;
+                }
+            } else {
+                Log::warning('IPA Export: signature anchors incomplete', $ctx + [
+                    'hdrRow'  => $hdrRow,
+                    'signRow' => $signRow,
+                    'dateRow' => $dateRow,
+                ]);
+            }
+
             // ========== 8) Print setup A4 ==========
             $sheet->getPageSetup()
                 ->setPaperSize(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::PAPERSIZE_A4)
@@ -334,26 +499,48 @@ class IpaExportController extends Controller
     }
 
     /** Tulis baris header kategori (merge B..U, tebal, fill) */
-    private function writeCategoryRow(Worksheet $sheet, int $row, string $title, array $map, int $colStart, int $colEnd): void
-    {
-        // Kosongkan kolom A (No)
-        $sheet->setCellValueByColumnAndRow($map['no']['c1'], $row, null);
+    /** Tulis baris header kategori TANPA MERGE; roman di kolom A, label di kolom B, warna baris utuh */
+    private function writeCategoryRow(
+        Worksheet $sheet,
+        int $row,
+        string $roman,
+        string $label,
+        array $map,
+        int $colStart,
+        int $colEnd
+    ): void {
+        // 1) Isi kolom A dengan roman, bold, center
+        $sheet->setCellValueByColumnAndRow($map['no']['c1'], $row, $roman);
+        $sheet->getStyleByColumnAndRow($map['no']['c1'], $row)->applyFromArray([
+            'font'      => ['bold' => true],
+            'alignment' => [
+                'horizontal' => Alignment::HORIZONTAL_CENTER,
+                'vertical'   => Alignment::VERTICAL_CENTER,
+            ],
+        ]);
 
-        // Merge dari kolom Program sampai Total
-        $sheet->mergeCellsByColumnAndRow($map['prog']['c1'], $row, $colEnd, $row);
-        $sheet->setCellValueByColumnAndRow($map['prog']['c1'], $row, $title);
+        // 2) Isi kolom B dengan label kategori (kolom lain dikosongkan)
+        $sheet->setCellValueByColumnAndRow($map['prog']['c1'], $row, $label);
+        for ($c = $map['prog']['c1'] + 1; $c <= $colEnd; $c++) {
+            $sheet->setCellValueByColumnAndRow($c, $row, null);
+        }
 
-        // Style: bold, fill abu, border kiri-kanan tebal, vertical middle
-        $range = $this->addr($map['prog']['c1'], $row) . ':' . $this->addr($colEnd, $row);
-        $sheet->getStyle($range)->getFont()->setBold(true);
-        $sheet->getStyle($range)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle($range)->getFill()->setFillType(Fill::FILL_SOLID)->getStartColor()->setARGB('FFF3F4F6');
+        // 3) Style seluruh baris (B..U) tanpa merge: fill + bold + align kiri
+        $range = $this->addr($colStart, $row) . ':' . $this->addr($colEnd, $row);
+        $sheet->getStyle($range)->applyFromArray([
+            'font'      => ['bold' => true],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT, 'vertical' => Alignment::VERTICAL_CENTER],
+            'fill'      => [
+                'fillType'   => Fill::FILL_SOLID,
+                'startColor' => ['argb' => 'FFF3F4F6'], // sama seperti sebelumnya
+            ],
+        ]);
 
-        // Garis kiri-kanan keseluruhan baris
+        // 4) Border kiri & kanan baris
         $sheet->getStyleByColumnAndRow($colStart, $row)->getBorders()->getLeft()->setBorderStyle(Border::BORDER_MEDIUM);
         $sheet->getStyleByColumnAndRow($colEnd,   $row)->getBorders()->getRight()->setBorderStyle(Border::BORDER_MEDIUM);
 
-        // Tinggi baris
+        // 5) Tinggi baris
         $sheet->getRowDimension($row)->setRowHeight(20);
     }
 
@@ -525,5 +712,16 @@ class IpaExportController extends Controller
             ]);
         }
         return null;
+    }
+
+    /** Buat label kategori tanpa roman (mis. "ACTIVITY MANAGEMENT (Cap 70%)") */
+    private function categoryLabel(?string $key, array $catMeta): string
+    {
+        if ($key && isset($catMeta[$key])) {
+            $m = $catMeta[$key];
+            return sprintf('%s (Cap %d%%)', $m['title'], $m['cap']);
+        }
+        $safe = strtoupper(str_replace('_', ' ', (string)$key)) ?: 'OTHERS';
+        return "— {$safe} —";
     }
 }

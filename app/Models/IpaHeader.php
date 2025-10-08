@@ -31,6 +31,12 @@ class IpaHeader extends Model
         'status'
     ];
 
+    protected $cast = [
+        'submitted_at' => 'datetime',
+        'checked_at'   => 'datetime',
+        'approved_at'  => 'datetime',
+    ];
+
     // ==== Relationships ====
     public function employee()
     {
