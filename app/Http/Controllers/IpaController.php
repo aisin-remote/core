@@ -231,9 +231,6 @@ class IpaController extends Controller
         }
 
         $existing = IpaAchievement::where('ipa_id', $ipa->id)->get();
-
-        $byId = $existing->keyBy('id');
-
         $working = $existing->map(function ($row) {
             return [
                 'id'                   => $row->id,
@@ -250,9 +247,7 @@ class IpaController extends Controller
 
         $toDelete = (array)($validated['delete_achievements'] ?? []);
         if (!empty($toDelete)) {
-            $working = array_values(array_filter($working, function ($w) use ($toDelete) {
-                return !in_array((int)$w['id'], $toDelete, true);
-            }));
+            $working = array_values(array_filter($working, fn($w) => !in_array((int)$w['id'], $toDelete, true)));
         }
 
         $incomingAch = (array)($validated['achievements'] ?? []);
@@ -272,9 +267,7 @@ class IpaController extends Controller
             if (!empty($a['id'])) {
                 foreach ($working as &$w) {
                     if ((int)$w['id'] === (int)$a['id']) {
-                        foreach ($data as $k => $v) {
-                            if ($v !== null) $w[$k] = $v;
-                        }
+                        foreach ($data as $k => $v) if ($v !== null) $w[$k] = $v;
                         break;
                     }
                 }
@@ -302,6 +295,15 @@ class IpaController extends Controller
         }
         $grand = array_sum($sumByCat);
 
+        $grandScore = 0.0;
+        $grandTotal = 0.0;
+        foreach ($working as $w) {
+            $wgt = (float)($w['weight'] ?? 0);
+            $scr = (float)($w['self_score'] ?? 0);
+            $grandScore += $scr;
+            $grandTotal += ($wgt / 100.0) * $scr;
+        }
+
         $wantStatus = strtolower((string)($validated['header']['status'] ?? ''));
 
         if ($wantStatus === 'submitted') {
@@ -310,11 +312,14 @@ class IpaController extends Controller
             foreach ($CAPS as $cat => $cap) {
                 $sum = (float)($sumByCat[$cat] ?? 0.0);
                 if (abs($sum - $cap) > 1e-8) {
-                    $errors["categories.$cat"][] = "Kategori harus tepat {$cap}%, sekarang " . rtrim(rtrim(number_format($sum, 2, '.', ''), '0'), '.') . "%.";
+                    $errors["categories.$cat"][] =
+                        "Kategori harus tepat {$cap}%, sekarang " . number_format($sum, 2) . "%.";
                 }
             }
+
             if (abs($grand - 100.0) > 1e-8) {
-                $errors['grand'][] = "Total seluruh kategori harus 100%, sekarang " . rtrim(rtrim(number_format($grand, 2, '.', ''), '0'), '.') . "%.";
+                $errors['grand'][] =
+                    "Total seluruh kategori harus 100%, sekarang " . number_format($grand, 2) . "%.";
             }
 
             if (!empty($errors)) {
@@ -338,8 +343,9 @@ class IpaController extends Controller
         $updatedIds = [];
         $deletedIds = [];
 
-        DB::transaction(function () use ($ipa, $validated, &$createdIds, &$updatedIds, &$deletedIds, $wantStatus, $me) {
+        DB::transaction(function () use ($ipa, $validated, &$createdIds, &$updatedIds, &$deletedIds, $wantStatus, $me, $grandTotal, $grandScore) {
 
+            // Delete
             if (!empty($validated['delete_achievements'])) {
                 $rows = IpaAchievement::query()
                     ->where('ipa_id', $ipa->id)
@@ -353,6 +359,7 @@ class IpaController extends Controller
                 }
             }
 
+            // Upsert
             if (!empty($validated['achievements'])) {
                 foreach ($validated['achievements'] as $a) {
                     $data = [
@@ -385,6 +392,7 @@ class IpaController extends Controller
                 }
             }
 
+            // ==== Saat submit, update header + simpan total ====
             if ($wantStatus === 'submitted') {
                 $now = now();
 
@@ -402,43 +410,34 @@ class IpaController extends Controller
                     }
 
                     $res = $employee->getSuperiorsByLevel($level) ?? null;
-
                     if ($res instanceof \Illuminate\Support\Collection) {
                         $candidate = $pick === 'last' ? $res->last() : $res->first();
                     } elseif (is_array($res)) {
-                        $candidate = $pick === 'last'
-                            ? (\count($res) ? end($res) : null)
-                            : (\count($res) ? reset($res) : null);
+                        $candidate = $pick === 'last' ? end($res) : reset($res);
                     } else {
                         $candidate = $res;
                     }
 
-                    $id = data_get($candidate, 'id')
+                    return data_get($candidate, 'id')
                         ?: data_get($candidate, 'employee_id')
                         ?: data_get($candidate, 'user_id');
-
-                    return $id ?: null;
                 };
 
-                $resolvedChecker  = $resolveSuperior($actorEmployee, 1, 'first');
-                if ($resolvedChecker)  $ipa->checked_by  = $resolvedChecker;
+                if ($checker = $resolveSuperior($actorEmployee, 1, 'first')) $ipa->checked_by  = $checker;
+                if ($approver = $resolveSuperior($actorEmployee, 3, 'last')) $ipa->approved_by = $approver;
 
-                $resolvedApprover = $resolveSuperior($actorEmployee, 3, 'last');
-                if ($resolvedApprover) $ipa->approved_by = $resolvedApprover;
-
-                $ipa->status = 'submitted';
+                $ipa->status       = 'submitted';
+                $ipa->grand_total  = $grandTotal;
+                $ipa->grand_score  = $grandScore;
                 $ipa->save();
-
-                Log::info('IPA Update: submitted set', [
-                    'ipa_id'       => $ipa->id,
-                    'submitted_at' => $ipa->submitted_at,
-                    'checked_by'   => $ipa->checked_by,
-                    'approved_by'  => $ipa->approved_by,
-                ]);
 
                 if (empty($validated['achievements'])) {
                     IpaAchievement::where('ipa_id', $ipa->id)->update(['status' => 'submitted']);
                 }
+            } else {
+                $ipa->grand_total = $grandTotal;
+                $ipa->grand_score = $grandScore;
+                $ipa->save();
             }
         });
 
@@ -448,6 +447,8 @@ class IpaController extends Controller
             'updated_ids'  => $updatedIds,
             'deleted_ids'  => $deletedIds,
             'message'      => $wantStatus === 'submitted' ? 'IPA submitted.' : 'IPA updated.',
+            'grand_total'  => $grandTotal,
+            'grand_score'  => $grandScore,
         ]);
     }
 
