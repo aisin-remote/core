@@ -1392,7 +1392,6 @@ class EmployeeController extends Controller
     public function appraisalUpdate(Request $request, $id)
     {
         $appraisal = PerformanceAppraisalHistory::findOrFail($id);
-
         $validatedData = $request->validate([
             'score' => 'required',
             'date'  => 'required|date',
@@ -1401,15 +1400,20 @@ class EmployeeController extends Controller
         try {
             DB::beginTransaction();
 
-            // Update dengan field yang benar
             $appraisal->update([
                 'score'       => $validatedData['score'],
                 'description' => $validatedData['description'] ?? null,
-                'date'        => Carbon::parse($validatedData['date']),   // Pastikan format tanggal benar
+                'date'        => Carbon::parse($validatedData['date']),
             ]);
 
             // Get year hav terakhir
-            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->max('year');
+            if (!$havLastYear) {
+                DB::rollBack();
+                return redirect()
+                    ->back()
+                    ->with('warning', 'Mohon segera perbarui assessment karyawan');
+            }
 
             // Update HAV Quadran
             (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
