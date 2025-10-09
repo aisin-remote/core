@@ -260,8 +260,10 @@
             // Submit revise
             reviseForm?.addEventListener('submit', async (e) => {
                 e.preventDefault();
+
                 const ipaId = reviseIppIdEl.value;
                 const note = (reviseNoteEl.value || '').trim();
+
                 if (!note) {
                     reviseErrEl.textContent = 'Please write a comment.';
                     reviseErrEl.classList.remove('d-none');
@@ -270,11 +272,13 @@
                 }
 
                 const reviseBase = @json(route('ipa.revise', ['ipa' => '___ID___']));
-                await postJSON(reviseBase.replace('___ID___', ipaId), {
-                    note
-                });
+                const url = reviseBase.replace('___ID___', ipaId);
+
+                reviseSubmit.disabled = true;
+                reviseSubmit.classList.add('disabled');
+
                 try {
-                    await postJSON(reviseBase.replace('___ID___', ipaId), {
+                    await postJSON(url, {
                         note
                     });
                     reviseModal.hide();
@@ -284,9 +288,9 @@
                     alert('Gagal mengirim revisi.');
                 } finally {
                     reviseSubmit.disabled = false;
+                    reviseSubmit.classList.remove('disabled');
                 }
             });
-
         })();
     </script>
 @endpush

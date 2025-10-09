@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\IpaAchievement;
+use App\Models\IpaComment;
 use App\Models\IpaHeader;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class IpaApprovalController extends Controller
@@ -189,36 +191,60 @@ class IpaApprovalController extends Controller
 
     public function revise(Request $request, IpaHeader $ipa)
     {
-        $me   = optional(auth()->user())->employee;
-        $note = trim((string) ($request->input('note') ?? ''));
+        $data = $request->validate([
+            'note' => 'required|string|max:1000',
+        ]);
+
+        $me = optional(auth()->user())->employee;
         if (!$me) {
             return response()->json(['ok' => false, 'message' => 'Unauthorized'], 401);
         }
 
+        $from = (string) $ipa->status;
+        $to   = 'revised';
+
         try {
-            Log::info('IPA Revise: try', ['ipa_id' => $ipa->id, 'status' => $ipa->status, 'by_emp' => $me->id, 'note' => $note]);
+            return DB::transaction(function () use ($ipa, $me, $from, $to, $data) {
+                Log::info('IPA Revise: try', [
+                    'ipa_id'  => $ipa->id,
+                    'status'  => $ipa->status,
+                    'by_emp'  => $me->id,
+                    'note'    => $data['note'],
+                ]);
 
-            $can =
-                ($ipa->status === 'submitted' && (int)$ipa->checked_by  === (int)$me->id) ||
-                ($ipa->status === 'checked'   && (int)$ipa->approved_by === (int)$me->id);
+                $can =
+                    ($ipa->status === 'submitted' && (int) $ipa->checked_by  === (int) $me->id) ||
+                    ($ipa->status === 'checked'   && (int) $ipa->approved_by === (int) $me->id);
 
-            if (!$can) {
-                return response()->json(['ok' => false, 'message' => 'Not in your queue'], 403);
-            }
+                if (!$can) {
+                    return response()->json(['ok' => false, 'message' => 'Not in your queue'], 403);
+                }
 
-            $ipa->status = 'revise';
-            $ipa->save();
-            IpaAchievement::where('ipa_id', $ipa->id)->update(['status' => 'revise']);
+                IpaComment::create([
+                    'ipa_id'      => $ipa->id,
+                    'employee_id' => $me->id,
+                    'status_from' => $from,
+                    'status_to'   => $to,
+                    'comment'     => $data['note'],
+                ]);
 
-            Log::info('IPA Revise: ok', ['ipa_id' => $ipa->id]);
-            return response()->json(['ok' => true, 'status' => 'revise']);
+                $ipa->status = $to;
+                $ipa->save();
+
+                IpaAchievement::where('ipa_id', $ipa->id)->update(['status' => $to]);
+
+                Log::info('IPA Revise: ok', ['ipa_id' => $ipa->id, 'status_to' => $to]);
+
+                return response()->json(['ok' => true, 'status' => $to]);
+            });
         } catch (\Throwable $e) {
             Log::error('IPA Revise: exception', [
-                'msg' => $e->getMessage(),
+                'msg'  => $e->getMessage(),
                 'file' => $e->getFile(),
-                'line' => $e->getLine()
+                'line' => $e->getLine(),
             ]);
             report($e);
+
             return response()->json(['ok' => false, 'message' => 'Internal error'], 500);
         }
     }
