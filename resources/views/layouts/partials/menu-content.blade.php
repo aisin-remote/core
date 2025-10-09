@@ -403,7 +403,7 @@
                 $userCompany = strtolower(optional(optional(auth()->user())->employee)->company_name ?? 'aii');
             @endphp
             @if ($isUserRole)
-                <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
+                <div class="disabled menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
                     <span
@@ -472,7 +472,7 @@
                     </div>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="menu-item menu-accordion
+                <div class="disabled menu-item menu-accordion
         {{ request()->routeIs('ipp.list') || request()->routeIs('ipa.list') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
@@ -758,14 +758,14 @@
 
             {{-- RTC (flyout) --}}
             @if ($canSeeRtc)
-                <div class="menu-item">
+                <div class="disabled menu-item">
                     <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
                         <span class="menu-icon"><i class="fas fa-tasks"></i></span>
                         <span class="menu-title">RTC</span>
                     </a>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                <div class="disabled menu-item menu-accordion" data-kt-menu-trigger="click">
                     <span class="menu-link"><span class="menu-icon"><i class="fas fa-tasks"></i></span><span
                             class="menu-title">RTC</span><span class="menu-arrow"></span></span>
                     <div class="menu-sub menu-sub-dropdown">
@@ -780,7 +780,7 @@
 
             {{-- ==== IPP & IPA (flyout) ==== --}}
             @if ($isUserRole)
-                <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                <div class="disabled menu-item menu-accordion" data-kt-menu-trigger="click">
                     <span class="menu-link">
                         <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
                         <span class="menu-title">IPP & IPA</span>
@@ -803,7 +803,7 @@
                     </div>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                <div class="disabled menu-item menu-accordion" data-kt-menu-trigger="click">
                     <span class="menu-link">
                         <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
                         <span class="menu-title">IPP & IPA</span>
