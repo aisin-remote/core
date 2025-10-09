@@ -15,6 +15,7 @@ class PlantController extends Controller
             ->get();
 
         $directors = Employee::where('position', 'Direktur')
+            ->orWhere('position', 'act director')
             ->when($company, function ($query) use ($company) {
                 $query->where('company_name', $company);
             })->get();
@@ -33,9 +34,10 @@ class PlantController extends Controller
         ]);
 
         $director = Employee::where('id', $request->director_id)
-        ->where('position', 'Direktur')
-        ->where('company_name', $request->company)
-        ->first();
+            ->where('position', 'Direktur')
+            ->orWhere('position', 'act director')
+            ->where('company_name', $request->company)
+            ->first();
 
         if (!$director) {
             return redirect()->back()->with('error', 'Direktur tidak sesuai dengan perusahaan yang dipilih.');
@@ -63,9 +65,10 @@ class PlantController extends Controller
         ]);
 
         $director = Employee::where('id', $request->director_id)
-        ->where('position', 'Direktur')
-        ->where('company_name', $request->company)
-        ->first();
+            ->where('position', 'Direktur')
+            ->orWhere('position', 'act director')
+            ->where('company_name', $request->company)
+            ->first();
 
         if (!$director) {
             return redirect()->back()->with('error', 'Direktur tidak sesuai dengan perusahaan yang dipilih.');

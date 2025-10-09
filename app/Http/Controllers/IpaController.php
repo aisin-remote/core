@@ -9,7 +9,9 @@ use App\Models\IpaActivity;
 use App\Models\IpaAchievement;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Symfony\Component\HttpFoundation\Response;
 
 class IpaController extends Controller
 {
@@ -178,10 +180,10 @@ class IpaController extends Controller
         ]);
     }
 
-    /** UPDATE: upsert (tanpa menghapus data lain) + dukung custom achievement */
     public function update(Request $req, IpaHeader $ipa)
     {
-        // $this->authorize('update', $ipa);
+        $user = auth()->user();
+        $me   = optional($user)->employee;
 
         $validated = $req->validate([
             'header.status'                       => ['nullable', Rule::in(IpaAchievement::STATUSES)],
@@ -199,13 +201,151 @@ class IpaController extends Controller
             'delete_achievements.*'               => ['integer', 'exists:ipa_achievements,id'],
         ]);
 
+        $CAPS = [
+            'activity_management' => 70.0,
+            'people_development'  => 10.0,
+            'crp'                 => 10.0,
+            'special_assignment'  => 10.0,
+        ];
+
+        $fail = function (string $message, array $errors = []) {
+            return response()->json([
+                'ok'      => false,
+                'message' => $message,
+                'errors'  => $errors,
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        };
+
+        $currentStatus = strtolower((string)$ipa->status);
+        $locked = in_array($currentStatus, ['submitted', 'checked', 'approved'], true);
+
+        $hasMutation =
+            !empty($validated['delete_achievements']) ||
+            !empty($validated['achievements']) ||
+            (!empty($validated['header']['status']));
+
+        if ($locked && $hasMutation) {
+            return $fail('IPA sudah submitted. Perubahan tidak diperbolehkan.', [
+                'status' => ['IPA sudah submitted.']
+            ]);
+        }
+
+        $existing = IpaAchievement::where('ipa_id', $ipa->id)->get();
+        $working = $existing->map(function ($row) {
+            return [
+                'id'                   => $row->id,
+                'ipp_point_id'         => $row->ipp_point_id,
+                'category'             => $row->category,
+                'title'                => $row->title,
+                'one_year_target'      => $row->one_year_target,
+                'one_year_achievement' => $row->one_year_achievement,
+                'weight'               => (float)($row->weight ?? 0),
+                'self_score'           => (float)($row->self_score ?? 0),
+                'status'               => $row->status,
+            ];
+        })->values()->all();
+
+        $toDelete = (array)($validated['delete_achievements'] ?? []);
+        if (!empty($toDelete)) {
+            $working = array_values(array_filter($working, fn($w) => !in_array((int)$w['id'], $toDelete, true)));
+        }
+
+        $incomingAch = (array)($validated['achievements'] ?? []);
+        foreach ($incomingAch as $a) {
+            $data = [
+                'ipp_point_id'         => $a['ipp_point_id']        ?? null,
+                'category'             => $a['category']            ?? null,
+                'title'                => $a['title']               ?? null,
+                'one_year_target'      => $a['one_year_target']     ?? null,
+                'one_year_achievement' => $a['one_year_achievement'] ?? null,
+                'weight'               => array_key_exists('weight', $a) ? (float)$a['weight'] : null,
+                'self_score'           => array_key_exists('self_score', $a) ? (float)$a['self_score'] : null,
+                'status'               => (!empty($a['status']) && in_array($a['status'], IpaAchievement::STATUSES, true))
+                    ? $a['status'] : null,
+            ];
+
+            if (!empty($a['id'])) {
+                foreach ($working as &$w) {
+                    if ((int)$w['id'] === (int)$a['id']) {
+                        foreach ($data as $k => $v) if ($v !== null) $w[$k] = $v;
+                        break;
+                    }
+                }
+                unset($w);
+            } else {
+                $working[] = [
+                    'id'                   => null,
+                    'ipp_point_id'         => $data['ipp_point_id'],
+                    'category'             => $data['category'],
+                    'title'                => $data['title'],
+                    'one_year_target'      => $data['one_year_target'],
+                    'one_year_achievement' => $data['one_year_achievement'],
+                    'weight'               => (float)($data['weight'] ?? 0),
+                    'self_score'           => (float)($data['self_score'] ?? 0),
+                    'status'               => $data['status'] ?? 'draft',
+                ];
+            }
+        }
+
+        $sumByCat = [];
+        foreach ($working as $w) {
+            $cat = (string)($w['category'] ?? '');
+            if ($cat === '') continue;
+            $sumByCat[$cat] = ($sumByCat[$cat] ?? 0) + (float)($w['weight'] ?? 0);
+        }
+        $grand = array_sum($sumByCat);
+
+        $grandScore = 0.0;
+        $grandTotal = 0.0;
+        foreach ($working as $w) {
+            $wgt = (float)($w['weight'] ?? 0);
+            $scr = (float)($w['self_score'] ?? 0);
+            $grandScore += $scr;
+            $grandTotal += ($wgt / 100.0) * $scr;
+        }
+
+        $wantStatus = strtolower((string)($validated['header']['status'] ?? ''));
+
+        if ($wantStatus === 'submitted') {
+            $errors = [];
+
+            foreach ($CAPS as $cat => $cap) {
+                $sum = (float)($sumByCat[$cat] ?? 0.0);
+                if (abs($sum - $cap) > 1e-8) {
+                    $errors["categories.$cat"][] =
+                        "Kategori harus tepat {$cap}%, sekarang " . number_format($sum, 2) . "%.";
+                }
+            }
+
+            if (abs($grand - 100.0) > 1e-8) {
+                $errors['grand'][] =
+                    "Total seluruh kategori harus 100%, sekarang " . number_format($grand, 2) . "%.";
+            }
+
+            if (!empty($errors)) {
+                return $fail('Validasi submit gagal.', $errors);
+            }
+        } else {
+            $errors = [];
+            foreach ($sumByCat as $cat => $sum) {
+                if (!array_key_exists($cat, $CAPS)) continue;
+                $cap = (float)$CAPS[$cat];
+                if ($sum - $cap > 1e-8) {
+                    $errors["categories.$cat"][] = "Total bobot melebihi CAP: {$sum}% / {$cap}%.";
+                }
+            }
+            if (!empty($errors)) {
+                return $fail('Validasi CAP per kategori gagal.', $errors);
+            }
+        }
+
         $createdIds = [];
         $updatedIds = [];
         $deletedIds = [];
 
-        DB::transaction(function () use ($ipa, $validated, &$createdIds, &$updatedIds, &$deletedIds) {
+        DB::transaction(function () use ($ipa, $validated, &$createdIds, &$updatedIds, &$deletedIds, $wantStatus, $me, $grandTotal, $grandScore) {
 
-            // 1) Delete achievements (jika diminta)
+            // Delete
             if (!empty($validated['delete_achievements'])) {
                 $rows = IpaAchievement::query()
                     ->where('ipa_id', $ipa->id)
@@ -219,37 +359,32 @@ class IpaController extends Controller
                 }
             }
 
-            // 2) Upsert achievements
+            // Upsert
             if (!empty($validated['achievements'])) {
                 foreach ($validated['achievements'] as $a) {
                     $data = [
-                        'ipp_point_id'         => $a['ipp_point_id']        ?? null,
-                        'category'             => $a['category']            ?? null,
-                        'title'                => $a['title']               ?? null,
-                        'one_year_target'      => $a['one_year_target']     ?? null,
+                        'ipp_point_id'         => $a['ipp_point_id']         ?? null,
+                        'category'             => $a['category']             ?? null,
+                        'title'                => $a['title']                ?? null,
+                        'one_year_target'      => $a['one_year_target']      ?? null,
                         'one_year_achievement' => $a['one_year_achievement'] ?? null,
-                        'weight'               => isset($a['weight']) ? (float)$a['weight'] : null,
-                        'self_score'           => isset($a['self_score']) ? (float)$a['self_score'] : null,
+                        'weight'               => array_key_exists('weight', $a) ? (float)$a['weight'] : null,
+                        'self_score'           => array_key_exists('self_score', $a) ? (float)$a['self_score'] : null,
                     ];
 
-                    // status:
                     if (!empty($a['status']) && in_array($a['status'], IpaAchievement::STATUSES, true)) {
                         $data['status'] = $a['status'];
                     }
 
                     if (!empty($a['id'])) {
-                        // update
                         $ach = IpaAchievement::where('ipa_id', $ipa->id)->findOrFail($a['id']);
-                        $ach->fill(array_filter($data, fn($v) => $v !== null)); // jangan overwrite null
+                        $ach->fill(array_filter($data, fn($v) => $v !== null));
                         $ach->save();
                         $updatedIds[] = $ach->id;
                     } else {
-                        // create
                         $ach = new IpaAchievement();
                         $ach->ipa_id = $ipa->id;
-                        // isi hanya field yang ada
                         foreach ($data as $k => $v) if ($v !== null) $ach->{$k} = $v;
-                        // default status = draft jika tidak ada
                         if (empty($data['status'])) $ach->status = 'draft';
                         $ach->save();
                         $createdIds[] = $ach->id;
@@ -257,18 +392,52 @@ class IpaController extends Controller
                 }
             }
 
-            // 3) Update header status (opsional)
-            if (!empty($validated['header']['status'])) {
-                $ipa->status = $validated['header']['status'];
+            // ==== Saat submit, update header + simpan total ====
+            if ($wantStatus === 'submitted') {
+                $now = now();
+
+                if (empty($ipa->submitted_at)) {
+                    $ipa->submitted_at = $now;
+                }
+
+                $actorUser     = auth()->user();
+                $actorEmployee = optional($actorUser)->employee;
+
+                $resolveSuperior = function ($employee, int $level, string $pick) {
+                    if (!$employee || !method_exists($employee, 'getSuperiorsByLevel')) {
+                        Log::warning('IPA Update: getSuperiorsByLevel not available', ['level' => $level]);
+                        return null;
+                    }
+
+                    $res = $employee->getSuperiorsByLevel($level) ?? null;
+                    if ($res instanceof \Illuminate\Support\Collection) {
+                        $candidate = $pick === 'last' ? $res->last() : $res->first();
+                    } elseif (is_array($res)) {
+                        $candidate = $pick === 'last' ? end($res) : reset($res);
+                    } else {
+                        $candidate = $res;
+                    }
+
+                    return data_get($candidate, 'id')
+                        ?: data_get($candidate, 'employee_id')
+                        ?: data_get($candidate, 'user_id');
+                };
+
+                if ($checker = $resolveSuperior($actorEmployee, 1, 'first')) $ipa->checked_by  = $checker;
+                if ($approver = $resolveSuperior($actorEmployee, 3, 'last')) $ipa->approved_by = $approver;
+
+                $ipa->status       = 'submitted';
+                $ipa->grand_total  = $grandTotal;
+                $ipa->grand_score  = $grandScore;
                 $ipa->save();
 
-                // Jika header di-set submitted/checked/approved tanpa achievements ikut, kita boleh sync semua
-                if (
-                    in_array($ipa->status, ['submitted', 'checked', 'approved'], true)
-                    && empty($validated['achievements'])
-                ) {
-                    IpaAchievement::where('ipa_id', $ipa->id)->update(['status' => $ipa->status]);
+                if (empty($validated['achievements'])) {
+                    IpaAchievement::where('ipa_id', $ipa->id)->update(['status' => 'submitted']);
                 }
+            } else {
+                $ipa->grand_total = $grandTotal;
+                $ipa->grand_score = $grandScore;
+                $ipa->save();
             }
         });
 
@@ -277,7 +446,9 @@ class IpaController extends Controller
             'created_ids'  => $createdIds,
             'updated_ids'  => $updatedIds,
             'deleted_ids'  => $deletedIds,
-            'message'      => 'IPA updated.',
+            'message'      => $wantStatus === 'submitted' ? 'IPA submitted.' : 'IPA updated.',
+            'grand_total'  => $grandTotal,
+            'grand_score'  => $grandScore,
         ]);
     }
 

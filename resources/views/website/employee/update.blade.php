@@ -234,6 +234,7 @@
                                                         <option value="">Select Position</option>
                                                         @php
                                                             $positions = [
+                                                                'Act Director' => 'Act Director',
                                                                 'GM' => 'General Manager',
                                                                 'Act GM' => 'Act General Manager',
                                                                 'Manager' => 'Manager',
@@ -1475,7 +1476,7 @@
                         groupToShow = 'department-group';
                     } else if (['GM', 'Act GM'].includes(position)) {
                         groupToShow = 'division-group';
-                    } else if (['Direktur'].includes(position)) {
+                    } else if (['Direktur', 'Act Director'].includes(position)) {
                         groupToShow = 'plant-group';
                     }
 

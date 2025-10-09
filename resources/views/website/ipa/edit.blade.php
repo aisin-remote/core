@@ -278,28 +278,6 @@
             filter: brightness(.98)
         }
 
-        /* Totals Card */
-        .totals-card {
-            min-width: 360px;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px
-        }
-
-        .mini-bar {
-            height: 8px;
-            background: #e5e7eb;
-            border-radius: 99px;
-            overflow: hidden
-        }
-
-        .mini-bar>span {
-            display: block;
-            height: 100%;
-            width: 0%;
-            background: var(--primary);
-            transition: width .25s ease
-        }
-
         /* Helper/Legend */
         .legend {
             display: flex;
@@ -395,6 +373,9 @@
                 <button class="btn btn-add btn-sm" id="btn-add-activity" title="Tambah Activity">
                     <i class="bi bi-plus-lg text-white"></i> Tambah Activity
                 </button>
+                <a href="{{ route('ipa.export', $ipa->id) }}" class="btn btn-success btn-sm">
+                    Export Excel
+                </a>
             </div>
         </div>
 
@@ -450,10 +431,6 @@
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="px-3 py-2 help-line muted">
-                                    Baris bertanda <span class="badge-src">Custom</span> adalah activity yang kamu tambahkan
-                                    di IPA (tidak mengubah IPP).
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -463,27 +440,6 @@
 
         {{-- Totals --}}
         <div class="mt-3 d-flex flex-wrap gap-3 justify-content-end">
-            <div class="card shadow-sm totals-card">
-                <div class="card-body py-2">
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div><i class="bi bi-trophy"></i> Achievement Total (Σ(W/100×R))</div>
-                        <div><strong id="total-achievement">0,00</strong></div>
-                    </div>
-                    <div class="mini-bar mb-2"><span id="bar-ach"></span></div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div><i class="bi bi-graph-up"></i> Grand Score (Σ R)</div>
-                        <div><strong id="total-grand-score">0,00</strong></div>
-                    </div>
-                    <div class="mini-bar mb-2"><span id="bar-gscore"></span></div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <div><i class="bi bi-star"></i> Grand Total</div>
-                        <div><strong id="total-grand">0,00</strong></div>
-                    </div>
-                    <div class="mini-bar"><span id="bar-grand"></span></div>
-                </div>
-            </div>
             <div class="d-flex align-items-end">
                 <button class="btn btn-primary" id="btn-save-bottom" title="Kirim sebagai Submitted">
                     <i class="bi bi-send-check"></i> Submit
@@ -512,13 +468,16 @@
             const URL_UPDATE = $root.data('url-update');
             const URL_RECALC = $root.data('url-recalc');
 
-            // Toast
+            let HEADER_STATUS = 'draft';
+            const MSG_SUBMITTED_LOCK = 'IPA sudah submitted. Perubahan tidak diperbolehkan.';
+
+            // ===================== Toast =====================
             function toast(msg, type = 'success') {
                 const id = 'toast-' + Date.now();
                 const $t = $(`
 <div class="toast align-items-center badge-${type} border-0" id="${id}"
-     role="status" aria-live="polite" aria-atomic="true"
-     style="position:fixed;top:1rem;right:1rem;z-index:1080;">
+    role="status" aria-live="polite" aria-atomic="true"
+    style="position:fixed;top:1rem;right:1rem;z-index:1080;">
   <div class="d-flex">
     <div class="toast-body">${esc(msg)}</div>
     <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
@@ -532,30 +491,7 @@
                 $t.on('hidden.bs.toast', () => $t.remove());
             }
 
-            const $tAch = $('#total-achievement');
-            const $tGnd = $('#total-grand');
-            const $tGScore = $('#total-grand-score');
-            const $barAch = $('#bar-ach');
-            const $barG = $('#bar-grand');
-            const $barGS = $('#bar-gscore');
-
-            // permissions dari backend
-            let PERMS = {
-                can_add: true,
-                can_edit: true,
-                can_delete: true,
-                can_recalc: true,
-                can_submit: true
-            };
-
-            // cache
-            let IPP_POINTS = [];
-            let ACHS = []; // status diambil dari backend (bukan lokal)
-
-            let mdlDetail = new bootstrap.Modal(document.getElementById('modal-ipp-detail'));
-            let mdlAdd = new bootstrap.Modal(document.getElementById('modal-add-activity'));
-
-            // utils
+            // ===================== Helpers =====================
             const esc = (s) => String(s || '').replace(/[&<>\"']/g, m => ({
                 '&': '&amp;',
                 '<': '&lt;',
@@ -580,22 +516,113 @@
                 const num = parseFloat(s);
                 return isNaN(num) ? 0 : num;
             }
+
+            function extractBackendErrors(payload) {
+                const msgs = [];
+                if (!payload) return msgs;
+                if (payload.errors && typeof payload.errors === 'object') {
+                    Object.values(payload.errors).forEach(arr => {
+                        if (Array.isArray(arr)) arr.forEach(m => msgs.push(String(m)))
+                    });
+                }
+                if (payload.message && typeof payload.message === 'string') msgs.unshift(payload.message);
+                return msgs.filter(Boolean);
+            }
+
+            // Lock rule: setelah SUBMITTED (atau lebih tinggi) kunci semua perubahan
+            function isLockedAfterSubmit() {
+                const s = String(HEADER_STATUS || '').toLowerCase();
+                return ['submitted', 'checked', 'approved'].includes(s);
+            }
+
             const $tbody = (cat) => $(`.js-tbl-ipp[data-cat="${cat}"] .js-tbody-ipp`);
 
-            // helper nilai
-            const scoreForIpp = id => nloc((ACHS.find(x => Number(x.ipp_point_id) === Number(id))?.self_score) ?? 0);
-            const weightForIpp = id => {
-                const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id));
-                if (ex && ex.weight != null) return nloc(ex.weight);
-                const p = IPP_POINTS.find(pp => Number(pp.id) === Number(id));
-                return nloc(p?.weight ?? 0);
+            // ===================== Variabel lainnya (as existing) =====================
+            let PERMS = {
+                can_add: true,
+                can_edit: true,
+                can_delete: true,
+                can_recalc: true,
+                can_submit: true
             };
-            const statusForIpp = id => (ACHS.find(x => Number(x.ipp_point_id) === Number(id))?.status) || null;
+            let IPP_POINTS = [];
+            let ACHS = [];
 
-            const scoreForCustom = a => nloc(a.self_score ?? 0);
-            const weightForCustom = a => nloc(a.weight ?? 0);
-            const rowTotal = (Wpct, R) => (nloc(Wpct) / 100) * nloc(R);
+            let mdlDetail = new bootstrap.Modal(document.getElementById('modal-ipp-detail'));
+            let mdlAdd = new bootstrap.Modal(document.getElementById('modal-add-activity'));
 
+            // ===================== CAP utils =====================
+            function capFor(cat) {
+                const $it = $(`.accordion-item[data-cat="${cat}"]`);
+                return nloc($it.data('cap') || 0);
+            }
+
+            function totalWeightByCat(cat) {
+                let sum = 0;
+                IPP_POINTS.filter(p => (p.category || '') === cat).forEach(p => {
+                    const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
+                    sum += nloc(ex?.weight ?? p.weight ?? 0);
+                });
+                ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat).forEach(c => sum += nloc(c.weight ??
+                    0));
+                return sum;
+            }
+
+            function totalWeightAllCats() {
+                let sum = 0;
+                $('.accordion-item[data-cat]').each(function() {
+                    sum += totalWeightByCat(String($(this).data('cat')));
+                });
+                return sum;
+            }
+
+            function categoryTitle(key) {
+                const $item = $(`.accordion-item[data-cat="${key}"]`);
+                const title = $item.find('.accordion-button span:first').text().trim();
+                return title || key;
+            }
+
+            function wouldExceedCapOnEditIPP(p, newW) {
+                const cat = p.category || '';
+                const cap = capFor(cat);
+                const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
+                const oldW = nloc(ex?.weight ?? p.weight ?? 0);
+                const others = totalWeightByCat(cat) - oldW;
+                const newSum = others + nloc(newW);
+                return {
+                    exceed: newSum > cap + 1e-8,
+                    newSum,
+                    cap,
+                    cat
+                };
+            }
+
+            function wouldExceedCapOnEditCustom(a, newW) {
+                const cat = a.category || '';
+                const cap = capFor(cat);
+                const oldW = nloc(a.weight ?? 0);
+                const others = totalWeightByCat(cat) - oldW;
+                const newSum = others + nloc(newW);
+                return {
+                    exceed: newSum > cap + 1e-8,
+                    newSum,
+                    cap,
+                    cat
+                };
+            }
+
+            function wouldExceedCapOnAdd(cat, addW) {
+                const cap = capFor(cat);
+                const newSum = totalWeightByCat(cat) + nloc(addW);
+                return {
+                    exceed: newSum > cap + 1e-8,
+                    newSum,
+                    cap,
+                    cat
+                };
+            }
+
+            // ===================== UI render (ringkas, sama seperti versi kamu) =====================
             function statusBadgeHtml(achOrStatus) {
                 const status = (achOrStatus && typeof achOrStatus === 'object') ? (achOrStatus.status || null) : (
                     achOrStatus || null);
@@ -638,59 +665,54 @@
             function actionButtonsHtml() {
                 const btnDetail =
                     `<button class="btn btn-sm btn-edit btn-mini js-row-detail" aria-label="Detail"><i class="bi bi-pencil-square"></i> Detail</button>`;
-                const btnDelete = PERMS.can_delete ?
-                    `<button class="btn btn-sm btn-del btn-mini js-row-delete ms-1" aria-label="Hapus"><i class="bi bi-trash3"></i> Hapus</button>` :
-                    '';
+                const btnDelete =
+                    `<button class="btn btn-sm btn-del btn-mini js-row-delete ms-1" aria-label="Hapus"><i class="bi bi-trash3"></i> Hapus</button>`;
                 return `<span class="text-nowrap">${btnDetail}${btnDelete}</span>`;
             }
 
-            // render row (tambahkan data-status untuk strip warna kiri)
             function rowIPPHtml(p) {
                 const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id)) || null;
-                const score = scoreForIpp(p.id);
-                const weight = weightForIpp(p.id);
-                const total = rowTotal(weight, score);
+                const score = nloc(ex?.self_score ?? 0);
+                const weight = nloc(ex?.weight ?? p.weight ?? 0);
+                const total = (weight / 100) * score;
                 const st = (ex?.status || '').toString().toLowerCase();
-
                 return `<tr data-source="ipp" data-ipp-id="${p.id}" data-cat="${esc(p.category||'')}" data-status="${esc(st)}">
-                    <td>${esc(p.activity||'-')}</td>
-                    <td><div class="fw-semibold">${esc(p.target_one||'(tanpa judul)')}</div></td>
-                    <td>${fmt(weight)}%</td>
-                    <td>${fmt(score)}</td>
-                    <td>${fmt(total)}</td>
-                    <td>${statusBadgeHtml(ex)}</td>
-                    <td>${actionButtonsHtml()}</td>
-                </tr>`;
+            <td>${esc(p.activity||'-')}</td>
+            <td><div class="fw-semibold">${esc(p.target_one||'(tanpa judul)')}</div></td>
+            <td>${fmt(weight)}%</td>
+            <td>${fmt(score)}</td>
+            <td>${fmt(total)}</td>
+            <td>${statusBadgeHtml(ex)}</td>
+            <td>${actionButtonsHtml()}</td>
+        </tr>`;
             }
 
             function rowCustomHtml(a) {
                 const key = a.__key || a.id || '';
-                const score = scoreForCustom(a);
-                const weight = weightForCustom(a);
-                const total = rowTotal(weight, score);
+                const score = nloc(a.self_score ?? 0);
+                const weight = nloc(a.weight ?? 0);
+                const total = (weight / 100) * score;
                 const st = (a?.status || '').toString().toLowerCase();
-
                 return `<tr data-source="custom" data-ach-key="${esc(key)}" data-cat="${esc(a.category||'')}" data-status="${esc(st)}">
-                    <td>${esc(a.title||'(tanpa judul)')} <span class="ms-1 badge-src">Custom</span></td>
-                    <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
-                    <td>${fmt(weight)}%</td>
-                    <td>${fmt(score)}</td>
-                    <td>${fmt(total)}</td>
-                    <td>${statusBadgeHtml(a)}</td>
-                    <td>${actionButtonsHtml()}</td>
-                </tr>`;
+            <td>${esc(a.title||'(tanpa judul)')}</td>
+            <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
+            <td>${fmt(weight)}%</td>
+            <td>${fmt(score)}</td>
+            <td>${fmt(total)}</td>
+            <td>${statusBadgeHtml(a)}</td>
+            <td>${actionButtonsHtml()}</td>
+        </tr>`;
             }
 
-            // CAP badge
-            function totalWeightByCat(cat) {
-                let sum = 0;
-                IPP_POINTS.filter(p => (p.category || '') === cat).forEach(p => {
-                    const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
-                    sum += nloc(ex?.weight ?? p.weight ?? 0);
-                });
-                ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat).forEach(c => sum += nloc(c.weight ??
-                    0));
-                return sum;
+            function renderByCat(cat) {
+                const $tb = $tbody(cat);
+                const ippRows = IPP_POINTS.filter(p => (p.category || '') === cat);
+                const custRows = ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat);
+                let html = '';
+                if (ippRows.length) html += ippRows.map(rowIPPHtml).join('');
+                if (custRows.length) html += custRows.map(rowCustomHtml).join('');
+                if (!html) html = '<tr class="empty-row"><td colspan="7">Belum ada item.</td></tr>';
+                $tb.html(html);
             }
 
             function updateCapBadges() {
@@ -713,69 +735,7 @@
                     $badge.append(document.createTextNode(' ' + fmt(sum) + '% / ' + fmt(cap) + '%'));
                 });
             }
-
-            // Laporan CAP kategori (untuk validasi submit)
-            function getAllCategoriesMeta() {
-                return $('.accordion-item[data-cat][data-cap]').map(function() {
-                    return {
-                        key: String($(this).data('cat')),
-                        cap: nloc($(this).data('cap'))
-                    };
-                }).get();
-            }
-
-            function categoriesCapReport() {
-                const EPS = 0.0001;
-                return getAllCategoriesMeta().map(({
-                    key,
-                    cap
-                }) => {
-                    const sum = totalWeightByCat(key);
-                    let state = 'exact';
-                    if (sum > cap + EPS) state = 'over';
-                    else if (Math.abs(sum - cap) > EPS) state = 'under';
-                    return {
-                        key,
-                        cap,
-                        sum,
-                        ok: state === 'exact',
-                        state
-                    };
-                });
-            }
-
-            function catTitle(key) {
-                const $item = $(`.accordion-item[data-cat="${key}"]`);
-                const title = $item.find('.accordion-button span:first').text().trim();
-                return title || key;
-            }
-
-            function allCategoriesAtCap() {
-                return categoriesCapReport().every(r => r.ok);
-            }
-
-            function renderByCat(cat) {
-                const $tb = $tbody(cat);
-                const ippRows = IPP_POINTS.filter(p => (p.category || '') === cat);
-                const custRows = ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat);
-                let html = '';
-                if (ippRows.length) html += ippRows.map(rowIPPHtml).join('');
-                if (custRows.length) html += custRows.map(rowCustomHtml).join('');
-                if (!html) html = '<tr class="empty-row"><td colspan="7">Belum ada item.</td></tr>';
-                $tb.html(html);
-            }
-
-            function renderAll() {
-                $('[data-cat]').each(function() {
-                    renderByCat($(this).data('cat'));
-                });
-                recalcTotals();
-                updateCapBadges();
-                applyPermissions();
-                updateSubmitButtons();
-            }
-
-            // totals
+            // totals & bars (optional)
             function recalcTotals() {
                 let total = 0,
                     sumR = 0;
@@ -788,16 +748,23 @@
                     total += (nloc(c.weight ?? 0) / 100) * nloc(c.self_score ?? 0);
                     sumR += nloc(c.self_score ?? 0);
                 });
-                $tAch.text(fmt(total));
-                $tGnd.text(fmt(total));
-                $tGScore.text(fmt(sumR));
+                $('#total-achievement,#total-grand').text(fmt(total));
+                $('#total-grand-score').text(fmt(sumR));
                 const scale = v => Math.max(0, Math.min(100, (v / 10) * 100));
-                $barAch.css('width', scale(total) + '%');
-                $barG.css('width', scale(total) + '%');
-                $barGS.css('width', Math.max(0, Math.min(100, (sumR / 10) * 100)) + '%');
+                $('#bar-ach,#bar-grand').css('width', scale(total) + '%');
+                $('#bar-gscore').css('width', Math.max(0, Math.min(100, (sumR / 10) * 100)) + '%');
             }
 
-            // Submit button rules
+            function renderAll() {
+                $('[data-cat]').each(function() {
+                    renderByCat($(this).data('cat'));
+                });
+                recalcTotals();
+                updateCapBadges();
+                updateSubmitButtons();
+            }
+
+            // ===================== Permissions & submit hint =====================
             function areAllPointsDraftStrict() {
                 if (!Array.isArray(ACHS)) return false;
                 const everyIPPHasDraft = IPP_POINTS.every(p => {
@@ -805,45 +772,37 @@
                     return !!ex && String(ex.status || '').toLowerCase() === 'draft';
                 });
                 if (!everyIPPHasDraft) return false;
-                const allCustomDraft = ACHS.filter(a => !a.ipp_point_id)
-                    .every(a => String(a.status || '').toLowerCase() === 'draft');
+                const allCustomDraft = ACHS.filter(a => !a.ipp_point_id).every(a => String(a.status || '')
+                    .toLowerCase() === 'draft');
                 return allCustomDraft;
+            }
+
+            function allCategoriesAtCap() {
+                const EPS = 1e-8;
+                return $('.accordion-item[data-cat][data-cap]').toArray().every(el => {
+                    const $el = $(el);
+                    const cat = String($el.data('cat'));
+                    const cap = nloc($el.data('cap'));
+                    const sum = totalWeightByCat(cat);
+                    return Math.abs(sum - cap) <= EPS;
+                });
             }
 
             function updateSubmitButtons() {
                 const $btns = $('#btn-save, #btn-save-bottom');
-                if (!PERMS.can_submit) {
-                    $btns.addClass('hidden').prop('disabled', true);
-                    return;
-                }
-                $btns.removeClass('hidden');
-
-                const allDraft = areAllPointsDraftStrict();
-                const capsOk = allCategoriesAtCap();
-                const enabled = allDraft && capsOk;
-
-                $btns.prop('disabled', !enabled);
-
-                if (!allDraft && !capsOk) {
-                    $btns.attr('title', 'Semua poin harus Draft dan seluruh kategori harus pas dengan CAP.');
-                } else if (!allDraft) {
-                    $btns.attr('title', 'Semua poin harus berstatus Draft.');
-                } else if (!capsOk) {
-                    $btns.attr('title', 'Seluruh kategori harus pas sesuai CAP.');
-                } else {
-                    $btns.removeAttr('title');
-                }
+                // Tombol tetap terlihat, tapi jika sudah submitted, berikan title dan blok saat klik
+                $btns.prop('disabled', false).removeClass('hidden');
+                const hints = [];
+                if (!areAllPointsDraftStrict()) hints.push('Semua poin sebaiknya berstatus Draft.');
+                if (!allCategoriesAtCap()) hints.push('Seluruh kategori sebaiknya pas sesuai CAP.');
+                if (Math.abs(totalWeightAllCats() - 100) > 1e-8) hints.push(
+                    'Total seluruh kategori sebaiknya tepat 100%.');
+                if (isLockedAfterSubmit()) hints.unshift('IPA sudah submitted (terkunci).');
+                if (hints.length) $btns.attr('title', hints.join(' '));
+                else $btns.removeAttr('title');
             }
 
-            // Permissions dari backend
-            function applyPermissions() {
-                $('#btn-add-activity').toggle(!!PERMS.can_add);
-                $('#btn-recalc').toggle(!!PERMS.can_recalc);
-                $('#btn-save, #btn-save-bottom').toggle(!!PERMS.can_submit);
-                $('#ippd-btn-save').prop('disabled', !PERMS.can_edit);
-            }
-
-            // LOAD
+            // ===================== LOAD =====================
             function initLoad() {
                 $('.js-tbody-ipp').html('<tr class="empty-row"><td colspan="7">Memuat...</td></tr>');
                 $.getJSON(URL_DATA).done(function(res) {
@@ -852,7 +811,7 @@
                         return;
                     }
                     const d = res.data || {};
-
+                    HEADER_STATUS = String(d.header?.status || 'draft');
                     IPP_POINTS = Array.isArray(d.ipp_points) ? d.ipp_points.map(p => ({
                         id: p.id,
                         activity: p.activity || p.title,
@@ -861,7 +820,6 @@
                         weight: nloc(p.weight || 0),
                         category: p.category
                     })) : [];
-
                     ACHS = Array.isArray(d.achievements) ? d.achievements.map(x => ({
                         id: x.id || null,
                         ipp_point_id: x.ipp_point_id || null,
@@ -873,36 +831,34 @@
                         self_score: nloc(x.self_score || 0),
                         status: x.status || null
                     })) : [];
-
-                    PERMS = d.permissions || derivePermsFromHeader(d.header?.status);
                     renderAll();
                 }).fail(function() {
                     toast('Error server saat memuat.', 'danger');
                 });
             }
 
-            function derivePermsFromHeader(headerStatus) {
-                const s = String(headerStatus || 'draft').toLowerCase();
-                if (['submitted', 'checked', 'approved'].includes(s)) {
-                    return {
-                        can_add: false,
-                        can_edit: false,
-                        can_delete: false,
-                        can_recalc: false,
-                        can_submit: false
-                    };
-                }
-                return {
-                    can_add: true,
-                    can_edit: true,
-                    can_delete: true,
-                    can_recalc: true,
-                    can_submit: true
-                };
+            // ===================== Keyboard Enter untuk modal =====================
+            function bindEnterToSave(modalSelector, saveBtnSelector) {
+                $(document).on('keydown', modalSelector, function(e) {
+                    const isEnter = (e.key === 'Enter' || e.keyCode === 13);
+                    const $t = $(e.target);
+                    const isTextarea = $t.is('textarea');
+                    const isButton = $t.is('button, [type="button"], [type="submit"]');
+                    if (isEnter && !e.shiftKey && !isTextarea && !isButton) {
+                        e.preventDefault();
+                        $(saveBtnSelector).trigger('click');
+                    }
+                });
             }
+            bindEnterToSave('#modal-ipp-detail', '#ippd-btn-save');
+            bindEnterToSave('#modal-add-activity', '#add-btn-save');
 
-            // DETAIL
+            // ===================== DETAIL (open) — guard submitted =====================
             $(document).on('click', '.js-row-detail', function() {
+                if (isLockedAfterSubmit()) {
+                    toast(MSG_SUBMITTED_LOCK, 'warning');
+                    return;
+                }
                 const $tr = $(this).closest('tr');
                 const source = ($tr.data('source') || '').toString();
                 $('#ippd-source').val(source);
@@ -942,29 +898,44 @@
                     $('#ippd-score').val(nloc(a.self_score || 0));
                     $('#ippd-achv').val(a.one_year_achievement || '');
                 }
-                $('#ippd-btn-save').prop('disabled', !PERMS.can_edit);
                 mdlDetail.show();
             });
 
-            // DETAIL save
+            // ===================== DETAIL (save) — tetap jaga CAP, tapi blok jika submitted =====================
             $('#ippd-btn-save').on('click', function() {
-                if (!PERMS.can_edit) {
-                    toast('Tidak bisa mengedit pada status saat ini.', 'warning');
+                if (isLockedAfterSubmit()) {
+                    toast(MSG_SUBMITTED_LOCK, 'warning');
                     return;
                 }
                 const source = ($('#ippd-source').val() || '').toString();
 
                 if (source === 'ipp') {
                     const id = Number($('#ippd-id').val());
+                    const p = IPP_POINTS.find(x => Number(x.id) === Number(id));
+                    if (!p) {
+                        toast('Data tidak ditemukan.', 'danger');
+                        return;
+                    }
+
+                    const category = p.category || '';
                     const W = nloc($('#ippd-weight').val());
                     const R = nloc($('#ippd-score').val());
                     const target = ($('#ippd-target').val() || '').trim();
                     const ach = ($('#ippd-achv').val() || '').trim();
 
+                    const pred = wouldExceedCapOnEditIPP(p, W);
+                    if (pred.exceed) {
+                        toast(`${categoryTitle(category)} melebihi CAP: ${fmt(pred.newSum)}% / ${fmt(pred.cap)}%`,
+                            'danger');
+                        return;
+                    }
+
                     const payload = {
                         achievements: [{
                             id: (ACHS.find(x => Number(x.ipp_point_id) === id)?.id) || null,
                             ipp_point_id: id,
+                            category,
+                            title: p.activity || p.title || '',
                             one_year_target: target,
                             weight: W,
                             self_score: R,
@@ -986,8 +957,16 @@
                             toast('Tersimpan.', 'success');
                             initLoad();
                             mdlDetail.hide();
-                        } else toast(res?.message || 'Gagal menyimpan.', 'warning');
-                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
+                        } else {
+                            const msgs = extractBackendErrors(res);
+                            if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
+                            else toast('Gagal menyimpan.', 'warning');
+                        }
+                    }).fail(xhr => {
+                        const msgs = extractBackendErrors(xhr.responseJSON || {});
+                        if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'danger'));
+                        else toast('Error server.', 'danger');
+                    });
 
                 } else {
                     const key = ($('#ippd-ach-key').val() || '').toString();
@@ -1004,11 +983,27 @@
                     const R = nloc($('#ippd-score').val());
                     const ach = ($('#ippd-achv').val() || '').trim();
 
+                    if (!title) {
+                        toast('Activity wajib diisi.', 'warning');
+                        return;
+                    }
+                    if (!target) {
+                        toast('One Year Target wajib diisi.', 'warning');
+                        return;
+                    }
+
+                    const pred = wouldExceedCapOnEditCustom(a, W);
+                    if (pred.exceed) {
+                        toast(`${categoryTitle(a.category)} melebihi CAP: ${fmt(pred.newSum)}% / ${fmt(pred.cap)}%`,
+                            'danger');
+                        return;
+                    }
+
                     const payload = {
                         achievements: [{
                             id: a.id || null,
                             category: a.category,
-                            title: title,
+                            title,
                             one_year_target: target,
                             weight: W,
                             self_score: R,
@@ -1030,14 +1025,25 @@
                             toast('Custom activity diperbarui.', 'success');
                             initLoad();
                             mdlDetail.hide();
-                        } else toast(res?.message || 'Gagal menyimpan.', 'warning');
-                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
+                        } else {
+                            const msgs = extractBackendErrors(res);
+                            if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
+                            else toast('Gagal menyimpan.', 'warning');
+                        }
+                    }).fail(xhr => {
+                        const msgs = extractBackendErrors(xhr.responseJSON || {});
+                        if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'danger'));
+                        else toast('Error server.', 'danger');
+                    });
                 }
             });
 
-            // DELETE
+            // ===================== DELETE — selalu cek submitted lalu blok =====================
             $(document).on('click', '.js-row-delete', function() {
-                if (!PERMS.can_delete) return;
+                if (isLockedAfterSubmit()) {
+                    toast(MSG_SUBMITTED_LOCK, 'warning');
+                    return;
+                }
                 const $tr = $(this).closest('tr');
                 const source = ($tr.data('source') || '').toString();
                 if (!confirm('Hapus item ini?')) return;
@@ -1095,9 +1101,12 @@
                 }
             });
 
-            // ADD open
+            // ===================== ADD (open) — guard submitted =====================
             $('#btn-add-activity').on('click', function() {
-                if (!PERMS.can_add) return;
+                if (isLockedAfterSubmit()) {
+                    toast(MSG_SUBMITTED_LOCK, 'warning');
+                    return;
+                }
                 $('#add-cat').val('');
                 $('#add-activity').val('');
                 $('#add-target').val('');
@@ -1107,10 +1116,12 @@
                 mdlAdd.show();
             });
 
-            // ADD save
+            // ===================== ADD (save) — guard submitted + CAP =====================
             $('#add-btn-save').on('click', function() {
-                if (!PERMS.can_add) return;
-
+                if (isLockedAfterSubmit()) {
+                    toast(MSG_SUBMITTED_LOCK, 'warning');
+                    return;
+                }
                 const cat = ($('#add-cat').val() || '').toString();
                 const tit = ($('#add-activity').val() || '').trim();
                 const tgt = ($('#add-target').val() || '').trim();
@@ -1128,6 +1139,13 @@
                 }
                 if (!tgt) {
                     toast('One Year Target wajib diisi.', 'warning');
+                    return;
+                }
+
+                const pred = wouldExceedCapOnAdd(cat, W);
+                if (pred.exceed) {
+                    toast(`${categoryTitle(cat)} melebihi CAP: ${fmt(pred.newSum)}% / ${fmt(pred.cap)}%`,
+                        'danger');
                     return;
                 }
 
@@ -1153,30 +1171,44 @@
                     data: payload,
                     dataType: 'json'
                 }).done(function(res) {
-                    toast('Custom activity ditambahkan.', 'success');
-                    initLoad();
-                    mdlAdd.hide();
-                }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
+                    if (res && res.ok) {
+                        toast('Custom activity ditambahkan.', 'success');
+                        initLoad();
+                        mdlAdd.hide();
+                    } else {
+                        const msgs = extractBackendErrors(res);
+                        if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
+                        else toast('Gagal menambahkan.', 'warning');
+                    }
+                }).fail(xhr => {
+                    const msgs = extractBackendErrors(xhr.responseJSON || {});
+                    if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'danger'));
+                    else toast('Error server.', 'danger');
+                });
             });
 
-            // Submit All
+            // ===================== SUBMIT — blok jika sudah submitted =====================
             function submitAll() {
-                if (!PERMS.can_submit) {
-                    toast('Tidak dapat submit pada status saat ini.', 'warning');
+                if (isLockedAfterSubmit()) {
+                    toast(MSG_SUBMITTED_LOCK, 'warning');
                     return;
                 }
 
-                const allDraft = areAllPointsDraftStrict();
-                if (!allDraft) {
-                    toast('Semua poin harus berstatus Draft sebelum bisa Submit.', 'warning');
-                    return;
-                }
-
-                const capIssues = categoriesCapReport().filter(r => !r.ok);
-                if (capIssues.length) {
-                    const msg = 'Cap kategori belum pas: ' + capIssues.map(i =>
-                        `${catTitle(i.key)} (${fmt(i.sum)}% / ${fmt(i.cap)}%)`).join(', ');
-                    toast(msg, 'warning');
+                // Validasi 100% & tiap kategori = CAP
+                const EPS = 1e-8;
+                const issues = [];
+                $('.accordion-item[data-cat][data-cap]').each(function() {
+                    const cat = String($(this).data('cat'));
+                    const cap = nloc($(this).data('cap'));
+                    const sum = totalWeightByCat(cat);
+                    if (Math.abs(sum - cap) > EPS) issues.push(
+                        `${categoryTitle(cat)} harus ${fmt(cap)}% (sekarang ${fmt(sum)}%)`);
+                });
+                const grand = totalWeightAllCats();
+                if (Math.abs(grand - 100) > EPS) issues.unshift(
+                    `Total seluruh kategori harus 100% (sekarang ${fmt(grand)}%)`);
+                if (issues.length) {
+                    issues.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
                     return;
                 }
 
@@ -1209,16 +1241,27 @@
                     dataType: 'json'
                 }).done(function(res) {
                     if (res && res.ok) {
-                        toast('Berhasil submit.', 'success');
+                        toast(res.message || 'Berhasil submit.', 'success');
                         initLoad();
-                    } else toast(res?.message || 'Gagal submit.', 'warning');
-                }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
+                    } else {
+                        const msgs = extractBackendErrors(res);
+                        if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
+                        else toast('Gagal submit.', 'warning');
+                    }
+                }).fail(function(xhr) {
+                    const msgs = extractBackendErrors(xhr.responseJSON || {});
+                    if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'danger'));
+                    else toast(xhr.statusText || 'Error server.', 'danger');
+                });
             }
             $('#btn-save, #btn-save-bottom').off('click').on('click', submitAll);
 
-            // Recalc
+            // ===================== Recalc =====================
             $('#btn-recalc').on('click', function() {
-                if (!PERMS.can_recalc) return;
+                if (isLockedAfterSubmit()) {
+                    toast(MSG_SUBMITTED_LOCK, 'warning');
+                    return;
+                }
                 $.post({
                     url: URL_RECALC,
                     headers: {
@@ -1227,16 +1270,15 @@
                     dataType: 'json'
                 }).done(function(res) {
                     if (res && res.ok && res.totals) {
-                        $tAch.text(fmt(res.totals.achievement_total));
-                        $tGnd.text(fmt(res.totals.achievement_total));
-                        $tGScore.text(fmt(res.totals.grand_score || 0));
+                        $('#total-achievement,#total-grand').text(fmt(res.totals.achievement_total));
+                        $('#total-grand-score').text(fmt(res.totals.grand_score || 0));
                         updateCapBadges();
                         toast('Recalc selesai.');
                     }
                 });
             });
 
-            // buka semua accordion (UX: biar langsung kelihatan)
+            // buka semua accordion
             $('#accordionIPA .accordion-collapse').each(function() {
                 this.removeAttribute('data-bs-parent');
                 this.classList.add('show');
