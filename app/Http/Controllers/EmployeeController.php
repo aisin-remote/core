@@ -108,10 +108,11 @@ class EmployeeController extends Controller
 
     public function index(Request $request, $company = null)
     {
-        $title        = 'Employee';
-        $user         = auth()->user();
-        $search       = $request->input('search');
-        $filter       = $request->input('filter', 'all');  // Menambahkan filter, default 'all'
+        $title  = 'Employee';
+        $user   = auth()->user();
+        $search = $request->input('search'); // opsional: untuk prefill input
+        $filter = $request->input('filter', 'all');
+
         $allPositions = [
             'President',
             'VPD',
@@ -127,141 +128,68 @@ class EmployeeController extends Controller
         ];
 
         $rawPosition     = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
-            :  $rawPosition;
+        $currentPosition = preg_replace('/^Act\s+/', '', $rawPosition);
 
-        // Cari index posisi saat ini
         $positionIndex = array_search($currentPosition, $allPositions);
-
-        // Fallback jika tidak ditemukan
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
-        }
-
-        // Ambil posisi di bawahnya (tanpa posisi user)
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            :  [];
+        if ($positionIndex === false) $positionIndex = array_search('Operator', $allPositions);
+        $visiblePositions = array_slice($allPositions, $positionIndex);
 
         if ($user->isHRDorDireksi()) {
-            // HRD bisa mencari berdasarkan beberapa kolom, termasuk company_name
-            $employees = Employee::with([
+            $query = Employee::with([
                 'subSection.section.department',
                 'leadingSection.department',
                 'leadingDepartment.division'
             ])
-                ->when($company, fn($query) => $query->where('company_name', $company))  // Filter berdasarkan perusahaan yang sedang diakses
+                ->when($company, fn($q) => $q->where('company_name', $company))
                 ->where(function ($q) use ($visiblePositions) {
                     foreach ($visiblePositions as $pos) {
                         $q->orWhere('position', $pos)
                             ->orWhere('position', 'like', "Act %{$pos}");
                     }
                 })
-                ->when($search, function ($query, $search) {
-                    $query->where(function ($q) use ($search) {
-                        $q->where('name', 'like', "%{$search}%")
-                            ->orWhere('npk', 'like', "%{$search}%")
-                            ->orWhere('company_name', 'like', "%{$search}%");  // Pencarian di seluruh kolom
-                    });
-                })
-                ->when($filter && $filter != 'all', function ($query) use ($filter) {
-                    $query->where(function ($q) use ($filter) {
-                        $q->where('position', $filter)
+                ->when($filter && $filter !== 'all', function ($q) use ($filter) {
+                    $q->where(function ($qq) use ($filter) {
+                        $qq->where('position', $filter)
                             ->orWhere('position', 'like', "Act %{$filter}");
                     });
                 })
+                ->orderBy('name');
 
-                ->get();
+            $employees = $query->get();
         } else {
-            // Untuk user biasa (misalnya Supervisor), pencarian hanya berlaku untuk 'company_name' yang terkait
             $employee = Employee::with([
                 'subSection.section.department.division.plant',
                 'leadingSection.department.division.plant',
                 'leadingDepartment.division.plant'
-            ])
-                ->where('user_id', $user->id)
-                ->first();
-
+            ])->where('user_id', $user->id)->first();
 
             if (!$employee) {
                 $employees = collect();
             } else {
                 $query = $this->getSubordinatesFromStructure($employee);
 
-                if ($query instanceof \Illuminate\Database\Eloquent\Builder) {
-                    // Pastikan hanya pencarian berdasarkan company_name yang relevan
-                    if ($search) {
-                        $query->where(function ($q) use ($search, $employee) {
-                            $q->where('company_name', $employee->company_name)  // Batasi pencarian hanya dalam company_name yang sama dengan user
-                                ->where(function ($q2) use ($search) {
-                                    $q2->where('name', 'like', "%{$search}%")
-                                        ->orWhere('npk', 'like', "%{$search}%");
-                                });
-                        });
-                    }
-
-                    // Filter posisi jika diperlukan
-                    if ($filter && $filter != 'all') {
-                        $query->where(function ($q) use ($filter) {
-                            $q->where('position', $filter)
-                                ->orWhere('position', 'like', "Act %{$filter}");
-                        });
-                    }
-
-
-                    // Paginate hasil
-                    $employees = $query->paginate(10)->appends([
-                        'search'  => $search,
-                        'filter'  => $filter,
-                        'company' => $company
-                    ]);
-                } else {
+                if (!($query instanceof \Illuminate\Database\Eloquent\Builder)) {
                     $employees = collect();
+                } else {
+                    $query->where('company_name', $employee->company_name)
+                        ->when($filter && $filter !== 'all', function ($q) use ($filter) {
+                            $q->where(function ($qq) use ($filter) {
+                                $qq->where('position', $filter)
+                                    ->orWhere('position', 'like', "Act %{$filter}");
+                            });
+                        })
+                        ->orderBy('name');
+
+                    $employees = $query->get();
                 }
             }
         }
 
-        $allPositions = [
-            'President',
-            'Direktur',
-            'GM',
-            'Manager',
-            'Coordinator',
-            'Section Head',
-            'Supervisor',
-            'Leader',
-            'JP',
-            'Operator',
-        ];
-
-        $rawPosition     = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
-            :  $rawPosition;
-
-        // Cari index posisi saat ini
-        $positionIndex = array_search($currentPosition, $allPositions);
-
-        // Fallback jika tidak ditemukan
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
-        }
-
-        // Ambil posisi di bawahnya (tanpa posisi user)
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            :  [];
-
-        // Hilangkan 'Operator' jika posisi user ada 'President'
         if ($currentPosition === 'President') {
-            $visiblePositions = array_filter($visiblePositions, function ($pos) {
-                return $pos !== 'Operator' && $pos !== 'President';
-            });
-            $visiblePositions = array_values($visiblePositions);  // reset index
+            $visiblePositions = array_values(array_filter($visiblePositions, fn($p) => $p !== 'Operator' && $p !== 'President'));
         }
 
-        return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions'));
+        return view('website.employee.index', compact('employees', 'title', 'filter', 'company', 'visiblePositions', 'search'));
     }
 
     public function status($id)
