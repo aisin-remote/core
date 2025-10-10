@@ -457,6 +457,7 @@ class Employee extends Model
             'act manager'      => 'manager',
             'act supervisor'   => 'supervisor',
             'act leader'       => 'leader',
+            'act direktur'     => 'direktur',
             'staff'            => 'leader',
             'act jp'           => 'jp',
             'act gm'           => 'gm',

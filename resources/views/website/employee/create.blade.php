@@ -153,7 +153,7 @@
                                         data-placeholder="Select Position..."
                                         class="form-select form-select-lg fw-semibold">
                                         <option value="">Select Position</option>
-                                        <option data-kt-flag="flags/afghanistan.svg" value="Director">Director</option>
+                                        <option data-kt-flag="flags/afghanistan.svg" value="Direktur">Direktur</option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="GM">General Manager
                                         </option>
                                         <option data-kt-flag="flags/afghanistan.svg" value="Act GM">Act General Manager
@@ -323,7 +323,7 @@
                         name = 'division_id';
                         options = divisions;
                         break;
-                    case 'Director':
+                    case 'Direktur':
                         label = 'Plant';
                         name = 'plant_id';
                         options = plants;

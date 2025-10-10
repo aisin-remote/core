@@ -237,6 +237,9 @@ class EmployeeController extends Controller
     {
         try {
             DB::beginTransaction();
+
+            Log::info('Employee store started', ['data' => $request->all()]);
+
             // Validasi
             $validator = Validator::make($request->all(), [
                 'npk'              => 'required|string|max:255|unique:employees,npk',
@@ -275,6 +278,7 @@ class EmployeeController extends Controller
             ]);
 
             if ($validator->fails()) {
+                Log::warning('Validation failed', ['errors' => $validator->errors()]);
                 if ($request->ajax()) {
                     return response()->json(['errors' => $validator->errors()], 422);
                 }
@@ -285,11 +289,12 @@ class EmployeeController extends Controller
 
             if ($request->hasFile('photo')) {
                 $validatedData['photo'] = $request->file('photo')->store('employee_photos', 'public');
+                Log::info('Photo uploaded', ['path' => $validatedData['photo']]);
             }
 
             $validatedData['working_period'] = Carbon::parse($validatedData['aisin_entry_date'])->diffInYears(Carbon::now());
 
-            // Supervisor (atasan langsung) berdasarkan hirarki
+            // Supervisor (atasan langsung)
             $supervisorId = null;
             if ($validatedData['sub_section_id'] ?? false) {
                 $supervisorId = DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])->value('leader_id');
@@ -304,10 +309,11 @@ class EmployeeController extends Controller
             }
 
             $validatedData['supervisor_id'] = $supervisorId;
+            Log::info('Supervisor determined', ['supervisor_id' => $supervisorId]);
 
             $inputEmail = $validatedData['email'];
             if (User::where('email', $inputEmail)->exists()) {
-                // Balikkan error 422 khusus 'email'
+                Log::warning('Duplicate email detected', ['email' => $inputEmail]);
                 if ($request->ajax()) {
                     return response()->json([
                         'errors' => ['email' => ['This email is already used. Please enter a different email address.']]
@@ -318,6 +324,7 @@ class EmployeeController extends Controller
 
             // Buat karyawan
             $employee = Employee::create($validatedData);
+            Log::info('Employee created', ['employee_id' => $employee->id]);
 
             // Simpan pendidikan
             foreach ($request->level ?? [] as $i => $level) {
@@ -346,52 +353,52 @@ class EmployeeController extends Controller
                 }
             }
 
-            // Simpan ke struktur sesuai posisi
+            // Mapping posisi ke struktur organisasi
             $pos = strtolower($validatedData['position']);
+            Log::info('Employee position detected', ['position' => $pos]);
 
-            // Mapping posisi ke entitas dan kolom yang perlu diupdate
             $roleMappings = [
                 'sub_section' => [
                     'roles'  => ['act jp', 'operator', 'jp'],
-                    'update' => fn()                         => $employee->update([
+                    'update' => fn() => $employee->update([
                         'sub_section_id' => $validatedData['sub_section_id'] ?? null,
                     ]),
                 ],
                 'sub_section_leader' => [
                     'roles'  => ['act leader', 'leader'],
-                    'update' => fn()                     => $validatedData['sub_section_id'] &&
+                    'update' => fn() => $validatedData['sub_section_id'] &&
                         DB::table('sub_sections')->where('id', $validatedData['sub_section_id'])
                         ->update(['leader_id' => $employee->id]),
                 ],
                 'section' => [
                     'roles'  => ['act supervisor', 'act section head', 'supervisor', 'section head'],
-                    'update' => fn()                                                                 => $validatedData['section_id'] &&
+                    'update' => fn() => $validatedData['section_id'] &&
                         DB::table('sections')->where('id', $validatedData['section_id'])
                         ->update(['supervisor_id' => $employee->id]),
                 ],
                 'department' => [
                     'roles'  => ['act manager', 'act coordinator', 'manager', 'coordinator'],
-                    'update' => fn()                                                         => $validatedData['department_id'] &&
+                    'update' => fn() => $validatedData['department_id'] &&
                         DB::table('departments')->where('id', $validatedData['department_id'])
                         ->update(['manager_id' => $employee->id]),
                 ],
                 'division' => [
                     'roles'  => ['act gm', 'gm'],
-                    'update' => fn()             => $validatedData['division_id'] &&
+                    'update' => fn() => $validatedData['division_id'] &&
                         DB::table('divisions')->where('id', $validatedData['division_id'])
                         ->update(['gm_id' => $employee->id]),
                 ],
                 'plant' => [
                     'roles'  => ['director'],
-                    'update' => fn()         => $validatedData['plant_id'] &&
+                    'update' => fn() => $validatedData['plant_id'] &&
                         DB::table('plants')->where('id', $validatedData['plant_id'])
                         ->update(['director_id' => $employee->id]),
                 ],
             ];
 
-            // Jalankan update berdasarkan role
-            foreach ($roleMappings as $map) {
+            foreach ($roleMappings as $key => $map) {
                 if (in_array($pos, $map['roles'])) {
+                    Log::info("Updating hierarchy for role: {$key}");
                     $map['update']();
                     break;
                 }
@@ -420,10 +427,13 @@ class EmployeeController extends Controller
                     'password_changed_at' => null
                 ]);
                 $employee->update(['user_id' => $user->id]);
+                Log::info('User account created for employee', ['user_id' => $user->id]);
             }
 
             DB::commit();
-            // Jika AJAX, balas JSON success (tanpa refresh)
+
+            Log::info('Employee store transaction committed successfully', ['employee_id' => $employee->id]);
+
             if ($request->ajax()) {
                 return response()->json([
                     'message'      => 'Employee added successfully!',
@@ -435,6 +445,13 @@ class EmployeeController extends Controller
                 ->with('success', 'Employee added successfully!');
         } catch (\Exception $e) {
             DB::rollBack();
+
+            Log::error('Error while storing employee', [
+                'message' => $e->getMessage(),
+                'trace'   => $e->getTraceAsString(),
+                'input'   => $request->all(),
+            ]);
+
             return redirect()->route('employee.master.index', ['company' => $request->input('company_name')])
                 ->with('error', 'Error Message: ' . $e->getMessage());
         }
@@ -827,7 +844,7 @@ class EmployeeController extends Controller
                     'act leader'       => 'leader',
                     'act jp'           => 'jp',
                     'act gm'           => 'gm',
-                    'act director'     => 'director',
+                    'act direktur'     => 'director',
                 ];
 
                 $promotionPaths = [
@@ -910,7 +927,7 @@ class EmployeeController extends Controller
                         },
                     ],
                     'plant' => [
-                        'roles'  => ['act director', 'director'],
+                        'roles'  => ['act direktur', 'director', 'direktur'],
                         'update' => function () use ($validatedData, $employee) {
                             if (!empty($validatedData['plant_id'])) {
                                 DB::table('plants')->where('id', $validatedData['plant_id'])
