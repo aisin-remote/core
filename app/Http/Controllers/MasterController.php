@@ -68,8 +68,8 @@ class MasterController extends Controller
 
         $allPositions = [
             'President',
+            'VPD',
             'Direktur',
-            'Act Director',
             'GM',
             'Act GM',
             'Manager',
@@ -82,23 +82,29 @@ class MasterController extends Controller
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
-            : $rawPosition;
 
-        // Cari index posisi saat ini
-        $positionIndex = array_search($currentPosition, $allPositions);
+        $visiblePositions = [];
 
-        // Fallback jika tidak ditemukan
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
+        if ($user->isHRDorDireksi()) {
+            $visiblePositions = $allPositions;
+        } else {
+
+            $currentPosition = Str::contains($rawPosition, 'Act ')
+                ? trim(str_replace('Act', '', $rawPosition))
+                : $rawPosition;
+
+            // Cari index posisi saat ini
+            $positionIndex = array_search($currentPosition, $allPositions);
+            // Fallback jika tidak ditemukan
+            if ($positionIndex === false) {
+                $positionIndex = array_search('Operator', $allPositions);
+            }
+
+            // Ambil posisi di bawahnya (tanpa posisi user)
+            $visiblePositions = $positionIndex !== false
+                ? array_slice($allPositions, $positionIndex)
+                : [];
         }
-
-        // Ambil posisi di bawahnya (tanpa posisi user)
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            : [];
-
 
         return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company', 'search', 'visiblePositions'));
     }
