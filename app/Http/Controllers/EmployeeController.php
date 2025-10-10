@@ -110,7 +110,7 @@ class EmployeeController extends Controller
     {
         $title  = 'Employee';
         $user   = auth()->user();
-        $search = $request->input('search'); // opsional: untuk prefill input
+        $search = $request->input('search');
         $filter = $request->input('filter', 'all');
 
         $allPositions = [
@@ -127,12 +127,21 @@ class EmployeeController extends Controller
             'Operator',
         ];
 
-        $rawPosition     = $user->employee->position ?? 'Operator';
-        $currentPosition = preg_replace('/^Act\s+/', '', $rawPosition);
 
-        $positionIndex = array_search($currentPosition, $allPositions);
-        if ($positionIndex === false) $positionIndex = array_search('Operator', $allPositions);
-        $visiblePositions = array_slice($allPositions, $positionIndex);
+        $rawPosition = $user->employee->position ?? 'Operator';
+        $currentPosition = Str::contains($rawPosition, 'Act ')
+            ? trim(str_replace('Act', '', $rawPosition))
+            : $rawPosition;
+
+        $visiblePositions = [];
+        if ($user->isHRDorDireksi()) {
+            $visiblePositions = $allPositions;
+        } else {
+
+            $positionIndex = array_search($currentPosition, $allPositions);
+            if ($positionIndex === false) $positionIndex = array_search('Operator', $allPositions);
+            $visiblePositions = array_slice($allPositions, $positionIndex);
+        }
 
         if ($user->isHRDorDireksi()) {
             $query = Employee::with([
