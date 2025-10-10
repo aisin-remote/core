@@ -253,6 +253,14 @@
                 return;
             }
 
+            const selector = '#table-section';
+
+            // Jika sudah jadi DataTable, jangan init ulang
+            if ($.fn.DataTable.isDataTable(selector)) {
+                console.debug('DataTable sudah diinit: skip.');
+                return;
+            }
+
             // Inisialisasi DataTable
             $('#table-section').DataTable({
                 responsive: true,
