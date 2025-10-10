@@ -554,6 +554,9 @@ class IcpController extends Controller
         $steps = IcpApprovalStep::with(['icp.employee', 'icp.steps'])
             ->whereIn('role', $rolesToMatch)
             ->where('status', 'pending')
+            ->whereHas('icp', function ($q) {
+                $q->where('status', '!=', 4);
+            })
             ->orderBy('step_order')
             ->get()
             ->filter(function ($s) {
@@ -792,7 +795,6 @@ class IcpController extends Controller
     {
         $owner = $icp->employee()->first();
         $chain = ApprovalHelper::expectedChainForEmployee($owner);
-
         $icp->steps()->delete();
         foreach ($chain as $i => $s) {
             IcpApprovalStep::create([
