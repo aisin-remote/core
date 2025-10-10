@@ -102,77 +102,10 @@ class IcpController extends Controller
     {
         $title  = 'Employee ICP';
         $user   = auth()->user();
-        $search = $request->input('search');
+        $search = $request->input('search');               // diteruskan ke querystring agar tab/URL konsisten
         $filter = $request->input('filter', 'all');
 
-        if ($user->isHRDorDireksi()) {
-            // HRD & Direksi melihat semua, + FILTER posisi (jika ada)
-            $icps = Icp::with('employee')
-                ->when($company, function ($q) use ($company) {
-                    $q->whereHas('employee', fn($e) => $e->where('company_name', $company));
-                })
-                ->when($search, function ($q) use ($search) {
-                    $q->whereHas('employee', function ($e) use ($search) {
-                        $e->where(function ($qq) use ($search) {
-                            $qq->where('name', 'like', "%{$search}%")
-                                ->orWhere('npk', 'like', "%{$search}%")
-                                ->orWhere('company_name', 'like', "%{$search}%");
-                        });
-                    });
-                })
-                ->when($filter && $filter !== 'all', function ($q) use ($filter) {
-                    $q->whereHas('employee', function ($e) use ($filter) {
-                        // group: exact position ATAU "Act {position}"
-                        $e->where(function ($g) use ($filter) {
-                            $g->where('position', $filter)
-                                ->orWhere('position', 'like', "Act %{$filter}");
-                        });
-                    });
-                })
-                ->paginate(10)
-                ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
-        } else {
-            // User non-HRD: hanya bawahan
-            $employee = $user->employee;
-            $cpm = $employee->company_name;
-            if (!$employee) {
-                $icps = collect();
-            } else {
-                $subordinatesQuery = $this->getSubordinatesFromStructure($employee);
-
-                if ($subordinatesQuery instanceof \Illuminate\Database\Eloquent\Builder) {
-                    $icps = Icp::with(['employee:id,name,npk,company_name,position,grade'])
-                        ->whereHas('employee', function ($q) use ($subordinatesQuery, $search, $filter, $employee, $company) {
-                            $q->whereIn('id', $subordinatesQuery->select('id'));
-
-                            $q->where('company_name', $company ?: $employee->company_name);
-
-                            // search
-                            if (!empty($search)) {
-                                $q->where(function ($q2) use ($search) {
-                                    $q2->where('name', 'like', "%{$search}%")
-                                        ->orWhere('npk', 'like', "%{$search}%")
-                                        ->orWhere('company_name', 'like', "%{$search}%");
-                                });
-                            }
-
-                            // filter posisi (exact atau "Act {posisi}")
-                            if (!empty($filter) && $filter !== 'all') {
-                                $q->where(function ($g) use ($filter) {
-                                    $g->where('position', $filter)
-                                        ->orWhere('position', 'like', "Act %{$filter}");
-                                });
-                            }
-                        })
-                        ->orderByDesc('created_at')
-                        ->paginate(10)
-                        ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
-                } else {
-                    $icps = collect();
-                }
-            }
-        }
-
+        // Posisi untuk tab
         $allPositions = [
             'President',
             'Direktur',
@@ -187,23 +120,16 @@ class IcpController extends Controller
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
+        $currentPosition = Str::startsWith($rawPosition, 'Act ')
+            ? trim(Str::replaceFirst('Act', '', $rawPosition))
             : $rawPosition;
 
         $positionIndex = array_search($currentPosition, $allPositions);
+        if ($positionIndex === false) $positionIndex = array_search('Operator', $allPositions);
+        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
-        }
-
-        // Posisi yang terlihat di tab (dari posisi user ke bawah)
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            : [];
-
+        // View tidak membawa $icp lagi; DataTables akan fetch via AJAX
         return view('website.icp.index', compact(
-            'icps',
             'title',
             'visiblePositions',
             'search',
@@ -211,6 +137,130 @@ class IcpController extends Controller
             'company'
         ));
     }
+
+    public function data(Request $request, $company = null)
+    {
+        $user   = auth()->user();
+
+        // Parameter standar DataTables
+        $draw   = (int) $request->input('draw', 1);
+        $start  = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        $searchValue = trim($request->input('search.value', ''));
+        $filter = $request->input('filter', 'all');
+
+        // Base query: join ke employee untuk memfilter kolom karyawan
+        $base = Icp::query()->with('employee')
+            ->when($company, fn($q) => $q->whereHas('employee', fn($e) => $e->where('company_name', $company)));
+
+        if ($user->isHRDorDireksi()) {
+            // tidak ada pembatasan bawahan
+        } else {
+            $employee = $user->employee;
+            if (!$employee) {
+                return response()->json([
+                    'draw' => $draw,
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                ]);
+            }
+            $subordinates = $this->getSubordinatesFromStructure($employee);
+            if ($subordinates instanceof \Illuminate\Database\Eloquent\Builder) {
+                $base->whereHas('employee', fn($q) => $q->whereIn('id', $subordinates->select('id')));
+            } else {
+                return response()->json([
+                    'draw' => $draw,
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                ]);
+            }
+            // pastikan company konsisten untuk non-HRD
+            $base->whereHas('employee', fn($q) => $q->where('company_name', $company ?: $employee->company_name));
+        }
+
+        // Hitung total (sebelum search/filter posisi)
+        $recordsTotal = (clone $base)->count();
+
+        // Filter posisi (exact atau 'Act {posisi}')
+        if (!empty($filter) && $filter !== 'all') {
+            $base->whereHas('employee', function ($e) use ($filter) {
+                $e->where(function ($g) use ($filter) {
+                    $g->where('position', $filter)
+                        ->orWhere('position', 'like', "Act %{$filter}");
+                });
+            });
+        }
+
+        // Search global
+        if ($searchValue !== '') {
+            $base->whereHas('employee', function ($e) use ($searchValue) {
+                $e->where(function ($qq) use ($searchValue) {
+                    $qq->where('name', 'like', "%{$searchValue}%")
+                        ->orWhere('npk', 'like', "%{$searchValue}%")
+                        ->orWhere('company_name', 'like', "%{$searchValue}%");
+                });
+            });
+        }
+
+        // Hitung setelah filter+search
+        $recordsFiltered = (clone $base)->count();
+
+        // Ordering (opsional; default by newest)
+        $orderColIdx = (int) data_get($request->input('order.0'), 'column', 0);
+        $orderDir    = data_get($request->input('order.0'), 'dir', 'desc') === 'asc' ? 'asc' : 'desc';
+        // mapping index kolom front-end
+        $cols = ['id', 'photo', 'npk', 'name', 'company_name', 'position', 'department', 'grade', 'actions'];
+        $orderCol = $cols[$orderColIdx] ?? 'id';
+
+        if ($orderCol === 'name') {
+            $base->join('employees', 'employees.id', '=', 'icp.employee_id')
+                ->orderBy('employees.name', $orderDir)
+                ->select('icp.*'); // pastikan kolom icp.* dipilih
+        } else {
+            $base->orderBy('icp.created_at', 'desc'); // fallback
+        }
+
+        // Paging
+        $rows = $base->skip($start)->take($length)->get();
+
+        // Susun data baris
+        $data = [];
+        foreach ($rows as $i => $icp) {
+            $emp = $icp->employee;
+
+            // Unit dinamis sesuai posisi
+            $unit = match ($emp?->position) {
+                'Direktur'   => $emp?->plant?->name,
+                'GM', 'Act GM' => $emp?->division?->name,
+                default      => $emp?->department?->name,
+            };
+
+            $photoUrl = $emp?->photo ? asset('storage/' . $emp->photo) : asset('assets/media/avatars/300-1.jpg');
+
+            $data[] = [
+                // Serahkan "No" dihitung client dari start + row index, atau kirim kolom hidden index
+                'no'           => $start + $i + 1,
+                'photo'        => '<img src="' . $photoUrl . '" class="rounded" width="40" height="40" style="object-fit:cover" />',
+                'npk'          => e($emp?->npk ?? '-'),
+                'name'         => e($emp?->name ?? '-'),
+                'company_name' => e($emp?->company_name ?? '-'),
+                'position'     => e($emp?->position ?? '-'),
+                'department'   => e($unit ?? '-'),
+                'grade'        => e($emp?->grade ?? '-'),
+                'actions'      => '<a href="#" data-employee-id="' . $emp?->id . '" class="btn btn-info btn-sm history-btn">History</a>',
+            ];
+        }
+
+        return response()->json([
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $data,
+        ]);
+    }
+
 
     public function assign(Request $request, $company = null)
     {
