@@ -7,54 +7,65 @@ use Illuminate\Support\Str;
 
 class ApprovalHelper
 {
-    // lower, trim, buang "Act "
+    /**
+     * Normalisasi string posisi mentah:
+     * - lower, trim, hilangkan titik
+     * - buang prefix "act " (Act/ACT/act)
+     * - rapikan spasi ganda
+     */
     public static function norm(string $s): string
     {
         $x = Str::of($s)->lower()->trim();
-        // hilangkan "act " di depan, titik, dan spasi ganda
-        $x = Str::of(preg_replace('/^act\s+/i', '', (string)$x))
+        $x = Str::of(preg_replace('/^act\s+/i', '', (string) $x)) // buang prefix "act "
             ->replace('.', '')
             ->squish()
             ->toString();
+
         return $x;
     }
 
-    // ubah ke role kanonik yang dipakai di tabel steps
+    /**
+     * Mapping ke role KANONIK untuk dipakai di tabel steps:
+     *   president, vpd, director, gm, manager, supervisor, leader, jp, operator
+     *
+     * Catatan:
+     * - Semua "Act ..." otomatis direduksi ke jabatan utamanya oleh norm().
+     * - Penyetaraan: "section head" → supervisor, "coordinator" → manager,
+     *   "direktur" → director, "general manager" → gm, dst.
+     */
     public static function canonical(string $pos): string
     {
         $p = self::norm($pos);
 
-        $map = [
+        $alias = [
             // Top
-            'presiden' => 'president',
             'president' => 'president',
-            'presdir' => 'president',
-            'president director' => 'president',
-
-            'vpd' => 'vpd',
-            'vice president director' => 'vpd',
+            'vpd'       => 'vpd',
 
             // Direktur
             'direktur' => 'director',
-            'director' => 'director',
-            'dir'      => 'director',
-            'direksi'  => 'director',
+
+            // GM
+            'gm' => 'gm',
 
             // Manajerial
-            'general manager' => 'gm',
-            'gm' => 'gm',
-            'manager' => 'manager',
-            'coordinator' => 'coordinator',
-            'section head' => 'section head',
-            'supervisor' => 'supervisor',
+            'manager'      => 'manager',
+            'coordinator'  => 'manager',
+            'section head' => 'supervisor',
+            'supervisor'   => 'supervisor',
 
             // Shopfloor
-            'leader' => 'leader',
-            'jp' => 'jp',
+            'leader'   => 'leader',
+            'jp'       => 'jp',
             'operator' => 'operator',
+
+            'act direktur'     => 'director',
+            'act gm'           => 'gm',
+            'act jp'           => 'jp',
+            'act section head' => 'supervisor',
         ];
 
-        return $map[$p] ?? $p;
+        return $alias[$p] ?? $p;
     }
 
     public static function roleKeyFor(Employee $e): string
@@ -62,12 +73,32 @@ class ApprovalHelper
         return self::canonical($e->position ?? '');
     }
 
-    /** Chain sesuai kesepakatan terakhir */
+    /**
+     * Alias untuk pencarian (opsional): berguna saat whereIn('role', ...)
+     * supaya legacy label masih ikut keambil.
+     */
+    public static function synonymsForSearch(string $canonicalRole): array
+    {
+        $map = [
+            'president'  => ['president', 'presiden', 'president director', 'presdir'],
+            'vpd'        => ['vpd', 'vice president director'],
+            'director'   => ['director', 'direktur', 'direksi', 'dir'],
+            'gm'         => ['gm', 'general manager'],
+            'manager'    => ['manager', 'coordinator'],                                   // legacy: coordinator
+            'supervisor' => ['supervisor', 'section head'],                               // legacy: section head
+            'leader'     => ['leader', 'staff'],                                          // jika di data ada "Staff"
+            'jp'         => ['jp'],
+            'operator'   => ['operator'],
+        ];
+
+        // default ke dirinya sendiri kalau nggak ada di peta
+        return $map[$canonicalRole] ?? [$canonicalRole];
+    }
+
+    /** Chain sesuai kesepakatan terakhir. */
     public static function expectedChainForEmployee(Employee $e): array
     {
-        $role = self::canonical($e->position ?? '');
-
-        // Khusus MANAGER
+        $role = self::roleKeyFor($e);
         if ($role === 'manager') {
             return [
                 ['type' => 'check',   'role' => 'director',  'label' => 'Checking by Director'],
@@ -76,7 +107,6 @@ class ApprovalHelper
             ];
         }
 
-        // Operator → Leader (check) → Supervisor (approve)
         if ($role === 'operator') {
             return [
                 ['type' => 'check',   'role' => 'leader',     'label' => 'Checking by Leader'],
@@ -84,7 +114,6 @@ class ApprovalHelper
             ];
         }
 
-        // JP → (check) Supervisor → (approve) GM
         if ($role === 'jp') {
             return [
                 ['type' => 'check',   'role' => 'supervisor', 'label' => 'Checking by Supervisor'],
@@ -92,30 +121,27 @@ class ApprovalHelper
             ];
         }
 
-        // Supervisor / Section Head → (check) GM → (approve) Director
-        if (in_array($role, ['supervisor', 'section head'], true)) {
+        // Section Head sudah disetarakan → supervisor
+        if ($role === 'supervisor') {
             return [
                 ['type' => 'check',   'role' => 'gm',        'label' => 'Checking by GM'],
                 ['type' => 'approve', 'role' => 'director',  'label' => 'Approve by Director'],
             ];
         }
 
-        // GM → (check) Director → (approve) President
         if ($role === 'gm') {
             return [
-                ['type' => 'check',   'role' => 'director',  'label' => 'Checking by Director'],
+                ['type' => 'check',   'role' => 'vpd',  'label' => 'Checking by VPD'],
                 ['type' => 'approve', 'role' => 'president', 'label' => 'Approve by President'],
             ];
         }
 
-        // Director → (approve) President
         if ($role === 'director') {
             return [
                 ['type' => 'approve', 'role' => 'president', 'label' => 'Approve by President'],
             ];
         }
 
-        // Default: tidak perlu chain
         return [];
     }
 }

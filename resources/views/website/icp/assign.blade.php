@@ -366,7 +366,7 @@
                                             <form action="{{ route('icp.submit', $icp->id) }}" method="POST"
                                                 class="m-0">
                                                 @csrf
-                                                <button type="submit" class="btn btn-primary"
+                                                <button type="submit" class="btn btn-primary w-100"
                                                     onclick="return confirm('Submit ICP ini untuk approval?');">
                                                     <i class="fas fa-paper-plane"></i> Submit
                                                 </button>
