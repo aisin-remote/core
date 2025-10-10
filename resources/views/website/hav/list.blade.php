@@ -377,6 +377,15 @@
                 return;
             }
 
+
+            const selector = '#kt_table_users';
+
+            // Jika sudah jadi DataTable, jangan init ulang
+            if ($.fn.DataTable.isDataTable(selector)) {
+                console.debug('DataTable sudah diinit: skip.');
+                return;
+            }
+
             // Inisialisasi DataTable
             const dt = $('#kt_table_users').DataTable({
                 responsive: true,
