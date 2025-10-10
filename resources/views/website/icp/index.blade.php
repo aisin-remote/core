@@ -235,7 +235,6 @@
                             let exportButton = isLastRow ?
                                 `<a href="/icp/export/${employeeId}" class="btn btn-success btn-sm ms-2" target="_blank">Export</a>` :
                                 '';
-
                             // Format date (contoh: dd-mm-yyyy)
                             let formattedDate = '-';
                             if (icp.date) {
@@ -253,7 +252,7 @@
                             <td class="text-center">${icp.career_target}</td>
                             <td class="text-center">${formattedDate}</td>
                             <td class="text-center">
-                                ${exportButton}
+                                ${exportButton} ${deleteButton}
                             </td>
                         </tr>
                     `;
