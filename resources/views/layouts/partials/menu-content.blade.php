@@ -403,7 +403,7 @@
                 $userCompany = strtolower(optional(optional(auth()->user())->employee)->company_name ?? 'aii');
             @endphp
             @if ($isUserRole)
-                <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
+                <div class="disabled menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
                     <span
@@ -439,7 +439,7 @@
                         </div>
 
                         <div
-                            class="disabled menu-item menu-accordion {{ request()->routeIs('ipa.*') || request()->is('ipa*') ? 'show' : '' }}">
+                            class="menu-item menu-accordion {{ request()->routeIs('ipa.*') || request()->is('ipa*') ? 'show' : '' }}">
                             <span
                                 class="menu-link {{ request()->routeIs('ipa.*') || request()->is('ipa*') ? 'active' : '' }}">
                                 <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
@@ -448,18 +448,13 @@
                             </span>
                             <div class="menu-sub menu-sub-accordion">
                                 <div class="menu-item">
-                                    @if (Route::has('ipa.index'))
-                                        <a href="{{ route('ipa.index') }}"
-                                            class="menu-link {{ request()->routeIs('ipa.index') ? 'active' : '' }}">
-                                        @else
-                                            <a href="{{ url('/ipa') }}"
-                                                class="menu-link {{ request()->is('ipa') ? 'active' : '' }}">
-                                    @endif
-                                    <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                                    <span class="menu-title">IPA Assign</span>
+                                    <a href="{{ route('ipa.index') }}"
+                                        class="menu-link {{ request()->routeIs('ipa.index') ? 'active' : '' }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">IPA Assign</span>
                                     </a>
                                 </div>
-                                <div class="menu-item">
+                                <div class="disabled menu-item">
                                     @if (Route::has('ipa.list'))
                                         <a href="{{ route('ipa.list', ['company' => $userCompany]) }}"
                                             class="menu-link {{ request()->routeIs('ipa.list') ? 'active' : '' }}">
@@ -477,7 +472,7 @@
                     </div>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="menu-item menu-accordion
+                <div class="disabled menu-item menu-accordion
         {{ request()->routeIs('ipp.list') || request()->routeIs('ipa.list') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
@@ -763,14 +758,14 @@
 
             {{-- RTC (flyout) --}}
             @if ($canSeeRtc)
-                <div class="menu-item">
+                <div class="disabled menu-item">
                     <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}" href="/rtc">
                         <span class="menu-icon"><i class="fas fa-tasks"></i></span>
                         <span class="menu-title">RTC</span>
                     </a>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                <div class="disabled menu-item menu-accordion" data-kt-menu-trigger="click">
                     <span class="menu-link"><span class="menu-icon"><i class="fas fa-tasks"></i></span><span
                             class="menu-title">RTC</span><span class="menu-arrow"></span></span>
                     <div class="menu-sub menu-sub-dropdown">
@@ -785,7 +780,7 @@
 
             {{-- ==== IPP & IPA (flyout) ==== --}}
             @if ($isUserRole)
-                <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                <div class="disabled menu-item menu-accordion" data-kt-menu-trigger="click">
                     <span class="menu-link">
                         <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
                         <span class="menu-title">IPP & IPA</span>
@@ -808,7 +803,7 @@
                     </div>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
+                <div class="disabled menu-item menu-accordion" data-kt-menu-trigger="click">
                     <span class="menu-link">
                         <span class="menu-icon"><i class="fas fa-id-badge"></i></span>
                         <span class="menu-title">IPP & IPA</span>
@@ -1232,6 +1227,12 @@
                     <span class="menu-title">IPP</span>
                 </a>
             </div>
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/ipa') ? 'active' : '' }}"
+                    href="{{ route('ipa.approval') }}">
+                    <span class="menu-title">IPA</span>
+                </a>
+            </div>
         </div>
 
         {{-- FLYOUT --}}
@@ -1244,6 +1245,10 @@
                     href="{{ route('rtc.approval') }}"><span class="menu-title">RTC</span></a></div>
             <div class="menu-item"><a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
                     href="{{ route('icp.approval') }}"><span class="menu-title">ICP</span></a></div>
+            <div class="menu-item"><a class="menu-link {{ request()->is('approval/ipp') ? 'active' : '' }}"
+                    href="{{ route('ipp.approval') }}"><span class="menu-title">ICP</span></a></div>
+            <div class="menu-item"><a class="menu-link {{ request()->is('approval/ipa') ? 'active' : '' }}"
+                    href="{{ route('ipa.approval') }}"><span class="menu-title">ICP</span></a></div>
         </div>
     </div>
     <!-- ===== END APPROVAL ===== -->

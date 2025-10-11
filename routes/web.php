@@ -7,6 +7,7 @@ use App\Http\Controllers\HavController;
 use App\Http\Controllers\IcpController;
 use App\Http\Controllers\IdpController;
 use App\Http\Controllers\RtcController;
+use App\Http\Controllers\IpaController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlantController;
@@ -22,6 +23,8 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IpaApprovalController;
+use App\Http\Controllers\IpaExportController;
 use App\Http\Controllers\IppController;
 use App\Http\Controllers\SignatureController;
 use Illuminate\Support\Facades\Request;
@@ -135,6 +138,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::post('/delete/{id}', [IcpController::class, 'destroy'])->name('icp.destroy');
         Route::post('/{id}/submit', [IcpController::class, 'submit'])->name('icp.submit');
+
+        Route::get('/data/{company?}', [IcpController::class, 'data'])->name('icp.data');
     });
 
     Route::prefix('hav')->group(function () {
@@ -179,6 +184,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/ipp', [IppController::class, 'approval'])->name('ipp.approval');
         Route::post('/ipp/{id}', [IppController::class, 'approve'])->name('ipp.approve');
         Route::post('/ipp/revise/{id}', [IppController::class, 'revise'])->name('ipp.revise');
+
+        Route::get('/ipa', [IpaApprovalController::class, 'approval'])->name('ipa.approval');
+        Route::post('/ipa/{ipa?}/approve', [IpaApprovalController::class, 'approve'])->name('ipa.approve');
+        Route::post('/ipa/{ipa?}/revise',  [IpaApprovalController::class, 'revise'])->name('ipa.revise');
     });
 
     Route::prefix('employee')->group(function () {
@@ -328,11 +337,18 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/{ipp}/comments', [IppController::class, 'getComment'])->name('ipp.comments');
     });
 
-    Route::prefix('ipa')->group(function () {
-        Route::get('/', [IppController::class, 'create'])->name('ipa.index');
-        Route::post('/', [IppController::class, 'store'])->name('ipa.store');
-        Route::get('/list/{company}', [IppController::class, 'list'])->name('ipa.list');
+    Route::prefix('ipa')->name('ipa.')->group(function () {
+        Route::get('/',                [IpaController::class, 'index'])->name('index');
+        Route::get('/{id}/edit',       [IpaController::class, 'edit'])->name('edit');
+        Route::get('/{id}/data',       [IpaController::class, 'getData'])->name('data');
+        Route::put('/{ipa}',            [IpaController::class, 'update'])->name('update');
+        Route::post('/{id}/recalc',    [IpaController::class, 'recalc'])->name('recalc');
+        Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
+
+        Route::get('/approval/json', [IpaApprovalController::class, 'approvalJson'])->name('approval.json');
+        Route::get('/{ipa?}/export', [IpaExportController::class, 'export'])->name('export');
     });
+
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
         ->name('idp.exportTemplate');

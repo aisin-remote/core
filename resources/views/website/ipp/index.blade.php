@@ -22,6 +22,67 @@
             --noteNew-shadow: rgba(59, 130, 246, .10);
         }
 
+        .page-head {
+            background: linear-gradient(90deg, #eaf2ff, #fff);
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            box-shadow: 0 6px 20px rgba(24, 39, 75, .06);
+        }
+
+        .page-title {
+            margin: 0;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: .2px;
+            display: flex;
+            align-items: center;
+            gap: .6rem;
+        }
+
+        .page-title .bi {
+            font-size: 1.4rem;
+            color: var(--primary);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: .5rem;
+            flex-wrap: wrap
+        }
+
+        .toolbar .btn {
+            border-radius: 12px;
+            padding: .55rem .9rem;
+            font-weight: 700;
+            letter-spacing: .2px
+        }
+
+        .toolbar .btn.btn-light {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            color: #0f172a
+        }
+
+        .toolbar .btn.btn-add {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff
+        }
+
+        .toolbar .btn.btn-add:hover {
+            background: var(--primary-600);
+            border-color: var(--primary-600)
+        }
+
+        .toolbar .btn.btn-primary {
+            padding: .55rem 1.05rem
+        }
+
         .accordion.ipp .accordion-item {
             border: 1px solid var(--ipp-border);
             border-radius: 12px;
@@ -485,6 +546,15 @@
 
 @section('main')
     <div class="container-xxl py-3 px-6">
+
+        {{-- Header --}}
+        <div class="page-head mb-3">
+            <h3 class="page-title">
+                <i class="bi bi-clipboard2-check text-primary"></i>
+                <span>Individual Performance Plan</span>
+            </h3>
+        </div>
+
         @php
             $categories = [
                 ['key' => 'activity_management', 'title' => 'I. Activity Management', 'cap' => 70],

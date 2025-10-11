@@ -68,6 +68,7 @@ class MasterController extends Controller
 
         $allPositions = [
             'President',
+            'VPD',
             'Direktur',
             'GM',
             'Act GM',
@@ -81,23 +82,29 @@ class MasterController extends Controller
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
-            : $rawPosition;
 
-        // Cari index posisi saat ini
-        $positionIndex = array_search($currentPosition, $allPositions);
+        $visiblePositions = [];
 
-        // Fallback jika tidak ditemukan
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
+        if ($user->isHRDorDireksi()) {
+            $visiblePositions = $allPositions;
+        } else {
+
+            $currentPosition = Str::contains($rawPosition, 'Act ')
+                ? trim(str_replace('Act', '', $rawPosition))
+                : $rawPosition;
+
+            // Cari index posisi saat ini
+            $positionIndex = array_search($currentPosition, $allPositions);
+            // Fallback jika tidak ditemukan
+            if ($positionIndex === false) {
+                $positionIndex = array_search('Operator', $allPositions);
+            }
+
+            // Ambil posisi di bawahnya (tanpa posisi user)
+            $visiblePositions = $positionIndex !== false
+                ? array_slice($allPositions, $positionIndex)
+                : [];
         }
-
-        // Ambil posisi di bawahnya (tanpa posisi user)
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            : [];
-
 
         return view('website.master.employee.index', compact('employee', 'title', 'filter', 'company', 'search', 'visiblePositions'));
     }
@@ -414,7 +421,8 @@ class MasterController extends Controller
                 $q->whereHas('supervisor', function ($sub) use ($company) {
                     $sub->where('company_name', $company);
                 });
-            })->get();
+            })
+            ->get();
 
         return view('website.master.section.index', compact('sections', 'departments', 'supervisors', 'company'));
     }
@@ -432,12 +440,14 @@ class MasterController extends Controller
             });
         })->get();
 
+
         $subSections = SubSection::with(['leader', 'section'])
             ->when($company, function ($q) use ($company) {
-                $q->whereHas('leader', function ($sub) use ($company) {
-                    $sub->where('company_name', $company);
+                $q->whereHas('section', function ($sub) use ($company) {
+                    $sub->where('company', $company);
                 });
-            })->paginate(10);
+            })
+            ->get();
 
         return view('website.master.subSection.index', compact('subSections', 'leaders', 'sections', 'company'));
     }

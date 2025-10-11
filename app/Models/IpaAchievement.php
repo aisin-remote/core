@@ -14,14 +14,21 @@ class IpaAchievement extends Model
 
     protected $fillable = [
         'ipa_id',
-        'title',
+        'ipp_point_id',
         'description',
+        'one_year_target',
+        'one_year_achievement',
         'weight',
         'self_score',
         'calc_score',
         'evidence',
         'position',
+        'title',
+        'category',
+        'status'
     ];
+
+    public const STATUSES = ['draft', 'submitted', 'checked', 'approved'];
 
     // ==== Relationships ====
     public function ipa()

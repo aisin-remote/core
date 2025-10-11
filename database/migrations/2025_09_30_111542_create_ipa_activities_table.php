@@ -29,14 +29,14 @@ return new class extends Migration {
             $table->string('category', 100)->nullable()->index();
 
             // Deskripsi aktivitas/target
-            $table->text('description');
+            $table->text('description')->nullable();
 
             // Bobot & skor (gunakan skala dari "Skala Penilaian")
-            $table->decimal('weight', 6, 2)->default(0);      // contoh: 0–100 (atau 0–1 jika pakai proporsi)
-            $table->decimal('self_score', 6, 2)->default(0);  // contoh: 1–5
+            $table->decimal('weight', 6, 2)->nullable()->default(0);      // contoh: 0–100 (atau 0–1 jika pakai proporsi)
+            $table->decimal('self_score', 6, 2)->nullable()->default(0);  // contoh: 1–5
 
             // Nilai hasil (weight × self_score) – disimpan untuk rekap cepat
-            $table->decimal('calc_score', 10, 2)->default(0)->index();
+            $table->decimal('calc_score', 10, 2)->nullable()->default(0)->index();
 
             // Bukti/link/file (opsional)
             $table->text('evidence')->nullable();

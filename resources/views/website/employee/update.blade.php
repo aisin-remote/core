@@ -234,24 +234,25 @@
                                                         <option value="">Select Position</option>
                                                         @php
                                                             $positions = [
-                                                                'GM' => 'General Manager',
-                                                                'Act GM' => 'Act General Manager',
-                                                                'Manager' => 'Manager',
-                                                                'Act Manager' => 'Act Manager',
-                                                                'Coordinator' => 'Coordinator',
-                                                                'Act Coordinator' => 'Act Coordinator',
-                                                                'Section Head' => 'Section Head',
+                                                                'Act Direktur'     => 'Act Direktur',
+                                                                'GM'               => 'General Manager',
+                                                                'Act GM'           => 'Act General Manager',
+                                                                'Manager'          => 'Manager',
+                                                                'Act Manager'      => 'Act Manager',
+                                                                'Coordinator'      => 'Coordinator',
+                                                                'Act Coordinator'  => 'Act Coordinator',
+                                                                'Section Head'     => 'Section Head',
                                                                 'Act Section Head' => 'Act Section Head',
-                                                                'Supervisor' => 'Supervisor',
-                                                                'Act Supervisor' => 'Act Supervisor',
-                                                                'Act Leader' => 'Act Leader',
-                                                                'Leader' => 'Leader',
-                                                                'Staff' => 'Staff',
-                                                                'Act JP' => 'Act JP',
-                                                                'Operator' => 'Operator',
-                                                                'Direktur' => 'Direktur',
-                                                                'VPD' => 'VPD',
-                                                                'President' => 'President',
+                                                                'Supervisor'       => 'Supervisor',
+                                                                'Act Supervisor'   => 'Act Supervisor',
+                                                                'Act Leader'       => 'Act Leader',
+                                                                'Leader'           => 'Leader',
+                                                                'Staff'            => 'Staff',
+                                                                'Act JP'           => 'Act JP',
+                                                                'Operator'         => 'Operator',
+                                                                'Direktur'         => 'Direktur',
+                                                                'VPD'              => 'VPD',
+                                                                'President'        => 'President',
                                                             ];
                                                         @endphp
                                                         @foreach ($positions as $value => $label)
@@ -1475,7 +1476,7 @@
                         groupToShow = 'department-group';
                     } else if (['GM', 'Act GM'].includes(position)) {
                         groupToShow = 'division-group';
-                    } else if (['Direktur'].includes(position)) {
+                    } else if (['Direktur', 'Act Direktur'].includes(position)) {
                         groupToShow = 'plant-group';
                     }
 

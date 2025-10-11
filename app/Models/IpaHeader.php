@@ -20,7 +20,21 @@ class IpaHeader extends Model
         'activity_total',
         'achievement_total',
         'grand_total',
+        'grand_score',
         'created_by',
+        'created_at',
+        'submitted_at',
+        'checked_by',
+        'checked_at',
+        'approved_by',
+        'approved_at',
+        'status'
+    ];
+
+    protected $cast = [
+        'submitted_at' => 'datetime',
+        'checked_at'   => 'datetime',
+        'approved_at'  => 'datetime',
     ];
 
     // ==== Relationships ====
@@ -46,7 +60,15 @@ class IpaHeader extends Model
 
     public function creator()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(Employee::class, 'created_by');
+    }
+    public function checkedBy()
+    {
+        return $this->belongsTo(Employee::class, 'checked_by');
+    }
+    public function approvedBy()
+    {
+        return $this->belongsTo(Employee::class, 'approved_by');
     }
 
     // ==== Helpers ====
@@ -54,10 +76,14 @@ class IpaHeader extends Model
     {
         $actTotal = $this->activities()->sum('calc_score');
         $achTotal = $this->achievements()->sum('calc_score');
+
+        $actScore = $this->activities()->sum('self_score');
+        $achScore = $this->achievements()->sum('self_score');
         $this->update([
             'activity_total'    => $actTotal,
             'achievement_total' => $achTotal,
             'grand_total'       => $actTotal + $achTotal,
+            'grand_score'       => $actScore + $achScore,
         ]);
     }
 }

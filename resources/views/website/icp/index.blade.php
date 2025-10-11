@@ -1,45 +1,43 @@
+{{-- resources/views/website/icp/index.blade.php --}}
 @extends('layouts.root.main')
 
 @section('title')
     {{ $title ?? 'ICP' }}
 @endsection
-
 @section('breadcrumbs')
     {{ $title ?? 'ICP' }}
 @endsection
+
 @section('main')
     @if (session()->has('success'))
         <script>
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
                     title: "Sukses!",
-                    text: "{{ session('success') }}",
+                    text: @json(session('success')),
                     icon: "success",
                     confirmButtonText: "OK"
                 });
             });
         </script>
     @endif
-    <div id="kt_app_content_container" class="app-container  container-fluid ">
+
+    <div id="kt_app_content_container" class="app-container container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">ICP List</h3>
-                <div class="d-flex align-items-center">
-                </div>
+                <div class="d-flex align-items-center"></div>
             </div>
 
             <div class="card-body">
                 <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
                     style="cursor:pointer">
-                    {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
                         <a class="nav-link fs-7 {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('icp.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
-
-                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
                             <a class="nav-link fs-7 my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
@@ -49,7 +47,8 @@
                         </li>
                     @endforeach
                 </ul>
-                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
+
+                <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users" width="100%">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
@@ -58,57 +57,14 @@
                             <th>Employee Name</th>
                             <th>Company</th>
                             <th>Position</th>
-                            <th>Department</th> {{-- Tetap static --}}
+                            <th>Department</th>
                             <th>Grade</th>
                             <th class="text-center">Actions</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach ($icps as $index => $icp)
-                            @php $employee = $icp->employee; @endphp
-
-                            @php
-                                $unit = match ($employee->position) {
-                                    'Direktur' => $employee->plant?->name,
-                                    'GM', 'Act GM' => $employee->division?->name,
-                                    default => $employee->department?->name,
-                                };
-                            @endphp
-                            <tr class="fs-7" data-position="{{ $employee->position }}">
-                                <td>{{ $icps->firstItem() + $index }}</td>
-
-                                <td class="text-center">
-                                    <img src="{{ $employee->photo ? asset('storage/' . $employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
-                                        alt="Employee Photo" class="rounded" width="40" height="40"
-                                        style="object-fit: cover;">
-                                </td>
-                                <td>{{ $employee->npk }}</td>
-                                <td>{{ $employee->name }}</td>
-                                <td>{{ $employee->company_name }}</td>
-                                <td>{{ $employee->position }}</td>
-                                <td>{{ $unit }}</td> {{-- Dinamis berdasarkan posisi --}}
-                                <td>{{ $employee->grade }}</td>
-                                {{-- @if (auth()->user()->role == 'HRD')
-                                        <a href="{{ route('employee.edit', $employee->npk) }}"
-                                            class="btn btn-warning btn-sm">
-                                            <i class="fa fa-pencil-alt"></i>
-                                        </a>
-                                    @endif --}}
-                                <td class="text-center">
-                                    {{-- Summary --}}
-                                    <a href="#" data-employee-id="{{ $employee->id }}"
-                                        class="btn btn-info btn-sm history-btn">
-                                        History
-                                    </a>
-                                </td>
-
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
-                <div class="d-flex justify-content-end mt-4">
-                    {{ $icps->links('pagination::bootstrap-5') }}
-                </div>
+
                 <div class="d-flex justify-content-between">
                     <small class="text-muted fw-bold">
                         Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
@@ -117,6 +73,8 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal History (tetap sama seperti punyamu) --}}
     <div class="modal fade" id="detailAssessmentModal" tabindex="-1" aria-labelledby="detailAssessmentModalLabel"
         aria-hidden="true">
         <div class="modal-dialog modal-xl">
@@ -167,121 +125,165 @@
 @push('scripts')
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Pastikan jQuery terpasang (DataTables butuh jQuery)
             if (typeof $ === 'undefined') {
                 console.error("jQuery not loaded. DataTable won't initialize.");
                 return;
             }
 
-            // Inisialisasi DataTable
-            const dt = $('#kt_table_users').DataTable({
-                responsive: true,
-                language: {
-                    search: "_INPUT_",
-                    searchPlaceholder: "Search...",
-                    lengthMenu: "Show _MENU_ entries",
-                    zeroRecords: "No matching records found",
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                    paginate: {
-                        next: "Next",
-                        previous: "Previous"
-                    }
-                },
-                ordering: false,
-                lengthChange: false,
+            const tableId = '#kt_table_users';
+            if (!$.fn.DataTable.isDataTable(tableId)) {
+                const ajaxUrl = @json(route('icp.data', ['company' => $company]));
+                const urlParams = new URLSearchParams(window.location.search);
+                const filter = urlParams.get('filter') || 'all';
 
-            });
-            console.log("✅ DataTable Initialized Successfully");
+                const dt = $(tableId).DataTable({
+                    processing: true,
+                    serverSide: true,
+                    responsive: true,
+                    searching: true,
+                    ordering: true,
+                    lengthChange: true,
+                    pageLength: 10,
+                    ajax: {
+                        url: ajaxUrl,
+                        data: function(d) {
+                            // DataTables akan kirim: draw, start, length, search[value], order, dll.
+                            d.filter = filter; // kirim filter tab
+                        },
+                        error: function(xhr) {
+                            console.error('DT AJAX error:', xhr?.responseText || xhr);
+                            Swal.fire("Error", "Gagal memuat data ICP.", "error");
+                        }
+                    },
+                    columns: [{
+                            data: 'no',
+                            name: 'no',
+                            orderable: false,
+                            searchable: false
+                        },
+                        {
+                            data: 'photo',
+                            name: 'photo',
+                            orderable: false,
+                            searchable: false
+                        },
+                        {
+                            data: 'npk',
+                            name: 'npk'
+                        },
+                        {
+                            data: 'name',
+                            name: 'name'
+                        },
+                        {
+                            data: 'company_name',
+                            name: 'company_name'
+                        },
+                        {
+                            data: 'position',
+                            name: 'position'
+                        },
+                        {
+                            data: 'department',
+                            name: 'department',
+                            orderable: false
+                        },
+                        {
+                            data: 'grade',
+                            name: 'grade',
+                            orderable: false
+                        },
+                        {
+                            data: 'actions',
+                            name: 'actions',
+                            orderable: false,
+                            searchable: false,
+                            className: 'text-center'
+                        }
+                    ],
+                    columnDefs: [{
+                            targets: [1, 8],
+                            render: function(data) {
+                                return data;
+                            }
+                        } // biarkan HTML apa adanya
+                    ],
+                    language: {
+                        search: "_INPUT_",
+                        searchPlaceholder: "Search...",
+                        lengthMenu: "Show _MENU_ entries",
+                        zeroRecords: "No matching records found",
+                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                        paginate: {
+                            next: "Next",
+                            previous: "Previous"
+                        }
+                    }
+                });
+
+                console.log("✅ DataTable (server-side) Initialized");
+            }
         });
     </script>
+
+    {{-- History modal logic tetap, tidak diubah kecuali query selector --}}
     <script>
-        $(document).on("click", ".history-btn", function(event) {
-            event.preventDefault();
-
-            let employeeId = $(this).data("employee-id");
-            console.log("Fetching history for Employee ID:", employeeId);
-
-            // Reset data modal sebelum request baru dilakukan
+        $(document).on("click", ".history-btn", function(e) {
+            e.preventDefault();
+            const employeeId = $(this).data("employee-id");
             $("#npkText").text("-");
             $("#positionText").text("-");
             $("#kt_table_assessments tbody").empty();
-            $("#exportBtn").remove(); // Pastikan tidak ada tombol export tertinggal
 
-            $.ajax({
-                url: `/icp/history/${employeeId}`,
-                type: "GET",
-                success: function(response) {
-                    console.log("Response received:", response);
-
+            $.get(`/icp/history/${employeeId}`)
+                .done(function(response) {
                     if (!response.employee) {
-                        alert("Employee not found!");
+                        Swal.fire("Oops", "Employee not found!", "warning");
                         return;
                     }
-
                     $("#npkText").text(response.employee.npk);
                     $("#positionText").text(response.employee.position);
 
-                    const tableBody = $("#kt_table_assessments tbody");
-                    tableBody.empty();
-
-                    if (response.employee.icp.length > 0) {
-                        response.employee.icp.forEach((icp, index) => {
-                            let deleteButton = ''; // isi sesuai kebutuhan, contoh:
-                            deleteButton =
-                                `<button class="btn btn-danger btn-sm btn-delete" data-id="${icp.id}">Delete</button>`;
-
-                            let isLastRow = index === response.employee.icp.length - 1;
-
-                            let exportButton = isLastRow ?
+                    const tbody = $("#kt_table_assessments tbody");
+                    if ((response.employee.icp || []).length) {
+                        response.employee.icp.forEach((icp, idx) => {
+                            const d = icp.date ? new Date(icp.date) : null;
+                            const dd = d ? String(d.getDate()).padStart(2, '0') : '-';
+                            const mm = d ? String(d.getMonth() + 1).padStart(2, '0') : '-';
+                            const yy = d ? d.getFullYear() : '';
+                            const dateStr = d ? `${dd}-${mm}-${yy}` : '-';
+                            const isLast = idx === response.employee.icp.length - 1;
+                            const exportBtn = isLast ?
                                 `<a href="/icp/export/${employeeId}" class="btn btn-success btn-sm ms-2" target="_blank">Export</a>` :
                                 '';
-
-                            // Format date (contoh: dd-mm-yyyy)
-                            let formattedDate = '-';
-                            if (icp.date) {
-                                let d = new Date(icp.date);
-                                let day = String(d.getDate()).padStart(2, '0');
-                                let month = String(d.getMonth() + 1).padStart(2, '0');
-                                let year = d.getFullYear();
-                                formattedDate = `${day}-${month}-${year}`;
-                            }
-
-                            let row = `
+                            const delBtn =
+                                `<button class="btn btn-danger btn-sm btn-delete" data-id="${icp.id}">Delete</button>`;
+                            tbody.append(`
                         <tr>
-                            <td class="text-center">${index + 1}</td>
-                            <td class="text-center">${icp.aspiration || '-'}</td>
-                            <td class="text-center">${icp.career_target}</td>
-                            <td class="text-center">${formattedDate}</td>
-                            <td class="text-center">
-                                ${exportButton}
-                            </td>
+                            <td class="text-center">${idx+1}</td>
+                            <td class="text-center">${icp.aspiration ?? '-'}</td>
+                            <td class="text-center">${icp.career_target ?? '-'}</td>
+                            <td class="text-center">${dateStr}</td>
+                            <td class="text-center">${exportBtn} ${delBtn}</td>
                         </tr>
-                    `;
-                            tableBody.append(row);
+                    `);
                         });
-
                     } else {
-                        tableBody.append(`
-                    <tr>
-                        <td colspan="5" class="text-center text-muted">No assessment found</td>
-                    </tr>
-                `);
+                        tbody.append(
+                            `<tr><td colspan="5" class="text-center text-muted">No assessment found</td></tr>`
+                        );
                     }
-
-                    // Tampilkan modal
                     $("#detailAssessmentModal").modal("show");
-                },
-                error: function(error) {
-                    console.error("Error fetching data:", error);
-                    alert("Failed to load ICP data!");
-                }
-            });
+                })
+                .fail(function(xhr) {
+                    console.error("Error fetching history:", xhr?.responseText || xhr);
+                    Swal.fire("Error", "Failed to load ICP data!", "error");
+                });
         });
 
-        // Listener tombol delete
+        // Delete
         $(document).on("click", ".btn-delete", function() {
             const icpId = $(this).data("id");
-
             Swal.fire({
                 title: "Are you sure?",
                 text: "You won't be able to revert this!",
@@ -290,32 +292,26 @@
                 confirmButtonColor: "#d33",
                 cancelButtonColor: "#3085d6",
                 confirmButtonText: "Yes, delete it!"
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $.ajax({
-                        url: `/icp/delete/${icpId}`,
-                        type: "POST",
-                        headers: {
-                            "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
-                        },
-                        success: function(response) {
-                            Swal.fire(
-                                "Deleted!",
-                                "ICP record has been deleted.",
-                                "success"
-                            ).then(() => {
-                                location.reload(); // 🔄 reload seluruh halaman
-                            });
-                        },
-                        error: function(xhr, status, error) {
-                            Swal.fire(
-                                "Failed!",
-                                "ICP record could not be deleted.",
-                                "error"
-                            );
+            }).then((res) => {
+                if (!res.isConfirmed) return;
+                $.ajax({
+                    url: `/icp/delete/${icpId}`,
+                    type: "POST",
+                    headers: {
+                        "X-CSRF-TOKEN": $('meta[name="csrf-token"]').attr("content")
+                    }
+                }).done(function() {
+                    Swal.fire("Deleted!", "ICP record has been deleted.", "success").then(() => {
+                        // reload DataTable server-side, bukan reload halaman
+                        if ($.fn.DataTable.isDataTable('#kt_table_users')) {
+                            $('#kt_table_users').DataTable().ajax.reload(null, false);
+                        } else {
+                            location.reload();
                         }
                     });
-                }
+                }).fail(function() {
+                    Swal.fire("Failed!", "ICP record could not be deleted.", "error");
+                });
             });
         });
     </script>
