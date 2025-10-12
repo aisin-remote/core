@@ -232,7 +232,7 @@ class IcpController extends Controller
 
             // Unit dinamis sesuai posisi
             $unit = match ($emp?->position) {
-                'Direktur'   => $emp?->plant?->name,
+                'Direktur', 'Act Direktur'   => $emp?->plant?->name,
                 'GM', 'Act GM' => $emp?->division?->name,
                 default      => $emp?->department?->name,
             };
