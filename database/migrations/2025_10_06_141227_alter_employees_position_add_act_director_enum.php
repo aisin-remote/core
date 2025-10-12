@@ -13,7 +13,7 @@ return new class extends Migration {
                 'President',
                 'VPD',
                 'Direktur',
-                'Act Director',
+                'Act Direktur',
                 'Act GM',
                 'GM',
                 'Act Manager',
