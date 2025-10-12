@@ -6,74 +6,78 @@ use App\Models\Hav;
 use App\Models\Idp;
 use App\Models\Rtc;
 use App\Models\Employee;
-use App\Models\Assessment;
+use App\Models\Ipp;
 use Illuminate\Http\Request;
 
 class ToDoListController extends Controller
 {
     public function index()
     {
-        $employee = auth()->user()->employee;
-        $company = $employee->company_name;
+        $user     = auth()->user();
+        $role     = $user->role;
+        $employee = $user->employee;
+        $company  = $employee->company_name ?? null;
 
-        $normalized = $employee->getNormalizedPosition();
+        // ===== HRD = superadmin: akses semua karyawan =====
+        if ($role === 'HRD') {
+            // ambil semua employee id
+            $allIds    = Employee::pluck('id')->toArray();
+            $subCreate = $allIds;
+            $subCheck  = $allIds;
+            $subApprove = $allIds;
 
-        // Ambil bawahannya yang bisa create
-        $createLevel = $employee->getCreateAuth();
-        $subCreate = $employee->getSubordinatesByLevel($createLevel)->pluck('id')->toArray();
-
-        $checkLevel = $employee->getFirstApproval();
-        $approveLevel = $employee->getFinalApproval();
-
-        if ($normalized === 'vpd') {
-            // Untuk VPD, filter GM dan Manager
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+            // Normalized posisi diset khusus agar branch lain tidak jalan
+            $normalized = 'hrd';
         } else {
-            // Untuk posisi lain, ambil semua bawahan
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+            // ===== Non-HRD: pakai aturan existing =====
+            $normalized  = $employee?->getNormalizedPosition();
+            $createLevel = $employee?->getCreateAuth();
+            $subCreate   = $employee?->getSubordinatesByLevel($createLevel)->pluck('id')->toArray() ?? [];
+
+            $checkLevel  = $employee?->getFirstApproval();
+            $approveLevel = $employee?->getFinalApproval();
+
+            if ($normalized === 'vpd') {
+                // VPD: check=GM, approve=Manager
+                $subCheck   = $employee->getSubordinatesByLevel($checkLevel,  ['gm'])->pluck('id')->toArray();
+                $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+            } else {
+                $subCheck   = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+                $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+            }
         }
 
-        // Ambil assessment terbaru hanya milik bawahannya
-        $assessments = Hav::with(['employee', 'details.idp', 'details.alc']) // tambahkan details.alc
+        // ===== Ambil HAV terbaru per karyawan (hanya yang bisa dibuat oleh user/HRD) =====
+        $assessments = Hav::with(['employee', 'details.idp', 'details.alc'])
             ->whereIn('employee_id', $subCreate)
-            // ->when(
-            //     $company,
-            //     fn($query) =>
-            //     $query->whereHas('employee', fn($q) => $q->where('company_name', $company))
-            // )
-            ->whereIn('id', function ($query) {
-                $query->selectRaw('id')
+            ->whereIn('id', function ($q) {
+                $q->selectRaw('id')
                     ->from('havs as a')
                     ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM havs WHERE employee_id = a.employee_id)');
             })
             ->get();
 
+        // ==== Build kandidat IDP yang belum ada (unassigned) ====
         $emp = [];
         foreach ($assessments as $assessment) {
             foreach ($assessment->details as $detail) {
                 $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
 
-                // Ambil IDP yang bukan status -1
-                $validIdp = $idps->first(function ($idp) {
-                    return $idp && $idp->status !== -1;
-                });
+                // ambil IDP valid (bukan -1)
+                $validIdp = $idps->first(fn($idp) => $idp && $idp->status !== -1);
 
-                if (
-                    ((int) $detail->score < 3 || $detail->suggestion_development !== null)
-                ) {
+                if ((int) $detail->score < 3 || $detail->suggestion_development !== null) {
                     $emp[$assessment->employee_id][] = [
                         'hav_detail_id' => $detail->id,
-                        'alc_id' => $detail->alc_id,
-                        'alc_name' => $detail->alc->name ?? 'Unknown',
+                        'alc_id'        => $detail->alc_id,
+                        'alc_name'      => $detail->alc->name ?? 'Unknown',
                     ];
                 }
             }
         }
 
-        $employeeNames = $assessments->pluck('employee.name', 'employee_id')->toArray();
-        $employeeNpk = $assessments->pluck('employee.npk', 'employee_id')->toArray();
+        $employeeNames   = $assessments->pluck('employee.name', 'employee_id')->toArray();
+        $employeeNpk     = $assessments->pluck('employee.npk', 'employee_id')->toArray();
         $employeeCompany = $assessments->pluck('employee.company_name', 'employee_id')->toArray();
 
         $notExistInIdp = [];
@@ -85,23 +89,23 @@ class ToDoListController extends Controller
 
                 if (!$exists) {
                     $notExistInIdp[] = [
-                        'employee_name' => $employeeNames[$employeeId] ?? 'Unknown',
-                        'employee_npk' => $employeeNpk[$employeeId] ?? 'Unknown',
+                        'employee_name'    => $employeeNames[$employeeId]   ?? 'Unknown',
+                        'employee_npk'     => $employeeNpk[$employeeId]     ?? 'Unknown',
                         'employee_company' => $employeeCompany[$employeeId] ?? 'Unknown',
-                        'hav_detail_id' => $item['hav_detail_id'],
-                        'alc_id' => $item['alc_id'],
-                        'alc_name' => $item['alc_name'] ?? 'Unknown',
+                        'hav_detail_id'    => $item['hav_detail_id'],
+                        'alc_id'           => $item['alc_id'],
+                        'alc_name'         => $item['alc_name'] ?? 'Unknown',
                     ];
                     break;
                 }
             }
         }
 
-        // === Draft ===
+        // ===== Draft =====
         $draftIdps = Employee::with([
-            'hav.details' => function ($query) {
-                $query->whereHas('idp', fn($q) => $q->where('status', 0))
-                    ->with(['idp' => fn($q) => $q->where('status', 0)])
+            'hav.details' => function ($q) {
+                $q->whereHas('idp', fn($qq) => $qq->where('status', 0))
+                    ->with(['idp' => fn($qq) => $qq->where('status', 0)])
                     ->orderBy('created_at')
                     ->take(1);
             }
@@ -111,22 +115,22 @@ class ToDoListController extends Controller
             ->get();
 
         $draftIdpCollection = $draftIdps->map(function ($employee) {
-            $hav = $employee->hav->first();
+            $hav    = $employee->hav->first();
             $detail = optional($hav?->details->first());
-            $idp = optional($detail?->idp);
+            $idp    = optional($detail?->idp);
 
             return [
-                'type' => 'draft',
-                'employee_name' => $employee->name,
-                'employee_npk' => $employee->npk,
+                'type'             => 'draft',
+                'employee_name'    => $employee->name,
+                'employee_npk'     => $employee->npk,
                 'employee_company' => $employee->company_name,
-                'category' => $idp?->category ?? '-',
-                'program' => $idp?->development_program ?? '-',
-                'target' => $idp?->development_target ?? '-',
+                'category'         => $idp?->category ?? '-',
+                'program'          => $idp?->development_program ?? '-',
+                'target'           => $idp?->development_target ?? '-',
             ];
         });
 
-        // === Revisi ===
+        // ===== Revisi =====
         $reviseIdps = Employee::with(['hav.details.idp' => fn($q) => $q->where('status', -1)->orderBy('created_at')])
             ->whereIn('id', $subCreate)
             ->whereHas('hav.details.idp', fn($q) => $q->where('status', -1))
@@ -138,55 +142,51 @@ class ToDoListController extends Controller
                     $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
                     return $idps->filter(fn($idp) => $idp->status === -1)->map(function ($idp) use ($employee) {
                         return [
-                            'type' => 'revise',
-                            'employee_name' => $employee->name,
-                            'employee_npk' => $employee->npk,
+                            'type'             => 'revise',
+                            'employee_name'    => $employee->name,
+                            'employee_npk'     => $employee->npk,
                             'employee_company' => $employee->company_name,
-                            'category' => $idp->category ?? '-',
-                            'program' => $idp->development_program ?? '-',
-                            'target' => $idp->development_target ?? '-',
-                            'created_at' => $idp->created_at,
+                            'category'         => $idp->category ?? '-',
+                            'program'          => $idp->development_program ?? '-',
+                            'target'           => $idp->development_target ?? '-',
+                            'created_at'       => $idp->created_at,
                         ];
                     });
                 });
             });
         });
 
-        // === Pending (status 1 dan 2)
+        // ===== Pending (status 1/2/3 sesuai peran) =====
         $checkIdps = Employee::with(['hav.details.idp' => fn($q) => $q->where('status', 1)->orderBy('created_at')])
             ->whereIn('id', $subCheck)
             ->whereHas('hav.details.idp', fn($q) => $q->where('status', 1))
             ->get();
 
-        // Base query for approveIdps
         $approveIdpsQuery = Employee::with(['hav.details.idp' => fn($q) => $q->orderBy('created_at')])
             ->whereIn('id', $subApprove)
             ->whereHas('hav.details.idp', fn($q) => $q->where('status', 2));
 
-        // Only exclude managers if logged in user is president
         if ($normalized === 'president') {
             $approveIdpsQuery->where('position', '!=', 'Manager');
         }
 
-        $approveIdps = $approveIdpsQuery->get()
-            ->filter(function ($employee) {
-                return $employee->hav->every(function ($hav) {
-                    $statuses = collect($hav->details)->flatMap(function ($detail) {
-                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-                        return $idps->pluck('status');
-                    })->unique();
+        $approveIdps = $approveIdpsQuery->get()->filter(function ($employee) {
+            return $employee->hav->every(function ($hav) {
+                $statuses = collect($hav->details)->flatMap(function ($detail) {
+                    $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+                    return $idps->pluck('status');
+                })->unique();
 
-                    // Must have only status 2 and no -1
-                    return $statuses->count() === 1 && $statuses->first() === 2;
-                });
+                return $statuses->count() === 1 && $statuses->first() === 2;
             });
+        });
 
         if ($normalized === 'president') {
             $presidenApproveIdps = Employee::with(['hav.details.idp' => fn($q) => $q->orderBy('created_at')])
                 ->whereIn('id', $subApprove)
                 ->whereHas('hav.details.idp', fn($q) => $q->where('status', 3))
                 ->whereDoesntHave('hav.details', function ($q) {
-                    $q->whereHas('idp', fn($q) => $q->where('status', 2));
+                    $q->whereHas('idp', fn($qq) => $qq->where('status', 2));
                 })
                 ->get()
                 ->filter(function ($employee) {
@@ -210,18 +210,19 @@ class ToDoListController extends Controller
             return $employee->hav->flatMap(function ($hav) use ($employee) {
                 return collect($hav->details)->flatMap(function ($detail) use ($employee) {
                     $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-                    return $idps->filter(fn($idp) => in_array($idp->status, [1, 2, 3]))->map(function ($idp) use ($employee) {
-                        return [
-                            'type' => $idp->status === 1 ? 'need_check' : 'need_approval',
-                            'employee_name' => $employee->name,
-                            'employee_npk' => $employee->npk,
-                            'employee_company' => $employee->company_name,
-                            'category' => $idp->category ?? '-',
-                            'program' => $idp->development_program ?? '-',
-                            'target' => $idp->development_target ?? '-',
-                            'created_at' => $idp->created_at,
-                        ];
-                    });
+                    return $idps->filter(fn($idp) => in_array($idp->status, [1, 2, 3]))
+                        ->map(function ($idp) use ($employee) {
+                            return [
+                                'type'             => $idp->status === 1 ? 'need_check' : 'need_approval',
+                                'employee_name'    => $employee->name,
+                                'employee_npk'     => $employee->npk,
+                                'employee_company' => $employee->company_name,
+                                'category'         => $idp->category ?? '-',
+                                'program'          => $idp->development_program ?? '-',
+                                'target'           => $idp->development_target ?? '-',
+                                'created_at'       => $idp->created_at,
+                            ];
+                        });
                 });
             });
         })
@@ -229,20 +230,19 @@ class ToDoListController extends Controller
             ->unique('employee_npk')
             ->values();
 
-        // === Unassigned
+        // ===== Unassigned dari HAV (belum dibuat IDP) =====
         $unassignedIdps = collect($notExistInIdp)->map(function ($item) {
             $item['type'] = 'unassigned';
             return $item;
         });
-        // dd($draftIdpCollection, $reviseIdpCollection, $pendingIdpCollection);
 
-        // === Gabung semua
+        // ===== Gabung semua IDP tasks =====
         $allIdpTasks = $unassignedIdps
             ->merge($draftIdpCollection)
             ->merge($reviseIdpCollection)
             ->merge($pendingIdpCollection);
 
-        // HAV //
+        // ===== HAV tasks =====
         $allHavTasks = Hav::with('employee')
             ->whereIn('employee_id', $subCheck)
             ->where('status', 0)
@@ -250,20 +250,70 @@ class ToDoListController extends Controller
             ->unique('employee_id')
             ->values();
 
-        // RTC //
+        // ===== RTC tasks =====
         $allRtcTasks = Rtc::with('employee')
             ->where(function ($query) use ($subCheck, $subApprove) {
                 $query->where(function ($q) use ($subCheck) {
-                    $q->whereIn('employee_id', $subCheck)
-                        ->where('status', 0);
+                    $q->whereIn('employee_id', $subCheck)->where('status', 0);
                 })->orWhere(function ($q) use ($subApprove) {
-                    $q->whereIn('employee_id', $subApprove)
-                        ->where('status', 1);
+                    $q->whereIn('employee_id', $subApprove)->where('status', 1);
                 });
             })
             ->get();
 
-        // Kirim ke view
-        return view('website.todolist.index', compact('allIdpTasks', 'allHavTasks', 'allRtcTasks'));
+        // ===== IPP tasks =====
+        $year = now()->year;
+
+        $ippTasks = [
+            "activity_management" => 0,
+            "crp"                 => 0,
+            "people_development"  => 0,
+            "special_assignment"  => 0,
+            "total"               => 0,
+            "status"              => "",
+            "employee_company"    => "",
+            "employee_npk"        => ""
+
+        ];
+        $message = null;
+        $employeesWithoutIppThisYear = collect();
+
+        $employeeId = $employee->id ?? auth()->user()->employee_id ?? null;
+        $ipp = null;
+        $ipp = Ipp::with('employee')
+            ->where('employee_id', $employeeId)
+            ->where('on_year', $year)
+            ->latest('created_at')
+            ->first();
+
+        if (!$ipp) {
+            $summary = [];
+            $message = "The {$year} IPP has not yet been created.";
+        } else {
+            $summary = is_array($ipp->summary) ? $ipp->summary : (json_decode($ipp->summary, true) ?? []);
+            $message = null;
+        }
+
+        $ippTasks = [
+            "activity_management" => $summary["activity_management"] ?? 0,
+            "crp"                 => $summary["crp"] ?? 0,
+            "people_development"  => $summary["people_development"] ?? 0,
+            "special_assignment"  => $summary["special_assignment"] ?? 0,
+            "total"               => $summary["total"] ?? array_sum([
+                $summary["activity_management"] ?? 0,
+                $summary["crp"] ?? 0,
+                $summary["people_development"] ?? 0,
+                $summary["special_assignment"] ?? 0,
+            ]),
+            "status"            => $ipp->status ?? "Not Created",
+            "employee_name"    => $ipp->employee->name ?? "",
+            "employee_company"    => $ipp->employee->company_name ?? "",
+            "employee_npk"        => $ipp->employee->npk ?? ""
+        ];
+
+        $allIppTasks['ippTasks'] = $ippTasks;
+        $allIppTasks['message']     = $message;
+
+        return view('website.todolist.index', compact('allIdpTasks', 'allHavTasks', 'allRtcTasks', 'allIppTasks'));
     }
 }

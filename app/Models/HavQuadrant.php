@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Log;
 
 class HavQuadrant extends Model
 {
@@ -23,15 +24,16 @@ class HavQuadrant extends Model
     function generateHavQuadrant($employee_id, $assessment, $performance)
     {
         // Tentukan rentang X
-        if ($assessment >= 1 && $assessment <= 2.4) {
-            $col = 0;  // Kolom "1-2.4"
-        } elseif ($assessment >= 2.5 && $assessment <= 3) {
-            $col = 1;  // Kolom "2.5 - 3"
-        } elseif ($assessment >= 3.1 && $assessment <= 3.5) {
-            $col = 2;  // Kolom "3.1 - 3.5"
-        } elseif ($assessment >= 3.6 && $assessment <= 5) {
-            $col = 3;  // Kolom "3.6 - 5"
+        if ($assessment >= 1.0 && $assessment < 2.5) {
+            $col = 0;
+        } elseif ($assessment >= 2.5 && $assessment <= 3.0) {
+            $col = 1;
+        } elseif ($assessment > 3.0 && $assessment <= 3.5) {
+            $col = 2;
+        } elseif ($assessment > 3.5 && $assessment <= 5.0) {
+            $col = 3;
         } else {
+            Log::info('assessment skor :' . $assessment);
             throw new \Exception("Nilai Assessment tidak valid. Mohon periksa kembali input Anda.");
         }
 
@@ -45,7 +47,8 @@ class HavQuadrant extends Model
         } elseif ($performance >= 21 && $performance <= 24) {
             $row = 0;  // Baris "21 - 24" => Indeks 0 (Baris paling atas)
         } else {
-            throw new \Exception("Nilai Assessment tidak valid. Mohon periksa kembali input Anda.");
+            Log::info('performance skor :' . $performance);
+            throw new \Exception("Nilai Performance tidak valid. Mohon periksa kembali input Anda.");
         }
 
         // Matriks nilai dalam tabel

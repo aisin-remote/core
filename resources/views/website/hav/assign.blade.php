@@ -32,18 +32,18 @@
                     role="tablist" style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4 {{ $filter == 'all' ? 'active' : '' }}"
+                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                            Show All
+                            <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
 
-                    {{-- Tab Dinamis --}}
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                {{ $position }}
+                                <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
                     @endforeach
@@ -63,7 +63,6 @@
                         </tr>
                     </thead>
                     <tbody>
-
                         @foreach ($employees as $item)
                             <tr data-position="{{ $item->employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
@@ -78,52 +77,27 @@
                                     $isAssessmentOne = $item->hav && $item->hav->details->contains('is_assessment', 1);
                                 @endphp
                                 <td>
-                                    <span class="badge badge-light-warning fs-7 fw-bold">
-                                        @if ($status === 0 && $isAssessmentOne)
-                                            Not Created
-                                        @elseif ($status === 2 && \Carbon\Carbon::parse($item->hav->created_at)->addYear()->isPast())
-                                            -
-                                        @else
-                                            {{ match ($status) {
-                                                0 => 'Submited',
-                                                1 => 'Revised',
-                                                2 => 'Approved',
-                                                3 => 'Not Created',
-                                                default => '-',
-                                            } }}
-                                        @endif
+                                    <span class="badge {{ $item->badge_class }} fs-7 fw-bold">
+                                        {{ $item->status_text }}
                                     </span>
                                 </td>
                                 <td class="text-center">
-                                    @if (!$item->hav || $item->allowAdd)
-                                        {{-- Tidak ada HAV atau status 2 sudah lebih dari 1 tahun --}}
+                                    @if ($item->show_add)
                                         <a href="#" class="btn btn-info btn-sm btn-add-import" data-bs-toggle="modal"
                                             data-bs-target="#importModal" data-employee-id="{{ $item->employee->id }}">
                                             <i class="fas fa-plus"></i> Add
                                         </a>
-                                    @else
-                                        @php
-                                            $isAssessment = $item->hav->details->first()?->is_assessment ?? 1;
-                                            $status = $item->hav->status;
-                                        @endphp
-
-                                        @if ($isAssessment == 0 && $status == 1)
-                                            <a href="#" class="btn btn-warning btn-sm btn-revise-import"
-                                                data-bs-toggle="modal" data-bs-target="#importModal"
-                                                data-hav-id="{{ $item->hav->id }}"
-                                                data-employee-id="{{ $item->employee->id }}">
-                                                <i class="fas fa-upload"></i> Revise
-                                            </a>
-                                        @elseif ($isAssessment == 1)
-                                            <a href="#" class="btn btn-info btn-sm btn-add-import"
-                                                data-bs-toggle="modal" data-bs-target="#importModal"
-                                                data-employee-id="{{ $item->employee->id }}">
-                                                <i class="fas fa-plus"></i> Add
-                                            </a>
-                                        @endif
                                     @endif
 
-                                    {{-- Tombol Comment selalu tampil --}}
+                                    @if ($item->show_revise)
+                                        <a href="#" class="btn btn-warning btn-sm btn-revise-import"
+                                            data-bs-toggle="modal" data-bs-target="#importModal"
+                                            data-hav-id="{{ $item->revise_hav_id }}"
+                                            data-employee-id="{{ $item->employee->id }}">
+                                            <i class="fas fa-upload"></i> Revise
+                                        </a>
+                                    @endif
+
                                     @if ($item->hav)
                                         <a data-id="{{ $item->hav->id }}" class="btn btn-primary btn-sm btn-hav-comment"
                                             href="#">
@@ -375,10 +349,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                                                                                                                                                                                                data-id="${hav.id}"
-                                                                                                                                                                                                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                                                                                                                                                                                    History
-                                                                                                                                                                                                                                </a>`}
+                                                                                                                                                                                                                                                                                                data-id="${hav.id}"
+                                                                                                                                                                                                                                                                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                                                                                                                                                                                                                                    History
+                                                                                                                                                                                                                                                                                                </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>

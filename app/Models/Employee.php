@@ -42,7 +42,7 @@ class Employee extends Model
 
     public function latestIcp()
     {
-        return $this->hasOne(Icp::class)->latestOfMany();
+        return $this->hasOne(Icp::class, 'employee_id')->latestOfMany();
     }
 
 
@@ -76,6 +76,12 @@ class Employee extends Model
                 $employee->user->delete();
             }
         });
+    }
+
+    public function scopeForCompany($query, ?string $company)
+    {
+        if (!$company) return $query; // HRD: lihat semua
+        return $query->where('company_name', $company);
     }
 
     public function promotionHistory()
@@ -382,44 +388,64 @@ class Employee extends Model
     public static function manualSuperiorMap()
     {
         return [
-            'gm' => 'vp',
-            'vp' => 'president',
+            // gunakan posisi yang sudah dinormalisasi
+            'gm'       => 'direktur',   // kalau struktural gagal, minimal naik ke Direktur
+            'direktur' => 'vpd',        // Direktur naik ke VPD
+            'vpd'      => 'president',  // VPD naik ke President
+            'vp'       => 'president',  // jaga-jaga kalau ada data lama "VP"
         ];
     }
 
+
     private function getDirectSuperiorOf(Employee $employee)
     {
-        // Struktur organisasi
-        if ($employee->leadingDivision && $employee->leadingDivision->plant && $employee->leadingDivision->plant->director_id) {
-            return Employee::find($employee->leadingDivision->plant->director_id);
+        $norm = $employee->getNormalizedPosition();
+
+        // Cabang khusus untuk posisi puncak yang tidak tercakup struktur
+        if ($norm === 'vpd') {
+            return Employee::whereRaw('LOWER(position) = ?', ['president'])->first();
+        }
+        if ($norm === 'direktur') {
+            return Employee::where(function ($q) {
+                $q->whereRaw('LOWER(position) = ?', ['vpd'])
+                    ->orWhereRaw('LOWER(position) = ?', ['vp']); // fallback data lama
+            })->first() ?? Employee::whereRaw('LOWER(position) = ?', ['president'])->first();
         }
 
+        // ====== LANJUTKAN DENGAN LOGIKA STRUKTURAL YANG SUDAH ADA ======
+        if ($employee->leadingDivision && $employee->leadingDivision->plant && $employee->leadingDivision->plant->director_id) {
+            return Employee::find($employee->leadingDivision->plant->director_id); // GM -> Direktur
+        }
         if ($employee->leadingDepartment && $employee->leadingDepartment->division && $employee->leadingDepartment->division->gm_id) {
             return Employee::find($employee->leadingDepartment->division->gm_id);
         }
-
         if ($employee->leadingSection && $employee->leadingSection->department && $employee->leadingSection->department->manager_id) {
             return Employee::find($employee->leadingSection->department->manager_id);
         }
-
         if ($employee->leadingSubSection && $employee->leadingSubSection->section && $employee->leadingSubSection->section->supervisor_id) {
             return Employee::find($employee->leadingSubSection->section->supervisor_id);
         }
-
         if ($employee->subSection && $employee->subSection->leader_id) {
             return Employee::find($employee->subSection->leader_id);
         }
 
-        // Fallback manual berdasarkan posisi
+        // ====== FALLBACK MANUAL (pakai posisi yang DINORMALISASI) ======
         $map = self::manualSuperiorMap();
-        $myPosition = strtolower($employee->position);
+        $target = $map[$norm] ?? null;
 
-        if (isset($map[$myPosition])) {
-            return Employee::whereRaw('LOWER(position) = ?', [$map[$myPosition]])->first();
+        if ($target) {
+            return Employee::where(function ($q) use ($target) {
+                $q->whereRaw('LOWER(position) = ?', [$target]);
+                if ($target === 'vpd') {
+                    // dukung label lama "VP"
+                    $q->orWhereRaw('LOWER(position) = ?', ['vp']);
+                }
+            })->first();
         }
 
         return null;
     }
+
 
     public function getNormalizedPosition()
     {
@@ -431,6 +457,7 @@ class Employee extends Model
             'act manager'      => 'manager',
             'act supervisor'   => 'supervisor',
             'act leader'       => 'leader',
+            'act direktur'     => 'direktur',
             'staff'            => 'leader',
             'act jp'           => 'jp',
             'act gm'           => 'gm',
@@ -521,7 +548,7 @@ class Employee extends Model
             Str::contains($position, 'gm') => $this->leadingDivision->name ?? 'Tidak Ada Divisi',
             Str::contains($position, 'manager') => $this->leadingDepartment->name ?? 'Tidak Ada Departemen',
             default => $this->department->name
-            ?? 'Tidak Ada Departemen',
+                ?? 'Tidak Ada Departemen',
         };
     }
 
@@ -535,5 +562,15 @@ class Employee extends Model
     {
         $actGmPositions = ['Act GM'];
         return in_array($this->position, $actGmPositions);
+    }
+
+    public function ipps()
+    {
+        return $this->hasMany(Ipp::class);
+    }
+
+    public function ippComments()
+    {
+        return $this->hasMany(IppComment::class);
     }
 }

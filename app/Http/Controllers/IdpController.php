@@ -320,7 +320,7 @@ class IdpController extends Controller
     }
     public function show($employee_id)
     {
-        $employee = Employee::with('assessments')->find($employee_id);
+        $employee = Employee::find($employee_id);
 
         if (!$employee) {
             return response()->json([
@@ -328,19 +328,102 @@ class IdpController extends Controller
             ], 404);
         }
 
-        $assessments = Idp::with('hav.hav.employee')
-            ->whereHas('hav.hav.employee', function ($q) use ($employee) {
-                $q->where('id', $employee->id);
-            })
-            ->get()
-            ->groupBy('assessment_id') // Grouping berdasarkan assessment_id
-            ->map(function ($group) {
-                return $group->values(); // Reset key supaya array numerik
-            });
+        $idps = Idp::with([
+            'hav.hav.employee',
+            'hav.alc',
+            'assessment'
+        ])
+            ->whereHas('hav.hav.employee', fn($q) => $q->where('id', $employee->id))
+            ->orderByDesc('created_at')
+            ->get();
+
+        $normalized = $employee->getNormalizedPosition();
+        $badges = [
+            'no_approval_needed' => ['text' => '-',            'class' => 'light-primary'],
+            'not_created'        => ['text' => 'Not Created',  'class' => 'light-dark'],
+            'draft'              => ['text' => 'Need Submit',  'class' => 'light-secondary'],
+            'waiting'            => ['text' => 'Waiting',      'class' => 'light-warning'],
+            'checked'            => ['text' => 'Checked',      'class' => 'light-info'],
+            'approved'           => ['text' => 'Approved',     'class' => 'light-success'],
+            'revise'             => ['text' => 'Need Revise',  'class' => 'light-danger'],
+            'unknown'            => ['text' => 'Unknown',      'class' => 'light-secondary'],
+        ];
+
+        // Proses setiap IDP -> hitung status & approver (jabatan) + badge
+        $processed = $idps->map(function (Idp $idp) use ($employee, $normalized, $badges) {
+            // Konversi status angka ke label (khusus manager : 3 dianggap "checking")
+            $status = match (true) {
+                $normalized === 'manager' => match ($idp->status) {
+                    0 => 'draft',
+                    1 => 'waiting',
+                    2 => 'checked',
+                    3 => 'checked',
+                    4 => 'approved',
+                    -1 => 'revise',
+                    default => 'unknown',
+                },
+                default => match ($idp->status) {
+                    0 => 'draft',
+                    1 => 'waiting',
+                    2 => 'checked',
+                    3 => 'approved',
+                    -1 => 'revise',
+                    default => 'unknown',
+                },
+            };
+
+            // Tentukan approver (jabatan) + phrase
+            $approver = null;
+            $phrase = null;
+
+            if ($normalized === 'manager') {
+                $m        = $this->resolveApproverForManager($employee, (int) $idp->status);
+                $status   = $m['status'];
+                $approver = $m['position'] ?? null;
+                $phrase   = $m['phrase'] ?? null;
+            } else {
+                $level = match ($status) {
+                    'waiting'  => (int) $employee->getCreateAuth() + 1,
+                    'checked'  => (int) $employee->getFirstApproval() + 1,
+                    'approved' => (int) $employee->getFinalApproval(),
+                    default    => 0,
+                };
+                if ($level > 0) {
+                    $sup = $employee->getSuperiorsByLevel($level)->last();
+                    $approver = $sup->position ?? null;
+                    $phrase   = $status === 'approved' ? 'Approved by ' : 'Checking by ';
+                }
+            }
+            // Susun badge text
+            $badgeText = $badges[$status]['text'] ?? 'unknown';
+            if (in_array($status, ['waiting', 'checked', 'approved'], true) && $approver) {
+                $badgeText = ($phrase ?? ($status === 'approved' ? 'Approved by ' : 'Checking by ')) . $approver;
+            }
+
+            return [
+                'idp_id'              => $idp->id,
+                'assessment_id'       => $idp->assessment_id,
+                'alc_id'              => $idp->alc_id,
+                'alc_name'            => optional($idp->hav->alc)->name,
+                'category'            => $idp->category,
+                'development_program' => $idp->development_program,
+                'development_target'  => $idp->development_target,
+                'date'                => $idp->date,
+                'status'              => $status,                            // waiting/checked/approved/dll
+                'approver'            => $approver,                          // jabatan approver (bisa null)
+                'badge'               => [
+                    'text'  => $badgeText,
+                    'class' => $badges[$status]['class'],
+                ],
+            ];
+        })
+            ->groupBy('assessment_id')
+            ->map(fn($g) => $g->values());
+
 
         return response()->json([
             'employee' => $employee,
-            'grouped_assessments' => $assessments,
+            'grouped_assessments' => $processed,
         ]);
     }
 
@@ -1165,13 +1248,13 @@ class IdpController extends Controller
     {
         $badges = [
             'no_approval_needed' => ['text' => '-', 'class' => 'light-primary'],
-            'not_created' => ['text' => 'Not Created', 'class' => 'light-dark'],
-            'draft' => ['text' => 'Need Submit', 'class' => 'light-secondary'],
-            'waiting' => ['text' => 'Waiting', 'class' => 'light-warning'],
-            'checked' => ['text' => 'Checked', 'class' => 'light-info'],
-            'approved' => ['text' => 'Approved', 'class' => 'light-success'],
-            'revise' => ['text' => 'Need Revise', 'class' => 'light-danger'],
-            'unknown' => ['text' => 'Unknown', 'class' => 'light-secondary'],
+            'not_created'        => ['text' => 'Not Created', 'class' => 'light-dark'],
+            'draft'              => ['text' => 'Need Submit', 'class' => 'light-secondary'],
+            'waiting'            => ['text' => 'Waiting', 'class' => 'light-warning'],
+            'checked'            => ['text' => 'Checked', 'class' => 'light-info'],
+            'approved'           => ['text' => 'Approved', 'class' => 'light-success'],
+            'revise'             => ['text' => 'Need Revise', 'class' => 'light-danger'],
+            'unknown'            => ['text' => 'Unknown', 'class' => 'light-secondary'],
         ];
 
         return $assessments->map(function ($assessment) use ($alcs, $badges) {
@@ -1200,35 +1283,25 @@ class IdpController extends Controller
             }
 
             // Get overall status
-            $overallStatus = $this->getOverallStatus($assessment);
+            $employee   = $assessment->employee ?? optional($assessment->details->first())->hav->employee;
+            $normalized = $employee?->getNormalizedPosition();
+
+            $overallStatus = ($normalized === 'manager')
+                ? $this->getOverallStatusV2($assessment)   // khusus Manager
+                : $this->getOverallStatus($assessment);     // selain Manager
             $assessment->overall_status = $overallStatus['status'];
 
-            switch ($overallStatus['status']) {
-                case 'approved':
-                    $overallBadgeText = $overallStatus['approver']
-                        ? 'Approved by ' . $overallStatus['approver']
-                        : $badges['approved']['text'];
-                    break;
-
-                case 'waiting':
-                    $overallBadgeText = $overallStatus['approver']
-                        ? 'Waiting by ' . $overallStatus['approver']
-                        : $badges['waiting']['text'];
-                    break;
-
-                case 'checked':
-                    $overallBadgeText = $overallStatus['approver']
-                        ? 'Checked by ' . $overallStatus['approver'] // (untuk manager status=3 otomatis nama step-2)
-                        : $badges['checked']['text'];
-                    break;
-
-                default:
-                    $overallBadgeText = $badges[$overallStatus['status']]['text'];
+            $overallBadgeText = $badges[$overallStatus['status']]['text'];
+            if (in_array($overallStatus['status'], ['waiting', 'checked', 'approved'], true) && $overallStatus['approver']) {
+                $prefix = $overallStatus['phrase'] ?? (
+                    $overallStatus['status'] === 'waiting' ? 'Checking by ' : ($overallStatus['status'] === 'checked' ? 'Checking by ' : 'Approved by ')
+                );
+                $overallBadgeText = $prefix . $overallStatus['approver'];
             }
 
             $assessment->overall_badge = [
-                'text' => $overallBadgeText,
-                'class' => $badges[$overallStatus['status']]['class']
+                'text'  => $overallBadgeText,
+                'class' => $badges[$overallStatus['status']]['class'],
             ];
 
             return $assessment;
@@ -1243,17 +1316,21 @@ class IdpController extends Controller
                 return null;
 
             // kalau detail approved → pakai final approval; selain itu → first approval
-            $level = ($detail->status ?? null) === 'approved'
-                ? (int) $employee->getFinalApproval()
-                : (int) $employee->getFirstApproval();
+            $status = $detail->status ?? null;
 
+            $level = match ($status) {
+                'waiting'  => (int) $employee->getCreateAuth() + 1,
+                'checked'  => (int) $employee->getFirstApproval() + 1,
+                'approved' => (int) $employee->getFinalApproval(),
+                default    => 0,
+            };
             if ($level <= 0)
                 return null;
 
             $chain = $employee->getSuperiorsByLevel($level); // Collection<Employee>
             $finalSuperior = $chain->last();
 
-            return $finalSuperior->name ?? null;
+            return $finalSuperior->position ?? null;
         } catch (\Throwable $e) {
             logger()->error('Error getting approver name: ' . $e->getMessage());
             return null;
@@ -1267,12 +1344,12 @@ class IdpController extends Controller
         }
 
         $idp = $detail->idp->first();
-        $employee = $idp->assessment->employee ?? null;
-        $normalized = $employee?->getNormalizedPosition();
-
         if (!$idp) {
             return 'not_created';
         }
+
+        $employee   = optional($idp->assessment)->employee; // aman
+        $normalized = $employee?->getNormalizedPosition();
 
         // Logika khusus untuk manager
         if ($normalized === 'manager') {
@@ -1284,9 +1361,9 @@ class IdpController extends Controller
                 case 2:
                     return 'checked';
                 case 3:
-                    return 'checked';  // Khusus manager, status 3 dianggap checked
+                    return 'checked';
                 case 4:
-                    return 'approved'; // Khusus manager, status 4 adalah approved
+                    return 'approved';
                 case -1:
                     return 'revise';
                 default:
@@ -1294,7 +1371,7 @@ class IdpController extends Controller
             }
         }
 
-        // Logika normal untuk non-manager
+        // Non-manager (normal)
         switch ($idp->status) {
             case 0:
                 return 'draft';
@@ -1365,7 +1442,6 @@ class IdpController extends Controller
                     continue;
 
                 $normalized = $employee->getNormalizedPosition();
-
                 if ($normalized === 'manager') {
                     // mapping manager: 1(waiting) → step1, 2(checked1) → step1, 3(checked2) → step2, 4(approved) → step3
                     switch ((int) $idp->status) {
@@ -1421,6 +1497,57 @@ class IdpController extends Controller
         return ['status' => 'unknown', 'approver' => null];
     }
 
+    private function getOverallStatusV2($assessment): array
+    {
+        // Guard: non-manager langsung pakai versi lama
+        $emp = $assessment->employee ?? optional($assessment->details->first())->hav->employee;
+        if (!$emp || $emp->getNormalizedPosition() !== 'manager') {
+            return $this->getOverallStatus($assessment);
+        }
+
+        // ====== sisakan hanya logika MANAGER di bawah ini ======
+        $seen        = [];
+        $hasNotCreated = false;
+        $candidates  = [];
+
+        foreach ($assessment->details as $detail) {
+            if ($detail->score > 3 && $detail->suggestion_development === null) continue;
+
+            $idp = $detail->idp->first();
+            if (!$idp) {
+                $hasNotCreated = true;
+                continue;
+            }
+
+            // Status string (waiting/checked/approved/dll)
+            $statusStr = $this->determineIdpStatus($detail);
+            $seen[]    = $statusStr;
+
+            // Mapping approver khusus Manager by angka status
+            $m = $this->resolveApproverForManager($emp, (int) $idp->status);
+            $candidates[$m['status']] = $m;
+        }
+
+
+        if (empty($seen) && !$hasNotCreated) {
+            return ['status' => 'no_approval_needed', 'approver' => null, 'phrase' => null];
+        }
+
+        $priority = ['revise', 'draft', 'waiting', 'checked', 'approved', 'unknown'];
+        foreach ($priority as $s) {
+            if (in_array($s, $seen, true)) {
+                $pick = $candidates[$s] ?? ['status' => $s, 'phrase' => null, 'position' => null];
+                return ['status' => $s, 'approver' => $pick['position'] ?? null, 'phrase' => $pick['phrase'] ?? null];
+            }
+        }
+
+        if ($hasNotCreated) {
+            return ['status' => 'not_created', 'approver' => null, 'phrase' => null];
+        }
+
+        return ['status' => 'unknown', 'approver' => null, 'phrase' => null];
+    }
+
     private function getSuperiorNameAtStep(Employee $employee, int $step): ?string
     {
         $chain = $employee->getSuperiorsByLevel(10);
@@ -1440,6 +1567,73 @@ class IdpController extends Controller
         array_unshift($positions, 'Show All');
 
         return $positions;
+    }
+
+    private function normalizeTargets(array $targets): array
+    {
+        $map = [
+            'director'  => 'direktur',
+            'direktur'  => 'direktur',
+            'vp'        => 'vpd',
+            'vpd'       => 'vpd',
+            'pd'        => 'president',
+            'president' => 'president',
+        ];
+        return array_values(array_unique(array_map(function ($t) use ($map) {
+            $t = strtolower(trim($t));
+            return $map[$t] ?? $t;
+        }, $targets)));
+    }
+
+    private function findInChainOrFallback(Employee $employee, array $targetPositions): ?Employee
+    {
+        $targets = $this->normalizeTargets($targetPositions);
+
+        // 1) coba dari chain existing
+        $chain = $employee->getSuperiorsByLevel(10); // Collection<Employee>
+        $found = $chain->first(function ($sup) use ($targets) {
+            return in_array($sup->getNormalizedPosition(), $targets, true);
+        });
+        if ($found) return $found;
+
+        // 2) fallback global (tanpa menyentuh model lain)
+        $query = Employee::query();
+        $query->where(function ($q) use ($targets) {
+            foreach ($targets as $t) {
+                $q->orWhereRaw('LOWER(position) = ?', [$t]); // ex: 'vpd', 'president', 'direktur'
+            }
+        });
+
+
+        return $query->first(); // aman: kalau multi VPD, ambil yg pertama (opsional bisa difilter plant/division nanti)
+    }
+
+    private function resolveApproverForManager(Employee $employee, int $idpStatus): array
+    {
+        switch ($idpStatus) {
+            case 1: {
+                    $sup = $this->findInChainOrFallback($employee, ['direktur', 'director']);
+                    return ['status' => 'waiting',  'phrase' => 'Checking by ',  'position' => $sup->position ?? null];
+                }
+            case 2: {
+                    $sup = $this->findInChainOrFallback($employee, ['vpd', 'vp']);
+                    return ['status' => 'checked',  'phrase' => 'Checking by ',  'position' => $sup->position ?? null];
+                }
+            case 3: {
+                    $sup = $this->findInChainOrFallback($employee, ['president']);
+                    return ['status' => 'checked',  'phrase' => 'Checking by ', 'position' => $sup->position ?? null];
+                }
+            case 4: {
+                    $sup = $this->findInChainOrFallback($employee, ['president']);
+                    return ['status' => 'approved', 'phrase' => 'Approved by ', 'position' => $sup->position ?? null];
+                }
+            case -1:
+                return ['status' => 'revise', 'phrase' => null, 'position' => null];
+            case 0:
+                return ['status' => 'draft',  'phrase' => null, 'position' => null];
+            default:
+                return ['status' => 'unknown', 'phrase' => null, 'position' => null];
+        }
     }
 
     private function getDevelopmentPrograms()

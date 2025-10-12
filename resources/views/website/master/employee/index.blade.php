@@ -48,13 +48,12 @@
                     </button>
                 </div>
             </div>
-
             <div class="card-body">
                 <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
                     style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                        <a class="nav-link fs-7 {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             <i class="fas fa-list me-2"></i>Show All
                         </a>
@@ -63,7 +62,7 @@
                     {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('employee.master.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
                                 <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
@@ -88,8 +87,8 @@
                     </thead>
 
                     <tbody>
-                        @forelse ($employee as $index => $employees)
-                            <tr>
+                        @foreach ($employee as $index => $employees)
+                            <tr class="fs-7">
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td class="text-center">
                                     <img src="{{ $employees->photo ? asset('storage/' . $employees->photo) : asset('assets/media/avatars/300-1.jpg') }}"
@@ -106,7 +105,7 @@
 
                                 {{-- ✅ Modified Action buttons --}}
                                 <td class="text-center nowrap" style="min-width: 120px;">
-                                    <a href="{{ route('employee.edit', $employees->npk) }}"
+                                    <a href="{{ route('employee.edit', "$employees->user_id") }}"
                                         class="btn btn-warning btn-sm me-1">
                                         <i class="fa fa-edit"></i>
                                     </a>
@@ -127,12 +126,7 @@
                                     </button>
                                 </td>
                             </tr>
-
-                        @empty
-                            <tr>
-                                <td colspan="11" class="text-center text-muted">No employees found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>

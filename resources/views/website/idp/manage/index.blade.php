@@ -5,7 +5,7 @@
 @section('toolbar')
     <div class="idp-header">
         <h1 class="idp-title">Individual Development Plans</h1>
-        <a href="{{ route('dashboard.index') }}" class="btn btn-dark">Back</a>
+        <a href="{{ route('dashboard') }}" class="btn btn-dark">Back</a>
     </div>
 @endsection
 

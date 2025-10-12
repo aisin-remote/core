@@ -153,7 +153,7 @@
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 Swal.fire({
-                    title: 'Perhatian',
+                    title: 'Warning',
                     text: '{{ session('warning') }}',
                     icon: 'warning',
                     confirmButtonText: 'OK'

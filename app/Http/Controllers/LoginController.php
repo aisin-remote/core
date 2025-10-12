@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class LoginController extends Controller
 {
@@ -15,29 +16,28 @@ class LoginController extends Controller
     public function authenticate(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|min:6|max:255',
-            'password' => 'required'
+            'email'    => 'required|min:6|max:255',
+            'password' => 'required',
         ]);
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-            return redirect()->route('dashboard.index');
+            // Pakai Gate agar konsisten dengan sidebar & route guard
+            if (Gate::allows('view-dashboard')) {
+                return redirect()->route('dashboard');
+            }
+            return redirect()->route('todolist.index');
         }
 
-        return redirect()->back()->with('error', 'Email or password do not match our records!');
+        return back()->with('error', 'Email or password do not match our records!');
     }
 
     public function logout(Request $request)
     {
         Auth::logout();
-
-        // Hapus semua session
         $request->session()->invalidate();
         $request->session()->regenerateToken();
-
-        // Redirect ke halaman login sesuai prefix route
         return redirect()->route('login')->with('success', 'You have been logged out.');
     }
-
 }

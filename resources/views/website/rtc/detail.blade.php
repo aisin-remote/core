@@ -17,7 +17,6 @@
     </div>
 
     <div style="position: relative;">
-        <!-- Floating export buttons -->
         <div style="position: absolute; top: 20px; right: 20px; z-index: 10000; display: flex; gap: 8px;">
             <button id="btn-pdf" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PDF</button>
             <button id="btn-png" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PNG</button>
@@ -25,21 +24,22 @@
             <button id="btn-csv" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">CSV</button>
         </div>
 
-        <!-- Chart container -->
         <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
     </div>
+@endsection
+
+@push('custom-css')
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
     <style>
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
         }
 
         html,
         body {
             height: 100%;
-            background-color: #111;
-            /* Sesuai mode dark chart */
+            background: #101114;
+            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif;
         }
 
         #orgchart-container {
@@ -47,285 +47,394 @@
             height: 100vh;
             overflow: auto;
         }
-    </style>
 
-@endsection
+        .export-btn {
+            background: #1f2937;
+            color: #fff;
+            padding: .4rem .7rem;
+            border-radius: .5rem;
+            border: 1px solid #374151;
+        }
+
+        .export-btn:hover {
+            background: #111827;
+        }
+    </style>
+@endpush
 
 @push('scripts')
-    <script src="https://balkan.app/js/OrgChart.js"></script>
-
     <script>
         const main = @json($main);
         const managers = @json($managers);
+        const hideMainPlans = @json($hideMainPlans ?? false);
+        const NO_ROOT = @json($noRoot ?? false);
+        const GROUP_TOP = @json($groupTop ?? false); // <-- penting: mode group untuk company
     </script>
 
     <script>
         $(function() {
-            OrgChart.templates.myTemplate = Object.assign({}, OrgChart.templates.ana);
-            OrgChart.templates.myTemplate.size = [300, 380];
+            /* ================== TEMPLATES ================== */
+            const W = 360,
+                H = 430,
+                HDR = 76;
+            const CX = W / 2,
+                AV = 64,
+                CY = (AV / 2) + 18;
+            const LEFTX = 26,
+                RIGHTX = W - 26;
 
-            OrgChart.templates.myTemplate.node = `
-<rect x="0" y="0" width="300" height="380" fill="#ffffff" rx="10" ry="10" stroke="#e0e0e0" stroke-width="1"></rect>
-<rect x="0" y="0" width="300" height="50" fill="{val}" rx="10" ry="10"></rect>
-`;
+            // base dari "ana"
+            OrgChart.templates.factory = Object.assign({}, OrgChart.templates.ana);
+            OrgChart.templates.factory.size = [W, H];
 
-            OrgChart.templates.myTemplate.img_0 =
-                `<clipPath id="ulaImg"><circle cx="150" cy="45" r="35"></circle></clipPath>
-    <image preserveAspectRatio="xMidYMid slice" clip-path="url(#ulaImg)" xlink:href="{val}" x="115" y="12" width="70" height="70"></image>`;
+            // defs
+            OrgChart.templates.factory.defs =
+                '<filter id="dropShadow" x="-40%" y="-40%" width="180%" height="180%">' +
+                '<feGaussianBlur in="SourceAlpha" stdDeviation="3"></feGaussianBlur>' +
+                '<feOffset dx="0" dy="2" result="offsetblur"></feOffset>' +
+                '<feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer>' +
+                '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>' +
+                '</filter>' +
+                '<clipPath id="clipPhoto"><circle cx="' + CX + '" cy="' + CY + '" r="' + (AV / 2) +
+                '"/></clipPath>';
 
-            OrgChart.templates.myTemplate.field_0 =
-                `
-<text style="font-size: 15px; font-weight: bold;" fill="#000" x="150" y="95" text-anchor="middle">{val}</text>`; // department
+            // node normal (dengan label S/T–M/T–L/T)
+            OrgChart.templates.factory.node =
+                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
+                '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
+                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + HDR + '" fill="{val}"></rect>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="155" text-anchor="start">Grade</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="175" text-anchor="start">Age</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="195" text-anchor="start">LOS</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="215" text-anchor="start">LCP</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="245" text-anchor="start">S/T</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="265" text-anchor="start">M/T</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="285" text-anchor="start">L/T</text>';
 
-            OrgChart.templates.myTemplate.field_1 = `
-<text style="font-size: 13px;" fill="#777" x="150" y="115" text-anchor="middle">{val}</text>`; // name
+            OrgChart.templates.factory.img_0 =
+                '<image clip-path="url(#clipPhoto)" xlink:href="{val}" x="' + (CX - AV / 2) + '" y="' + (CY - AV /
+                    2) + '" width="' + AV + '" height="' + AV + '" preserveAspectRatio="xMidYMid slice"></image>';
+            OrgChart.templates.factory.field_0 = '<text style="font-size:16px;font-weight:700;fill:#111827" x="' +
+                CX + '" y="105" text-anchor="middle">{val}</text>';
+            OrgChart.templates.factory.field_1 = '<text style="font-size:13px;fill:#6b7280" x="' + CX +
+                '" y="128" text-anchor="middle">{val}</text>';
+            OrgChart.templates.factory.field_2 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="155" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_3 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="175" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_4 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="195" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_5 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
+                RIGHTX + '" y="215" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_6 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="245" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_7 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="265" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_8 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="285" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_9 = '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (
+                H - 14) + '" text-anchor="middle">(grade, age, HAV)</text>';
 
-            OrgChart.templates.myTemplate.field_2 = `
-<text style="font-size: 13px;" fill="#000" x="50" y="140" text-anchor="start">Grade</text>
-<text style="font-size: 13px; font-weight: bold;" fill="#000" x="250" y="140" text-anchor="end">{val}</text>`;
+            // template tanpa S/T–M/T–L/T (pakai untuk President, VPD, Plant)
+            OrgChart.templates.factoryRoot = Object.assign({}, OrgChart.templates.factory);
+            OrgChart.templates.factoryRoot.node =
+                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
+                '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
+                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + HDR + '" fill="{val}"></rect>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="155" text-anchor="start">Grade</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="175" text-anchor="start">Age</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="195" text-anchor="start">LOS</text>' +
+                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '" y="215" text-anchor="start">LCP</text>';
 
-            OrgChart.templates.myTemplate.field_3 = `
-<text style="font-size: 13px;" fill="#000" x="50" y="160" text-anchor="start">Age</text>
-<text style="font-size: 13px; font-weight: bold;" fill="#000" x="250" y="160" text-anchor="end">{val}</text>`;
+            /* ===== Group template (kotak besar berisi President & VPD) ===== */
+            // (mengikuti contoh OrgChartJS, cukup definisi minimal + link path)
+            OrgChart.templates.group.link =
+                `<path stroke-linejoin="round" stroke="#aeaeae" stroke-width="1px" fill="none"
+                   d="M{xa},{ya} {xb},{yb} {xc},{yc} L{xd},{yd}" />`;
+            OrgChart.templates.group.nodeMenuButton = '';
+            OrgChart.templates.group.min = Object.assign({}, OrgChart.templates.group);
+            OrgChart.templates.group.min.imgs = `{val}`;
+            OrgChart.templates.group.min.img_0 = ``;
+            OrgChart.templates.group.min.description =
+                `<text data-width="230" data-text-overflow="multiline" style="font-size: 14px;" fill="#aeaeae"
+                   x="125" y="100" text-anchor="middle">{val}</text>`;
 
-            OrgChart.templates.myTemplate.field_4 = `
-<text style="font-size: 13px;" fill="#000" x="50" y="180" text-anchor="start">LOS</text>
-<text style="font-size: 13px; font-weight: bold;" fill="#000" x="250" y="180" text-anchor="end">{val}</text>`;
-
-            OrgChart.templates.myTemplate.field_5 = `
-<text style="font-size: 13px;" fill="#000" x="50" y="200" text-anchor="start">LCP</text>
-<text style="font-size: 13px; font-weight: bold;" fill="#000" x="250" y="200" text-anchor="end">{val}</text>`;
-
-            OrgChart.templates.myTemplate.field_6 = `
-<text style="font-size: 13px;" fill="#000" x="30" y="230" text-anchor="start">S/T</text>
-<text style="font-size: 13px;" fill="#000" x="270" y="230" text-anchor="end">{val}</text>`;
-
-            OrgChart.templates.myTemplate.field_7 = `
-<text style="font-size: 13px;" fill="#000" x="30" y="250" text-anchor="start">M/T</text>
-<text style="font-size: 13px;" fill="#000" x="270" y="250" text-anchor="end">{val}</text>`;
-
-            OrgChart.templates.myTemplate.field_8 = `
-<text style="font-size: 13px;" fill="#000" x="30" y="270" text-anchor="start">L/T</text>
-<text style="font-size: 13px;" fill="#000" x="270" y="270" text-anchor="end">{val}</text>`;
-
-            OrgChart.templates.myTemplate.field_9 = `
-<text style="font-size: 11px;" fill="#888" x="150" y="350" text-anchor="middle">(gol, usia, HAV)</text>`;
-
+            /* ================== WARNA ================== */
             const colorMap = {
-                'color-1': '#007bff',
-                'color-2': '#28a745',
-                'color-3': '#dc3545',
-                'color-4': '#ffc107',
-                'color-5': '#6f42c1',
-                'color-6': '#20c997',
-                'color-7': '#fd7e14',
-            }
+                'color-1': '#0ea5e9',
+                'color-2': '#22c55e',
+                'color-3': '#ef4444',
+                'color-4': '#f59e0b',
+                'color-5': '#8b5cf6',
+                'color-6': '#14b8a6',
+                'color-7': '#fb923c',
+                'color-8': '#06b6d4',
+                'color-9': '#a855f7',
+                'color-10': '#10b981',
+                'color-11': '#eab308',
+                'color-12': '#ec4899',
+                'color-13': '#34d399',
+                'color-14': '#3b82f6'
+            };
+
+            /* ================== BUILD DATA ================== */
+            const clamp = (s, max = 42) => (s && s.length > max ? (s.slice(0, max - 1) + '…') : (s || '-'));
 
             function buildChartData(main, managers) {
-                let nodes = [];
+                const nodes = [];
+                let ai = 0;
+                const nid = () => 'n' + (ai++);
 
-                const rootId = 'root';
-                nodes.push({
-                    id: rootId,
-                    department: main.title ?? '-',
-                    name: main.person.name ?? '-',
-                    grade: main.person.grade ?? '-',
-                    age: main.person.age ?? '-',
-                    los: main.person.los ?? '-',
-                    lcp: main.person.lcp ?? '-',
-                    cand_st: `${main.shortTerm?.name ?? '-'} (${main.shortTerm?.grade ?? '-'}, ${main.shortTerm?.age ?? '-'})`,
-                    cand_mt: `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
-                    cand_lt: `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
-                    color: colorMap[main.colorClass] || '#007bff',
-                    img: main.person?.photo ? main.person.photo : null
-                });
+                // === MODE GROUP (company): buat kotak group berisi President & VPD
+                if (GROUP_TOP) {
+                    const groupId = 'top-group';
+                    nodes.push({
+                        id: groupId,
+                        name: 'Top Management',
+                        description: 'President & VPD',
+                        tags: ['group', 'top-pair'] // template group + 2 kolom
+                    });
 
-                managers.forEach((manager, i) => {
-                    const managerId = `m-${i}`;
-
-                    // Only create manager node if it's not the same as main person
-                    if (!manager.skipManagerNode) {
+                    // 1) Masukkan Presiden & VPD ke dalam group (stpid)
+                    managers.slice(0, 2).forEach(m => {
+                        const id = nid();
                         nodes.push({
-                            id: managerId,
-                            pid: rootId,
-                            department: manager.title ?? '-',
-                            name: manager.person?.name ?? '-',
-                            grade: manager.person?.grade ?? '-',
-                            age: manager.person?.age ?? '-',
-                            los: manager.person?.los ?? '-',
-                            lcp: manager.person?.lcp ?? '-',
-                            cand_st: `${manager.shortTerm?.name ?? '-'} (${manager.shortTerm?.grade ?? '-'}, ${manager.shortTerm?.age ?? '-'})`,
-                            cand_mt: `${manager.midTerm?.name ?? '-'} (${manager.midTerm?.grade ?? '-'}, ${manager.midTerm?.age ?? '-'})`,
-                            cand_lt: `${manager.longTerm?.name ?? '-'} (${manager.longTerm?.grade ?? '-'}, ${manager.longTerm?.age ?? '-'})`,
-                            color: colorMap[manager.colorClass] || '#28a745',
-                            img: manager.person?.photo ? manager.person.photo : null
-                        });
-                    }
-
-                    // Add supervisors - connect to main if manager is skipped, otherwise to manager
-                    const parentId = manager.skipManagerNode ? rootId : managerId;
-
-                    (manager.supervisors ?? []).forEach((spv, j) => {
-                        const spvId = `m-${i}-s-${j}`;
-                        nodes.push({
-                            id: spvId,
-                            pid: parentId,
-                            department: spv.title ?? '-',
-                            name: spv.person?.name ?? '-',
-                            grade: spv.person?.grade ?? '-',
-                            age: spv.person?.age ?? '-',
-                            los: spv.person?.los ?? '-',
-                            lcp: spv.person?.lcp ?? '-',
-                            cand_st: `${spv.shortTerm?.name ?? '-'} (${spv.shortTerm?.grade ?? '-'}, ${spv.shortTerm?.age ?? '-'})`,
-                            cand_mt: `${spv.midTerm?.name ?? '-'} (${spv.midTerm?.grade ?? '-'}, ${spv.midTerm?.age ?? '-'})`,
-                            cand_lt: `${spv.longTerm?.name ?? '-'} (${spv.longTerm?.grade ?? '-'}, ${spv.longTerm?.age ?? '-'})`,
-                            color: colorMap[spv.colorClass] || '#dc3545',
-                            img: spv.person?.photo ? spv.person.photo : null
+                            id,
+                            stpid: groupId, // <— masuk ke dalam group
+                            department: clamp(m.title, 64),
+                            name: clamp(m.person?.name, 48),
+                            grade: m.person?.grade ?? '-',
+                            age: m.person?.age ?? '-',
+                            los: m.person?.los ?? '-',
+                            lcp: m.person?.lcp ?? '-',
+                            cand_st: '',
+                            cand_mt: '',
+                            cand_lt: '', // kosong
+                            color: colorMap[m.colorClass] || '#22c55e',
+                            img: m.person?.photo || null,
+                            tags: ['no-plans'] // hilangkan S/T–M/T–L/T
                         });
                     });
+
+                    // 2) Ambil subtree PLANt dari manager pertama (Presiden) → taruh di bawah group
+                    const shared = (managers[0]?.supervisors || []);
+                    const emit = (node, parentId) => {
+                        const id = nid();
+                        const base = {
+                            id,
+                            pid: parentId,
+                            department: clamp(node.title, 64),
+                            name: clamp(node.person?.name, 48),
+                            grade: node.person?.grade ?? '-',
+                            age: node.person?.age ?? '-',
+                            los: node.person?.los ?? '-',
+                            lcp: node.person?.lcp ?? '-',
+                            cand_st: node.no_plans ? '' : clamp(
+                                `${node.shortTerm?.name ?? '-'} (${node.shortTerm?.grade ?? '-'}, ${node.shortTerm?.age ?? '-'})`,
+                                48),
+                            cand_mt: node.no_plans ? '' : clamp(
+                                `${node.midTerm?.name ?? '-'} (${node.midTerm?.grade ?? '-'}, ${node.midTerm?.age ?? '-'})`,
+                                48),
+                            cand_lt: node.no_plans ? '' : clamp(
+                                `${node.longTerm?.name ?? '-'} (${node.longTerm?.grade ?? '-'}, ${node.longTerm?.age ?? '-'})`,
+                                48),
+                            color: colorMap[node.colorClass] || '#22c55e',
+                            img: node.person?.photo || null
+                        };
+                        if (node.no_plans) base.tags = ['no-plans']; // Plant juga tanpa S/T–M/T–L/T
+                        nodes.push(base);
+                        (node.supervisors || []).forEach(ch => emit(ch, id));
+                    };
+
+                    shared.forEach(ch => emit(ch, groupId));
+                    return nodes;
+                }
+
+                // === MODE BUKAN GROUP (plant/division/department/section/sub_section)
+                const rootId = 'root';
+                if (!NO_ROOT) {
+                    const rootNode = {
+                        id: rootId,
+                        department: clamp(main.title, 64),
+                        name: clamp(main.person?.name, 48),
+                        grade: main.person?.grade ?? '-',
+                        age: main.person?.age ?? '-',
+                        los: main.person?.los ?? '-',
+                        lcp: main.person?.lcp ?? '-',
+                        cand_st: hideMainPlans ? '' : clamp(
+                            `${main.shortTerm?.name ?? '-'} (${main.shortTerm?.grade ?? '-'}, ${main.shortTerm?.age ?? '-'})`,
+                            48),
+                        cand_mt: hideMainPlans ? '' : clamp(
+                            `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
+                            48),
+                        cand_lt: hideMainPlans ? '' : clamp(
+                            `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
+                            48),
+                        color: colorMap[main.colorClass] || '#0ea5e9',
+                        img: main.person?.photo || null,
+                        ...(hideMainPlans ? {
+                            tags: ['no-plans']
+                        } : {})
+                    };
+                    nodes.push(rootNode);
+                }
+
+                const emitStd = (node, parentId) => {
+                    const id = nid();
+                    const obj = {
+                        id,
+                        ...(parentId ? {
+                            pid: parentId
+                        } : {}),
+                        department: clamp(node.title, 64),
+                        name: clamp(node.person?.name, 48),
+                        grade: node.person?.grade ?? '-',
+                        age: node.person?.age ?? '-',
+                        los: node.person?.los ?? '-',
+                        lcp: node.person?.lcp ?? '-',
+                        cand_st: node.no_plans ? '' : clamp(
+                            `${node.shortTerm?.name ?? '-'} (${node.shortTerm?.grade ?? '-'}, ${node.shortTerm?.age ?? '-'})`,
+                            48),
+                        cand_mt: node.no_plans ? '' : clamp(
+                            `${node.midTerm?.name ?? '-'} (${node.midTerm?.grade ?? '-'}, ${node.midTerm?.age ?? '-'})`,
+                            48),
+                        cand_lt: node.no_plans ? '' : clamp(
+                            `${node.longTerm?.name ?? '-'} (${node.longTerm?.grade ?? '-'}, ${node.longTerm?.age ?? '-'})`,
+                            48),
+                        color: colorMap[node.colorClass] || '#22c55e',
+                        img: node.person?.photo || null
+                    };
+                    if (node.no_plans) obj.tags = ['no-plans'];
+                    nodes.push(obj);
+                    (node.supervisors || []).forEach(ch => emitStd(ch, id));
+                };
+
+                const parentId = NO_ROOT ? null : rootId;
+                managers.forEach(m => {
+                    const id = emitStd(m, parentId);
                 });
 
                 return nodes;
             }
 
-            console.log('Main data:', main);
-            console.log('Managers data:', managers);
-            console.log('Chart nodes:', buildChartData(main, managers));
-
-            async function countTotalImages(data) {
-                let count = 0;
-                if (data.main.person?.photo) count++;
-                data.managers.forEach(manager => {
-                    if (manager.person.photo) count++;
-                    (manager.supervisors || []).forEach(spv => {
-                        if (spv.person.photo) count++;
-                    })
-                })
-
-                return count;
-            }
-
-            // inisiasi loading overflow
+            /* ================== LOADING ================== */
             const loadingOverlay = $('#loading-overlay');
             const loadingProgress = $('#loading-progress');
-            let totalImages = 0;
-            countTotalImages({
-                main,
-                managers
-            }).then(total => {
-                totalImages = total;
-                loadingProgress.text(`Mengunduh gambar 0/${totalImages}`);
-            });
-            let loadedImages = 0;
 
-            // Update progress text
-            function updateProgress() {
-                loadedImages++;
-                loadingProgress.text(`Mengunduh gambar ${loadedImages}/${totalImages}`);
+            async function countTotalImages(payload) {
+                let c = 0;
+                if (payload.main.person?.photo) c++;
+                const walk = (arr) => {
+                    (arr || []).forEach(n => {
+                        if (n.person?.photo) c++;
+                        walk(n.supervisors || []);
+                    });
+                };
+                walk(payload.managers || []);
+                return c;
             }
 
-            // Tampilkan loading overlay
-            loadingOverlay.removeClass('d-none').addClass('d-flex');
-            loadingProgress.text(`Mengunduh gambar 0/${totalImages}`);
-
+            function updateProgress(loaded, total) {
+                loadingProgress.text(`Mengunduh gambar ${loaded}/${total}`);
+            }
             async function safeConvertToBase64(url) {
+                if (!url) return null;
                 try {
-                    if (!url) {
-                        updateProgress();
-                        return null;
-                    }
-
-                    // Fix protocol-relative URLs
-                    if (url.startsWith('//')) url = window.location.protocol + url;
-                    if (url.startsWith('/')) url = window.location.origin + url;
-
-                    // Tambahkan cache buster untuk menghindari cached response
-                    const cacheBusterUrl = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
-
-                    const response = await fetch(cacheBusterUrl, {
-                        mode: 'cors',
+                    const u = url.startsWith('//') ? (location.protocol + url) : (url.startsWith('/') ? (
+                        location.origin + url) : url);
+                    const res = await fetch(u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(), {
                         credentials: 'same-origin'
                     });
-
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                    const blob = await response.blob();
-                    return new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onloadend = () => {
-                            updateProgress(); // Update progress ketika gambar selesai
-                            resolve(reader.result)
-                        };
-                        reader.onerror = () => {
-                            updateProgress(); // Update progress ketika gambar selesai
-                            resolve(null);
-                        };
-                        reader.readAsDataURL(blob);
+                    if (!res.ok) throw new Error(res.status);
+                    const blob = await res.blob();
+                    return await new Promise(resolve => {
+                        const r = new FileReader();
+                        r.onloadend = () => resolve(r.result);
+                        r.readAsDataURL(blob);
                     });
-                } catch (error) {
-                    console.warn('Failed to convert image to base64:', url, error);
+                } catch {
                     return null;
                 }
             }
-
             async function prepareChartData(main, managers) {
-                // Clone objects to avoid mutation
                 const processedMain = {
                     ...main
                 };
-                const processedManagers = JSON.parse(JSON.stringify(managers));
+                const deep = JSON.parse(JSON.stringify(managers));
+                let total = await countTotalImages({
+                    main,
+                    managers
+                });
+                let loaded = 0;
+                updateProgress(0, total);
 
-                // Convert main image
                 if (processedMain.person?.photo) {
                     processedMain.person.photo = await safeConvertToBase64(processedMain.person.photo);
+                    updateProgress(++loaded, total);
                 }
-
-                // Process managers
-                await Promise.all(processedManagers.map(async (manager) => {
-                    if (manager.person?.photo) {
-                        manager.person.photo = await safeConvertToBase64(manager.person.photo);
+                async function walk(list) {
+                    for (const n of (list || [])) {
+                        if (n.person?.photo) {
+                            n.person.photo = await safeConvertToBase64(n.person.photo);
+                            updateProgress(++loaded, total);
+                        }
+                        if (n.supervisors) await walk(n.supervisors);
                     }
-
-                    // Process supervisors
-                    if (manager.supervisors) {
-                        await Promise.all(manager.supervisors.map(async (spv) => {
-                            if (spv.person?.photo) {
-                                spv.person.photo = await safeConvertToBase64(spv
-                                    .person.photo);
-                            }
-                        }));
-                    }
-                }));
-
+                }
+                await walk(deep);
                 return {
                     main: processedMain,
-                    managers: processedManagers
+                    managers: deep
                 };
             }
 
-            // ✅ 3. Buat chart
+            /* ================== RENDER ================== */
+            loadingOverlay.removeClass('d-none').addClass('d-flex');
+
             prepareChartData(main, managers).then(({
                 main,
                 managers
             }) => {
                 const nodes = buildChartData(main, managers);
 
-                // Sembunyikan loading dengan animasi
-                loadingOverlay.fadeOut(300, function() {
-                    $(this).addClass('d-none').removeClass('d-flex');
-                });
+                loadingOverlay.fadeOut(250, () => loadingOverlay.addClass('d-none').removeClass('d-flex'));
 
-                const chart = new OrgChart(document.getElementById("orgchart-container"), {
-                    template: "myTemplate",
+                const chart = new OrgChart(document.getElementById('orgchart-container'), {
+                    template: "factory",
                     mode: "dark",
                     enableSearch: false,
                     enableDragDrop: false,
                     enableZoom: true,
                     enablePan: true,
                     scaleInitial: OrgChart.match.boundary,
-                    scaleMin: 0.3,
-                    scaleMax: 2,
+                    scaleMin: 0.2,
+                    scaleMax: 2.2,
                     nodeMouseClick: OrgChart.action.none,
+                    // mapping tag → template / layout
+                    tags: {
+                        'no-plans': {
+                            template: 'factoryRoot'
+                        }, // sembunyikan S/T–M/T–L/T
+                        'group': {
+                            template: 'group'
+                        },
+                        'top-pair': {
+                            subTreeConfig: {
+                                columns: 2
+                            }
+                        } // dua kolom di dalam group
+                    },
                     nodeBinding: {
                         node: "color",
                         img_0: "img",
@@ -338,74 +447,61 @@
                         field_6: "cand_st",
                         field_7: "cand_mt",
                         field_8: "cand_lt",
-                        field_9: "field_9",
+                        field_9: "field_9"
                     },
-                    nodes: nodes, // Gunakan nodes yang sudah diproses
-                    onInit: function() {
-                        // Pastikan tombol tetap ada setelah chart diinisialisasi
-                        document.querySelector('.export-buttons').style.display = 'flex';
-                    }
+                    nodes
                 });
 
-                // Export handlers
-                function setupExportButtons() {
-                    document.getElementById("btn-pdf")?.addEventListener("click", () => {
-                        chart.fit();
-                        setTimeout(() => {
-                            chart.exportPDF({
-                                filename: "chart.pdf"
-                            });
-                        }, 1500);
-                    });
+                // Export
+                $('#btn-pdf').addClass('export-btn').on('click', () => {
+                    chart.fit();
+                    setTimeout(() => chart.exportPDF({
+                        filename: 'chart.pdf'
+                    }), 800);
+                });
+                $('#btn-png').addClass('export-btn').on('click', () => {
+                    chart.fit();
+                    setTimeout(() => chart.exportPNG({
+                        filename: 'chart.png'
+                    }), 800);
+                });
+                $('#btn-svg').addClass('export-btn').on('click', () => {
+                    chart.fit();
+                    setTimeout(() => chart.exportSVG({
+                        filename: 'chart.svg'
+                    }), 800);
+                });
+                $('#btn-csv').addClass('export-btn').on('click', () => {
+                    chart.fit();
+                    setTimeout(() => chart.exportCSV({
+                        filename: 'chart.csv'
+                    }), 800);
+                });
 
-                    document.getElementById("btn-png")?.addEventListener("click", () => {
-                        chart.fit();
-                        setTimeout(() => {
-                            chart.exportPNG({
-                                filename: "chart.png"
-                            });
-                        }, 1500); // Tambah delay lebih besar
-                    });
-
-                    document.getElementById("btn-svg")?.addEventListener("click", () => {
-                        chart.fit();
-                        setTimeout(() => {
-                            chart.exportSVG({
-                                filename: "chart.svg"
-                            });
-                        }, 1500);
-                    });
-
-                    document.getElementById("btn-csv")?.addEventListener("click", () => {
-                        chart.fit();
-                        setTimeout(() => {
-                            chart.exportCSV({
-                                filename: "chart.csv"
-                            });
-                        }, 1500);
-                    });
-                }
-
-                setupExportButtons();
                 chart.fit();
-            }).catch(error => {
-                console.error('Error initializing chart:', error);
-                loadingOverlay.fadeOut(300, function() {
-                    $(this).addClass('d-none').removeClass('d-flex');
-                });
-                // Fallback: Render chart without images
+            }).catch(err => {
+                console.error(err);
+                loadingOverlay.addClass('d-none').removeClass('d-flex');
+
                 const nodes = buildChartData(main, managers);
-                new OrgChart(document.getElementById("orgchart-container"), {
-                    template: "myTemplate",
+                new OrgChart(document.getElementById('orgchart-container'), {
+                    template: "factory",
                     mode: "dark",
                     enableSearch: false,
-                    enableDragDrop: false,
-                    enableZoom: true,
-                    enablePan: true,
-                    scaleInitial: OrgChart.match.boundary,
-                    scaleMin: 0.3,
-                    scaleMax: 2,
                     nodeMouseClick: OrgChart.action.none,
+                    tags: {
+                        'no-plans': {
+                            template: 'factoryRoot'
+                        },
+                        'group': {
+                            template: 'group'
+                        },
+                        'top-pair': {
+                            subTreeConfig: {
+                                columns: 2
+                            }
+                        }
+                    },
                     nodeBinding: {
                         node: "color",
                         img_0: "img",
@@ -418,9 +514,9 @@
                         field_6: "cand_st",
                         field_7: "cand_mt",
                         field_8: "cand_lt",
-                        field_9: "field_9",
+                        field_9: "field_9"
                     },
-                    nodes: nodes
+                    nodes
                 });
             });
         });

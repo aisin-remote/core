@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Rtc;
 
 class Department extends Model
 {
@@ -12,15 +13,14 @@ class Department extends Model
     protected $guarded = ['id'];
 
     public function employees()
-{
-    return $this->belongsToMany(
-        Employee::class,
-        'employee_departments',   // ← nama pivot table yang sama
-        'department_id',          // ← foreign key utk model Department di pivot
-        'employee_id'             // ← foreign key utk model Employee di pivot
-    )->withTimestamps();
-}
-
+    {
+        return $this->belongsToMany(
+            Employee::class,
+            'employee_departments',
+            'department_id',
+            'employee_id'
+        )->withTimestamps();
+    }
 
     public function division()
     {
@@ -37,6 +37,7 @@ class Department extends Model
         return $this->belongsTo(Employee::class, 'manager_id');
     }
 
+    // ===== Kandidat dari kolom lama (biarkan ada bila masih dipakai tempat lain)
     public function short()
     {
         return $this->belongsTo(Employee::class, 'short_term');
@@ -48,5 +49,32 @@ class Department extends Model
     public function long()
     {
         return $this->belongsTo(Employee::class, 'long_term');
+    }
+
+    public function rtc()
+    {
+        return $this->hasMany(Rtc::class, 'area_id', 'id')
+            ->where('area', 'department');
+    }
+
+    protected function rtcLatestByTerm(string $term)
+    {
+        return $this->hasOne(Rtc::class, 'area_id', 'id')
+            ->areaLogical('department')
+            ->termLogical($term)
+            ->latestOfMany('id'); // atau 'created_at' jika lebih cocok
+    }
+
+    public function rtcShortLatest()
+    {
+        return $this->rtcLatestByTerm('short');
+    }
+    public function rtcMidLatest()
+    {
+        return $this->rtcLatestByTerm('mid');
+    }
+    public function rtcLongLatest()
+    {
+        return $this->rtcLatestByTerm('long');
     }
 }

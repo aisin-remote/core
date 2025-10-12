@@ -13,11 +13,14 @@ use App\Models\SubSection;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\GradeConversion;
+use App\Models\IcpApprovalStep;
+use App\Helpers\ApprovalHelper;
 use App\Models\MatrixCompetency;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Models\PerformanceAppraisalHistory;
+use App\Services\IcpApproval;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -81,93 +84,28 @@ class IcpController extends Controller
 
         return Employee::whereIn('id', $subordinateIds);
     }
+
     private function collectSubordinates($models, $field, $subordinateIds)
     {
         $ids = $models->pluck($field)->filter();
         return $subordinateIds->merge($ids);
     }
+
     private function collectOperators($subSections, $subordinateIds)
     {
         $subSectionIds = $subSections->pluck('id');
         $operatorIds = Employee::whereIn('sub_section_id', $subSectionIds)->pluck('id');
         return $subordinateIds->merge($operatorIds);
     }
+
     public function index(Request $request, $company = null)
     {
         $title  = 'Employee ICP';
         $user   = auth()->user();
-        $search = $request->input('search');
+        $search = $request->input('search');               // diteruskan ke querystring agar tab/URL konsisten
         $filter = $request->input('filter', 'all');
 
-        if ($user->isHRDorDireksi()) {
-            // HRD & Direksi melihat semua, + FILTER posisi (jika ada)
-            $icps = Icp::with('employee')
-                ->when($company, function ($q) use ($company) {
-                    $q->whereHas('employee', fn($e) => $e->where('company_name', $company));
-                })
-                ->when($search, function ($q) use ($search) {
-                    $q->whereHas('employee', function ($e) use ($search) {
-                        $e->where(function ($qq) use ($search) {
-                            $qq->where('name', 'like', "%{$search}%")
-                                ->orWhere('npk', 'like', "%{$search}%")
-                                ->orWhere('company_name', 'like', "%{$search}%");
-                        });
-                    });
-                })
-                ->when($filter && $filter !== 'all', function ($q) use ($filter) {
-                    $q->whereHas('employee', function ($e) use ($filter) {
-                        // group: exact position ATAU "Act {position}"
-                        $e->where(function ($g) use ($filter) {
-                            $g->where('position', $filter)
-                                ->orWhere('position', 'like', "Act %{$filter}");
-                        });
-                    });
-                })
-                ->paginate(10)
-                ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
-        } else {
-            // User non-HRD: hanya bawahan
-            $employee = $user->employee;
-
-            if (!$employee) {
-                $icps = collect();
-            } else {
-                $subordinatesQuery = $this->getSubordinatesFromStructure($employee);
-
-                if ($subordinatesQuery instanceof \Illuminate\Database\Eloquent\Builder) {
-                    // 💡 gunakan subquery, bukan pluck (lebih efisien dan tidak eager execute)
-                    $icps = Icp::with('employee')
-                        ->whereHas('employee', function ($q) use ($subordinatesQuery, $search, $filter, $company) {
-                            $q->whereIn('id', $subordinatesQuery->select('id'));
-
-                            if ($search) {
-                                $q->where(function ($q2) use ($search) {
-                                    $q2->where('name', 'like', "%{$search}%")
-                                        ->orWhere('npk', 'like', "%{$search}%")
-                                        ->orWhere('company_name', 'like', "%{$search}%");
-                                });
-                            }
-
-                            if ($company) {
-                                $q->where('company_name', $company);
-                            }
-
-                            if ($filter && $filter !== 'all') {
-                                // group-kan kondisi posisi agar tidak "meng-OR" ke seluruh blok
-                                $q->where(function ($g) use ($filter) {
-                                    $g->where('position', $filter)
-                                        ->orWhere('position', 'like', "Act %{$filter}");
-                                });
-                            }
-                        })
-                        ->paginate(10)
-                        ->appends(['search' => $search, 'filter' => $filter, 'company' => $company]);
-                } else {
-                    $icps = collect();
-                }
-            }
-        }
-
+        // Posisi untuk tab
         $allPositions = [
             'President',
             'Direktur',
@@ -182,23 +120,16 @@ class IcpController extends Controller
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-        $currentPosition = \Illuminate\Support\Str::contains($rawPosition, 'Act ')
-            ? trim(str_replace('Act', '', $rawPosition))
+        $currentPosition = Str::startsWith($rawPosition, 'Act ')
+            ? trim(Str::replaceFirst('Act', '', $rawPosition))
             : $rawPosition;
 
         $positionIndex = array_search($currentPosition, $allPositions);
+        if ($positionIndex === false) $positionIndex = array_search('Operator', $allPositions);
+        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
-        if ($positionIndex === false) {
-            $positionIndex = array_search('Operator', $allPositions);
-        }
-
-        // Posisi yang terlihat di tab (dari posisi user ke bawah)
-        $visiblePositions = $positionIndex !== false
-            ? array_slice($allPositions, $positionIndex)
-            : [];
-
+        // View tidak membawa $icp lagi; DataTables akan fetch via AJAX
         return view('website.icp.index', compact(
-            'icps',
             'title',
             'visiblePositions',
             'search',
@@ -207,46 +138,207 @@ class IcpController extends Controller
         ));
     }
 
-    public function assign(Request $request, $company = null)
+    public function data(Request $request, $company = null)
     {
-        $title = 'Assign HAV';
-        $user = auth()->user();
-        $employee = $user->employee;
+        $user   = auth()->user();
+
+        // Parameter standar DataTables
+        $draw   = (int) $request->input('draw', 1);
+        $start  = (int) $request->input('start', 0);
+        $length = (int) $request->input('length', 10);
+        $searchValue = trim($request->input('search.value', ''));
         $filter = $request->input('filter', 'all');
-        $search = $request->input('search');
 
-        // Posisi yang terlihat
-        $allPositions = ['Direktur', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
-        $rawPosition = $employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ') ? trim(str_replace('Act', '', $rawPosition)) : $rawPosition;
-        $positionIndex = array_search($currentPosition, $allPositions);
-        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
+        // Base query: join ke employee untuk memfilter kolom karyawan
+        $base = Icp::query()->with('employee')
+            ->when($company, fn($q) => $q->whereHas('employee', fn($e) => $e->where('company_name', $company)));
 
-        // Ambil subordinate berdasarkan level otorisasi
-        $approvallevel = $employee->getCreateAuth();
-        $subordinateIds = $employee->getSubordinatesByLevel($approvallevel)->pluck('id')->toArray();
+        if ($user->isHRDorDireksi()) {
+            // tidak ada pembatasan bawahan
+        } else {
+            $employee = $user->employee;
+            if (!$employee) {
+                return response()->json([
+                    'draw' => $draw,
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                ]);
+            }
+            $subordinates = $this->getSubordinatesFromStructure($employee);
+            if ($subordinates instanceof \Illuminate\Database\Eloquent\Builder) {
+                $base->whereHas('employee', fn($q) => $q->whereIn('id', $subordinates->select('id')));
+            } else {
+                return response()->json([
+                    'draw' => $draw,
+                    'recordsTotal' => 0,
+                    'recordsFiltered' => 0,
+                    'data' => [],
+                ]);
+            }
+            // pastikan company konsisten untuk non-HRD
+            $base->whereHas('employee', fn($q) => $q->where('company_name', $company ?: $employee->company_name));
+        }
 
-        // Ambil semua subordinate (filtered)
-        $icps = Employee::whereIn('id', $subordinateIds)
-            ->when($company, fn($q) => $q->where('company_name', $employee->company_name))
-            ->when($filter && $filter !== 'all', function ($q) use ($filter) {
-                $q->where(function ($sub) use ($filter) {
-                    $sub->where('position', $filter)
+        // Hitung total (sebelum search/filter posisi)
+        $recordsTotal = (clone $base)->count();
+
+        // Filter posisi (exact atau 'Act {posisi}')
+        if (!empty($filter) && $filter !== 'all') {
+            $base->whereHas('employee', function ($e) use ($filter) {
+                $e->where(function ($g) use ($filter) {
+                    $g->where('position', $filter)
                         ->orWhere('position', 'like', "Act %{$filter}");
                 });
+            });
+        }
+
+        // Search global
+        if ($searchValue !== '') {
+            $base->whereHas('employee', function ($e) use ($searchValue) {
+                $e->where(function ($qq) use ($searchValue) {
+                    $qq->where('name', 'like', "%{$searchValue}%")
+                        ->orWhere('npk', 'like', "%{$searchValue}%")
+                        ->orWhere('company_name', 'like', "%{$searchValue}%");
+                });
+            });
+        }
+
+        // Hitung setelah filter+search
+        $recordsFiltered = (clone $base)->count();
+
+        // Ordering (opsional; default by newest)
+        $orderColIdx = (int) data_get($request->input('order.0'), 'column', 0);
+        $orderDir    = data_get($request->input('order.0'), 'dir', 'desc') === 'asc' ? 'asc' : 'desc';
+        // mapping index kolom front-end
+        $cols = ['id', 'photo', 'npk', 'name', 'company_name', 'position', 'department', 'grade', 'actions'];
+        $orderCol = $cols[$orderColIdx] ?? 'id';
+
+        if ($orderCol === 'name') {
+            $base->join('employees', 'employees.id', '=', 'icp.employee_id')
+                ->orderBy('employees.name', $orderDir)
+                ->select('icp.*'); // pastikan kolom icp.* dipilih
+        } else {
+            $base->orderBy('icp.created_at', 'desc'); // fallback
+        }
+
+        // Paging
+        $rows = $base->skip($start)->take($length)->get();
+
+        // Susun data baris
+        $data = [];
+        foreach ($rows as $i => $icp) {
+            $emp = $icp->employee;
+
+            // Unit dinamis sesuai posisi
+            $unit = match ($emp?->position) {
+                'Direktur'   => $emp?->plant?->name,
+                'GM', 'Act GM' => $emp?->division?->name,
+                default      => $emp?->department?->name,
+            };
+
+            $photoUrl = $emp?->photo ? asset('storage/' . $emp->photo) : asset('assets/media/avatars/300-1.jpg');
+
+            $data[] = [
+                // Serahkan "No" dihitung client dari start + row index, atau kirim kolom hidden index
+                'no'           => $start + $i + 1,
+                'photo'        => '<img src="' . $photoUrl . '" class="rounded" width="40" height="40" style="object-fit:cover" />',
+                'npk'          => e($emp?->npk ?? '-'),
+                'name'         => e($emp?->name ?? '-'),
+                'company_name' => e($emp?->company_name ?? '-'),
+                'position'     => e($emp?->position ?? '-'),
+                'department'   => e($unit ?? '-'),
+                'grade'        => e($emp?->grade ?? '-'),
+                'actions'      => '<a href="#" data-employee-id="' . $emp?->id . '" class="btn btn-info btn-sm history-btn">History</a>',
+            ];
+        }
+
+        return response()->json([
+            'draw'            => $draw,
+            'recordsTotal'    => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data'            => $data,
+        ]);
+    }
+
+
+    public function assign(Request $request, $company = null)
+    {
+        $title   = 'ICP Assign';
+        $user    = auth()->user();
+        $emp     = $user->employee;
+
+        $filter  = $request->input('filter', 'all');
+        $search  = $request->input('search');
+
+        // tab posisi yang terlihat (seperti sebelumnya)
+        $allPositions = ['Direktur', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
+        $rawPosition  = $emp->position ?? 'Operator';
+        $currentPos   = Str::startsWith($rawPosition, 'Act ') ? trim(substr($rawPosition, 4)) : $rawPosition;
+        $posIdx       = array_search($currentPos, $allPositions);
+        $visiblePositions = $posIdx !== false ? array_slice($allPositions, $posIdx) : $allPositions;
+
+        // bawahan yg boleh dibuat
+        $createLevel     = $emp->getCreateAuth();
+        $subordinateIds  = $emp->getSubordinatesByLevel($createLevel)->pluck('id');
+
+        $employees = Employee::with([
+            'departments:id,name',
+            'latestIcp.steps.actor',    // ambil steps + siapa check/approve
+        ])
+            ->whereIn('id', $subordinateIds)
+            ->when($company ?: $emp->company_name, fn($q, $c) => $q->where('company_name', $c))
+            ->when($filter && $filter !== 'all', function ($q) use ($filter) {
+                $q->where(fn($x) => $x->where('position', $filter)->orWhere('position', 'like', "Act %{$filter}"));
             })
-            ->when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))
-            ->with([
-                'icp' => function ($q) {
-                    $q->orderByDesc('created_at')  // urutkan biar first() dapat yang terbaru
-                        > with(['latestIcp.details']);
-                }
-            ])
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
             ->get();
 
+        // siapkan baris
+        $rows = $employees->map(function ($e) {
+            $icp   = $e->latestIcp; // bisa null
+            $steps = $icp?->steps?->sortBy('step_order') ?? collect();
 
-        return view('website.icp.assign', compact('title', 'icps', 'filter', 'company', 'search', 'visiblePositions'));
+            // garis status selesai
+            $done = $steps->where('status', 'done')
+                ->map(fn($s) => "✓ {$s->label}" . ($s->actor ? " ({$s->actor->name}, " . $s->acted_at?->format('d/m/Y') . ")" : ""))
+                ->values()->all();
+
+            // antrian berikutnya
+            $next = $steps->where('status', 'pending')->sortBy('step_order')->first();
+            $waiting = $next ? "⏳ Waiting: {$next->label}" : null;
+
+            // gunakan waktu approve terakhir untuk expiry (bukan created_at)
+            $lastApprovedStep = $steps->where('type', 'approve')->where('status', 'done')
+                ->sortByDesc('acted_at')->first();
+            $approvedAt = $lastApprovedStep?->acted_at;
+            $statusCode = $icp?->status ?? null;
+            $expired    = ($statusCode === 3 && $approvedAt)
+                ? \Carbon\Carbon::parse($approvedAt)->addYear()->isPast()
+                : false;
+
+            $badgeMap = [
+                null => ['No ICP', 'badge-light'],
+                0    => ['Revise', 'badge-light-danger'],
+                1    => ['Submitted', 'badge-light-primary'],
+                2    => ['Checked', 'badge-light-warning'],
+                3    => [$expired ? 'Approved (Expired)' : 'Approved', $expired ? 'badge-light-dark' : 'badge-light-success'],
+            ];
+            [$label, $badge] = $badgeMap[$statusCode] ?? ['-', 'badge-light'];
+
+            $actions = [
+                'add'    => (!$icp) || $expired,
+                'revise' => ($statusCode === 0 && $icp),
+                'export' => (bool) $icp,
+            ];
+
+            return compact('e', 'icp', 'done', 'waiting', 'label', 'badge', 'actions');
+        });
+
+        return view('website.icp.assign', compact('title', 'rows', 'filter', 'company', 'search', 'visiblePositions'));
     }
+
     public function create($employeeId)
     {
         $title = 'Add icp';
@@ -261,6 +353,7 @@ class IcpController extends Controller
 
         return view('website.icp.create', compact('title', 'employee', 'grades', 'departments', 'employees', 'technicalCompetencies'));
     }
+
     public function store(Request $request)
     {
         $request->validate([
@@ -296,8 +389,9 @@ class IcpController extends Controller
                 'aspiration' => $request->aspiration,
                 'career_target' => $request->career_target,
                 'date' => $request->date,
-                'status' => '1',
+                'status' => Icp::STATUS_DRAFT, // status awal "Draft" (4)
             ]);
+            $this->seedStepsForIcp($icp);
 
             // Loop semua detail dan simpan satu per satu
             foreach ($request->stages as $stage) {
@@ -327,12 +421,13 @@ class IcpController extends Controller
             }
 
             DB::commit();
-            return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil ditambahkan.');
+            return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil disimpan.');
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
         }
     }
+
     public function show($employee_id)
     {
         $employee = Employee::with('icp')->find($employee_id);
@@ -493,99 +588,112 @@ class IcpController extends Controller
 
         return response()->download($path)->deleteFileAfterSend(true);
     }
+
+    /* =================== APPROVAL LIST =================== */
     public function approval()
     {
-        $user = auth()->user();
-        $employee = $user->employee;
+        $me   = auth()->user()->employee;
+        $role = ApprovalHelper::roleKeyFor($me);
 
-        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-        $checkLevel = $employee->getFirstApproval();
-        $approveLevel = $employee->getFinalApproval();
+        $rolesToMatch = [$role];
+        // toleransi data lama
+        if ($role === 'director') $rolesToMatch[] = 'direktur';
+        if ($role === 'president') $rolesToMatch[] = 'presiden';
+        if ($role === 'gm') $rolesToMatch[] = 'general manager';
 
-
-        $normalized = $employee->getNormalizedPosition();
-
-        if ($normalized === 'vpd') {
-            // Jika VPD, filter GM untuk check dan Manager untuk approve
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
-        } else {
-            // Default (tidak filter posisi bawahannya)
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
-        }
-
-        $checkIdps = Icp::with('employee')
-            ->where('status', 1)
-            ->whereHas('employee', function ($q) use ($subCheck) {
-                $q->whereIn('employee_id', $subCheck);
+        $steps = IcpApprovalStep::with(['icp.employee', 'icp.steps'])
+            ->whereIn('role', $rolesToMatch)
+            ->where('status', 'pending')
+            ->whereHas('icp', function ($q) {
+                $q->where('status', '!=', 4);
             })
-            ->get();
-
-        $checkIdpIds = $checkIdps->pluck('id')->toArray();
-
-        $approveIdps = Icp::with('employee')
-            ->where('status', 2)
-            ->whereHas('employee', function ($q) use ($subApprove) {
-                $q->whereIn('employee_id', $subApprove);
+            ->orderBy('step_order')
+            ->get()
+            ->filter(function ($s) {
+                return $s->icp->steps->every(function ($x) use ($s) {
+                    return $x->step_order >= $s->step_order || $x->status === 'done';
+                });
             })
-            ->whereNotIn('id', $checkIdpIds)  // ← filter agar tidak muncul dua kali
-            ->get();
+            ->values();
 
-        $idps = $checkIdps->merge($approveIdps);
-
-
-        return view('website.approval.icp.index', compact('idps'));
+        return view('website.approval.icp.index', ['steps' => $steps, 'title' => 'Approval ICP']);
     }
-    public function approve($id)
+
+    public function approve($icpId)
     {
-        $idp = Icp::findOrFail($id);
+        $me    = auth()->user()->employee;
+        $isHRD = auth()->user()->role === 'HRD';
+        $role  = ApprovalHelper::roleKeyFor($me);
 
-        if ($idp->status == 1) {
-            $idp->status = 2;
-            $idp->save();
+        $icp = Icp::with('steps')->findOrFail($icpId);
 
-            return response()->json([
-                'message' => 'ICP has been approved!'
-            ]);
+        // Ambil step pending saat ini (next in turn)
+        $pendingSorted = $icp->steps->where('status', 'pending')->sortBy('step_order');
+
+        $step = $isHRD
+            ? $pendingSorted->first()                             // HRD boleh eksekusi step berikutnya apa pun rolenya
+            : $pendingSorted->firstWhere('role', $role);          // Non-HRD hanya step utk rolenya
+
+        if (!$step) {
+            return response()->json(['message' => 'No actionable step for your role.'], 400);
         }
 
-        if ($idp->status == 2) {
-            $idp->status = 3;
-            $idp->save();
-
-            return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
+        // Pastikan semua step sebelumnya sudah 'done'
+        foreach ($icp->steps as $s) {
+            if ($s->step_order < $step->step_order && $s->status !== 'done') {
+                return response()->json(['message' => 'Previous steps are not completed yet.'], 400);
+            }
         }
 
-        return response()->json([
-            'message' => 'Something went wrong!'
-        ], 400);
+        DB::transaction(function () use ($icp, $step, $me) {
+            $step->update([
+                'status'   => 'done',
+                'actor_id' => $me->id,
+                'acted_at' => now(),
+            ]);
+
+            // Hitung status ringkas ICP
+            $remainingChecks   = $icp->steps->where('status', 'pending')->where('type', 'check')->count();
+            $hasApprovePending = $icp->steps->where('status', 'pending')->where('type', 'approve')->count() > 0;
+
+            if ($remainingChecks > 0) {
+                $icp->status = 1; // Submitted / masih proses cek
+            } elseif ($hasApprovePending) {
+                $icp->status = 2; // Semua check selesai → menunggu approve
+            } else {
+                $icp->status = 3; // Approve terakhir selesai
+            }
+            $icp->save();
+        });
+
+        return response()->json(['message' => 'Approved.']);
     }
     public function revise(Request $request)
     {
-        $idp = Icp::findOrFail($request->id);
+        $icp = Icp::with('steps')->findOrFail($request->id);
 
-        // Menyimpan status HAV sebagai disetujui
-        $idp->status = 0;  // Status disetujui
+        DB::transaction(function () use ($icp, $request) {
+            $icp->status = 0; // Revise
+            $icp->save();
 
+            // tandai step aktif sebagai revised (opsional):
+            $current = $icp->steps->where('status', 'pending')->sortBy('step_order')->first();
+            if ($current) {
+                $current->update(['status' => 'revised']);
+            }
 
-        $comment = $request->input('comment');
-        $employee = auth()->user()->employee;
-        // Menyimpan komentar ke dalam tabel hav_comment_history
-        if ($employee) {
-            $idp->commentHistory()->create([
-                'comment' => $comment,
-                'employee_id' => $employee->id  // Menyimpan siapa yang memberikan komentar
-            ]);
-        }
-        // Simpan perubahan status HAV
-        $idp->save();
+            // catat komentar (kalau punya tabel comment history ICP)
+            if ($emp = auth()->user()->employee) {
+                $icp->commentHistory()->create([
+                    'comment'     => (string) $request->input('comment', ''),
+                    'employee_id' => $emp->id,
+                ]);
+            }
+        });
 
-        // Kembalikan respons JSON
-        return response()->json(['message' => 'ICP has been revise.']);
+        return response()->json(['message' => 'ICP has been revised.']);
     }
+
     public function update(Request $request, $id)
     {
         $request->validate([
@@ -620,7 +728,7 @@ class IcpController extends Controller
                 'aspiration'    => $request->aspiration,
                 'career_target' => $request->career_target,
                 'date'          => $request->date,
-                'status'        => "1",
+                'status'        => Icp::STATUS_DRAFT, // 4
             ]);
 
             // Hapus semua detail lama (bisa diubah kalau ingin granular update)
@@ -732,5 +840,50 @@ class IcpController extends Controller
         $icp->delete();
 
         return response()->json(['message' => 'ICP deleted successfully']);
+    }
+    private function seedStepsForIcp(Icp $icp)
+    {
+        $owner = $icp->employee()->first();
+        $chain = ApprovalHelper::expectedChainForEmployee($owner);
+        $icp->steps()->delete();
+        foreach ($chain as $i => $s) {
+            IcpApprovalStep::create([
+                'icp_id'     => $icp->id,
+                'step_order' => $i + 1,
+                'type'       => $s['type'],
+                'role'       => $s['role'],
+                'label'      => $s['label']
+            ]);
+        }
+
+        // kalau chain kosong, langsung approve
+        if (empty($chain)) {
+            $icp->status = Icp::STATUS_APPROVED; // 3
+            $icp->save();
+        }
+    }
+
+    public function submit($id)
+    {
+        $icp = Icp::with('steps', 'employee')->findOrFail($id);
+
+        if ($icp->status !== Icp::STATUS_DRAFT) {
+            return back()->with('error', 'Hanya draft yang bisa disubmit.');
+        }
+
+        DB::beginTransaction();
+        try {
+            // seed steps sesuai chain, lalu set status ringkas:
+            $this->seedStepsForIcp($icp); // method kamu yang sudah ada
+            // override status jadi SUBMITTED (1) agar jelas
+            $icp->status = Icp::STATUS_SUBMITTED; // 1
+            $icp->save();
+
+            DB::commit();
+            return back()->with('success', 'ICP berhasil disubmit untuk approval.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->with('error', 'Gagal submit: ' . $e->getMessage());
+        }
     }
 }

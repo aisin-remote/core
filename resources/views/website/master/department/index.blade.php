@@ -62,8 +62,8 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($departments as $department)
-                            <tr>
+                        @foreach ($departments as $department)
+                            <tr class="fs-7">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $department->name }}</td>
                                 <td>{{ $department->division->name ?? '-' }}</td>
@@ -80,11 +80,7 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">No data found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -296,6 +292,14 @@
             // Pastikan jQuery tersedia
             if (typeof $ === 'undefined') {
                 console.error("jQuery not loaded. DataTable won't initialize.");
+                return;
+            }
+
+            const selector = '#table-department';
+
+            // Jika sudah jadi DataTable, jangan init ulang
+            if ($.fn.DataTable.isDataTable(selector)) {
+                console.debug('DataTable sudah diinit: skip.');
                 return;
             }
 

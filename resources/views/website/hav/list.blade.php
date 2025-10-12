@@ -13,37 +13,25 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">HAV List</h3>
-                <div class="d-flex align-items-center">
-                    <input type="text" id="searchInput" class="form-control me-2" placeholder="Search Employee..."
-                        style="width: 200px;" value="{{ request('search') }}">
-                    <button type="button" class="btn btn-primary me-3" id="searchButton">
-                        <i class="fas fa-search"></i> Search
-                    </button>
-                    {{-- <button type="button" class="btn btn-info me-3" data-bs-toggle="modal"
-                        data-bs-target="#kt_modal_create_app">
-                        <i class="fas fa-upload"></i>
-                        Import2
-                    </button> --}}
-                </div>
             </div>
 
             <div class="card-body">
-                <ul class="nav nav-custom nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-4 fw-semibold mb-8"
-                    role="tablist" style="cursor:pointer">
+                <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
+                    style="cursor:pointer">
                     {{-- Tab Show All --}}
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link text-active-primary pb-4
-        {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                        <a class="nav-link fs-7 {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
                             href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
-                            Show All
+                            <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
-                    {{-- Tab Dinamis --}}
+
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link text-active-primary pb-4 {{ $filter == $position ? 'active' : '' }}"
+                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
                                 href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
-                                {{ $position }}
+                                <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
                     @endforeach
@@ -65,7 +53,7 @@
                     </thead>
                     <tbody>
                         @foreach ($employees as $item)
-                            <tr data-position="{{ $item->employee->position }}">
+                            <tr class="fs-7" data-position="{{ $item->employee->position }}">
                                 <td>{{ $loop->iteration }}</td>
                                 <td class="text-center">
                                     <img src="{{ $item->employee->photo ? asset('storage/' . $item->employee->photo) : asset('assets/media/avatars/300-1.jpg') }}"
@@ -78,7 +66,8 @@
                                 <td>{{ $item->employee->position }}</td>
                                 <td>{{ $item->employee->bagian }}</td>
                                 <td>{{ $item->employee->grade }}</td>
-                                <td><span class="badge {{ $item->bg_color }} fs-7 fw-bold">{{ $item->quadran->name ?? '-' }}
+                                <td><span
+                                        class="badge {{ $item->bg_color }} fs-7 fw-bold">{{ $item->quadran->name ?? '-' }}
                                     </span>
                                 </td>
                                 <td class="text-center">
@@ -354,20 +343,9 @@
     </div>
 @endsection
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 @push('scripts')
-    <!-- jQuery dulu -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-    <!-- DataTables CSS -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.4/css/jquery.dataTables.min.css">
-
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/1.13.4/js/jquery.dataTables.min.js"></script>
     @if (session('success'))
         <script>
             Swal.fire({
@@ -390,6 +368,43 @@
             });
         </script>
     @endif
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Pastikan jQuery terpasang (DataTables butuh jQuery)
+            if (typeof $ === 'undefined') {
+                console.error("jQuery not loaded. DataTable won't initialize.");
+                return;
+            }
+
+
+            const selector = '#kt_table_users';
+
+            // Jika sudah jadi DataTable, jangan init ulang
+            if ($.fn.DataTable.isDataTable(selector)) {
+                console.debug('DataTable sudah diinit: skip.');
+                return;
+            }
+
+            // Inisialisasi DataTable
+            const dt = $('#kt_table_users').DataTable({
+                responsive: true,
+                language: {
+                    search: "_INPUT_",
+                    searchPlaceholder: "Search...",
+                    lengthMenu: "Show _MENU_ entries",
+                    zeroRecords: "No matching records found",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    paginate: {
+                        next: "Next",
+                        previous: "Previous"
+                    }
+                },
+                ordering: false
+            });
+            console.log("✅ DataTable Initialized Successfully");
+        });
+    </script>
 
     <script>
         $(document).ready(function() {

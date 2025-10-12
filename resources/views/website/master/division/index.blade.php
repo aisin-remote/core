@@ -53,21 +53,21 @@
                 <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-division">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
+                            <th style="width:60px">No</th>
                             <th>Name Division</th>
                             <th>Plant</th>
-                            <th>Name</th>
-                            <th clas>Actions</th>
+                            <th>GM Name</th>
+                            <th class="text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($divisions as $division)
-                            <tr>
+                        @foreach ($divisions as $division)
+                            <tr class="fs-7">
                                 <td class="text-center">{{ $loop->iteration }}</td>
                                 <td>{{ $division->name }}</td>
-                                <td>{{ $division->plant->name }}</td>
-                                <td>{{ $division->gm->name }}</td>
-                                <td>
+                                <td>{{ optional($division->plant)->name }}</td>
+                                <td>{{ optional($division->gm)->name }}</td>
+                                <td class="text-center">
                                     <div class="d-flex justify-content-center gap-2">
                                         <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal"
                                             data-bs-target="#editDivisionModal{{ $division->id }}">
@@ -78,13 +78,10 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">No data found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
+
             </div>
         </div>
     </div>
@@ -220,19 +217,45 @@
 @endsection
 
 @push('scripts')
-    <!-- Tambahkan SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Pastikan jQuery tersedia
+            // 1) Cek jQuery
             if (typeof $ === 'undefined') {
                 console.error("jQuery not loaded. DataTable won't initialize.");
                 return;
             }
+            // 2) Cek plugin DataTables
+            if (!$.fn.DataTable) {
+                console.error("DataTables plugin not loaded.");
+                return;
+            }
+            // 3) Destroy kalau sudah pernah init (hindari 'Cannot reinitialise DataTable')
+            if ($.fn.DataTable.isDataTable('#table-division')) {
+                $('#table-division').DataTable().destroy();
+            }
 
-            // Inisialisasi DataTable
+            // 4) Init DataTables (client-side)
             $('#table-division').DataTable({
                 responsive: true,
+                autoWidth: false,
+                deferRender: true,
+                pageLength: 10,
+                lengthMenu: [10, 25, 50, 100],
+                ordering: true,
+                // Definisi kolom harus = jumlah kolom di thead
+                columns: [{
+                        orderable: false,
+                        searchable: false
+                    }, // No
+                    null, // Name Division
+                    null, // Plant
+                    null, // GM Name
+                    {
+                        orderable: false,
+                        searchable: false
+                    } // Actions
+                ],
                 language: {
                     search: "_INPUT_",
                     searchPlaceholder: "Search...",
@@ -244,20 +267,22 @@
                         previous: "Previous"
                     }
                 },
-                ordering: false
+                // Layout Bootstrap 5 (length & search di atas, info & paginate di bawah)
+                dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6 text-end'f>>" +
+                    "rt" +
+                    "<'row'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>"
             });
 
             console.log("✅ DataTable Initialized Successfully");
         });
     </script>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("✅ Script Loaded!");
-            // SweetAlert untuk Delete Button
+            // SweetAlert Delete
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', function() {
-                    let employeeId = this.getAttribute('data-id');
-
+                    let id = this.getAttribute('data-id');
                     Swal.fire({
                         title: "Are you sure?",
                         text: "You won't be able to revert this!",
@@ -270,7 +295,7 @@
                         if (result.isConfirmed) {
                             let form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = `/master/division/delete/${employeeId}`;
+                            form.action = `/master/division/delete/${id}`;
 
                             let csrfToken = document.createElement('input');
                             csrfToken.type = 'hidden';

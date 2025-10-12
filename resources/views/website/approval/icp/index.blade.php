@@ -25,7 +25,8 @@
 
             <div class="card-body">
                 @php
-                    $groupedIdps = $idps->groupBy(fn($idp) => $idp->employee->id);
+                    // Kelompokkan per karyawan (1 baris per ICP yang sedang menunggu action kamu)
+                    $grouped = ($steps ?? collect())->groupBy(fn($s) => $s->icp->employee->id);
                     $no = 1;
                 @endphp
 
@@ -41,35 +42,49 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse($groupedIdps as $employeeId => $employeeIdps)
-                            @php $employee = $employeeIdps->first()->employee; @endphp
-                            @php $firstIdp = $employeeIdps->first(); @endphp
-                            <tr>
+                        @forelse($grouped as $empId => $empSteps)
+                            @php
+                                /** @var \App\Models\IcpApprovalStep $step */
+                                $step = $empSteps->first(); // step yang pending untuk role-mu
+                                $icp = $step->icp;
+                                $employee = $icp->employee;
 
+                                // Aman untuk berbagai struktur organisasi
+                                $deptName =
+                                    $employee->department->name ??
+                                    (optional(optional($employee->subSection)->section)->department->name ?? '-');
+
+                                // Label step yang sedang menunggu (contoh: "Checking by GM")
+                                $pendingLabel = $step->label ?? 'Pending';
+                            @endphp
+                            <tr>
                                 <td>{{ $no++ }}</td>
                                 <td>{{ $employee->npk ?? '-' }}</td>
-                                <td>{{ $employee->name ?? '-' }}</td>
-                                <td>{{ $employee->bagian ?? '-' }}</td>
+                                <td>
+                                    {{ $employee->name ?? '-' }}
+                                    <div class="small text-muted">{{ $pendingLabel }}</div>
+                                </td>
+                                <td>{{ $deptName }}</td>
                                 <td>{{ $employee->position ?? '-' }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('icp.export', ['employee_id' => $firstIdp->employee_id]) }}"
+                                    <a href="{{ route('icp.export', ['employee_id' => $employee->id]) }}"
                                         class="btn btn-sm btn-success">
                                         <i class="fas fa-file-excel"></i> Export
                                     </a>
 
-                                    <button class="btn btn-sm btn-danger btn-revise" data-id="{{ $firstIdp->id }}">
+                                    <button class="btn btn-sm btn-danger btn-revise" data-id="{{ $icp->id }}">
                                         <i class="fas fa-edit"></i> Revise
                                     </button>
-                                    <button class="btn btn-sm btn-success btn-approve" data-idp-id="{{ $firstIdp->id }}">
+
+                                    {{-- Approve step ini --}}
+                                    <button class="btn btn-sm btn-success btn-approve" data-icp-id="{{ $icp->id }}">
                                         <i class="fas fa-check-circle"></i> Approve
                                     </button>
                                 </td>
                             </tr>
-
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center text-muted">Tidak ada ICP yang menunggu approval.
-                                </td>
+                                <td colspan="6" class="text-center text-muted">Tidak ada ICP yang menunggu approval.</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -83,35 +98,14 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function toggleAccordion(id) {
-            const el = document.getElementById(id);
-            if (el.classList.contains('show')) {
-                bootstrap.Collapse.getInstance(el)?.hide();
-            } else {
-                new bootstrap.Collapse(el);
-            }
-        }
-
         document.addEventListener('DOMContentLoaded', () => {
-            // Toggle accordion
-            document.querySelectorAll('.btn-toggle-accordion').forEach(button => {
-                button.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-bs-target');
-                    const row = document.querySelector(targetId);
-                    document.querySelectorAll('.accordion-collapse').forEach(el => el.classList
-                        .remove('show'));
-                    row.classList.add('show');
-                });
-            });
-
-            // Approve button
-            document.querySelectorAll('.btn-approve').forEach(button => {
-                button.addEventListener('click', () => {
-                    const id = button.dataset.idpId;
-
+            // Approve
+            document.querySelectorAll('.btn-approve').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.icpId;
                     Swal.fire({
                         title: 'Approve this data?',
-                        text: "Are you sure you want to approve this employee?",
+                        text: 'Are you sure you want to approve this employee?',
                         icon: 'question',
                         showCancelButton: true,
                         confirmButtonColor: '#28a745',
@@ -124,34 +118,30 @@
                                     method: 'GET',
                                     headers: {
                                         'X-CSRF-TOKEN': document.querySelector(
-                                            'meta[name="csrf-token"]').getAttribute(
-                                            'content')
+                                            'meta[name="csrf-token"]').content
                                     }
                                 })
-                                .then(response => response.json())
-                                .then(data => {
+                                .then(r => r.json())
+                                .then(d => {
                                     Swal.fire({
                                         title: 'Approved!',
-                                        text: data.message ||
-                                            'The employee has been approved.',
+                                        text: d.message || 'Approved.',
                                         icon: 'success',
                                         timer: 1500,
                                         showConfirmButton: false
                                     });
-                                    setTimeout(() => location.reload(), 1500);
+                                    setTimeout(() => location.reload(), 1200);
                                 })
-                                .catch(() => {
-                                    Swal.fire('Error!', 'Something went wrong.',
-                                        'error');
-                                });
+                                .catch(() => Swal.fire('Error!', 'Something went wrong.',
+                                    'error'));
                         }
                     });
                 });
             });
 
-            // Revise button
-            document.querySelectorAll('.btn-revise').forEach(button => {
-                button.addEventListener('click', () => {
+            // Revise
+            document.querySelectorAll('.btn-revise').forEach(btn => {
+                btn.addEventListener('click', () => {
                     Swal.fire({
                         title: 'Enter reason for revision',
                         input: 'textarea',
@@ -159,47 +149,40 @@
                         showCancelButton: true,
                         confirmButtonText: 'Submit',
                         cancelButtonText: 'Cancel',
-                        inputValidator: value => !value ? 'You need to write something!' :
-                            null
-                    }).then(result => {
-                        if (result.isConfirmed) {
-                            const id = button.dataset.id;
-                            const revisionReason = result.value;
-
+                        inputValidator: v => !v ? 'You need to write something!' : null
+                    }).then(res => {
+                        if (res.isConfirmed) {
+                            const id = btn.dataset.id;
                             Swal.fire({
                                 title: 'Submitting...',
                                 allowOutsideClick: false,
                                 didOpen: () => Swal.showLoading()
                             });
-
                             fetch('icp/revise', {
                                     method: 'POST',
                                     headers: {
                                         'Content-Type': 'application/json',
                                         'X-CSRF-TOKEN': document.querySelector(
-                                            'meta[name="csrf-token"]').getAttribute(
-                                            'content')
+                                            'meta[name="csrf-token"]').content
                                     },
                                     body: JSON.stringify({
                                         id,
-                                        comment: revisionReason
+                                        comment: res.value
                                     })
                                 })
-                                .then(res => res.json())
-                                .then(data => {
+                                .then(r => r.json())
+                                .then(d => {
                                     Swal.fire({
                                         title: 'Revised!',
-                                        text: data.message,
+                                        text: d.message,
                                         icon: 'success',
                                         timer: 2000,
                                         showConfirmButton: false
                                     });
-                                    setTimeout(() => location.reload(), 1500);
+                                    setTimeout(() => location.reload(), 1200);
                                 })
-                                .catch(() => {
-                                    Swal.fire('Error!', 'Something went wrong.',
-                                        'error');
-                                });
+                                .catch(() => Swal.fire('Error!', 'Something went wrong.',
+                                    'error'));
                         }
                     });
                 });

@@ -50,7 +50,7 @@
             </div>
 
             <div class="card-body">
-                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-section">
+                <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-subSection">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
                             <th>No</th>
@@ -61,12 +61,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($subSections as $subSection)
-                            <tr>
+                        @foreach ($subSections as $subSection)
+                            <tr class="fs-7">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $subSection->name }}</td>
                                 <td>{{ $subSection->section->name }}</td>
-                                <td>{{ $subSection->leader->name }}</td>
+                                <td>{{ $subSection?->leader?->name }}</td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-2">
                                         <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"
@@ -78,11 +78,7 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">No data found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -233,6 +229,14 @@
             // Pastikan jQuery tersedia
             if (typeof $ === 'undefined') {
                 console.error("jQuery not loaded. DataTable won't initialize.");
+                return;
+            }
+
+            const selector = '#table-subSection';
+
+            // Jika sudah jadi DataTable, jangan init ulang
+            if ($.fn.DataTable.isDataTable(selector)) {
+                console.debug('DataTable sudah diinit: skip.');
                 return;
             }
 

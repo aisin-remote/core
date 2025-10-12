@@ -14,7 +14,7 @@
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
                     title: "Sukses!",
-                    text: "{{ session('success') }}",
+                    text: @json(session('success')),
                     icon: "success",
                     confirmButtonText: "OK"
                 });
@@ -26,28 +26,28 @@
             document.addEventListener("DOMContentLoaded", function() {
                 Swal.fire({
                     title: "Error!",
-                    text: "{{ session('error') }}",
+                    text: @json(session('error')),
                     icon: "error",
                     confirmButtonText: "OK"
                 });
             });
         </script>
     @endif
-    <div id="kt_app_content_container" class="app-container  container-fluid ">
+
+    <div id="kt_app_content_container" class="app-container container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Plant List</h3>
                 <div class="d-flex align-items-center">
-                    <button type="button" class="btn btn-primary me-3" data-bs-toggle="modal"
-                        data-bs-target="#addDepartmentModal">
+                    <button type="button" class="btn btn-primary me-3" data-bs-toggle="modal" data-bs-target="#addPlantModal">
                         <i class="fas fa-plus"></i> Add
                     </button>
                     <button type="button" class="btn btn-info me-3" data-bs-toggle="modal" data-bs-target="#importModal">
-                        <i class="fas fa-upload"></i>
-                        Import
+                        <i class="fas fa-upload"></i> Import
                     </button>
                 </div>
             </div>
+
             <div class="card-body">
                 <table class="table align-middle table-row-dashed fs-6 gy-5" id="table-plant">
                     <thead>
@@ -60,12 +60,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @forelse ($plants as $plant)
-                            <tr>
+                        @foreach ($plants as $plant)
+                            <tr class="fs-7">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $plant->name }}</td>
                                 <td>{{ $plant->company }}</td>
-                                <td>{{ $plant->director->name }}</td>
+                                <td>{{ optional($plant->director)->name }}</td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-2">
                                         <button type="button" class="btn btn-sm btn-warning" data-bs-toggle="modal"
@@ -79,11 +79,7 @@
                                     </div>
                                 </td>
                             </tr>
-                        @empty
-                            <tr>
-                                <td colspan="9" class="text-center text-muted">No data found</td>
-                            </tr>
-                        @endforelse
+                        @endforeach
                     </tbody>
                 </table>
             </div>
@@ -115,39 +111,36 @@
         </div>
     </div>
 
-    <!-- Modal Tambah Department -->
-    <div class="modal fade" id="addDepartmentModal" tabindex="-1" aria-labelledby="addDepartmentModalLabel"
-        aria-hidden="true">
+    <!-- Modal Tambah Plant -->
+    <div class="modal fade" id="addPlantModal" tabindex="-1" aria-labelledby="addPlantModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addDepartmentModalLabel">Add Plant</h5>
+                    <h5 class="modal-title" id="addPlantModalLabel">Add Plant</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <form action="{{ route('plant.master.store') }}" method="POST">
                     @csrf
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="name" class="form-label">Plant Name</label>
-                            <input type="text" class="form-control" id="name" name="name" required>
+                            <label for="add_name" class="form-label">Plant Name</label>
+                            <input type="text" class="form-control" id="add_name" name="name" required>
                         </div>
 
                         <div class="mb-3">
-                            <label for="company" class="form-label">Company</label>
-                            <input type="text" class="form-control" id="company" name="company"
+                            <label for="add_company_display" class="form-label">Company</label>
+                            <input type="text" class="form-control" id="add_company_display"
                                 value="{{ strtoupper($company) }}" required disabled>
-                            <input type="hidden" class="form-control" id="company" name="company"
-                                value="{{ strtoupper($company) }}">
+                            <input type="hidden" id="add_company" name="company" value="{{ strtoupper($company) }}">
                         </div>
 
                         <div class="mb-3">
-                            <label for="director_id" class="form-label">Director</label>
-                            <select class="form-control" id="director_id" name="director_id" required>
+                            <label for="add_director_id" class="form-label">Director</label>
+                            <select class="form-control" id="add_director_id" name="director_id" required>
                                 <option value="" disabled selected>-- Select Director --</option>
                                 @foreach ($directors as $director)
                                     <option value="{{ $director->id }}">{{ $director->name }} -
-                                        {{ $director->company_name }}
-                                    </option>
+                                        {{ $director->company_name }}</option>
                                 @endforeach
                             </select>
                         </div>
@@ -160,6 +153,7 @@
             </div>
         </div>
     </div>
+
     @foreach ($plants as $plant)
         <!-- Modal Edit -->
         <div class="modal fade" id="editModal{{ $plant->id }}" tabindex="-1"
@@ -167,7 +161,7 @@
             <div class="modal-dialog">
                 <form action="{{ route('plant.master.update', $plant->id) }}" method="POST">
                     @csrf
-                    @method('PUT') <!-- Gunakan PUT untuk update -->
+                    @method('PUT')
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="editModalLabel{{ $plant->id }}">Edit Plant</h5>
@@ -183,10 +177,10 @@
                             </div>
 
                             <div class="mb-3">
-                                <label for="company" class="form-label">Company</label>
-                                <input type="text" class="form-control" id="company" name="company"
+                                <label for="company_display{{ $plant->id }}" class="form-label">Company</label>
+                                <input type="text" class="form-control" id="company_display{{ $plant->id }}"
                                     value="{{ strtoupper($company) }}" required disabled>
-                                <input type="hidden" class="form-control" id="company" name="company"
+                                <input type="hidden" id="company{{ $plant->id }}" name="company"
                                     value="{{ strtoupper($company) }}">
                             </div>
 
@@ -194,10 +188,10 @@
                                 <label for="director_id{{ $plant->id }}" class="form-label">Director</label>
                                 <select class="form-control" id="director_id{{ $plant->id }}" name="director_id"
                                     required>
+                                    <option value="" disabled>-- Select Director --</option>
                                     @foreach ($directors as $director)
-                                        <option value="" disabled selected>-- Select Director --</option>
                                         <option value="{{ $director->id }}"
-                                            {{ $plant->director_id == $director->id ? 'selected' : '' }}>
+                                            {{ (int) $plant->director_id === (int) $director->id ? 'selected' : '' }}>
                                             {{ $director->name }} - {{ $director->company_name }}
                                         </option>
                                     @endforeach
@@ -217,43 +211,63 @@
 @endsection
 
 @push('scripts')
-    <!-- Tambahkan SweetAlert -->
+    <!-- SweetAlert -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            // Pastikan jQuery tersedia
-            if (typeof $ === 'undefined') {
-                console.error("jQuery not loaded. DataTable won't initialize.");
-                return;
+
+    @once
+        <script>
+            // Guard init untuk mencegah reinitialise DataTable
+            document.addEventListener("DOMContentLoaded", initPlantTable);
+            document.addEventListener("turbo:load", initPlantTable); // jika pakai Turbo
+            document.addEventListener("livewire:load", initPlantTable); // jika pakai Livewire
+
+            function initPlantTable() {
+                if (typeof $ === 'undefined' || !$.fn || !$.fn.DataTable) {
+                    console.error("jQuery/DataTables belum ter-load.");
+                    return;
+                }
+
+                const selector = '#table-plant';
+
+                if ($.fn.DataTable.isDataTable(selector)) {
+                    console.debug('DataTable sudah di-init, skip reinit.');
+                    return;
+                    // Jika perlu paksa re-init:
+                    // $(selector).DataTable().clear().destroy();
+                    // $(selector).DataTable(getDtOptions());
+                    // return;
+                }
+
+                $(selector).DataTable(getDtOptions());
+                console.log("✅ DataTable initialized");
             }
 
-            // Inisialisasi DataTable
-            $('#table-plant').DataTable({
-                responsive: true,
-                language: {
-                    search: "_INPUT_",
-                    searchPlaceholder: "Search...",
-                    lengthMenu: "Show _MENU_ entries",
-                    zeroRecords: "No matching records found",
-                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
-                    paginate: {
-                        next: "Next",
-                        previous: "Previous"
-                    }
-                },
-                ordering: false
-            });
+            function getDtOptions() {
+                return {
+                    responsive: true,
+                    language: {
+                        search: "_INPUT_",
+                        searchPlaceholder: "Search...",
+                        lengthMenu: "Show _MENU_ entries",
+                        zeroRecords: "No matching records found",
+                        info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                        paginate: {
+                            next: "Next",
+                            previous: "Previous"
+                        }
+                    },
+                    ordering: false
+                };
+            }
+        </script>
+    @endonce
 
-            console.log("✅ DataTable Initialized Successfully");
-        });
-    </script>
     <script>
+        // SweetAlert Delete
         document.addEventListener("DOMContentLoaded", function() {
-            console.log("✅ Script Loaded!");
-            // SweetAlert untuk Delete Button
             document.querySelectorAll('.delete-btn').forEach(button => {
                 button.addEventListener('click', function() {
-                    let employeeId = this.getAttribute('data-id');
+                    let plantId = this.getAttribute('data-id');
 
                     Swal.fire({
                         title: "Are you sure?",
@@ -267,7 +281,7 @@
                         if (result.isConfirmed) {
                             let form = document.createElement('form');
                             form.method = 'POST';
-                            form.action = `/master/plant/delete/${employeeId}`;
+                            form.action = `/master/plant/delete/${plantId}`;
 
                             let csrfToken = document.createElement('input');
                             csrfToken.type = 'hidden';

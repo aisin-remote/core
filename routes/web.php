@@ -7,6 +7,7 @@ use App\Http\Controllers\HavController;
 use App\Http\Controllers\IcpController;
 use App\Http\Controllers\IdpController;
 use App\Http\Controllers\RtcController;
+use App\Http\Controllers\IpaController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\PlantController;
@@ -21,6 +22,12 @@ use App\Http\Controllers\CompetencyController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\IpaApprovalController;
+use App\Http\Controllers\IpaExportController;
+use App\Http\Controllers\IppController;
+use App\Http\Controllers\SignatureController;
+use Illuminate\Support\Facades\Request;
 
 /*
 |--------------------------------------------------------------------------
@@ -92,16 +99,22 @@ Route::middleware('guest')->group(function () {
 });
 
 Route::middleware(['auth', 'force.password.change'])->group(function () {
-    Route::get('/dashboard', function () {
-        return view('website.dashboard.index');
-    })->name('dashboard.index');
+    Route::middleware(['company.scope', 'redirect.if.cannot.dashboard'])->group(function () {
+        Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+        Route::get('/dashboard/summary', [DashboardController::class, 'summary'])->name('dashboard.summary');
+        Route::get('/dashboard/list', [DashboardController::class, 'list'])->name('dashboard.list');
+    });
+
+    Route::get('/schedule', function () {
+        return view('website.dashboard.schedule.index');
+    })->name('schedule.index');
 
     Route::get('/master_schedule', function () {
-        return view('website.dashboard.master');
+        return view('website.dashboard.schedule.master');
     })->name('master_schedule.index');
 
     Route::get('/people', function () {
-        return view('website.dashboard.people');
+        return view('website.dashboard.schedule.people');
     })->name('people.index');
 
     Route::prefix('todolist')->group(function () {
@@ -111,19 +124,22 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('icp')->group(function () {
         // Pindahkan create di atas agar tidak tertabrak oleh {company}
 
-       Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
+        Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
 
         Route::get('/create/{employee_id}', [IcpController::class, 'create'])->name('icp.create');
         Route::post('/', [IcpController::class, 'store'])->name('icp.store');
-          Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
+        Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
 
         Route::get('/history/{id}', [IcpController::class, 'show'])->name('icp.show');
         Route::get('/export/{employee_id}', [IcpController::class, 'export'])->name('icp.export');
 
         Route::get('/edit/{id}', [IcpController::class, 'edit'])->name('icp.edit');
-       Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
+        Route::put('/{id}', [IcpController::class, 'update'])->name('icp.update');
 
-       Route::post('/delete/{id}', [IcpController::class, 'destroy'])->name('icp.destroy');
+        Route::post('/delete/{id}', [IcpController::class, 'destroy'])->name('icp.destroy');
+        Route::post('/{id}/submit', [IcpController::class, 'submit'])->name('icp.submit');
+
+        Route::get('/data/{company?}', [IcpController::class, 'data'])->name('icp.data');
     });
 
     Route::prefix('hav')->group(function () {
@@ -160,22 +176,37 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
         Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
+
         Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
         Route::get('/icp/{id}', [IcpController::class, 'approve'])->name('icp.approve');
         Route::post('icp/revise', [IcpController::class, 'revise'])->name('icp.revise');
+
+        Route::get('/ipp', [IppController::class, 'approval'])->name('ipp.approval');
+        Route::post('/ipp/{id}', [IppController::class, 'approve'])->name('ipp.approve');
+        Route::post('/ipp/revise/{id}', [IppController::class, 'revise'])->name('ipp.revise');
+
+        Route::get('/ipa', [IpaApprovalController::class, 'approval'])->name('ipa.approval');
+        Route::post('/ipa/{ipa?}/approve', [IpaApprovalController::class, 'approve'])->name('ipa.approve');
+        Route::post('/ipa/{ipa?}/revise',  [IpaApprovalController::class, 'revise'])->name('ipa.revise');
     });
 
     Route::prefix('employee')->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
-
+        Route::get('employee/check-email', [EmployeeController::class, 'checkEmail'])->name('employee.checkEmail');
         Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
         Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
-        Route::put('/{id}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
+        Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
         Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
         Route::get('/detail/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
         Route::post('/status/{id}', [EmployeeController::class, 'status'])->name('employee.status');
+
+        // signature
+        Route::post('/{employee}/signature', [SignatureController::class, 'store'])
+            ->name('employees.signature.store');
+        Route::delete('/{employee}/signature', [SignatureController::class, 'destroy'])
+            ->name('employees.signature.destroy');
 
         // promotion
         Route::prefix('promotion')->group(function () {
@@ -243,11 +274,24 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
 
     Route::prefix('rtc')->group(function () {
-        Route::get('/summary', [RtcController::class, 'summary'])->name('rtc.summary');
+        Route::get('/summary/{id?}', [RtcController::class, 'summary'])->name('rtc.summary');
         Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
-        Route::get('/list', [RtcController::class, 'list'])->name('rtc.list');
+        Route::get('/list/{id?}', [RtcController::class, 'list'])->name('rtc.list');
         Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
+
+        // routes/web.php
+        Route::get('/structure', [RtcController::class, 'summary'])
+            ->name('rtc.structure'); // yang sekarang
+
+        // Page khusus chart dabeng (re-use summary backend)
+        Route::get('/structure/dabeng', [RtcController::class, 'structureDabeng'])
+            ->name('rtc.structure.dabeng');
+
+        // JSON data untuk dabeng (pakai summary yg sama, cukup ?as_json=1)
+        Route::get('/structure.json', [RtcController::class, 'summary'])
+            ->name('rtc.structure.json'); // panggil dengan ?as_json=1
+
     });
 
     Route::prefix('idp')->group(function () {
@@ -276,6 +320,35 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::put('/update/{idp}', [IdpController::class, 'update'])->name('idp.update');
         Route::delete('/delete/{idp}', [IdpController::class, 'deleteIdp'])->name('idp.delete');
     });
+
+    Route::prefix('ipp')->group(function () {
+        Route::get('/', [IppController::class, 'index'])->name('ipp.index');
+        Route::get('/init', [IppController::class, 'init'])->name('ipp.init');
+        Route::post('/', [IppController::class, 'store'])->name('ipp.store');
+        Route::post('/submit', [IppController::class, 'submit'])->name('ipp.submit');
+        Route::get('/list/{company?}', [IppController::class, 'list'])->name('ipp.list');
+        Route::get('/data', [IppController::class, 'listJson'])->name('ipp.list.json');
+        Route::delete('/point/{point}', [IppController::class, 'destroyPoint'])->name('ipp.point.destroy');
+        Route::get('/export/excel/{id?}', [IppController::class, 'exportExcel'])->name('ipp.export.excel');
+        Route::get('/export/pdf/{id?}', [IppController::class, 'exportPdf'])->name('ipp.export.pdf');
+        Route::get('/employee/ipps', [IppController::class, 'employeeIppsJson'])
+            ->name('ipp.employee.ipps.json');
+        Route::get('/approval/json', [IppController::class, 'approvalJson'])->name('ipp.approval.json');
+        Route::get('/{ipp}/comments', [IppController::class, 'getComment'])->name('ipp.comments');
+    });
+
+    Route::prefix('ipa')->name('ipa.')->group(function () {
+        Route::get('/',                [IpaController::class, 'index'])->name('index');
+        Route::get('/{id}/edit',       [IpaController::class, 'edit'])->name('edit');
+        Route::get('/{id}/data',       [IpaController::class, 'getData'])->name('data');
+        Route::put('/{ipa}',            [IpaController::class, 'update'])->name('update');
+        Route::post('/{id}/recalc',    [IpaController::class, 'recalc'])->name('recalc');
+        Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
+
+        Route::get('/approval/json', [IpaApprovalController::class, 'approvalJson'])->name('approval.json');
+        Route::get('/{ipa?}/export', [IpaExportController::class, 'export'])->name('export');
+    });
+
 
     Route::get('/idp/export-template/{employee_id}', [IdpController::class, 'exportTemplate'])
         ->name('idp.exportTemplate');
