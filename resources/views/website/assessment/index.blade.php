@@ -1259,4 +1259,44 @@
             }
         });
     </script>
+    <script>
+        // Hapus assessment (delegated, karena tombol dibuat dinamis dari AJAX)
+$(document).on('click', '.delete-btn', function (e) {
+    e.preventDefault();
+    const id = $(this).data('id');
+    if (!id) return;
+
+    Swal.fire({
+        title: 'Yakin hapus?',
+        text: 'Aksi ini tidak bisa dibatalkan.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Ya, hapus',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (!result.isConfirmed) return;
+
+        $.ajax({
+            url: `/assessment/${id}`,
+            type: 'POST',           // pakai POST + _method: DELETE utk Laravel
+            data: { _method: 'DELETE' },
+        })
+        .done(function (res) {
+            Swal.fire('Terhapus!', 'Assessment sudah dihapus.', 'success')
+                .then(() => {
+                    // opsi 1: reload
+                    location.reload();
+                    // opsi 2 (tanpa reload): remove row langsung
+                    // $(`.delete-btn[data-id="${id}"]`).closest('tr').remove();
+                });
+        })
+        .fail(function (xhr) {
+            let msg = 'Gagal menghapus.';
+            if (xhr.responseJSON?.message) msg = xhr.responseJSON.message;
+            Swal.fire('Gagal', msg, 'error');
+        });
+    });
+});
+
+    </script>
 @endpush

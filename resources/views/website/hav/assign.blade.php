@@ -42,7 +42,7 @@
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
                             <a class="nav-link my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
-                                href="{{ route('hav.list', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
+                                href="{{ route('hav.assign', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
                                 <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
@@ -349,10 +349,10 @@
                                     Detail
                                 </a>
                                 ${`<a
-                                                                                                                                                                                                                                                                                                data-id="${hav.id}"
-                                                                                                                                                                                                                                                                                                class="btn btn-primary btn-sm btn-hav-comment" href="#">
-                                                                                                                                                                                                                                                                                                    History
-                                                                                                                                                                                                                                                                                                </a>`}
+                                                                                                                                                                                                                                                                                                        data-id="${hav.id}"
+                                                                                                                                                                                                                                                                                                        class="btn btn-primary btn-sm btn-hav-comment" href="#">
+                                                                                                                                                                                                                                                                                                            History
+                                                                                                                                                                                                                                                                                                        </a>`}
                                 <button type="button" class="btn btn-danger btn-sm delete-btn"
                                     data-id="${hav.id}">Delete</button>
                             </td>

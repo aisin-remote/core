@@ -27,6 +27,7 @@ use App\Http\Controllers\IpaApprovalController;
 use App\Http\Controllers\IpaExportController;
 use App\Http\Controllers\IppController;
 use App\Http\Controllers\SignatureController;
+use App\Http\Controllers\PerformanceReviewController;
 use Illuminate\Support\Facades\Request;
 
 /*
@@ -347,6 +348,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::get('/approval/json', [IpaApprovalController::class, 'approvalJson'])->name('approval.json');
         Route::get('/{ipa?}/export', [IpaExportController::class, 'export'])->name('export');
+    });
+
+    Route::prefix('reviews')->name('reviews.')->group(function () {
+        Route::get('/',        [PerformanceReviewController::class, 'index'])->name('index');
+        Route::get('/init',        [PerformanceReviewController::class, 'init'])->name('init');
+        Route::get('{id}',     [PerformanceReviewController::class, 'show'])->name('show');
+        Route::post('/',       [PerformanceReviewController::class, 'store'])->name('store');
+        Route::put('{id}',     [PerformanceReviewController::class, 'update'])->name('update');
+        Route::delete('{id}',  [PerformanceReviewController::class, 'destroy'])->name('destroy');
     });
 
 
