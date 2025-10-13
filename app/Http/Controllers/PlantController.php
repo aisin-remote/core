@@ -15,7 +15,7 @@ class PlantController extends Controller
             ->get();
 
         $directors = Employee::where('position', 'Direktur')
-            ->orWhere('position', 'act director')
+            ->orWhere('position', 'act direktur')
             ->when($company, function ($query) use ($company) {
                 $query->where('company_name', $company);
             })->get();
@@ -35,7 +35,7 @@ class PlantController extends Controller
 
         $director = Employee::where('id', $request->director_id)
             ->where('position', 'Direktur')
-            ->orWhere('position', 'act director')
+            ->orWhere('position', 'act direktur')
             ->where('company_name', $request->company)
             ->first();
 
@@ -66,7 +66,7 @@ class PlantController extends Controller
 
         $director = Employee::where('id', $request->director_id)
             ->where('position', 'Direktur')
-            ->orWhere('position', 'act director')
+            ->orWhere('position', 'act direktur')
             ->where('company_name', $request->company)
             ->first();
 

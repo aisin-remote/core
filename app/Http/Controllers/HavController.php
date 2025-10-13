@@ -774,7 +774,7 @@ class HavController extends Controller
         $sheet->setCellValue("C7", $employees->npk);
         $sheet->setCellValue("C8", $employees->grade);
         $sheet->setCellValue("C9", $employees->company_name);
-        $sheet->setCellValue("C10", $employees->department->name);
+        $sheet->setCellValue("C10", $employees?->department?->name);
         $sheet->setCellValue("C11", $employees->position);
         $sheet->setCellValue("C13", date('Y'));
 
