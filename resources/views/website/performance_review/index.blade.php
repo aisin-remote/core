@@ -453,6 +453,7 @@
             $('#reviewForm').on('submit', function(e) {
                 e.preventDefault();
                 const id = $('#reviewId').val();
+                const ipa_id = IPA.id;
 
                 const b1_items = $('.b1-item').map(function() {
                     const v = $(this).val();
@@ -489,6 +490,7 @@
                     method = 'POST';
                     data = {
                         year: yearVal,
+                        ipa_header_id: ipa_id,
                         period: {}
                     };
                     data.period[per] = {

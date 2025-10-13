@@ -53,7 +53,6 @@ class PerformanceReviewController extends Controller
         return (float)$v;
     }
 
-    /** GET /reviews (page) */
     public function index(Request $req)
     {
         $meId = optional(auth()->user())->employee?->id;
@@ -63,7 +62,7 @@ class PerformanceReviewController extends Controller
 
         $year = now()->year;
         $ipas = IpaHeader::where('employee_id', $meId)
-            ->where('on_year', $year) // ganti ke 'year' jika skema kamu pakai kolom 'year'
+            ->where('on_year', $year)
             ->first();
 
         $ipa = $ipas ? [
@@ -71,11 +70,9 @@ class PerformanceReviewController extends Controller
             'grand_total' => $ipas->grand_total,
         ] : null;
 
-        // Blade kamu expect variabel $ipa
         return view('website.performance_review.index', compact('ipa'));
     }
 
-    /** GET /reviews/init (JSON list milik karyawan login) */
     public function init(Request $req)
     {
         $me = optional(auth()->user())->employee;
@@ -95,7 +92,6 @@ class PerformanceReviewController extends Controller
         return $this->ok($paginated);
     }
 
-    /** GET /reviews/{id} (hanya milik sendiri) */
     public function show($id)
     {
         $me = optional(auth()->user())->employee;
@@ -129,6 +125,7 @@ class PerformanceReviewController extends Controller
 
         $validated = $req->validate([
             'year'          => ['required', 'integer', 'min:2000'],
+            'ipa_header_id' => ['required', 'integer', 'exists:ipa_headers,id'],
             'period'        => ['required', 'array'],
             'period.mid'    => ['sometimes', 'array'],
             'period.one'    => ['sometimes', 'array'],
@@ -142,9 +139,10 @@ class PerformanceReviewController extends Controller
             'period.*.b2_people_mgmt'    => ['nullable', 'numeric', 'between:1,5'],
         ]);
 
-        $year    = (int)$validated['year'];
-        $periods = $validated['period'];
-        $saved   = [];
+        $year        = (int)$validated['year'];
+        $ipaHeaderId = (int)$validated['ipa_header_id'];
+        $periods     = $validated['period'];
+        $saved       = [];
 
         try {
             DB::beginTransaction();
@@ -182,7 +180,7 @@ class PerformanceReviewController extends Controller
                 $review = PerformanceReview::updateOrCreate(
                     ['employee_id' => $me->id, 'year' => $year, 'period' => $p],
                     [
-                        'ipa_header_id'   => null,
+                        'ipa_header_id'   => $ipaHeaderId,
                         'result_percent'  => $grand,
                         'result_value'    => $resultValue,
 
