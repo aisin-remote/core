@@ -190,7 +190,8 @@
                             <div class="col-md-6">
                                 <label class="form-label">A. Result</label>
                                 <input type="number" step="0.01" id="a_grand_total_ipa" class="form-control"
-                                    placeholder="e.g. 136.00">
+                                    placeholder="e.g. 136.00" disabled>
+                                <input type="hidden" id="a_grand_total_ipa_hidden" name="a_grand_total_ipa">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">B1. PDCA & Values (avg) <span
@@ -204,7 +205,6 @@
                                 <input type="number" step="0.01" min="1" max="5" id="b2_people_mgmt"
                                     class="form-control" required readonly>
                             </div>
-
 
                             <div class="col-12">
                                 <div class="alert alert-warning py-2">
@@ -302,22 +302,22 @@
                             let i = (p.from || 1);
                             const tr = items.map(row => {
                                 return `<tr data-id="${row.id}">
-                        <td>${i++}</td>
-                        <td>${row.year}</td>
-                        <td class="text-uppercase">${row.period}</td>
-                        <td class="text-end">${fmt(row.result_percent)}</td>
-                        <td class="text-end">${fmt(row.result_value)}</td>
-                        <td class="text-end">${fmt(row.b1_pdca_values)}</td>
-                        <td class="text-end">${fmt(row.b2_people_mgmt)}</td>
-                        <td class="text-end fw-semibold">${fmt(row.final_value)}</td>
-                        <td>${badgeGrade(row.grading)}</td>
-                        <td>
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-light btn-edit"><i class="fas fa-pen"></i></button>
-                                <button class="btn btn-light btn-delete text-danger"><i class="fas fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>`;
+                                    <td>${i++}</td>
+                                    <td>${row.year}</td>
+                                    <td class="text-uppercase">${row.period}</td>
+                                    <td class="text-end">${fmt(row.result_percent)}</td>
+                                    <td class="text-end">${fmt(row.result_value)}</td>
+                                    <td class="text-end">${fmt(row.b1_pdca_values)}</td>
+                                    <td class="text-end">${fmt(row.b2_people_mgmt)}</td>
+                                    <td class="text-end fw-semibold">${fmt(row.final_value)}</td>
+                                    <td>${badgeGrade(row.grading)}</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-light btn-edit"><i class="fas fa-pen"></i></button>
+                                            <button class="btn btn-light btn-delete text-danger"><i class="fas fa-trash"></i></button>
+                                        </div>
+                                    </td>
+                                </tr>`;
                             }).join('');
                             $rows.html(tr);
                         }
@@ -361,6 +361,32 @@
                 $('#b1_pdca_values, #b2_people_mgmt').val('');
             }
 
+            function setAGrand(v) {
+                const val = (v == null || v === '') ? '' : Number(v);
+                $('#a_grand_total_ipa').val(val);
+                $('#a_grand_total_ipa_hidden').val(val);
+            }
+
+            function setAspectValues(kind /* 'b1' | 'b2' */ , values) {
+                const arr = Array.isArray(values) ? values : [];
+                const $targets = kind === 'b1' ? $('.b1-item') : $('.b2-item');
+                $targets.each(function(i) {
+                    const v = (arr[i] ?? '');
+                    $(this).val(v === null ? '' : v);
+                });
+            }
+
+            function prefillFromRow(row) {
+                setAGrand(row?.result_percent ?? '');
+                setAspectValues('b1', row?.b1_items || []);
+                setAspectValues('b2', row?.b2_items || []);
+                if (row?.b1_pdca_values != null) $('#b1_pdca_values').val(row.b1_pdca_values);
+                if (row?.b2_people_mgmt != null) $('#b2_people_mgmt').val(row.b2_people_mgmt);
+                if ($('#b1_pdca_values').val() === '' || $('#b2_people_mgmt').val() === '') {
+                    updateAvgsUI();
+                }
+            }
+
             // ===== Modal handlers =====
             const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
 
@@ -369,8 +395,10 @@
                 $('#reviewId').val('');
                 $('#year_input').val($('#year').val());
                 $('#period_input').val($('#period').val() || 'one');
-                $('#a_grand_total_ipa').val(IPA?.grand_total ?? '');
+                setAGrand(IPA?.grand_total ?? '');
                 resetAspectInputs();
+                setAspectValues('b1', []);
+                setAspectValues('b2', []);
                 modal.show();
             }
 
@@ -379,15 +407,16 @@
                 $('#reviewId').val(row.id);
                 $('#year_input').val(row.year);
                 $('#period_input').val(row.period);
-                $('#a_grand_total_ipa').val(row.result_percent || '');
                 resetAspectInputs();
-                // set nilai rata-rata dari record agar terlihat
-                $('#b1_pdca_values').val(row.b1_pdca_values || '');
-                $('#b2_people_mgmt').val(row.b2_people_mgmt || '');
+                prefillFromRow(row);
                 modal.show();
             }
 
             $('#btnCreate').on('click', openCreate);
+            $('#btnFilter').on('click', () => {
+                currentPage = 1;
+                loadReviews();
+            });
 
             // Edit
             $(document).on('click', '.btn-edit', function() {
@@ -425,7 +454,6 @@
                 e.preventDefault();
                 const id = $('#reviewId').val();
 
-                // kumpulkan array aspek
                 const b1_items = $('.b1-item').map(function() {
                     const v = $(this).val();
                     return v === '' ? null : Number(v);
@@ -436,23 +464,44 @@
                     return v === '' ? null : Number(v);
                 }).get().filter(v => v !== null);
 
-                const payload = {
-                    year: Number($('#year_input').val()),
-                    period: {},
-                }
-
+                const yearVal = Number($('#year_input').val());
                 const per = $('#period_input').val();
-                payload.period[per] = {
-                    a_grand_total_ipa: $('#a_grand_total_ipa').val() ? Number($('#a_grand_total_ipa')
-                    .val()) : null,
-                    b1_items: b1_items,
-                    b2_items: b2_items,
-                    b1_pdca_values: $('#b1_pdca_values').val() ? Number($('#b1_pdca_values').val()) : null,
-                    b2_people_mgmt: $('#b2_people_mgmt').val() ? Number($('#b2_people_mgmt').val()) : null,
-                };
 
-                const method = id ? 'PUT' : 'POST';
-                const url = id ? `${API_BASE}/${id}` : API_BASE;
+                let url, method, data;
+
+                if (id) {
+                    url = `${API_BASE}/${id}`;
+                    method = 'PUT';
+                    data = {
+                        year: yearVal,
+                        period: per,
+                        grand_total_pct: $('#a_grand_total_ipa_hidden').val() ?
+                            Number($('#a_grand_total_ipa_hidden').val()) : null,
+                        b1_items: b1_items,
+                        b2_items: b2_items,
+                        b1_pdca_values: $('#b1_pdca_values').val() ? Number($('#b1_pdca_values').val()) :
+                            null,
+                        b2_people_mgmt: $('#b2_people_mgmt').val() ? Number($('#b2_people_mgmt').val()) :
+                            null,
+                    };
+                } else {
+                    url = API_BASE;
+                    method = 'POST';
+                    data = {
+                        year: yearVal,
+                        period: {}
+                    };
+                    data.period[per] = {
+                        a_grand_total_ipa: $('#a_grand_total_ipa_hidden').val() ?
+                            Number($('#a_grand_total_ipa_hidden').val()) : null,
+                        b1_items: b1_items,
+                        b2_items: b2_items,
+                        b1_pdca_values: $('#b1_pdca_values').val() ? Number($('#b1_pdca_values').val()) :
+                            null,
+                        b2_people_mgmt: $('#b2_people_mgmt').val() ? Number($('#b2_people_mgmt').val()) :
+                            null,
+                    };
+                }
 
                 $('.save-text').addClass('d-none');
                 $('.save-spinner').removeClass('d-none');
@@ -460,7 +509,7 @@
                 $.ajax({
                     url,
                     method,
-                    data: payload,
+                    data,
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
                     },
