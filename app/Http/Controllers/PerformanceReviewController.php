@@ -112,11 +112,11 @@ class PerformanceReviewController extends Controller
 
     /**
      * POST /reviews
-     * Menerima struktur nested:
+     * Payload:
      * {
      *   "year": 2025,
      *   "period": {
-     *      "mid": { "a_grand_total_ipa": 4.83, "b1_items":[], "b2_items":[], "b1_pdca_values":4.14, "b2_people_mgmt":4.25 },
+     *      "mid": { "a_grand_total_ipa": 136, "b1_items":[...], "b2_items":[...], "b1_pdca_values":4.14, "b2_people_mgmt":4.25 },
      *      "one": { ... }
      *   }
      * }
@@ -132,6 +132,14 @@ class PerformanceReviewController extends Controller
             'period'        => ['required', 'array'],
             'period.mid'    => ['sometimes', 'array'],
             'period.one'    => ['sometimes', 'array'],
+
+            'period.*.a_grand_total_ipa' => ['nullable', 'numeric'],
+            'period.*.b1_items'          => ['nullable', 'array', 'max:7'],
+            'period.*.b1_items.*'        => ['nullable', 'numeric', 'between:1,5'],
+            'period.*.b2_items'          => ['nullable', 'array', 'max:4'],
+            'period.*.b2_items.*'        => ['nullable', 'numeric', 'between:1,5'],
+            'period.*.b1_pdca_values'    => ['nullable', 'numeric', 'between:1,5'],
+            'period.*.b2_people_mgmt'    => ['nullable', 'numeric', 'between:1,5'],
         ]);
 
         $year    = (int)$validated['year'];
@@ -152,9 +160,11 @@ class PerformanceReviewController extends Controller
                 }
                 $grand = $this->num($grandRaw);
 
-                // hitung rata-rata B1/B2 dari array, fallback ke nilai tunggal jika ada
-                $b1 = $this->avgOrNull($data['b1_items'] ?? []);
-                $b2 = $this->avgOrNull($data['b2_items'] ?? []);
+                $b1Items = array_values($data['b1_items'] ?? []);
+                $b2Items = array_values($data['b2_items'] ?? []);
+
+                $b1 = $this->avgOrNull($b1Items);
+                $b2 = $this->avgOrNull($b2Items);
                 $b1 = $b1 ?? (isset($data['b1_pdca_values']) ? $this->num($data['b1_pdca_values']) : null);
                 $b2 = $b2 ?? (isset($data['b2_people_mgmt']) ? $this->num($data['b2_people_mgmt']) : null);
 
@@ -175,8 +185,12 @@ class PerformanceReviewController extends Controller
                         'ipa_header_id'   => null,
                         'result_percent'  => $grand,
                         'result_value'    => $resultValue,
+
+                        'b1_items'        => $b1Items ?: null,
+                        'b2_items'        => $b2Items ?: null,
                         'b1_pdca_values'  => $b1,
                         'b2_people_mgmt'  => $b2,
+
                         'weight_result'   => 0.50,
                         'weight_b1'       => $weights['b1'],
                         'weight_b2'       => $weights['b2'],
@@ -206,8 +220,8 @@ class PerformanceReviewController extends Controller
      * Kompatibel dengan form lama (flat) untuk edit satu record.
      * Body optional:
      *  - year, period (mid|one)
-     *  - grand_total_pct (angka 1–5 atau %)
-     *  - b1_items[] / b2_items[] (jika dikirim, dipakai untuk hitung rata-rata)
+     *  - grand_total_pct (angka)
+     *  - b1_items[] / b2_items[] (jika dikirim, dipakai & disimpan)
      *  - b1_pdca_values / b2_people_mgmt (fallback jika array tidak dikirim)
      */
     public function update(Request $req, $id)
@@ -222,29 +236,32 @@ class PerformanceReviewController extends Controller
             'year'            => ['nullable', 'integer', 'min:2000'],
             'period'          => ['nullable', Rule::in(['mid', 'one'])],
 
-            'grand_total_pct' => ['nullable'], // akan dinormalisasi sendiri
+            'grand_total_pct' => ['nullable'],
 
             'b1_items'        => ['nullable', 'array', 'max:7'],
-            'b1_items.*'      => ['nullable'],
+            'b1_items.*'      => ['nullable', 'numeric', 'between:1,5'],
             'b2_items'        => ['nullable', 'array', 'max:4'],
-            'b2_items.*'      => ['nullable'],
+            'b2_items.*'      => ['nullable', 'numeric', 'between:1,5'],
 
-            'b1_pdca_values'  => ['nullable'],
-            'b2_people_mgmt'  => ['nullable'],
+            'b1_pdca_values'  => ['nullable', 'numeric', 'between:1,5'],
+            'b2_people_mgmt'  => ['nullable', 'numeric', 'between:1,5'],
         ]);
 
         try {
             DB::beginTransaction();
 
-            // grand total: jika dikirim, pakai; jika tidak, gunakan yang lama
             $grand = $review->result_percent;
             if (array_key_exists('grand_total_pct', $data) && $data['grand_total_pct'] !== null && $data['grand_total_pct'] !== '') {
                 $grand = $this->num($data['grand_total_pct']);
             }
 
-            // B1/B2: prioritas array aspek; fallback ke single; fallback lagi ke nilai lama
-            $b1 = $this->avgOrNull($data['b1_items'] ?? null);
-            $b2 = $this->avgOrNull($data['b2_items'] ?? null);
+            $b1Items = array_key_exists('b1_items', $data) ? array_values($data['b1_items'] ?? []) : $review->b1_items;
+            $b2Items = array_key_exists('b2_items', $data) ? array_values($data['b2_items'] ?? []) : $review->b2_items;
+
+            $b1FromArr = $this->avgOrNull($b1Items ?? null);
+            $b2FromArr = $this->avgOrNull($b2Items ?? null);
+
+            $b1 = $b1FromArr;
             if ($b1 === null) {
                 if (array_key_exists('b1_pdca_values', $data) && $data['b1_pdca_values'] !== null && $data['b1_pdca_values'] !== '') {
                     $b1 = $this->num($data['b1_pdca_values']);
@@ -252,6 +269,8 @@ class PerformanceReviewController extends Controller
                     $b1 = (float)$review->b1_pdca_values;
                 }
             }
+
+            $b2 = $b2FromArr;
             if ($b2 === null) {
                 if (array_key_exists('b2_people_mgmt', $data) && $data['b2_people_mgmt'] !== null && $data['b2_people_mgmt'] !== '') {
                     $b2 = $this->num($data['b2_people_mgmt']);
@@ -270,8 +289,12 @@ class PerformanceReviewController extends Controller
                 'period'          => $data['period'] ?? $review->period,
                 'result_percent'  => $grand,
                 'result_value'    => $resultValue,
+
+                'b1_items'        => $b1Items ?: null,
+                'b2_items'        => $b2Items ?: null,
                 'b1_pdca_values'  => $b1,
                 'b2_people_mgmt'  => $b2,
+
                 'weight_result'   => 0.50,
                 'weight_b1'       => $weights['b1'],
                 'weight_b2'       => $weights['b2'],
