@@ -1338,16 +1338,22 @@ class EmployeeController extends Controller
             ]);
 
             // Get year hav terakhir
-            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
-
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->max('year');
+            if (!$havLastYear) {
+                DB::rollBack();
+                return redirect()
+                    ->back()
+                    ->with('error', 'Assessment karyawan belum di assess');
+            }
             // Update HAV Quadran
             (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
             DB::commit();
             return redirect()->back()->with('success', 'Performance appraisal berhasil ditambahkan.');
-        } catch (\Throwable $th) {
+        } catch (\Throwable $e) {
             DB::rollback();
-            return redirect()->back()->with('error', 'Performance appraisal gagal ditambahkan : ' . $th->getMessage());
+            Log::error($e->getMessage());
+            return redirect()->back()->with('error', 'Performance appraisal gagal ditambahkan : ' . $e->getMessage());
         }
     }
 
@@ -1374,7 +1380,7 @@ class EmployeeController extends Controller
                 DB::rollBack();
                 return redirect()
                     ->back()
-                    ->with('warning', 'Mohon segera perbarui assessment karyawan');
+                    ->with('error', 'Assessment karyawan belum di assess');
             }
 
             // Update HAV Quadran
@@ -1398,8 +1404,13 @@ class EmployeeController extends Controller
             $appraisal->delete();
 
             // Get year hav terakhir
-            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->first()->year;
-
+            $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->max("year");
+            if (!$havLastYear) {
+                DB::rollBack();
+                return redirect()
+                    ->back()
+                    ->with('error', 'Assessment karyawan belum di assess');
+            }
             // Update HAV Quadran
             (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
