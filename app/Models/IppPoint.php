@@ -27,4 +27,9 @@ class IppPoint extends Model
     {
         return $this->belongsTo(Ipp::class);
     }
+
+    public function activityPlanItems()
+    {
+        return $this->hasMany(ActivityPlanItem::class);
+    }
 }
