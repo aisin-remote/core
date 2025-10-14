@@ -969,12 +969,11 @@ class EmployeeController extends Controller
                     $cfg     = $positionFieldMap[$normalize($oldPosition)];
                     $oldRef  = DB::table($cfg['table'])->where($cfg['column'], $employee->id)->first();
                     $newRefId = $validatedData[$cfg['key']] ?? null;
-
                     if ($oldRef && (int)$oldRef->id !== (int)$newRefId) {
                         DB::table($cfg['table'])->where('id', $oldRef->id)->update([$cfg['column'] => null]);
                         // log mutasi lateral (optional – fungsi Anda sendiri)
                         if (method_exists($this, 'logLateralMutation')) {
-                            $this->logLateralMutation($employee->id, $normalize($oldPosition), $oldRef->id, $newRefId, $cfg['key']);
+                            $this->logLateralMutation($employee?->id, $normalize($oldPosition), $oldRef->id, $newRefId, $cfg['key']);
                         }
                     }
                 }
@@ -1006,7 +1005,7 @@ class EmployeeController extends Controller
         }
     }
 
-    private function logLateralMutation(int $employeeId, string $position, int $fromId, int $toId, string $structureKey)
+    private function logLateralMutation(int $employeeId, string $position, int $fromId, ?int $toId, string $structureKey)
     {
         $lastMutation = MutationHistory::where('employee_id', $employeeId)
             ->where('position', $position)
