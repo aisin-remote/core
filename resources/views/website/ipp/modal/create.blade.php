@@ -30,6 +30,10 @@
                         </div>
 
                         <div class="col-md-6">
+                            <label class="form-label fs-6">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" class="form-control form-control-lg" id="pmStart">
+                        </div>
+                        <div class="col-md-6">
                             <label class="form-label fs-6">Due Date <span class="text-danger">*</span></label>
                             <input type="date" class="form-control form-control-lg" id="pmDue">
                         </div>

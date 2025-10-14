@@ -509,8 +509,6 @@
             display: none;
         }
 
-        /* << hide when zero */
-
         .pulse {
             display: inline-block;
             width: 8px;
@@ -729,19 +727,23 @@
                 const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
                 const oneShort = (data.target_one || '').length > 110 ? data.target_one.slice(0, 110) + '…' : (data
                     .target_one || '-');
+
+                const startTxt = data.start_date ? data.start_date : '-';
                 const dueTxt = data.due_date ? data.due_date : '-';
+
                 return `
       <tr class="align-middle point-row"
           data-row-id="${esc(rowId)}"
           data-activity="${esc(data.activity||'')}"
           data-mid="${esc(data.target_mid||'')}"
           data-one="${esc(data.target_one||'')}"
+          data-start="${esc(startTxt)}"
           data-due="${esc(dueTxt)}"
           data-status="${esc(data.status||'draft')}"
           data-weight="${w}">
         <td class="fw-semibold">${esc(data.activity||'-')}</td>
         <td class="text-muted">${esc(oneShort)}</td>
-        <td><span class="badge badge-light">${esc(dueTxt)}</span></td>
+        <td><span class="badge badge-light">${esc(startTxt)}</span> &rarr; <span class="badge badge-light">${esc(dueTxt)}</span></td>
         <td><span>${fmt(w)}</span></td>
         <td class="text-end">
           <div class="btn-group btn-group-sm" role="group">
@@ -1022,6 +1024,7 @@
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
+
             $(document).on('click', '.js-edit', function() {
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
@@ -1033,11 +1036,15 @@
                 const $pmTargetMid = $('#pmTargetMid');
                 if ($pmTargetMid.length) $pmTargetMid.val($tr.data('mid'));
                 $('#pmTargetOne').val($tr.data('one'));
+
+                $('#pmStart').val($tr.data('start') || '');
+
                 $('#pmDue').val($tr.data('due'));
                 $('#pmWeight').val($tr.data('weight'));
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
+
 
             /* ===== SUBMIT point ===== */
             $('#pointForm').on('submit', function(e) {
@@ -1051,13 +1058,16 @@
                 const cat = $('#pmCat').val();
                 const rowId = $('#pmRowId').val();
                 const $pmTargetMid = $('#pmTargetMid');
+
                 const data = {
                     activity: ($('#pmActivity').val() || '').toString().trim(),
                     target_mid: $pmTargetMid.length ? ($pmTargetMid.val() || '').toString().trim() : '',
                     target_one: ($('#pmTargetOne').val() || '').toString().trim(),
+                    start_date: $('#pmStart').val() || null,
                     due_date: $('#pmDue').val(),
                     weight: parseFloat($('#pmWeight').val()),
                 };
+
                 if (!data.activity) {
                     toast('Isi "Program / Activity".', 'danger');
                     return unlock();
@@ -1066,6 +1076,14 @@
                     toast('Pilih "Due Date".', 'danger');
                     return unlock();
                 }
+
+                if (data.start_date && data.due_date) {
+                    if (new Date(data.start_date) > new Date(data.due_date)) {
+                        toast('Start Date tidak boleh setelah Due Date.', 'danger');
+                        return unlock();
+                    }
+                }
+
                 if (isNaN(data.weight)) {
                     toast('Isi "Weight (%)" dengan angka.', 'danger');
                     return unlock();
@@ -1081,42 +1099,41 @@
                 };
 
                 $.ajax({
-                        url: "{{ route('ipp.store') }}",
-                        method: "POST",
-                        data: {
-                            _token: "{{ csrf_token() }}",
-                            payload: JSON.stringify(payload)
-                        },
-                        dataType: "json"
-                    }).done((res) => {
-                        const rowData = {
-                            ...data,
-                            status: 'draft'
-                        };
-                        const newRowId = res?.row_id || res?.id || ('row-' + ++autoRowId);
-                        const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
-                        if (mode === 'create') {
+                    url: "{{ route('ipp.store') }}",
+                    method: "POST",
+                    data: {
+                        _token: "{{ csrf_token() }}",
+                        payload: JSON.stringify(payload)
+                    },
+                    dataType: "json"
+                }).done((res) => {
+                    const rowData = {
+                        ...data,
+                        status: 'draft'
+                    };
+                    const newRowId = res?.row_id || res?.id || ('row-' + ++autoRowId);
+                    const $tbody = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
+                    if (mode === 'create') {
+                        $tbody.find('.empty-row').remove();
+                        $tbody.append(makeRowHtml(newRowId, rowData));
+                    } else {
+                        const $old = $(
+                            `table.js-table[data-cat="${cat}"] tbody tr[data-row-id="${rowId}"]`);
+                        if ($old.length) $old.replaceWith(makeRowHtml(newRowId, rowData));
+                        else {
                             $tbody.find('.empty-row').remove();
                             $tbody.append(makeRowHtml(newRowId, rowData));
-                        } else {
-                            const $old = $(
-                                `table.js-table[data-cat="${cat}"] tbody tr[data-row-id="${rowId}"]`);
-                            if ($old.length) $old.replaceWith(makeRowHtml(newRowId, rowData));
-                            else {
-                                $tbody.find('.empty-row').remove();
-                                $tbody.append(makeRowHtml(newRowId, rowData));
-                            }
                         }
-                        recalcAll();
-                        pointModal.hide();
-                        toast(res?.message || 'Draft tersimpan.');
-                        updateExportVisibility();
-                        if (res?.locked) applyLockDom(true);
-                    }).fail(err => {
-                        toast(err?.responseJSON?.message || 'Gagal menyimpan. Data tidak ditambahkan.',
-                            'danger');
-                    })
-                    .always(unlock);
+                    }
+                    recalcAll();
+                    pointModal.hide();
+                    toast(res?.message || 'Draft tersimpan.');
+                    updateExportVisibility();
+                    if (res?.locked) applyLockDom(true);
+                }).fail(err => {
+                    toast(err?.responseJSON?.message || 'Gagal menyimpan. Data tidak ditambahkan.',
+                        'danger');
+                }).always(unlock);
 
                 function unlock() {
                     $btn.prop('disabled', false);
@@ -1239,6 +1256,7 @@
                                         activity: pt.activity,
                                         target_mid: pt.target_mid,
                                         target_one: pt.target_one,
+                                        start_date: pt.start_date || null,
                                         due_date: pt.due_date,
                                         weight: pt.weight,
                                         status: pt.status || 'draft'
