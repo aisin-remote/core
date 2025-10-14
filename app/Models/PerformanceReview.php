@@ -22,6 +22,7 @@ class PerformanceReview extends Model
         'weight_b2',
         'final_value',
         'grading',
+        'status'
     ];
 
     protected $casts = [

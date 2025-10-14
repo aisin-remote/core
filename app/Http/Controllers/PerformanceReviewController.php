@@ -31,7 +31,6 @@ class PerformanceReviewController extends Controller
         ], $code);
     }
 
-    /** util: rata-rata array numeric (2 desimal) */
     private function avgOrNull(?array $arr): ?float
     {
         if (!$arr) return null;
@@ -44,7 +43,6 @@ class PerformanceReviewController extends Controller
         return round(array_sum($nums) / count($nums), 2);
     }
 
-    /** util: normalisasi angka (mendukung "4,83") */
     private function num($v): float
     {
         if (is_string($v)) {
@@ -106,18 +104,6 @@ class PerformanceReviewController extends Controller
         return $this->ok($review);
     }
 
-    /**
-     * POST /reviews
-     * Payload:
-     * {
-     *   "year": 2025,
-     *   "period": {
-     *      "mid": { "a_grand_total_ipa": 136, "b1_items":[...], "b2_items":[...], "b1_pdca_values":4.14, "b2_people_mgmt":4.25 },
-     *      "one": { ... }
-     *   }
-     * }
-     * Boleh kirim salah satu (mid/one) atau keduanya.
-     */
     public function store(Request $req)
     {
         $me = optional(auth()->user())->employee;
@@ -142,6 +128,7 @@ class PerformanceReviewController extends Controller
         $year        = (int)$validated['year'];
         $ipaHeaderId = (int)$validated['ipa_header_id'];
         $periods     = $validated['period'];
+        $status      = (string) "draft";
         $saved       = [];
 
         try {
@@ -153,7 +140,13 @@ class PerformanceReviewController extends Controller
 
                 $grandRaw = $data['a_grand_total_ipa'] ?? null;
                 if ($grandRaw === null || $grandRaw === '') {
-                    Log::warning("Skip $p period — no a_grand_total_ipa for employee {$me->id}");
+                    Log::warning("PerformanceReviewCalc: skip period (empty grand total)", [
+                        'ctx' => 'store',
+                        'employee_id' => $me->id,
+                        'employee_name' => $me->name ?? null,
+                        'year' => $year,
+                        'period' => $p,
+                    ]);
                     continue;
                 }
                 $grand = $this->num($grandRaw);
@@ -167,61 +160,101 @@ class PerformanceReviewController extends Controller
                 $b2 = $b2 ?? (isset($data['b2_people_mgmt']) ? $this->num($data['b2_people_mgmt']) : null);
 
                 if ($b1 === null || $b2 === null) {
-                    Log::warning("Skip $p period — incomplete B1/B2 for employee {$me->id}");
+                    Log::warning("PerformanceReviewCalc: skip period (incomplete B1/B2)", [
+                        'ctx' => 'store',
+                        'employee_id' => $me->id,
+                        'year' => $year,
+                        'period' => $p,
+                        'b1_items' => $b1Items,
+                        'b2_items' => $b2Items,
+                        'b1_avg' => $b1,
+                        'b2_avg' => $b2,
+                    ]);
                     continue;
                 }
 
-                // bobot & nilai
-                $weights     = ReviewHelper::weightsForGrade($me->grade);
-                $resultValue = ReviewHelper::computeResultValue($grand);
-                $finalValue  = ReviewHelper::calculateFinalValue($resultValue, $b1, $b2, $weights);
-                $grading     = ReviewHelper::gradeFromFinalValue($finalValue);
+                $resolvedAstra     = ReviewHelper::resolveAstraGrade($me->grade);
+                $weights           = ReviewHelper::weightsForGrade($me->grade);
+                $resultValue       = ReviewHelper::computeResultValue($grand);
+                $resultComponent   = round($resultValue * $weights['result'], 4);
+                $b1Component       = round($b1 * $weights['b1'], 4);
+                $b2Component       = round($b2 * $weights['b2'], 4);
+                $finalValue        = round($resultComponent + $b1Component + $b2Component, 2);
+                $grading           = ReviewHelper::gradeFromFinalValue($finalValue);
+
+                Log::info("PerformanceReviewCalc: computed", [
+                    'ctx'             => 'store',
+                    'employee_id'     => $me->id,
+                    'employee_name'   => $me->name ?? null,
+                    'grade_input'     => $me->grade ?? null,
+                    'grade_astra'     => $resolvedAstra,
+                    'weights'         => $weights,
+                    'year'            => $year,
+                    'period'          => $p,
+                    'ipa_header_id'   => $ipaHeaderId,
+                    'inputs'          => [
+                        'grand_total_ipa' => $grand,
+                        'b1_items'        => $b1Items,
+                        'b2_items'        => $b2Items,
+                        'b1_avg'          => $b1,
+                        'b2_avg'          => $b2,
+                    ],
+                    'result_value'    => $resultValue,
+                    'components'      => [
+                        'result_component' => $resultComponent,
+                        'b1_component'     => $b1Component,
+                        'b2_component'     => $b2Component,
+                    ],
+                    'final_value'     => $finalValue,
+                    'grading'         => $grading,
+                ]);
 
                 $review = PerformanceReview::updateOrCreate(
                     ['employee_id' => $me->id, 'year' => $year, 'period' => $p],
                     [
-                        'ipa_header_id'   => $ipaHeaderId,
-                        'result_percent'  => $grand,
-                        'result_value'    => $resultValue,
+                        'ipa_header_id'  => $ipaHeaderId,
+                        'result_percent' => $grand,
+                        'result_value'   => $resultValue,
 
-                        'b1_items'        => $b1Items ?: null,
-                        'b2_items'        => $b2Items ?: null,
-                        'b1_pdca_values'  => $b1,
-                        'b2_people_mgmt'  => $b2,
+                        'b1_items'       => $b1Items ?: null,
+                        'b2_items'       => $b2Items ?: null,
+                        'b1_pdca_values' => $b1,
+                        'b2_people_mgmt' => $b2,
 
-                        'weight_result'   => 0.50,
-                        'weight_b1'       => $weights['b1'],
-                        'weight_b2'       => $weights['b2'],
-                        'final_value'     => $finalValue,
-                        'grading'         => $grading,
+                        'weight_result'  => $weights['result'],
+                        'weight_b1'      => $weights['b1'],
+                        'weight_b2'      => $weights['b2'],
+                        'final_value'    => $finalValue,
+                        'grading'        => $grading,
+                        'status'         => "draft"
                     ]
                 );
 
+                Log::info("PerformanceReviewCalc: saved", [
+                    'ctx'        => 'store',
+                    'employee_id' => $me->id,
+                    'year'       => $year,
+                    'period'     => $p,
+                    'review_id'  => $review->id,
+                ]);
+
                 $saved[] = $review;
-                Log::info("PerformanceReview {$p} saved for employee {$me->id}", ['review_id' => $review->id]);
             }
 
             DB::commit();
             return $this->ok($saved, 'Reviews saved successfully');
         } catch (Throwable $e) {
             DB::rollBack();
-            Log::error("Failed saving PerformanceReview for employee {$me->id}: {$e->getMessage()}", [
-                'trace' => $e->getTraceAsString(),
-                'payload' => $req->all(),
+            Log::error("PerformanceReviewCalc: store failed", [
+                'employee_id' => $me->id ?? null,
+                'message'     => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
+                'payload'     => $req->all(),
             ]);
             return $this->fail('Failed to save reviews', 500, ['exception' => $e->getMessage()]);
         }
     }
 
-    /**
-     * PUT /reviews/{id}
-     * Kompatibel dengan form lama (flat) untuk edit satu record.
-     * Body optional:
-     *  - year, period (mid|one)
-     *  - grand_total_pct (angka)
-     *  - b1_items[] / b2_items[] (jika dikirim, dipakai & disimpan)
-     *  - b1_pdca_values / b2_people_mgmt (fallback jika array tidak dikirim)
-     */
     public function update(Request $req, $id)
     {
         $me = optional(auth()->user())->employee;
@@ -233,14 +266,11 @@ class PerformanceReviewController extends Controller
         $data = $req->validate([
             'year'            => ['nullable', 'integer', 'min:2000'],
             'period'          => ['nullable', Rule::in(['mid', 'one'])],
-
             'grand_total_pct' => ['nullable'],
-
             'b1_items'        => ['nullable', 'array', 'max:7'],
             'b1_items.*'      => ['nullable', 'numeric', 'between:1,5'],
             'b2_items'        => ['nullable', 'array', 'max:4'],
             'b2_items.*'      => ['nullable', 'numeric', 'between:1,5'],
-
             'b1_pdca_values'  => ['nullable', 'numeric', 'between:1,5'],
             'b2_people_mgmt'  => ['nullable', 'numeric', 'between:1,5'],
         ]);
@@ -259,41 +289,55 @@ class PerformanceReviewController extends Controller
             $b1FromArr = $this->avgOrNull($b1Items ?? null);
             $b2FromArr = $this->avgOrNull($b2Items ?? null);
 
-            $b1 = $b1FromArr;
-            if ($b1 === null) {
-                if (array_key_exists('b1_pdca_values', $data) && $data['b1_pdca_values'] !== null && $data['b1_pdca_values'] !== '') {
-                    $b1 = $this->num($data['b1_pdca_values']);
-                } else {
-                    $b1 = (float)$review->b1_pdca_values;
-                }
-            }
+            $b1 = $b1FromArr ?? (array_key_exists('b1_pdca_values', $data) && $data['b1_pdca_values'] !== '' ? $this->num($data['b1_pdca_values']) : (float)$review->b1_pdca_values);
+            $b2 = $b2FromArr ?? (array_key_exists('b2_people_mgmt', $data) && $data['b2_people_mgmt'] !== '' ? $this->num($data['b2_people_mgmt']) : (float)$review->b2_people_mgmt);
 
-            $b2 = $b2FromArr;
-            if ($b2 === null) {
-                if (array_key_exists('b2_people_mgmt', $data) && $data['b2_people_mgmt'] !== null && $data['b2_people_mgmt'] !== '') {
-                    $b2 = $this->num($data['b2_people_mgmt']);
-                } else {
-                    $b2 = (float)$review->b2_people_mgmt;
-                }
-            }
+            $resolvedAstra   = ReviewHelper::resolveAstraGrade($me->grade);
+            $weights         = ReviewHelper::weightsForGrade($me->grade);
+            $resultValue     = ReviewHelper::computeResultValue($grand);
+            $resultComponent = round($resultValue * $weights['result'], 4);
+            $b1Component     = round($b1 * $weights['b1'], 4);
+            $b2Component     = round($b2 * $weights['b2'], 4);
+            $finalValue      = round($resultComponent + $b1Component + $b2Component, 2);
+            $grading         = ReviewHelper::gradeFromFinalValue($finalValue);
 
-            $weights     = ReviewHelper::weightsForGrade($me->grade);
-            $resultValue = ReviewHelper::computeResultValue($grand);
-            $finalValue  = ReviewHelper::calculateFinalValue($resultValue, $b1, $b2, $weights);
-            $grading     = ReviewHelper::gradeFromFinalValue($finalValue);
+            Log::info("PerformanceReviewCalc: computed", [
+                'ctx'             => 'update',
+                'employee_id'     => $me->id,
+                'employee_name'   => $me->name ?? null,
+                'grade_input'     => $me->grade ?? null,
+                'grade_astra'     => $resolvedAstra,
+                'weights'         => $weights,
+                'year'            => $data['year'] ?? $review->year,
+                'period'          => $data['period'] ?? $review->period,
+                'review_id'       => $review->id,
+                'inputs'          => [
+                    'grand_total_ipa' => $grand,
+                    'b1_items'        => $b1Items,
+                    'b2_items'        => $b2Items,
+                    'b1_avg'          => $b1,
+                    'b2_avg'          => $b2,
+                ],
+                'result_value'    => $resultValue,
+                'components'      => [
+                    'result_component' => $resultComponent,
+                    'b1_component'     => $b1Component,
+                    'b2_component'     => $b2Component,
+                ],
+                'final_value'     => $finalValue,
+                'grading'         => $grading,
+            ]);
 
             $review->fill([
                 'year'            => $data['year']   ?? $review->year,
                 'period'          => $data['period'] ?? $review->period,
                 'result_percent'  => $grand,
                 'result_value'    => $resultValue,
-
                 'b1_items'        => $b1Items ?: null,
                 'b2_items'        => $b2Items ?: null,
                 'b1_pdca_values'  => $b1,
                 'b2_people_mgmt'  => $b2,
-
-                'weight_result'   => 0.50,
+                'weight_result'   => $weights['result'],
                 'weight_b1'       => $weights['b1'],
                 'weight_b2'       => $weights['b2'],
                 'final_value'     => $finalValue,
@@ -301,18 +345,26 @@ class PerformanceReviewController extends Controller
             ])->save();
 
             DB::commit();
+            Log::info("PerformanceReviewCalc: saved", [
+                'ctx'        => 'update',
+                'employee_id' => $me->id,
+                'review_id'  => $review->id,
+            ]);
+
             return $this->ok($review->fresh()->load(['employee:id,name,grade', 'ipaHeader:id,grand_total']), 'Review updated');
         } catch (Throwable $e) {
             DB::rollBack();
-            Log::error("Failed updating PerformanceReview {$id} for employee {$me->id}: {$e->getMessage()}", [
-                'trace' => $e->getTraceAsString(),
-                'payload' => $req->all(),
+            Log::error("PerformanceReviewCalc: update failed", [
+                'employee_id' => $me->id ?? null,
+                'review_id'   => $review->id ?? null,
+                'message'     => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
+                'payload'     => $req->all(),
             ]);
             return $this->fail('Failed to update review', 500, ['exception' => $e->getMessage()]);
         }
     }
 
-    /** DELETE /reviews/{id} (hanya milik sendiri) */
     public function destroy($id)
     {
         $me = optional(auth()->user())->employee;
@@ -325,12 +377,18 @@ class PerformanceReviewController extends Controller
             DB::beginTransaction();
             $review->delete();
             DB::commit();
-            Log::info("PerformanceReview {$id} deleted for employee {$me->id}");
+            Log::info("PerformanceReviewCalc: deleted", [
+                'employee_id' => $me->id,
+                'review_id'   => $id,
+            ]);
             return $this->ok(null, 'Review deleted');
         } catch (Throwable $e) {
             DB::rollBack();
-            Log::error("Failed deleting PerformanceReview {$id} for employee {$me->id}: {$e->getMessage()}", [
-                'trace' => $e->getTraceAsString(),
+            Log::error("PerformanceReviewCalc: delete failed", [
+                'employee_id' => $me->id ?? null,
+                'review_id'   => $id,
+                'message'     => $e->getMessage(),
+                'trace'       => $e->getTraceAsString(),
             ]);
             return $this->fail('Failed to delete review', 500, ['exception' => $e->getMessage()]);
         }
