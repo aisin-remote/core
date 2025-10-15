@@ -507,47 +507,46 @@ class EmployeeController extends Controller
 
             // 2) Ambil data terkait berdasarkan employee_id (lebih tegas daripada by npk)
             $promotionHistories = PromotionHistory::with('employee')
-                ->where('employee_id', $employee->id)
-                ->orderBy('last_promotion_date', 'desc')
+                ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
+                ->orderByDesc('last_promotion_date')
                 ->get();
 
             $astraTrainings = AstraTraining::with('employee')
-                ->where('employee_id', $employee->id)
-                ->orderBy('date_end', 'desc')
+                ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
+                ->orderByDesc('date_end')
                 ->get();
 
             $externalTrainings = ExternalTraining::with('employee')
-                ->where('employee_id', $employee->id)
-                ->orderBy('date_end', 'desc')
+                ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
+                ->orderByDesc('date_end')
                 ->get();
 
             $educations = EducationalBackground::with('employee')
-                ->where('employee_id', $employee->id)
-                ->orderBy('end_date', 'desc')
+                ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
+                ->orderByDesc('end_date')
                 ->get();
 
             $workExperiences = WorkingExperience::with('employee')
-                ->where('employee_id', $employee->id)
-                ->orderByRaw('ISNULL(end_date) DESC') // untuk MySQL; kalau PostgreSQL pakai "end_date IS NULL DESC"
+                ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
+                ->orderByRaw('ISNULL(end_date) DESC')
                 ->orderByDesc('end_date')
                 ->get();
 
             $performanceAppraisals = PerformanceAppraisalHistory::with('employee')
-                ->where('employee_id', $employee->id)
-                ->orderBy('date', 'desc')
+                ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
+                ->orderByDesc('date')
                 ->get();
 
-            $assessment = Assessment::with(['details.alc', 'employee'])
-                ->where('employee_id', $employee->id)
+            $assessment = Assessment::with('details.alc', 'employee')
+                ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
                 ->latest()
                 ->first();
 
-            $idps = Idp::with(['alc', 'assessment.employee'])
-                ->whereHas('assessment', function ($q) use ($employee) {
-                    $q->where('employee_id', $employee->id);
-                })
+            $idps = Idp::with('alc', 'assessment.employee')
+                ->whereHas('assessment.employee', fn($q) => $q->where('npk', $employee->npk))
                 ->get();
 
+            // ----- Jabatan-level (pakai employee_id spesifik baris yg dipilih) -----
             $humanAssets = Hav::with('employee')
                 ->where('employee_id', $employee->id)
                 ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
@@ -556,9 +555,15 @@ class EmployeeController extends Controller
                 ->get();
 
             // 3) Master data untuk tampilan
-            $departments = Department::all();
-            $divisions   = Division::where('company', $employee->company_name)->get();
+            $positions   = Employee::where('npk', $employee->npk)->pluck('position')->unique()->values();
             $plants      = Plant::all();
+            $departments = Department::where('company', $employee->company_name)->get();
+            $divisions   = Division::where('company', $employee->company_name)->get();
+            $sections    = Section::where('company', $employee->company_name)->get();
+            $subSections = SubSection::with('section')
+                ->whereHas('section', fn($q) => $q->where('company', $employee->company_name))
+                ->get();
+
 
             return view('website.employee.show', compact(
                 'employee',
@@ -598,17 +603,17 @@ class EmployeeController extends Controller
 
         // ----- Person-level (pakai NPK) -----
         $promotionHistories = PromotionHistory::with('employee')
-            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
             ->orderByDesc('last_promotion_date')
             ->get();
 
         $astraTrainings = AstraTraining::with('employee')
-            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
             ->orderByDesc('date_end')
             ->get();
 
         $externalTrainings = ExternalTraining::with('employee')
-            ->whereHas('employee', fn($q) => $q->where('npk', $npk))
+            ->whereHas('employee', fn($q) => $q->where('npk', $employee->npk))
             ->orderByDesc('date_end')
             ->get();
 
