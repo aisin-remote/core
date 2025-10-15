@@ -408,7 +408,8 @@
 
             function loadDivisionsForCompany(companyCode) {
                 const code = (companyCode || '').toUpperCase();
-                const plants = window.PLANTS_BY_COMPANY[code] || [];
+                const plants = (window.DIREKSI_BY_COMPANY && window.DIREKSI_BY_COMPANY[code]) ? window
+                    .DIREKSI_BY_COMPANY[code] : [];
 
                 const reqs = plants.map(p => $.getJSON(window.ROUTE_FILTER, {
                     filter: 'division',

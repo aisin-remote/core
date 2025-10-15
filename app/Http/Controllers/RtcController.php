@@ -581,7 +581,6 @@ class RtcController extends Controller
     {
         $rawId  = $id ?? $request->route('id') ?? $request->query('id'); // company / numeric id
         $filter = strtolower($request->query('filter', 'department'));
-
         $user     = auth()->user();
         $employee = $user->employee ?? null;
 
@@ -823,7 +822,7 @@ class RtcController extends Controller
                 }
 
                 /* ============================= PLANT (FULL SUBTREE) ============================= */
-            case 'plant': {
+            case 'direksi': {
                     $id = (int) $rawId;
 
                     $p = Plant::with('director')->findOrFail($id);
