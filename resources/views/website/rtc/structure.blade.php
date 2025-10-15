@@ -10,6 +10,10 @@
             --bg: #f8fafc;
             --panel: #fff;
             --card: #fff;
+            --card-executive: #fff;
+            --card-manager: #fff;
+            --card-supervisor: #fff;
+            --card-staff: #fff;
             --line: #cbd5e1;
             --text: #1e293b;
             --text-light: #0f172a;
@@ -19,7 +23,6 @@
             --shadow-heavy: 0 8px 32px rgba(0, 0, 0, .12);
             --border: #e2e8f0;
             --border-light: #cbd5e1;
-            --line-thickness: 2;
         }
 
         * {
@@ -30,16 +33,18 @@
         body {
             height: 100%;
             background: var(--bg);
+            font-family: 'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif;
             color: var(--text);
             margin: 0
         }
 
+        /* Toolbar */
         .rtc-toolbar {
             display: flex;
             gap: .5rem;
             align-items: center;
             flex-wrap: wrap;
-            margin: 0 0 .75rem
+            margin: 0 0 .75rem 0
         }
 
         .rtc-btn {
@@ -71,6 +76,7 @@
             font-size: 13px
         }
 
+        /* Kanvas */
         .rtc-wrap {
             height: calc(100vh - 160px);
             border: 1px solid var(--border);
@@ -81,17 +87,14 @@
         }
 
         .rtc-canvas {
-            position: relative;
             transform-origin: 0 0;
             padding: 40px;
             width: fit-content;
             min-width: 100%;
-            transition: transform .3s ease;
-            backface-visibility: hidden;
-            will-change: transform;
+            transition: transform .3s ease
         }
 
-        /* ===== STRUKTUR POHON (hanya untuk layouting; konektor digambar oleh SVG) ===== */
+        /* ===== Struktur Pohon ===== */
         .tree {
             padding-left: 0;
             margin: 0;
@@ -100,18 +103,20 @@
         }
 
         .tree ul {
+            --h-start: 0px;
+            /* akan diisi JS */
+            --h-width: 0px;
+            /* akan diisi JS */
             padding-left: 0;
             margin: 0;
             position: relative;
             padding-top: 50px;
-            /* jarak vertikal parent->bar */
             margin-top: 30px;
-            /* jarak bar->anak */
             display: flex;
             justify-content: center;
             align-items: flex-start;
             gap: 60px;
-            list-style: none
+            list-style: none;
         }
 
         .tree li {
@@ -122,7 +127,75 @@
             align-items: center
         }
 
-        /* ===== KARTU ===== */
+        /* Titik vertikal dari parent ke garis horizontal */
+        .tree ul::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            height: 50px;
+            transform: translateX(-50%);
+            border-left: 3px solid var(--line);
+            z-index: 1;
+        }
+
+        /* Garis horizontal: start & width diisi JS agar berhenti di node pertama/terakhir */
+        .tree ul::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            height: 3px;
+            background: var(--line);
+            z-index: 1;
+            left: var(--h-start);
+            width: var(--h-width);
+        }
+
+        /* Titik vertikal dari anak ke garis horizontal */
+        .tree li::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            height: 30px;
+            transform: translateX(-50%);
+            border-left: 3px solid var(--line);
+            z-index: 2;
+        }
+
+        /* === konektor untuk wrapper departemen === */
+        .department-group {
+            position: relative;
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center
+        }
+
+        .department-group::before {
+            content: '';
+            position: absolute;
+            top: -30px;
+            left: 50%;
+            height: 30px;
+            transform: translateX(-50%);
+            border-left: 3px solid var(--line);
+            z-index: 2;
+        }
+
+        .department-group::after {
+            display: none
+        }
+
+        /* tak perlu masking apa pun */
+
+        /* STOP masking lama yang menyebabkan putus-putus */
+        .tree li:first-child::after,
+        .tree li:last-child::after {
+            display: none
+        }
+
+        /* ===== Kartu Node ===== */
         .node {
             width: 320px;
             text-align: left;
@@ -133,21 +206,7 @@
             padding: 20px;
             position: relative;
             z-index: 10;
-            transition: .3s;
-            overflow: hidden;
-            /* supaya strip warna ikut rounded */
-        }
-
-        /* strip warna di atas kartu */
-        .node::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            right: 0;
-            height: 6px;
-            z-index: 1;
-            background: linear-gradient(135deg, var(--node-color, #0ea5e9), var(--node-color-dark, #0284c7));
+            transition: .3s
         }
 
         .node[data-level="executive"] {
@@ -191,8 +250,8 @@
         }
 
         .avatar {
-            width: 64px;
-            height: 64px;
+            width: 56px;
+            height: 56px;
             border-radius: 50%;
             object-fit: cover;
             border: 3px solid var(--border);
@@ -255,8 +314,7 @@
         .value {
             font-size: 13px;
             color: var(--text-light);
-            font-weight: 500;
-            text-align: right
+            font-weight: 500
         }
 
         .multiline {
@@ -312,7 +370,7 @@
         .top-title {
             font-size: 16px;
             color: var(--text);
-            margin: 0 0 20px;
+            margin: 0 0 20px 0;
             text-align: center;
             font-weight: 700;
             text-transform: uppercase;
@@ -440,6 +498,14 @@
             border: 1px solid rgba(156, 163, 175, .2)
         }
 
+        .department-group::before {
+            /* label ditaruh di JS/caption bawaan */
+        }
+
+        .department-group::after {
+            /* no-op */
+        }
+
         @media (max-width:1200px) {
             .tree ul {
                 gap: 40px
@@ -529,36 +595,6 @@
                 transform: rotate(360deg)
             }
         }
-
-        /* Export */
-        .export-mode .rtc-canvas {
-            transform: scale(1) !important
-        }
-
-        .export-mode .node.highlight {
-            outline: none !important;
-            animation: none !important;
-            box-shadow: var(--shadow) !important
-        }
-
-        /* ===== SVG konektor ===== */
-        .rtc-links {
-            position: absolute;
-            left: 0;
-            top: 0;
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .rtc-links path {
-            stroke: var(--line);
-            stroke-width: var(--line-thickness);
-            fill: none;
-            shape-rendering: crispEdges;
-            vector-effect: non-scaling-stroke;
-            /* stroke tidak ikut scaling saat zoom */
-            stroke-linecap: square;
-        }
     </style>
 @endpush
 
@@ -571,21 +607,15 @@
                     <button id="zoomReset" class="rtc-btn" title="Reset Zoom">100%</button>
                     <button id="zoomIn" class="rtc-btn" title="Zoom In">+</button>
                     <button id="fitToScreen" class="rtc-btn" title="Fit to Screen">Fit</button>
-
                     <div style="border-left:1px solid var(--border);height:24px;margin:0 8px;"></div>
-
                     <input id="orgSearch" class="rtc-input" type="search"
                         placeholder="Cari nama, jabatan, atau departemen…">
                     <button id="clearSearch" class="rtc-btn" title="Clear Search" style="display:none;">✕</button>
                     <span id="info" style="color:#9aa8c0;font-size:12px"></span>
-
                     <span style="flex:1 1 auto"></span>
-
                     <button id="expandAll" class="rtc-btn" title="Expand All">Expand All</button>
                     <button id="collapseAll" class="rtc-btn" title="Collapse All">Collapse All</button>
-
                     <div style="border-left:1px solid var(--border);height:24px;margin:0 8px;"></div>
-
                     <button id="btn-png" class="rtc-btn" title="Export as PNG">PNG</button>
                     <button id="btn-pdf" class="rtc-btn" title="Export as PDF">PDF</button>
                 </div>
@@ -593,8 +623,6 @@
             <div class="card-body" style="background:var(--panel)">
                 <div class="rtc-wrap">
                     <div id="canvas" class="rtc-canvas">
-                        <!-- SVG overlay untuk konektor -->
-                        <svg id="links" class="rtc-links" width="0" height="0"></svg>
                         <div class="loading">Loading organization chart...</div>
                     </div>
                 </div>
@@ -614,37 +642,34 @@
 
         /* ---------- HELPERS ---------- */
         const colorMap = {
-            "color-1": "c-1",
-            "color-2": "c-2",
-            "color-3": "c-3",
-            "color-4": "c-4",
-            "color-5": "c-5",
-            "color-6": "c-6",
-            "color-7": "c-7",
-            "color-8": "c-8",
-            "color-9": "c-9",
-            "color-10": "c-10",
-            "color-11": "c-11",
-            "color-12": "c-12",
-            "color-13": "c-13",
-            "color-14": "c-14"
+            'color-1': 'c-1',
+            'color-2': 'c-2',
+            'color-3': 'c-3',
+            'color-4': 'c-4',
+            'color-5': 'c-5',
+            'color-6': 'c-6',
+            'color-7': 'c-7',
+            'color-8': 'c-8',
+            'color-9': 'c-9',
+            'color-10': 'c-10',
+            'color-11': 'c-11',
+            'color-12': 'c-12',
+            'color-13': 'c-13',
+            'color-14': 'c-14'
         };
         const hierarchyLevels = {
-            "president": "executive",
-            "vpd": "executive",
-            "vice president": "executive",
-            "director": "executive",
-            "gm": "executive",
-            "general manager": "executive",
-            "manager": "manager",
-            "head": "manager",
-            "supervisor": "supervisor",
-            "lead": "supervisor",
-            "senior": "supervisor",
-            "section head": "supervisor",
-            "staff": "staff",
-            "officer": "staff",
-            "analyst": "staff"
+            'president': 'executive',
+            'vp': 'executive',
+            'vice president': 'executive',
+            'director': 'executive',
+            'manager': 'manager',
+            'head': 'manager',
+            'supervisor': 'supervisor',
+            'lead': 'supervisor',
+            'senior': 'supervisor',
+            'staff': 'staff',
+            'officer': 'staff',
+            'analyst': 'staff'
         };
         const clamp = (s, n = 64) => (s ? (String(s).length > n ? String(s).slice(0, n - 1) + '…' : String(s)) : '-');
         const qs = (s) => document.querySelector(s);
@@ -655,65 +680,46 @@
             return e;
         };
 
-        function getDeptName(person) {
-            if (!person || !person.department) return '';
-            const d = person.department;
-            if (typeof d === 'string') return d;
-            if (typeof d === 'object') return d.name || '';
-            return '';
-        }
+        /* registry buat search */
+        const registry = [];
+        let searchTimer = null,
+            resizeTimer = null;
 
-        function getHierarchyLevelByNode(data) {
-            const pos = (data?.person?.position || '').toLowerCase();
-            if (pos) {
-                for (const [kw, lv] of Object.entries(hierarchyLevels)) {
-                    if (pos.includes(kw)) return lv;
-                }
-            }
-            const t = (data?.title || '').toLowerCase();
-            for (const [kw, lv] of Object.entries(hierarchyLevels)) {
-                if (t.includes(kw)) return lv;
+        function getHierarchyLevel(title) {
+            if (!title) return 'staff';
+            const lower = String(title).toLowerCase();
+            for (const [key, lv] of Object.entries(hierarchyLevels)) {
+                if (lower.includes(key)) return lv;
             }
             return 'staff';
         }
 
-        function candidateText(c) {
-            if (!c || c.name === '-' || !c.name) return '';
-            const g = c.grade ?? '-',
-                a = c.age ?? '-';
-            return `${c.name} (${g}, ${a})`;
-        }
-
-        /* === AVATAR + HEADER NODE === */
-        function personRow(p, unitTitle) {
+        function personRow(p) {
             const head = el('div', 'node-header');
             const img = el('img', 'avatar');
-            const fallback =
+            img.src = p?.photo ||
                 `https://ui-avatars.com/api/?name=${encodeURIComponent(p?.name||'N/A')}&background=374151&color=e2e8f0`;
-            img.src = (p?.photo || '').trim() || fallback;
-            img.alt = (p?.name || 'photo');
-            img.crossOrigin = 'anonymous';
-            img.referrerPolicy = 'no-referrer';
             img.onerror = () => {
-                img.src = fallback;
+                img.src =
+                    `https://ui-avatars.com/api/?name=${encodeURIComponent(p?.name||'N/A')}&background=374151&color=e2e8f0`;
             };
             head.appendChild(img);
             const tx = el('div');
             const h4 = el('h4');
             h4.textContent = clamp(p?.name, 48);
             const role = el('div', 'role multiline');
-            role.textContent = unitTitle || '';
+            role.textContent = p?.title || '';
             tx.appendChild(h4);
             tx.appendChild(role);
             head.appendChild(tx);
             return head;
         }
 
-        function chips(title, colorClass, departmentName) {
+        function chips(title, colorClass, department) {
             const wrap = el('div');
-            if (departmentName) {
+            if (department) {
                 const b = el('span', 'badge');
-                b.textContent = departmentName;
+                b.textContent = department;
                 wrap.appendChild(b);
             }
             const chip = el('span', 'chip ' + (colorMap[colorClass] || 'c-1'));
@@ -733,7 +739,7 @@
                 a.textContent = k;
                 const b = el('div', 'value');
                 b.textContent = (v ?? '-');
-                if (hi && v !== undefined && v !== null && v !== '') {
+                if (hi && v) {
                     b.style.color = '#22c55e';
                     b.style.fontWeight = '600';
                 }
@@ -744,7 +750,10 @@
             add('Age', person?.age ?? '-');
             add('LOS', person?.los ?? '-');
             add('LCP', person?.lcp ?? '-');
+            if (person?.employee_id) add('ID', person.employee_id);
+            if (person?.department) add('Dept', person.department);
             box.appendChild(g);
+
             if (!hidePlans) {
                 const ttl = el('div', 'label');
                 ttl.textContent = 'SUCCESSION PLANS';
@@ -755,7 +764,7 @@
                     const a = el('div', 'label');
                     a.textContent = k;
                     const b = el('div', 'value multiline');
-                    b.textContent = v || '';
+                    b.textContent = v || 'No candidate';
                     if (!v) {
                         b.style.color = '#ef4444';
                         b.style.fontStyle = 'italic';
@@ -773,61 +782,61 @@
 
         function getNodeColor(cc) {
             const m = {
-                "color-1": {
-                    primary: "#0ea5e9",
-                    dark: "#0284c7"
+                'color-1': {
+                    primary: '#0ea5e9',
+                    dark: '#0284c7'
                 },
-                "color-2": {
-                    primary: "#22c55e",
-                    dark: "#16a34a"
+                'color-2': {
+                    primary: '#22c55e',
+                    dark: '#16a34a'
                 },
-                "color-3": {
-                    primary: "#ef4444",
-                    dark: "#dc2626"
+                'color-3': {
+                    primary: '#ef4444',
+                    dark: '#dc2626'
                 },
-                "color-4": {
-                    primary: "#f59e0b",
-                    dark: "#d97706"
+                'color-4': {
+                    primary: '#f59e0b',
+                    dark: '#d97706'
                 },
-                "color-5": {
-                    primary: "#8b5cf6",
-                    dark: "#7c3aed"
+                'color-5': {
+                    primary: '#8b5cf6',
+                    dark: '#7c3aed'
                 },
-                "color-6": {
-                    primary: "#14b8a6",
-                    dark: "#0d9488"
+                'color-6': {
+                    primary: '#14b8a6',
+                    dark: '#0d9488'
                 },
-                "color-7": {
-                    primary: "#fb923c",
-                    dark: "#ea580c"
+                'color-7': {
+                    primary: '#fb923c',
+                    dark: '#ea580c'
                 },
-                "color-8": {
-                    primary: "#06b6d4",
-                    dark: "#0891b2"
+                'color-8': {
+                    primary: '#06b6d4',
+                    dark: '#0891b2'
                 },
-                "color-9": {
-                    primary: "#a855f7",
-                    dark: "#9333ea"
+                'color-9': {
+                    primary: '#a855f7',
+                    dark: '#9333ea'
                 },
-                "color-10": {
-                    primary: "#10b981",
-                    dark: "#059669"
+                'color-10': {
+                    primary: '#10b981',
+                    dark: '#059669'
                 },
-                "color-11": {
-                    primary: "#eab308",
-                    dark: "#ca8a04"
+                'color-11': {
+                    primary: '#eab308',
+                    dark: '#ca8a04'
                 },
-                "color-12": {
-                    primary: "#ec4899",
-                    dark: "#db2777"
+                'color-12': {
+                    primary: '#ec4899',
+                    dark: '#db2777'
                 },
-                "color-13": {
-                    primary: "#34d399",
-                    dark: "#10b981"
+                'color-13': {
+                    primary: '#34d399',
+                    dark: '#10b981'
                 },
-                "color-14": {
-                    primary: "#3b82f6",
-                    dark: "#2563eb"
+                'color-14': {
+                    primary: '#3b82f6',
+                    dark: '#2563eb'
                 }
             };
             return m[cc] || m['color-1'];
@@ -837,21 +846,20 @@
             hidePlans = false
         } = {}) {
             const card = el('div', 'node');
-            const level = getHierarchyLevelByNode(data);
+            const level = getHierarchyLevel(data.title);
             card.setAttribute('data-level', level);
-
             const nc = getNodeColor(data.colorClass);
             card.style.setProperty('--node-color', nc.primary);
             card.style.setProperty('--node-color-dark', nc.dark);
-
-            const deptName = getDeptName(data.person);
-            card.appendChild(chips(data.title, data.colorClass, deptName));
-            card.appendChild(personRow(data.person, data.title));
-
+            card.appendChild(chips(data.title, data.colorClass, data.person?.department));
+            card.appendChild(personRow(data.person));
             const plans = {
-                st: candidateText(data.shortTerm),
-                mt: candidateText(data.midTerm),
-                lt: candidateText(data.longTerm)
+                st: data.shortTerm ?
+                    `${data.shortTerm.name??'-'} (${data.shortTerm.grade??'-'}, ${data.shortTerm.age??'-'})` : '',
+                mt: data.midTerm ?
+                    `${data.midTerm.name  ??'-'} (${data.midTerm.grade  ??'-'}, ${data.midTerm.age  ??'-'})` : '',
+                lt: data.longTerm ?
+                    `${data.longTerm.name ??'-'} (${data.longTerm.grade ??'-'}, ${data.longTerm.age ??'-'})` : ''
             };
             card.appendChild(detailGrid(data.person, plans, hidePlans || data.no_plans));
 
@@ -864,19 +872,18 @@
                     li.classList.toggle('collapsed');
                     const c = li.classList.contains('collapsed');
                     b.textContent = c ? `Expand (${data.supervisors.length})` : `Collapse (${data.supervisors.length})`;
-                    queueDraw();
+                    updateConnectorSpans();
                 };
                 t.appendChild(b);
                 card.appendChild(t);
             }
 
-            const searchText = [data.person?.name, data.person?.position, data.title, deptName, data.person?.grade, level]
-                .filter(Boolean).join(' ').toLowerCase();
             registry.push({
                 card,
                 data,
                 level,
-                searchText
+                searchText: [data.person?.name, data.title, data.person?.department, data.person?.grade, level]
+                    .filter(Boolean).join(' ').toLowerCase()
             });
             return card;
         }
@@ -891,9 +898,10 @@
 
             if (node.supervisors && node.supervisors.length) {
                 const ul = el('ul');
+
                 const groups = {};
                 node.supervisors.forEach(ch => {
-                    const g = getDeptName(ch.person) || 'General';
+                    const g = ch.person?.department || 'General';
                     (groups[g] ||= []).push(ch);
                 });
 
@@ -909,6 +917,7 @@
                 } else {
                     node.supervisors.forEach(c => ul.appendChild(renderNode(c, depth + 1)));
                 }
+
                 li.appendChild(ul);
             }
             return li;
@@ -975,144 +984,56 @@
             return container;
         }
 
-        /* ====== MATIKAN KONEKTOR CSS LAMA ====== */
-        function disableCssConnectors() {
-            if (document.getElementById('kill-css-lines')) return;
-            const style = document.createElement('style');
-            style.id = 'kill-css-lines';
-            style.textContent = `
-    .tree ul::before, .tree ul::after, .tree li::before, .department-group::before { content:none !important; border:0 !important; }
-  `;
-            document.head.appendChild(style);
-        }
-
-        /* ===== SVG CONNECTORS ===== */
-        let drawTimer = null;
-
-        function queueDraw() {
-            clearTimeout(drawTimer);
-            drawTimer = setTimeout(drawLinks, 32);
-        }
-
-        function drawLinks() {
-            const canvas = document.getElementById('canvas');
-            if (!canvas) return;
-
-            // pastikan relative positioning supaya SVG absolute nempel ke canvas
-            if (getComputedStyle(canvas).position === 'static') {
-                canvas.style.position = 'relative';
-            }
-
-            let svg = document.getElementById('links');
-            if (!svg) {
-                svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.id = 'links';
-                svg.style.position = 'absolute';
-                svg.style.left = 0;
-                svg.style.top = 0;
-                svg.style.pointerEvents = 'none';
-                svg.style.zIndex = 0;
-                canvas.prepend(svg);
-            }
-
-            // gunakan ukuran KONTEN sebenarnya agar tidak offset (padding/zoom/scroll aman)
-            const W = canvas.scrollWidth;
-            const H = canvas.scrollHeight;
-            svg.setAttribute('width', W);
-            svg.setAttribute('height', H);
-            svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-
-            while (svg.firstChild) svg.removeChild(svg.firstChild);
-
-            const dpr = window.devicePixelRatio || 1;
-            const snap = v => Math.round(v * dpr) / dpr;
-
-            const rootStyle = getComputedStyle(document.documentElement);
-            const LINE_COLOR = rootStyle.getPropertyValue('--line')?.trim() || '#cbd5e1';
-            const THICK = parseFloat(rootStyle.getPropertyValue('--line-thickness')) || 2;
-
-            // offset canvas (padding box) utk konversi absolut -> lokal
-            const cRect = canvas.getBoundingClientRect();
-
-            canvas.querySelectorAll('.tree li').forEach(li => {
-                const parentNode = li.querySelector(':scope > .node');
-                const ul = li.querySelector(':scope > ul, :scope > .department-group > ul');
-                if (!parentNode || !ul || ul.offsetParent === null) return;
-
-                const parentRect = parentNode.getBoundingClientRect();
-                const childNodes = [
+        /* ===== Layout konektor (kunci agar garis berhenti di node terakhir) ===== */
+        function updateConnectorSpans(root = document) {
+            const uls = root.querySelectorAll('.tree ul');
+            uls.forEach(ul => {
+                // Ambil node yang merupakan anak langsung ul, termasuk di dalam department-group
+                const nodeEls = [
                     ...ul.querySelectorAll(':scope > li > .node'),
                     ...ul.querySelectorAll(':scope > .department-group > ul > li > .node')
-                ].filter(n => n.offsetParent !== null);
-                if (childNodes.length === 0) return;
+                ].filter(n => n.offsetParent !== null); // hanya yang terlihat
 
-                const px = snap(parentRect.left + parentRect.width / 2 - cRect.left + canvas.scrollLeft);
-                const py = snap(parentRect.bottom - cRect.top + canvas.scrollTop);
+                if (nodeEls.length <= 1) {
+                    ul.style.setProperty('--h-start', '0px');
+                    ul.style.setProperty('--h-width', '0px');
+                    return;
+                }
+                const ulRect = ul.getBoundingClientRect();
+                const first = nodeEls[0].getBoundingClientRect();
+                const last = nodeEls[nodeEls.length - 1].getBoundingClientRect();
 
-                const childRects = childNodes.map(n => n.getBoundingClientRect());
-                const childCenters = childRects.map(r => snap(r.left + r.width / 2 - cRect.left + canvas
-                    .scrollLeft));
-                const firstX = Math.min(...childCenters);
-                const lastX = Math.max(...childCenters);
-
-                const minChildTop = Math.min(...childRects.map(r => r.top - cRect.top + canvas.scrollTop));
-                // bar di antara parent & anak: minimal 14px di bawah parent, 24px di atas anak
-                let barY = snap(Math.min(minChildTop - 24, Math.max(py + 14, py + (minChildTop - py) * 0.35)));
-
-                addPath(svg, `M ${px} ${py} L ${px} ${barY}`, LINE_COLOR, THICK); // parent vertical
-                addPath(svg, `M ${firstX} ${barY} L ${lastX} ${barY}`, LINE_COLOR, THICK); // horizontal bar
-
-                childRects.forEach((r, i) => {
-                    const cx = childCenters[i];
-                    const cy = snap(r.top - cRect.top + canvas.scrollTop);
-                    addPath(svg, `M ${cx} ${barY} L ${cx} ${cy}`, LINE_COLOR, THICK); // child verticals
-                });
+                const start = (first.left + first.width / 2) - ulRect.left;
+                const end = (last.left + last.width / 2) - ulRect.left;
+                ul.style.setProperty('--h-start', `${start}px`);
+                ul.style.setProperty('--h-width', `${Math.max(0,end - start)}px`);
             });
         }
 
-        function addPath(svg, d, color, thick) {
-            const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-            p.setAttribute('d', d);
-            p.setAttribute('stroke', color);
-            p.setAttribute('stroke-width', thick);
-            p.setAttribute('fill', 'none');
-            p.setAttribute('shape-rendering', 'crispEdges');
-            p.setAttribute('vector-effect', 'non-scaling-stroke');
-            p.setAttribute('stroke-linecap', 'square');
-            svg.appendChild(p);
-        }
-
         /* ===== Zoom, Fit, Search ===== */
-        const registry = [];
-        let zoom = 1,
-            canvasEl, searchInput, clearBtn, info, searchTimer = null;
+        let zoom = 1;
+        let canvas, searchInput, clearBtn, info;
 
         function applyZoom() {
-            if (canvasEl) {
-                canvasEl.style.transform = `scale(${zoom})`;
+            if (canvas) {
+                canvas.style.transform = `scale(${zoom})`;
                 const r = qs('#zoomReset');
                 if (r) r.textContent = `${Math.round(zoom*100)}%`;
-                queueDraw();
             }
         }
 
         function fitToScreen() {
-            const wrapper = qs('.rtc-wrap'),
-                content = qs('#canvas');
+            const wrapper = qs('.rtc-wrap');
+            const content = qs('#canvas');
             if (!wrapper || !content) return;
-            const prev = content.style.transform;
-            content.style.transform = 'scale(1)';
-            content.offsetHeight;
-            queueDraw();
-            setTimeout(() => {
-                const wr = wrapper.getBoundingClientRect(),
-                    cr = content.getBoundingClientRect();
-                const scaleX = (wr.width - 40) / cr.width,
-                    scaleY = (wr.height - 40) / cr.height;
-                zoom = Math.min(scaleX, scaleY, 1);
-                zoom = Math.max(0.1, zoom);
-                applyZoom();
-            }, 50);
+            updateConnectorSpans(content); // pastikan ukuran sudah dihitung sebelum fit
+            const wr = wrapper.getBoundingClientRect();
+            const cr = content.getBoundingClientRect();
+            const scaleX = (wr.width - 40) / cr.width;
+            const scaleY = (wr.height - 40) / cr.height;
+            zoom = Math.min(scaleX, scaleY, 1);
+            zoom = Math.max(0.1, zoom);
+            applyZoom();
         }
 
         function performSearch(q) {
@@ -1146,7 +1067,7 @@
                     info.textContent = '';
                 }
             }
-            queueDraw();
+            updateConnectorSpans(); // setelah expand by search, rapikan garis
         }
 
         function expandAll() {
@@ -1155,7 +1076,7 @@
                 const b = li.querySelector('.toggle button');
                 if (b) b.textContent = b.textContent.replace('Expand', 'Collapse');
             });
-            queueDraw();
+            updateConnectorSpans();
         }
 
         function collapseAll() {
@@ -1166,70 +1087,41 @@
                     if (b) b.textContent = b.textContent.replace('Collapse', 'Expand');
                 }
             });
-            queueDraw();
+            updateConnectorSpans();
         }
 
         /* ===== Init ===== */
         function initializeChart() {
-            disableCssConnectors();
+            canvas = qs('#canvas');
+            if (!canvas) return;
+            canvas.innerHTML = '';
+            registry.length = 0;
 
-            canvasEl = qs('#canvas');
-            if (!canvasEl) return;
-            if (getComputedStyle(canvasEl).position === 'static') {
-                canvasEl.style.position = 'relative';
-            }
-
-            // siapkan SVG overlay
-            let svg = qs('#links');
-            if (!svg) {
-                svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-                svg.id = 'links';
-                svg.style.position = 'absolute';
-                svg.style.left = 0;
-                svg.style.top = 0;
-                svg.style.pointerEvents = 'none';
-                svg.style.zIndex = 0;
-                canvasEl.prepend(svg);
-            } else {
-                canvasEl.insertBefore(svg, canvasEl.firstChild);
-            }
-
-            // build struktur
-            canvasEl.querySelectorAll(':scope > :not(#links)').forEach(n => n.remove());
-            const structure = buildRoots();
-            canvasEl.appendChild(structure);
-
-            // redraw saat avatar load
-            qsAll('.avatar').forEach(img => {
-                if (!img.complete) {
-                    img.addEventListener('load', queueDraw, {
-                        once: true
-                    });
+            try {
+                const structure = buildRoots();
+                canvas.appendChild(structure);
+                // setelah render, hitung garis lalu fit
+                requestAnimationFrame(() => {
+                    updateConnectorSpans(canvas);
+                    setTimeout(fitToScreen, 50);
+                });
+                const infoEl = qs('#info');
+                if (infoEl) {
+                    infoEl.textContent = `${registry.length} posisi dimuat`;
+                    infoEl.style.color = '#22c55e';
                 }
-            });
-
-            // observer: setiap perubahan attr/class/layout
-            const mo = new MutationObserver(() => queueDraw());
-            mo.observe(canvasEl, {
-                childList: true,
-                subtree: true,
-                attributes: true,
-                attributeFilter: ['style', 'class']
-            });
-
-            requestAnimationFrame(() => {
-                queueDraw();
-                setTimeout(fitToScreen, 100);
-            });
-
-            const infoEl = qs('#info');
-            if (infoEl) {
-                infoEl.textContent = `${registry.length} posisi dimuat`;
-                infoEl.style.color = '#22c55e';
+            } catch (err) {
+                console.error('Error building chart:', err);
+                canvas.innerHTML = '<div class="loading">Error loading chart. Please refresh.</div>';
             }
         }
 
+        /* ===== Listeners ===== */
         document.addEventListener('DOMContentLoaded', () => {
+            canvas = qs('#canvas');
+            searchInput = qs('#orgSearch');
+            clearBtn = qs('#clearSearch');
+            info = qs('#info');
             initializeChart();
 
             const zoomInBtn = qs('#zoomIn'),
@@ -1250,11 +1142,8 @@
             };
             if (fitBtn) fitBtn.onclick = fitToScreen;
 
-            const searchInput = qs('#orgSearch');
-            clearBtn = qs('#clearSearch');
-            info = qs('#info');
             if (searchInput) {
-                searchInput.addEventListener('input', e => {
+                searchInput.addEventListener('input', (e) => {
                     clearTimeout(searchTimer);
                     searchTimer = setTimeout(() => performSearch(e.target.value), 300);
                 });
@@ -1274,33 +1163,50 @@
             if (expandBtn) expandBtn.onclick = expandAll;
             if (collapseBtn) collapseBtn.onclick = collapseAll;
 
-            let resizeTimer = null;
+            document.addEventListener('keydown', (e) => {
+                if (e.ctrlKey || e.metaKey) {
+                    switch (e.key) {
+                        case '+':
+                        case '=':
+                            e.preventDefault();
+                            if (zoomInBtn) zoomInBtn.click();
+                            break;
+                        case '-':
+                            e.preventDefault();
+                            if (zoomOutBtn) zoomOutBtn.click();
+                            break;
+                        case '0':
+                            e.preventDefault();
+                            if (zoomResetBtn) zoomResetBtn.click();
+                            break;
+                        case 'f':
+                            e.preventDefault();
+                            if (searchInput) searchInput.focus();
+                            break;
+                    }
+                }
+                if (e.key === 'Escape') {
+                    if (clearBtn) clearBtn.click();
+                }
+            });
+
             window.addEventListener('resize', () => {
                 clearTimeout(resizeTimer);
                 resizeTimer = setTimeout(() => {
-                    queueDraw();
+                    updateConnectorSpans();
                     fitToScreen();
-                }, 180);
+                }, 250);
             });
-
-            // redraw ketika container di-scroll (mis. kamu punya sticky header/observer)
-            const wrap = qs('.rtc-wrap');
-            if (wrap) {
-                wrap.addEventListener('scroll', () => queueDraw(), {
-                    passive: true
-                });
-            }
         });
     </script>
 
-    <!-- Export Scripts -->
+    <!-- Export -->
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const pngBtn = qs('#btn-png'),
-                pdfBtn = qs('#btn-pdf'),
-                canvas = qs('#canvas');
+            const pngBtn = qs('#btn-png');
+            const pdfBtn = qs('#btn-pdf');
 
             if (pngBtn) {
                 pngBtn.onclick = async () => {
@@ -1309,20 +1215,12 @@
                     btn.textContent = 'Exporting...';
                     btn.disabled = true;
                     try {
-                        const body = document.body;
                         const hi = qsAll('.highlight');
-                        const originalZoom = zoom;
-                        body.classList.add('export-mode');
                         hi.forEach(n => n.classList.remove('highlight'));
-                        zoom = 1;
-                        canvas.style.transform = 'scale(1)';
-                        canvas.offsetHeight;
-                        queueDraw();
-                        await new Promise(r => setTimeout(r, 200));
-
                         const node = qs('.rtc-canvas');
                         if (!node) throw new Error('Canvas not found');
-                        const canvasEl = await html2canvas(node, {
+                        updateConnectorSpans(); // pastikan garis sudah tepat
+                        const canvas = await html2canvas(node, {
                             backgroundColor: '#ffffff',
                             scale: 2,
                             useCORS: true,
@@ -1330,16 +1228,10 @@
                             scrollX: 0,
                             scrollY: 0
                         });
-
-                        body.classList.remove('export-mode');
                         hi.forEach(n => n.classList.add('highlight'));
-                        zoom = originalZoom;
-                        canvas.style.transform = `scale(${zoom})`;
-                        queueDraw();
-
                         const a = document.createElement('a');
                         a.download = `orgchart-${new Date().toISOString().slice(0,10)}.png`;
-                        a.href = canvasEl.toDataURL('image/png', 1.0);
+                        a.href = canvas.toDataURL('image/png', 1.0);
                         a.click();
                     } catch (e) {
                         console.error(e);
@@ -1358,20 +1250,12 @@
                     btn.textContent = 'Exporting...';
                     btn.disabled = true;
                     try {
-                        const body = document.body;
                         const hi = qsAll('.highlight');
-                        const originalZoom = zoom;
-                        body.classList.add('export-mode');
                         hi.forEach(n => n.classList.remove('highlight'));
-                        zoom = 1;
-                        canvas.style.transform = 'scale(1)';
-                        canvas.offsetHeight;
-                        queueDraw();
-                        await new Promise(r => setTimeout(r, 200));
-
                         const node = qs('.rtc-canvas');
                         if (!node) throw new Error('Canvas not found');
-                        const canvasEl = await html2canvas(node, {
+                        updateConnectorSpans();
+                        const canvas = await html2canvas(node, {
                             backgroundColor: '#ffffff',
                             scale: 2,
                             useCORS: true,
@@ -1379,20 +1263,14 @@
                             scrollX: 0,
                             scrollY: 0
                         });
-
-                        body.classList.remove('export-mode');
                         hi.forEach(n => n.classList.add('highlight'));
-                        zoom = originalZoom;
-                        canvas.style.transform = `scale(${zoom})`;
-                        queueDraw();
 
-                        const imgData = canvasEl.toDataURL('image/jpeg', 0.95);
+                        const imgData = canvas.toDataURL('image/jpeg', 0.95);
                         const {
                             jsPDF
                         } = window.jspdf;
                         const pdf = new jsPDF({
-                            orientation: canvasEl.width > canvasEl.height ? 'landscape' :
-                                'portrait',
+                            orientation: canvas.width > canvas.height ? 'landscape' : 'portrait',
                             unit: 'pt',
                             format: 'a4'
                         });
@@ -1401,9 +1279,9 @@
                         const margin = 40,
                             AW = PW - margin * 2,
                             AH = PH - margin * 2;
-                        const ratio = Math.min(AW / canvasEl.width, AH / canvasEl.height);
-                        const w = canvasEl.width * ratio,
-                            h = canvasEl.height * ratio,
+                        const ratio = Math.min(AW / canvas.width, AH / canvas.height);
+                        const w = canvas.width * ratio,
+                            h = canvas.height * ratio,
                             x = (PW - w) / 2,
                             y = (PH - h) / 2;
                         pdf.addImage(imgData, 'JPEG', x, y, w, h);

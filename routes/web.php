@@ -273,26 +273,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
     });
 
-
     Route::prefix('rtc')->group(function () {
         Route::get('/summary/{id?}', [RtcController::class, 'summary'])->name('rtc.summary');
         Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/list/{id?}', [RtcController::class, 'list'])->name('rtc.list');
         Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
-
-        // routes/web.php
-        Route::get('/structure', [RtcController::class, 'summary'])
-            ->name('rtc.structure'); // yang sekarang
-
-        // Page khusus chart dabeng (re-use summary backend)
-        Route::get('/structure/dabeng', [RtcController::class, 'structureDabeng'])
-            ->name('rtc.structure.dabeng');
-
-        // JSON data untuk dabeng (pakai summary yg sama, cukup ?as_json=1)
-        Route::get('/structure.json', [RtcController::class, 'summary'])
-            ->name('rtc.structure.json'); // panggil dengan ?as_json=1
-
     });
 
     Route::prefix('idp')->group(function () {

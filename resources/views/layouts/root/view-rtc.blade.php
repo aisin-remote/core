@@ -114,7 +114,7 @@
     <script src="https://code.highcharts.com/modules/exporting.js"></script>
     <script src="https://code.highcharts.com/modules/export-data.js"></script>
     <script src="https://code.highcharts.com/modules/accessibility.js"></script>
-    <script src="https://balkan.app/js/OrgChart.js"></script>
+    <script src="{{ asset('assets/js/custom/orgchart.js') }}"></script>
 
 
     <!--begin::Vendors Javascript(used for this page only)-->

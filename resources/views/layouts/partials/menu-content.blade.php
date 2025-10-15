@@ -389,7 +389,7 @@
             @endphp
 
             @if ($canSeeRtc)
-                <div class="disabled menu-item">
+                <div class="menu-item">
                     <a class="menu-link {{ $currentPath === 'rtc' ? 'active' : '' }}"
                         href="{{ route('rtc.list', ['level' => $level, 'id' => $id]) }}">
                         <span class="menu-icon"><i class="fas fa-tasks"></i></span>

@@ -83,6 +83,12 @@
             const LEFTX = 26,
                 RIGHTX = W - 26;
 
+            if (OrgChart.isTrial()) {
+                console.log("Anda menggunakan versi trial.");
+            } else {
+                console.log("Anda menggunakan versi berlisensi.");
+            }
+
             // base dari "ana"
             OrgChart.templates.factory = Object.assign({}, OrgChart.templates.ana);
             OrgChart.templates.factory.size = [W, H];
