@@ -19,6 +19,7 @@ use App\Http\Controllers\ToDoListController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\ChecksheetController;
 use App\Http\Controllers\CompetencyController;
+use App\Http\Controllers\ActivityPlanController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
@@ -322,6 +323,15 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
             ->name('ipp.employee.ipps.json');
         Route::get('/approval/json', [IppController::class, 'approvalJson'])->name('ipp.approval.json');
         Route::get('/{ipp}/comments', [IppController::class, 'getComment'])->name('ipp.comments');
+    });
+
+    Route::prefix('activity-plan')->name('activity-plan.')->group(function () {
+        Route::get('/', [ActivityPlanController::class, 'index'])->name('index');
+        Route::get('/init', [ActivityPlanController::class, 'init'])->name('init');
+        Route::post('/item', [ActivityPlanController::class, 'storeItem'])->name('item.store');
+        Route::delete('/item/{item}', [ActivityPlanController::class, 'destroyItem'])->name('item.destroy');
+        Route::post('/submit-all', [ActivityPlanController::class, 'submitAll'])->name('submitAll');
+        Route::get('/export-excel', [ActivityPlanController::class, 'exportExcel'])->name('export.excel');
     });
 
     Route::prefix('ipa')->name('ipa.')->group(function () {

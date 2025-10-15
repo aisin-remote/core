@@ -1355,8 +1355,6 @@ class IppController
             return redirect()->back()->with('warning', 'Gagal mengekspor Excel: ' . $e->getMessage());
         }
     }
-
-
     public function exportPdf(?int $id = null)
     {
         try {

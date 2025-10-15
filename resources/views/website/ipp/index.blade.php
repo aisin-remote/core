@@ -49,40 +49,6 @@
             color: var(--primary);
         }
 
-        .toolbar {
-            display: flex;
-            gap: .5rem;
-            flex-wrap: wrap
-        }
-
-        .toolbar .btn {
-            border-radius: 12px;
-            padding: .55rem .9rem;
-            font-weight: 700;
-            letter-spacing: .2px
-        }
-
-        .toolbar .btn.btn-light {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            color: #0f172a
-        }
-
-        .toolbar .btn.btn-add {
-            background: var(--primary);
-            border-color: var(--primary);
-            color: #fff
-        }
-
-        .toolbar .btn.btn-add:hover {
-            background: var(--primary-600);
-            border-color: var(--primary-600)
-        }
-
-        .toolbar .btn.btn-primary {
-            padding: .55rem 1.05rem
-        }
-
         .accordion.ipp .accordion-item {
             border: 1px solid var(--ipp-border);
             border-radius: 12px;
@@ -170,7 +136,7 @@
             font-style: italic
         }
 
-        /* ===== COMMENT HISTORY — modal & timeline (polished + animated) ===== */
+        /* ===== COMMENT HISTORY — modal & timeline ===== */
         .comment-modal .modal-dialog {
             max-width: 860px;
         }
@@ -181,7 +147,6 @@
             box-shadow: 0 20px 50px rgba(2, 6, 23, .12);
         }
 
-        /* sticky header + subtle gradient */
         .comment-modal .modal-header {
             position: sticky;
             top: 0;
@@ -196,7 +161,6 @@
             letter-spacing: .2px;
         }
 
-        /* timeline rail */
         .cmt-timeline {
             position: relative;
             margin: .25rem 0 0 0;
@@ -204,7 +168,6 @@
             max-height: min(62vh, 560px);
             overflow: auto;
             scrollbar-gutter: stable;
-            /* fade top/btm scroll shadow */
             -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
             mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
         }
@@ -219,10 +182,6 @@
             border-radius: 9999px
         }
 
-        .cmt-timeline::-webkit-scrollbar-thumb:hover {
-            background: #b9c1cf
-        }
-
         .cmt-timeline::before {
             content: "";
             position: absolute;
@@ -232,10 +191,8 @@
             width: 3px;
             background: linear-gradient(180deg, #eef2f7, #e5e9f0);
             border-radius: 9999px;
-            animation: railGlow 3.2s ease-in-out infinite;
         }
 
-        /* each comment as a card */
         .cmt-item {
             position: relative;
             padding: .9rem 1rem 1rem 1rem;
@@ -243,13 +200,12 @@
             border: 1px solid #eef2f7;
             border-radius: 12px;
             background: #fff;
-            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+            transition: .18s;
             animation: itemEnter .24s ease-out both;
-            /* animasi masuk */
         }
 
         .cmt-item+.cmt-item {
-            margin-top: .7rem;
+            margin-top: .7rem
         }
 
         .cmt-item:hover {
@@ -258,7 +214,6 @@
             border-color: #e5eaf3;
         }
 
-        /* round dot on the rail */
         .cmt-dot {
             position: absolute;
             left: -1.1rem;
@@ -269,14 +224,8 @@
             border: 2px solid #fff;
             box-shadow: 0 0 0 2px #e6ebf3;
             background: #94a3b8;
-            transition: box-shadow .25s ease;
         }
 
-        .cmt-item:hover .cmt-dot {
-            box-shadow: 0 0 0 2px #dfe7f5, 0 0 0 8px rgba(30, 64, 175, .06);
-        }
-
-        /* status color dots (opsional, tetap) */
         .cmt-dot.revise {
             background: #ef4444
         }
@@ -297,7 +246,6 @@
             background: #94a3b8
         }
 
-        /* header row inside item */
         .cmt-head {
             display: flex;
             flex-wrap: wrap;
@@ -320,7 +268,6 @@
             border-radius: 9999px;
         }
 
-        /* status chip */
         .cmt-badge {
             background: #f8fafc;
             color: #334155;
@@ -378,38 +325,6 @@
             white-space: nowrap;
         }
 
-        /* ===== NEW highlight (pakai warna yang kamu pilih) ===== */
-        .cmt-item.is-new {
-            background: var(--noteNew-bgBot) !important;
-            border-color: var(--noteNew-border) !important;
-            box-shadow: 0 10px 26px var(--noteNew-shadow);
-            animation: itemEnter .22s ease-out both, newPulse 1.2s ease-out 0s 2;
-        }
-
-        .cmt-item.is-new .cmt-dot {
-            background: var(--noteNew-dot);
-            animation: dotPing 1.4s cubic-bezier(.2, .8, .2, 1) 0s 2;
-        }
-
-        /* === buttons in header === */
-        .comment-modal .modal-header .btn {
-            border-radius: 10px;
-        }
-
-        .comment-modal .modal-header .btn-light {
-            background: #f8fafc;
-            border: 1px solid #e5e7eb;
-            color: #0f172a;
-            transition: transform .15s ease, box-shadow .15s ease;
-        }
-
-        .comment-modal .modal-header .btn-light:hover {
-            background: #f3f4f6;
-            transform: translateY(-1px);
-            box-shadow: 0 6px 14px rgba(2, 6, 23, .08);
-        }
-
-        /* === Keyframes === */
         @keyframes itemEnter {
             from {
                 opacity: 0;
@@ -422,65 +337,6 @@
             }
         }
 
-        @keyframes newPulse {
-            0% {
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, .28)
-            }
-
-            70% {
-                box-shadow: 0 0 0 18px rgba(59, 130, 246, 0)
-            }
-
-            100% {
-                box-shadow: 0 0 0 0 rgba(59, 130, 246, 0)
-            }
-        }
-
-        @keyframes dotPing {
-            0% {
-                transform: scale(1);
-                opacity: 1
-            }
-
-            70% {
-                transform: scale(1.22);
-                opacity: .65
-            }
-
-            100% {
-                transform: scale(1);
-                opacity: 1
-            }
-        }
-
-        @keyframes railGlow {
-
-            0%,
-            100% {
-                filter: brightness(1)
-            }
-
-            50% {
-                filter: brightness(1.06)
-            }
-        }
-
-        /* === Accessibility: respect reduced motion === */
-        @media (prefers-reduced-motion: reduce) {
-
-            .cmt-item,
-            .cmt-item.is-new,
-            .comment-modal .modal-header .btn-light {
-                animation: none !important;
-                transition: none !important;
-            }
-
-            .cmt-timeline::before {
-                animation: none !important;
-            }
-        }
-
-        /* header badge “Comments” */
         .btn-comment-indicator {
             position: relative;
             border-radius: 9999px;
@@ -623,7 +479,7 @@
                                                 <tr>
                                                     <th style="width:34%">Program / Activity</th>
                                                     <th style="width:22%">Target One</th>
-                                                    <th style="width:10%">Due</th>
+                                                    <th style="width:14%">Start → Due</th>
                                                     <th style="width:6%">W%</th>
                                                     <th style="width:6%">Action</th>
                                                 </tr>
@@ -642,22 +498,26 @@
                     @endforeach
                 </div>
 
-                {{-- Submit + Export --}}
-                <div class="d-flex justify-content-end mt-3 gap-2">
-                    <a href="#" class="btn btn-success d-none" id="btnExportExcel"
-                        data-href-template="{{ route('ipp.export.excel', '__ID__') }}">
-                        <i class="bi bi-file-earmark-spreadsheet"></i> Export Excel
+                {{-- Toolbar: Activity Plan link + Export --}}
+                <div class="d-flex justify-content-between mt-3 gap-2">
+                    <a href="#" class="btn btn-light" id="btnGoActivityPlan"
+                        data-href-template="{{ route('activity-plan.index') }}?ipp_id=__IPP__">
+                        <i class="bi bi-list-check"></i> Activity Plan
                     </a>
 
-                    <a href="#" class="btn btn-danger d-none" id="btnExportPDF"
-                        data-href-template="{{ route('ipp.export.pdf', '__ID__') }}">
-                        <i class="bi bi-file-earmark-pdf"></i> Export PDF
-                    </a>
+                    <div class="d-flex gap-2">
+                        <a href="#" class="btn btn-success d-none" id="btnExportExcel"
+                            data-href-template="{{ route('ipp.export.excel', '__ID__') }}">
+                            <i class="bi bi-file-earmark-spreadsheet"></i> Export Excel
+                        </a>
 
-                    <button type="button" class="btn btn-warning" id="btnSubmitAll">
-                        <i class="bi bi-send-check"></i> Submit IPP
-                    </button>
+                        <a href="#" class="btn btn-danger d-none" id="btnExportPDF"
+                            data-href-template="{{ route('ipp.export.pdf', '__ID__') }}">
+                            <i class="bi bi-file-earmark-pdf"></i> Export PDF
+                        </a>
+                    </div>
                 </div>
+
             </div>
         </div>
     </div>
@@ -665,13 +525,13 @@
     {{-- ===== Comment History Modal ===== --}}
     @include('website.ipp.modal.history-comment')
 
+    {{-- Modal Tambah/Edit Point --}}
     @include('website.ipp.modal.create')
 @endsection
 
 @push('scripts')
     <script>
         (function($) {
-            const REQUIRE_TOTAL_100 = true;
             let CAT_CAP = {
                 activity_management: 70,
                 people_development: 10,
@@ -707,13 +567,6 @@
                 return sum;
             }
 
-            function buildSummaryFromDom() {
-                const s = {};
-                Object.keys(CAT_CAP).forEach(c => s[c] = sumWeights(c));
-                s.total = Object.values(s).reduce((a, b) => a + b, 0);
-                return s;
-            }
-
             function pickUsedBadgeClass(used, cap) {
                 const e = 1e-6;
                 if (Math.abs(used) <= e) return 'badge-secondary';
@@ -722,15 +575,27 @@
                 return 'badge-warning';
             }
 
-            /* ===== Rows ===== */
+            function updateCategoryCard(cat) {
+                const used = sumWeights(cat),
+                    cap = CAT_CAP[cat];
+                $(`.js-used[data-cat="${cat}"]`).text(fmt(used));
+                const cls = pickUsedBadgeClass(used, cap);
+                $(`.js-used[data-cat="${cat}"]`).closest('.badge')
+                    .removeClass('badge-primary badge-warning badge-danger badge-secondary')
+                    .addClass(cls);
+            }
+
+            function recalcAll() {
+                Object.keys(CAT_CAP).forEach(updateCategoryCard);
+            }
+
+            /* ===== Row HTML (Start→Due sudah include) ===== */
             function makeRowHtml(rowId, data) {
                 const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
                 const oneShort = (data.target_one || '').length > 110 ? data.target_one.slice(0, 110) + '…' : (data
                     .target_one || '-');
-
                 const startTxt = data.start_date ? data.start_date : '-';
                 const dueTxt = data.due_date ? data.due_date : '-';
-
                 return `
       <tr class="align-middle point-row"
           data-row-id="${esc(rowId)}"
@@ -752,28 +617,6 @@
           </div>
         </td>
       </tr>`;
-            }
-
-            function updateCategoryCard(cat) {
-                const used = sumWeights(cat),
-                    cap = CAT_CAP[cat];
-                $(`.js-used[data-cat="${cat}"]`).text(fmt(used));
-                const cls = pickUsedBadgeClass(used, cap);
-                $(`.js-used[data-cat="${cat}"]`).closest('.badge')
-                    .removeClass('badge-primary badge-warning badge-danger badge-secondary')
-                    .addClass(cls);
-            }
-
-            function recalcAll() {
-                Object.keys(CAT_CAP).forEach(updateCategoryCard);
-            }
-
-            function updateExportVisibility() {
-                const hasRows = $('table.js-table tbody tr').not('.empty-row').length > 0;
-                const hasId = !!window.__currentIppId;
-                const show = hasRows && hasId;
-                $('#btnExportExcel').toggleClass('d-none', !show);
-                $('#btnExportPDF').toggleClass('d-none', !show);
             }
 
             /* ===== Status badge ===== */
@@ -813,14 +656,9 @@
                     .addClass(info.cls).text(info.text);
             }
 
-            /* ===== Comment UI ===== */
+            /* ===== Comments rendering (tetap) ===== */
             function statusClass(s) {
                 return (s || '').toLowerCase();
-            }
-
-            function statusChip(s) {
-                const cls = statusClass(s);
-                return `<span class="cmt-badge ${cls}">${(s||'-').toUpperCase()}</span>`;
             }
 
             function toHtmlWithBreak(s) {
@@ -830,25 +668,19 @@
             function renderComments(list) {
                 const $ul = $('#commentTimeline').empty();
                 const $empty = $('#commentEmpty');
-
                 if (!Array.isArray(list) || list.length === 0) {
                     $empty.removeClass('d-none');
                     return;
                 }
                 $empty.addClass('d-none');
-
-                // ambil last_seen_id dari localStorage (per IPP)
                 const ippId = window.__currentIppId;
                 const lastSeenId = Number(localStorage.getItem(lastIdKey(ippId)) || 0);
-
-                // pastikan terbaru di atas – pakai id (fallback ke created_at kalau perlu)
                 const items = [...list].sort((a, b) => {
                     const ida = Number(a.id) || 0,
                         idb = Number(b.id) || 0;
-                    if (idb !== ida) return idb - ida; // id lebih besar = lebih baru
+                    if (idb !== ida) return idb - ida;
                     return String(b.created_at || '').localeCompare(String(a.created_at || ''));
                 });
-
                 items.forEach(c => {
                     const dotCls = statusClass(c.status_to) || 'draft';
                     const who = esc(c.employee?.name || c.user?.name || 'User');
@@ -857,64 +689,23 @@
                     const short = raw.length > 220 ? raw.slice(0, 220) : raw;
                     const needMore = raw.length > 220;
                     const itemId = 'cmt-' + (c.id || Math.random().toString(36).slice(2));
-
-                    // ⬇️ penanda baru
                     const isNew = (Number(c.id) || 0) > lastSeenId;
-
                     const $li = $(`
                         <li class="cmt-item ${isNew ? 'is-new' : ''}">
-                        <span class="cmt-dot ${dotCls}"></span>
-                        <div class="cmt-head">
-                            <span class="cmt-name ${isNew ? 'text-white' : ''}">${who}</span>
+                          <span class="cmt-dot ${dotCls}"></span>
+                          <div class="cmt-head">
+                            <span class="cmt-name ${isNew ? 'text-white':''}">${who}</span>
                             <span class="cmt-meta">• ${at}</span>
-                        </div>
-                        <div class="cmt-body ${isNew ? 'text-white' : ''}" id="${itemId}">
+                          </div>
+                          <div class="cmt-body ${isNew ? 'text-white':''}" id="${itemId}">
                             <span class="text">${toHtmlWithBreak(short)}</span>
                             ${needMore ? `<span class="more" data-full="${esc(raw)}">…more</span>` : ``}
-                        </div>
+                          </div>
                         </li>`);
                     $ul.append($li);
                 });
             }
 
-            function syncExportLinks(ippId) {
-                const $excel = $('#btnExportExcel');
-                const $pdf = $('#btnExportPDF');
-                const tExcel = $excel.data('href-template');
-                const tPdf = $pdf.data('href-template');
-
-                if (ippId) {
-                    $excel.attr('href', String(tExcel || '').replace('__ID__', ippId));
-                    $pdf.attr('href', String(tPdf || '').replace('__ID__', ippId));
-                } else {
-                    $excel.attr('href', '#');
-                    $pdf.attr('href', '#');
-                }
-            }
-
-
-
-            // expand/less comment
-            document.addEventListener('click', (e) => {
-                const more = e.target.closest('.cmt-body .more');
-                if (!more) return;
-                const wrap = more.parentElement;
-                const textEl = wrap.querySelector('.text');
-                if (more.dataset.state === 'open') {
-                    const full = more.getAttribute('data-full') || '';
-                    const short = full.slice(0, 220);
-                    textEl.innerHTML = toHtmlWithBreak(short);
-                    more.textContent = '…more';
-                    more.dataset.state = '';
-                } else {
-                    const full = more.getAttribute('data-full') || '';
-                    textEl.innerHTML = toHtmlWithBreak(full);
-                    more.textContent = 'less';
-                    more.dataset.state = 'open';
-                }
-            });
-
-            // ===== Indicator helpers (localStorage) =====
             function seenKey(ippId) {
                 return `ipp:${ippId}:comments_seen`;
             }
@@ -924,24 +715,20 @@
             }
 
             function setCommentIndicator(ippId, totalCount) {
-                const $btn = $('#btnComments');
-                const $count = $('#commentCount');
-                const $pulse = $('#commentPulse');
-
+                const $btn = $('#btnComments'),
+                    $count = $('#commentCount'),
+                    $pulse = $('#commentPulse');
                 if (!ippId) {
                     $btn.addClass('d-none');
                     $pulse.addClass('d-none');
                     return;
                 }
-
                 $btn.removeClass('d-none');
-
                 if (Number(totalCount) > 0) {
                     $count.text(totalCount).removeClass('is-hidden');
                 } else {
                     $count.text('0').addClass('is-hidden');
                 }
-
                 const lastSeen = Number(localStorage.getItem(seenKey(ippId)) || 0);
                 const hasNew = Number(totalCount) > lastSeen;
                 $pulse.toggleClass('d-none', !hasNew);
@@ -950,13 +737,10 @@
             function markCommentsSeen(ippId, totalCount, latestId) {
                 try {
                     localStorage.setItem(seenKey(ippId), String(Number(totalCount) || 0));
-                    if (latestId !== undefined) {
-                        localStorage.setItem(lastIdKey(ippId), String(Number(latestId) || 0));
-                    }
+                    if (latestId !== undefined) localStorage.setItem(lastIdKey(ippId), String(Number(latestId) || 0));
                 } catch (e) {}
                 setCommentIndicator(ippId, totalCount);
             }
-
             async function loadComments(ippId) {
                 const url = "{{ route('ipp.comments', ['ipp' => '__ID__']) }}".replace('__ID__', ippId);
                 try {
@@ -968,7 +752,6 @@
                     const json = await res.json();
                     const list = json.data || [];
                     renderComments(list);
-
                     const ids = list.map(x => Number(x.id) || 0);
                     const latestId = ids.length ? Math.max(...ids) : 0;
                     return {
@@ -983,8 +766,6 @@
                     };
                 }
             }
-
-            // dipanggil tombol
             window.openCommentsModal = async function(ippId) {
                 if (!ippId) return;
                 const {
@@ -997,11 +778,8 @@
                     keyboard: true
                 });
                 modal.show();
-
-                // setelah modal dibuka, anggap sudah dilihat
                 markCommentsSeen(ippId, count, latestId);
             };
-
             document.getElementById('btnRefreshComments')?.addEventListener('click', async () => {
                 const ippId = window.__currentIppId;
                 if (!ippId) return;
@@ -1036,17 +814,14 @@
                 const $pmTargetMid = $('#pmTargetMid');
                 if ($pmTargetMid.length) $pmTargetMid.val($tr.data('mid'));
                 $('#pmTargetOne').val($tr.data('one'));
-
                 $('#pmStart').val($tr.data('start') || '');
-
                 $('#pmDue').val($tr.data('due'));
                 $('#pmWeight').val($tr.data('weight'));
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
 
-
-            /* ===== SUBMIT point ===== */
+            /* ===== SUBMIT point (create/edit) ===== */
             $('#pointForm').on('submit', function(e) {
                 e.preventDefault();
                 if (LOCKED) {
@@ -1076,14 +851,12 @@
                     toast('Pilih "Due Date".', 'danger');
                     return unlock();
                 }
-
                 if (data.start_date && data.due_date) {
                     if (new Date(data.start_date) > new Date(data.due_date)) {
                         toast('Start Date tidak boleh setelah Due Date.', 'danger');
                         return unlock();
                     }
                 }
-
                 if (isNaN(data.weight)) {
                     toast('Isi "Weight (%)" dengan angka.', 'danger');
                     return unlock();
@@ -1188,45 +961,44 @@
                 }).fail(err => toast(err?.responseJSON?.message || 'Gagal menghapus point.', 'danger'));
             });
 
-            /* ===== Submit all ===== */
-            $('#btnSubmitAll').on('click', function() {
-                if (LOCKED) return;
-                const summary = buildSummaryFromDom();
-                for (const cat of Object.keys(CAT_CAP)) {
-                    if ((summary[cat] || 0) > CAT_CAP[cat]) {
-                        toast(`Bobot kategori "${cat.replace('_',' ')}" melebihi cap ${CAT_CAP[cat]}%.`,
-                            'danger');
-                        return;
-                    }
-                }
-                if (REQUIRE_TOTAL_100 && Math.round(summary.total) !== 100) {
-                    toast('Total bobot harus tepat 100% sebelum submit.', 'danger');
-                    return;
-                }
-                const $btn = $(this).prop('disabled', true);
-                $.ajax({
-                        url: "{{ route('ipp.submit') }}",
-                        method: "POST",
-                        data: {
-                            _token: "{{ csrf_token() }}"
-                        },
-                        dataType: "json"
-                    })
-                    .done(res => {
-                        applyLockDom(true);
-                        renderIppStatus('submitted');
-                        updateExportVisibility();
-                        toast(res?.message || 'IPP berhasil disubmit.');
-                    })
-                    .fail(err => toast(err?.responseJSON?.message || 'Gagal submit IPP.', 'danger'))
-                    .always(() => $btn.prop('disabled', false));
-            });
+            /* ===== Export visibility ===== */
+            function updateExportVisibility() {
+                const hasRows = $('table.js-table tbody tr').not('.empty-row').length > 0;
+                const hasId = !!window.__currentIppId;
+                const show = hasRows && hasId;
+                $('#btnExportExcel').toggleClass('d-none', !show);
+                $('#btnExportPDF').toggleClass('d-none', !show);
+            }
 
-            /* ===== Lock tampilan ===== */
+            /* ===== Link helper ===== */
+            function syncExportLinks(ippId) {
+                const $excel = $('#btnExportExcel');
+                const $pdf = $('#btnExportPDF');
+                const tExcel = $excel.data('href-template');
+                const tPdf = $pdf.data('href-template');
+                if (ippId) {
+                    $excel.attr('href', String(tExcel || '').replace('__ID__', ippId));
+                    $pdf.attr('href', String(tPdf || '').replace('__ID__', ippId));
+                } else {
+                    $excel.attr('href', '#');
+                    $pdf.attr('href', '#');
+                }
+            }
+
+            function syncActivityPlanLink(ippId) {
+                const $ap = $('#btnGoActivityPlan');
+                const tpl = $ap.data('href-template');
+                if (ippId) {
+                    $ap.attr('href', String(tpl).replace('__IPP__', ippId)).removeClass('disabled');
+                } else {
+                    $ap.attr('href', '#').addClass('disabled');
+                }
+            }
+
+            /* ===== Lock tampilan (tanpa tombol submit) ===== */
             function applyLockDom(locked) {
                 LOCKED = !!locked;
                 $('.js-open-modal').toggleClass('d-none', LOCKED);
-                $('#btnSubmitAll').toggleClass('d-none', LOCKED);
                 $('table.js-table').each(function() {
                     const $t = $(this);
                     $t.find('thead th:last-child').toggleClass('d-none', LOCKED);
@@ -1274,7 +1046,10 @@
 
                         const ippId = res?.ipp?.id || null;
                         window.__currentIppId = ippId;
+
+                        // Sinkronkan link export & Activity Plan
                         syncExportLinks(ippId);
+                        syncActivityPlanLink(ippId);
 
                         const totalComments = Number(res?.comments_count || 0);
                         setCommentIndicator(ippId, totalComments);
@@ -1282,28 +1057,25 @@
                         if (!res?.ipp && res?.has_approved) {
                             const year = res?.identitas?.on_year || '';
                             const bannerKey = (y) => `ipp:${y}:approved_banner_dismissed`;
-
                             if (localStorage.getItem(bannerKey(year)) !== '1') {
                                 if (!document.getElementById('ippApprovedBanner')) {
                                     const banner = $(`
-                                            <div id="ippApprovedBanner"
-                                                class="alert alert-info alert-dismissible fade show d-flex align-items-center"
-                                                role="alert" style="border-radius:12px;">
-                                            <i class="bi bi-info-circle me-2 fs-5"></i>
-                                            <div class="me-3">
-                                                <div class="fw-bold mb-0">
+                                    <div id="ippApprovedBanner"
+                                        class="alert alert-info alert-dismissible fade show d-flex align-items-center"
+                                        role="alert" style="border-radius:12px;">
+                                        <i class="bi bi-info-circle me-2 fs-5"></i>
+                                        <div class="me-3">
+                                            <div class="fw-bold mb-0">
                                                 Anda sudah memiliki IPP ${year} yang <span class="text-success">APPROVED</span>.
-                                                </div>
-                                                <small class="text-muted">
-                                                Halaman ini untuk memulai IPP baru (siklus berikutnya). Silakan tambah point dan submit.
-                                                </small>
                                             </div>
-                                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                                            </div>
-                                        `);
+                                            <small class="text-muted">
+                                                Halaman ini untuk memulai IPP baru (siklus berikutnya). Silakan tambah point.
+                                            </small>
+                                        </div>
+                                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                                    </div>
+                                `);
                                     $('.accordion.mt-3.ipp').before(banner);
-
-                                    // saat banner ditutup, simpan state agar tidak muncul lagi
                                     banner.on('closed.bs.alert', () => {
                                         try {
                                             localStorage.setItem(bannerKey(year), '1');
@@ -1330,7 +1102,6 @@
                     })
                     .fail(() => toast('Gagal memuat data awal IPP.', 'danger'));
             }
-
 
             $(document).ready(function() {
                 // buka semua panel
