@@ -10,6 +10,7 @@ use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Plant;
 use App\Models\SubSection;
+use App\Services\RtcService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -410,12 +411,12 @@ class RtcController extends Controller
 
             /* ===== Tabs ===== */
             $tabs = [
-                'company'     => ['label' => 'Company',  'show' => ($isHRD || $isTop2),                 'id' => null],
-                'direksi'     => ['label' => 'Direksi',  'show' => ($isDirektur || $isHRD || $isTop2),  'id' => null],
-                'division'    => ['label' => 'Division', 'show' => true,                                'id' => $plantIdForDivision],
-                'department'  => ['label' => 'Department', 'show' => true,                              'id' => null],
-                'section'     => ['label' => 'Section',   'show' => true,                               'id' => null],
-                'sub_section' => ['label' => 'Sub Section', 'show' => true,                             'id' => null],
+                'company'     => ['label' => 'Company',    'show' => ($isHRD || $isTop2),                 'id' => null],
+                'direksi'     => ['label' => 'Direksi',    'show' => ($isDirektur || $isHRD || $isTop2),  'id' => null],
+                'division'    => ['label' => 'Division',   'show' => true,                                'id' => $plantIdForDivision],
+                'department'  => ['label' => 'Department', 'show' => true,                                'id' => null],
+                'section'     => ['label' => 'Section',    'show' => true,                                'id' => null],
+                'sub_section' => ['label' => 'Sub Section', 'show' => true,                                'id' => null],
             ];
 
             // Default active tab
@@ -464,6 +465,82 @@ class RtcController extends Controller
             $hideKpiCols  = in_array($tableFilter, ['company', 'direksi'], true) || ($isGM && $tableFilter === 'division');
             $forceHideAdd = $hideKpiCols;
 
+            // ===============================
+            // ===== Hitung Not-Set Tabs =====
+            // ===============================
+            $nz = fn($v) => (int) max(0, (int) ($v ?? 0));
+
+            $counts = [
+                'company'     => 0,
+                'direksi'     => 0,
+                'division'    => 0,
+                'department'  => 0,
+                'section'     => 0,
+                'sub_section' => 0,
+            ];
+
+            // Company
+            if ($tabs['company']['show'] ?? false) {
+                $counts['company'] = $nz(RtcService::countNotSet('company', []));
+            }
+
+            // Direksi
+            if ($tabs['direksi']['show'] ?? false) {
+                if ($isDirektur && $plantIdForDivision) {
+                    $counts['direksi'] = $nz(RtcService::countNotSet('direksi', [
+                        'plant_ids' => [$plantIdForDivision],
+                    ]));
+                } else {
+                    $plantIds = Plant::pluck('id')->all();
+                    $counts['direksi'] = $nz(RtcService::countNotSet('direksi', [
+                        'plant_ids' => $plantIds,
+                    ]));
+                }
+            }
+
+            // Division
+            if ($tabs['division']['show'] ?? false) {
+                if ($isGM) {
+                    $divIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
+                    $counts['division'] = $nz(RtcService::countNotSet('division', [
+                        'division_ids' => $divIds,
+                    ]));
+                } elseif ($isDirektur && $plantIdForDivision) {
+                    $divIds = Division::where('plant_id', $plantIdForDivision)->pluck('id')->all();
+                    $counts['division'] = $nz(RtcService::countNotSet('division', [
+                        'division_ids' => $divIds,
+                    ]));
+                } else {
+                    $divIds = Division::pluck('id')->all();
+                    $counts['division'] = $nz(RtcService::countNotSet('division', [
+                        'division_ids' => $divIds,
+                    ]));
+                }
+            }
+
+            // Base division untuk level di bawahnya
+            if ($isGM) {
+                $baseDivisionIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
+            } elseif ($isDirektur && $plantIdForDivision) {
+                $baseDivisionIds = Division::where('plant_id', $plantIdForDivision)->pluck('id')->all();
+            } else {
+                $baseDivisionIds = Division::pluck('id')->all();
+            }
+
+            foreach (['department', 'section', 'sub_section'] as $lvl) {
+                if ($tabs[$lvl]['show'] ?? false) {
+                    $counts[$lvl] = $nz(RtcService::countNotSet($lvl, [
+                        'division_ids' => $baseDivisionIds,
+                    ]));
+                }
+            }
+
+            // Sisipkan angka ke $tabs
+            foreach ($tabs as $k => $tab) {
+                if (!($tab['show'] ?? false)) continue;
+                $tabs[$k]['not_set_count'] = $counts[$k] ?? 0;
+            }
+
             Log::debug('[RTC][list] view computed', [
                 'trace' => $trace,
                 'activeTab' => $activeTab,
@@ -472,8 +549,10 @@ class RtcController extends Controller
                 'cardTitle'   => $cardTitle,
                 'hideKpiCols' => $hideKpiCols,
                 'forceHideAdd' => $forceHideAdd,
+                'not_set_counts' => $counts,
             ]);
 
+            // === render view
             $resp = view('website.rtc.list', [
                 'title'            => 'RTC',
                 'cardTitle'        => $cardTitle,
@@ -515,16 +594,12 @@ class RtcController extends Controller
                 'msg'   => $e->getMessage(),
                 'file'  => $e->getFile(),
                 'line'  => $e->getLine(),
-                // batasi panjang stack agar log tidak meledak
                 'stack' => substr($e->getTraceAsString(), 0, 5000),
             ]);
 
-            // opsional: tampilkan pesan ramah ke user
             return back()->with('error', 'Terjadi masalah saat membuka halaman RTC. (trace: ' . $trace . ')');
         }
     }
-
-
     public function detail(Request $request)
     {
         // Ambil filter dan id dari query string
