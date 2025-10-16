@@ -404,7 +404,7 @@ class RtcController extends Controller
                     'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
                     'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
                     'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
-                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                    // 'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
                 ];
             } elseif ($isDirektur) {
                 $tabs = [
@@ -412,20 +412,20 @@ class RtcController extends Controller
                     'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
                     'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
                     'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
-                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                    // 'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
                 ];
             } elseif ($isGM) {
                 $tabs = [
                     'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
                     'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
                     'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
-                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                    // 'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
                 ];
             } elseif ($isMg) {
                 $tabs = [
                     'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
                     'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
-                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                    // 'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
                 ];
             } else {
                 $tabs = [
@@ -458,11 +458,6 @@ class RtcController extends Controller
                 default       => 'division',
             };
 
-            /* ===== Division dropdown utk Dept/Section/Sub =====
-           - GM: divisions yg gm_id = employee->id
-           - Direktur: divisions dalam plant yang dia pegang
-           - Manager: divisions yang berisi department (manager_id = employee->id)
-        ===== */
             $divisionsForSelect = collect();
             $preselectedDivisionId = null;
             if (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
@@ -483,7 +478,7 @@ class RtcController extends Controller
                 }
             }
 
-            /* ===== Employees utk modal Add (select2) ===== */
+            /* ===== Employees utk modal Add ===== */
             $employeesQuery = Employee::select('id', 'name', 'position', 'company_name')->orderBy('name');
             if (!($isHRD || $isTop2)) {
                 $employeesQuery->where('company_name', $employee->company_name);
@@ -496,7 +491,7 @@ class RtcController extends Controller
                 'employees_select_count' => $employees instanceof \Illuminate\Support\Collection ? $employees->count() : 0,
             ]);
 
-            /* ===== Container ID awal (yang butuh saja) ===== */
+            /* ===== Mengisi data di table setiap tab ===== */
             if ($tableFilter === 'division') {
                 if ($isGM) {
                     $containerId = null;
@@ -516,7 +511,13 @@ class RtcController extends Controller
                 } else {
                     $containerId = null;
                 }
-            } else { // company / direksi
+            } elseif ($tableFilter === 'direksi') {
+                if ($isDirektur && $employee->plant) {
+                    $containerId = (int) $employee->plant->id;
+                } else {
+                    $containerId = null;
+                }
+            } else {
                 $containerId = null;
             }
 
@@ -1396,37 +1397,76 @@ class RtcController extends Controller
         $user = auth()->user();
         $employee = $user->employee;
 
-        // Ambil bawahan menggunakan fungsi getSubordinatesFromStructure
-        $checkLevel = $employee->getFirstApproval();
-        $approveLevel = $employee->getFinalApproval();
+        $norm = strtolower($employee->getNormalizedPosition());
 
-        $normalized = $employee->getNormalizedPosition();
+        $queue = collect(); // Daftar RTC yang perlu di-approve oleh user ini
+        $stage = 'approve'; // Label tahap di UI: "check" atau "approve"
 
-        if ($normalized === 'vpd') {
-            // Jika VPD, filter GM untuk check dan Manager untuk approve
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+        if ($norm === 'gm') {
+            // GM: approve langsung status target 2 untuk dept/section/sub_section di divisinya
+            $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
+            $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
+            $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
+            $subIds     = SubSection::whereIn('section_id', $sectionIds)->pluck('id');
+
+            $queue = Rtc::with('employee')
+                ->where('status', 0) // submitted by manager
+                ->where(function ($q) use ($deptIds, $sectionIds, $subIds) {
+                    $q->where(function ($qq) use ($deptIds) {
+                        $qq->where('area', 'department')->whereIn('area_id', $deptIds);
+                    })
+                        ->orWhere(function ($qq) use ($sectionIds) {
+                            $qq->where('area', 'section')->whereIn('area_id', $sectionIds);
+                        })
+                        ->orWhere(function ($qq) use ($subIds) {
+                            $qq->where('area', 'sub_section')->whereIn('area_id', $subIds);
+                        });
+                })
+                ->get();
+
+            $stage = 'approve';
+        } elseif ($norm === 'direktur') {
+            // Direktur: approve langsung (status target 2) untuk division dalam plant yang dia pegang.
+            $plantId = optional($employee->plant)->id;
+            $divIds  = Division::where('plant_id', $plantId)->pluck('id');
+
+            $queue = Rtc::with('employee')
+                ->where('status', 0) // submitted by GM
+                ->where('area', 'division')
+                ->whereIn('area_id', $divIds)
+                ->get();
+            $stage = 'approve'; // langsung approve (0 -> 2)}
+
+            return view('website.approval.rtc.index', compact('rtcs'));
+        } elseif ($norm === 'vpd') {
+            // VPD: tahap 1 (check) untuk plant/direksi
+            $plantIds = \App\Models\Plant::pluck('id');
+
+            $queue = \App\Models\Rtc::with('employee')
+                ->where('status', 0) // submitted by Director
+                ->whereIn('area', ['direksi', 'plant'])
+                ->whereIn('area_id', $plantIds)
+                ->get();
+            $stage = 'check'; // (0 -> 1)
+        } elseif ($norm === 'president') {
+            // PD: tahap akhir approve untuk plant/direksi
+            $plantIds = \App\Models\Plant::pluck('id');
+
+            $queue = \App\Models\Rtc::with('employee')
+                ->where('status', 1) // checked by VPD
+                ->whereIn('area', ['direksi', 'plant'])
+                ->whereIn('area_id', $plantIds)
+                ->get();
+            $stage = 'approve'; // (1 -> 2)
         } else {
-            // Default (tidak filter posisi bawahannya)
-            $subCheck = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
-            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+            $queue = collect(); // Manager/HRD/lainnya: tidak ada antrian approval
+            $stage = 'approve';
         }
 
-        $checkRtc = Rtc::with('employee')
-            ->where('status', 0)
-            ->whereIn('employee_id', $subCheck)
-            ->get();
-
-        $checkRtcIds = $checkRtc->pluck('id')->toArray();
-
-        $approveRtc = Rtc::with('employee')
-            ->where('status', 1)
-            ->whereIn('employee_id', $subApprove)
-            ->get();
-
-        $rtcs = $checkRtc->merge($approveRtc);
-
-        return view('website.approval.rtc.index', compact('rtcs'));
+        return view('website.approval.rtc.index', [
+            'rtcs'  => $queue,
+            'stage' => $stage, // bisa dipakai untuk label tombol di blade
+        ]);
     }
 
     public function approve($id)

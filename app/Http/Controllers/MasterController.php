@@ -520,7 +520,7 @@ class MasterController extends Controller
             $pos = strtolower(trim($posRaw));
 
             $isGM   = in_array($pos, ['gm', 'act gm'], true);
-            $isDir  = (($user->role === 'User') && in_array($pos, ['direktur', 'director'], true));
+            $isDir  = (($user->role === 'User') && in_array($pos, ['direktur', 'director', 'act direktur'], true));
             $isHRD  = ($user->role === 'HRD');
             $isTop2 = in_array($pos, ['president', 'vpd', 'vice president director', 'wakil presdir'], true)
                 || in_array(strtolower((string) ($employee->getNormalizedPosition() ?? '')), ['president', 'vpd'], true);
@@ -697,7 +697,7 @@ class MasterController extends Controller
             };
             $areas = $areaAliases($areaKey);
 
-            $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey, $isGM) {  // ✅ tambahkan $isGM
+            $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey, $isGM, $isDir) {  // ✅ tambahkan $isGM
                 $rtcShort = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
                     ->whereIn('term', $termAliases('short'))->orderByDesc('id')
                     ->with(['employee:id,name,grade,birthday_date'])->first();
@@ -756,7 +756,9 @@ class MasterController extends Controller
 
                 $picEmp = $this->currentPicFor($areaKey, $item);
 
-                $canAddByRole = !($isGM && in_array($areaKey, ['department', 'section', 'sub_section'], true));
+                $canAddByRole =
+                    !($isGM && in_array($areaKey, ['department', 'section', 'sub_section'], true))
+                    && !($isDir && in_array($areaKey, ['division', 'department', 'section', 'sub_section'], true));
 
                 return [
                     'id'   => $item->id,
