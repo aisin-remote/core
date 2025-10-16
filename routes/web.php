@@ -178,6 +178,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
         Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
         Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
+        Route::patch('/rtc/{id}/revise', [RtcController::class, 'revise'])->name('rtc.revise');
+
 
         Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
         Route::get('/icp/{id}', [IcpController::class, 'approve'])->name('icp.approve');
@@ -262,14 +264,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('assessment')->group(function () {
         Route::get('/{company?}', [AssessmentController::class, 'index'])->name('assessments.index');
         Route::post('/update', [AssessmentController::class, 'update'])->name('assessments.update');
-
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
-
         Route::get('/history/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ubah ke 'history/{employee_id}'
-
         Route::get('/{assessment_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate'); // Pindahkan ke bawah
-
-
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
     });

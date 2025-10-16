@@ -364,9 +364,10 @@
                 $isTop2 = in_array($posNorm, ['president', 'vpd'], true);
                 $isDir = in_array($posNorm, ['direktur', 'director'], true);
                 $isGM = in_array($posNorm, ['gm', 'act gm'], true);
+                $isMg = in_array($posNorm, ['manager', 'coordinator'], true);
 
                 // Siapa saja boleh lihat RTC
-                $canSeeRtc = $isHRD || $isTop2 || $isDir || $isGM;
+                $canSeeRtc = $isHRD || $isTop2 || $isDir || $isGM || $isMg;
 
                 // Tentukan level + id yang dikirim ke route
                 $level = 'division';
