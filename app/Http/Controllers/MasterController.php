@@ -524,6 +524,7 @@ class MasterController extends Controller
             $isHRD  = ($user->role === 'HRD');
             $isTop2 = in_array($pos, ['president', 'vpd', 'vice president director', 'wakil presdir'], true)
                 || in_array(strtolower((string) ($employee->getNormalizedPosition() ?? '')), ['president', 'vpd'], true);
+            $isMg   = in_array($pos, ['manager', 'coordinator'], true); // ✅ tambahkan flag Manager
 
             Log::debug('[RTC][filter] role flags', [
                 'trace' => $trace,
@@ -535,15 +536,18 @@ class MasterController extends Controller
                 'isDir' => $isDir,
                 'isHRD' => $isHRD,
                 'isTop2' => $isTop2,
+                'isMg' => $isMg,
             ]);
 
-            /* Guards */
+            /* Guards (khusus GM untuk validasi division yang dia miliki) */
             if ($isGM && !in_array($filter, ['division', 'direksi', 'company'], true)) {
-                if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
-                $owns = Division::where('gm_id', $employee->id)->where('id', $containerId)->exists();
-                if (!$owns) {
-                    Log::warning('[RTC][filter] GM unauthorized division', ['trace' => $trace, 'division_id' => $containerId]);
-                    abort(403, 'Unauthorized division');
+                if ($containerId > 0) {
+                    $owns = Division::where('gm_id', $employee->id)
+                        ->where('id', $containerId)->exists();
+                    if (!$owns) {
+                        Log::warning('[RTC][filter] GM unauthorized division', ['trace' => $trace, 'division_id' => $containerId]);
+                        abort(403, 'Unauthorized division');
+                    }
                 }
             }
 
@@ -579,33 +583,84 @@ class MasterController extends Controller
 
                 case 'division':
                     if ($isGM) {
+                        // GM: semua division yang dia pegang
                         $data = Division::where('gm_id', $employee->id)->orderBy('name')->get();
                     } else {
+                        // Non-GM: by plant (untuk Direktur: plant yang dia pegang; untuk HRD/Top2: berdasarkan pilihan)
                         if ($containerId === 0) $containerId = (int) optional($employee->plant)->id;
                         $data = Division::where('plant_id', $containerId)->orderBy('name')->get();
                     }
                     $areaKey = 'division';
                     break;
 
-                case 'department':
-                    if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
-                    $data = Department::where('division_id', $containerId)->orderBy('name')->get();
-                    $areaKey = 'department';
-                    break;
+                case 'department': {
+                        $q = Department::query()
+                            ->when($containerId > 0, fn($qq) => $qq->where('division_id', $containerId));
 
-                case 'section':
-                    if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
-                    $data = Section::whereHas('department', fn($q) => $q->where('division_id', $containerId))
-                        ->orderBy('name')->get();
-                    $areaKey = 'section';
-                    break;
+                        // ✅ Manager: hanya department yang dia pimpin
+                        if ($isMg) {
+                            $q->where('manager_id', $employee->id);
+                        }
+                        // Scope GM (opsional—agar GM hanya lihat division yang dia pegang)
+                        if ($isGM) {
+                            $q->whereHas('division', fn($dv) => $dv->where('gm_id', $employee->id));
+                        }
+                        // Scope Direktur: hanya division dalam plant yang dia pegang
+                        if ($isDir && $employee->plant) {
+                            $q->whereHas('division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
+                        }
 
-                case 'sub_section':
-                    if ($containerId === 0) $containerId = (int) optional($employee->division)->id;
-                    $data = SubSection::whereHas('section.department', fn($q) => $q->where('division_id', $containerId))
-                        ->orderBy('name')->get();
-                    $areaKey = 'sub_section';
-                    break;
+                        $data = $q->orderBy('name')->get();
+                        $areaKey = 'department';
+                        break;
+                    }
+
+                case 'section': {
+                        $q = Section::query()
+                            // filter by selected division via parent department
+                            ->when($containerId > 0, fn($qq) =>
+                            $qq->whereHas('department', fn($d) => $d->where('division_id', $containerId)));
+
+                        // ✅ Manager: hanya section di department yang dia pimpin
+                        if ($isMg) {
+                            $q->whereHas('department', fn($d) => $d->where('manager_id', $employee->id));
+                        }
+                        // Scope GM
+                        if ($isGM) {
+                            $q->whereHas('department.division', fn($dv) => $dv->where('gm_id', $employee->id));
+                        }
+                        // Scope Direktur
+                        if ($isDir && $employee->plant) {
+                            $q->whereHas('department.division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
+                        }
+
+                        $data = $q->orderBy('name')->get();
+                        $areaKey = 'section';
+                        break;
+                    }
+
+                case 'sub_section': {
+                        $q = SubSection::query()
+                            ->when($containerId > 0, fn($qq) =>
+                            $qq->whereHas('section.department', fn($d) => $d->where('division_id', $containerId)));
+
+                        // ✅ Manager: hanya sub section di department yang dia pimpin
+                        if ($isMg) {
+                            $q->whereHas('section.department', fn($d) => $d->where('manager_id', $employee->id));
+                        }
+                        // Scope GM
+                        if ($isGM) {
+                            $q->whereHas('section.department.division', fn($dv) => $dv->where('gm_id', $employee->id));
+                        }
+                        // Scope Direktur
+                        if ($isDir && $employee->plant) {
+                            $q->whereHas('section.department.division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
+                        }
+
+                        $data = $q->orderBy('name')->get();
+                        $areaKey = 'sub_section';
+                        break;
+                    }
             }
 
             Log::debug('[RTC][filter] fetched', [
@@ -734,6 +789,7 @@ class MasterController extends Controller
             return response()->json(['message' => 'Internal error', 'trace' => $trace], 500);
         }
     }
+
 
     private function currentPicFor(string $area, $model)
     {

@@ -302,7 +302,7 @@ class RtcController extends Controller
 
     public function list(Request $request, $id = null)
     {
-        $trace = (string) Str::uuid();         // correlation id utk semua log di request ini
+        $trace = (string) Str::uuid();
         $t0    = microtime(true);
 
         try {
@@ -314,7 +314,7 @@ class RtcController extends Controller
                 'ua'    => substr((string) $request->userAgent(), 0, 200),
             ]);
 
-            $level    = $request->query('level'); // company|direksi|division|department|section|sub_section
+            $level    = $request->query('level');
             $user     = auth()->user();
             $employee = $user->employee;
 
@@ -328,6 +328,7 @@ class RtcController extends Controller
                 || in_array($normalized, ['president', 'vpd'], true);
             $isDirektur = ($user->role === 'User') && (in_array($pos, ['direktur', 'director'], true) || $normalized === 'direktur');
             $isGM       = in_array($pos, ['gm', 'act gm'], true) || in_array($normalized, ['gm', 'act gm'], true);
+            $isMg       = in_array($pos, ['manager', 'coordinator'], true) || in_array($normalized, ['manager', 'coordinator'], true);
 
             Log::debug('[RTC][list] role flags', [
                 'trace' => $trace,
@@ -339,6 +340,7 @@ class RtcController extends Controller
                 'isTop2' => $isTop2,
                 'isDirektur' => $isDirektur,
                 'isGM' => $isGM,
+                'isMg' => $isMg,
             ]);
 
             $readOnly   = ($isTop2 || $isHRD);
@@ -388,12 +390,95 @@ class RtcController extends Controller
                 'plants_dropdown_count' => $plants instanceof \Illuminate\Support\Collection ? $plants->count() : 0,
             ]);
 
-            /* ===== Division dropdown utk Dept/Section/Sub ===== */
+            /* ===== Tabs =====
+           - HRD/Top2: seperti semula (Company, Direksi, Division, Department, Section, Sub Section)
+           - Direktur: Direksi, Division, Department, Section, Sub Section
+           - GM: Division, Department, Section, Sub Section
+           - Manager: Department, Section, Sub Section
+        ===== */
+            $tabs = [];
+            if ($isHRD || $isTop2) {
+                $tabs = [
+                    'company'     => ['label' => 'Company',     'show' => true, 'id' => null],
+                    'direksi'     => ['label' => 'Direksi',     'show' => true, 'id' => null],
+                    'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
+                    'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
+                    'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
+                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                ];
+            } elseif ($isDirektur) {
+                $tabs = [
+                    'direksi'     => ['label' => 'Direksi',     'show' => true, 'id' => null],
+                    'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
+                    'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
+                    'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
+                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                ];
+            } elseif ($isGM) {
+                $tabs = [
+                    'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
+                    'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
+                    'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
+                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                ];
+            } elseif ($isMg) {
+                $tabs = [
+                    'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
+                    'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
+                    'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
+                ];
+            } else {
+                $tabs = [
+                    'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
+                ];
+            }
+
+            // Default active tab
+            if ($level) {
+                $activeTab = $level;
+            } elseif ($isGM) {
+                $activeTab = 'division';
+            } elseif ($isDirektur) {
+                $activeTab = 'direksi';
+            } elseif ($isHRD || $isTop2) {
+                $activeTab = 'company';
+            } elseif ($isMg) {
+                $activeTab = 'department';
+            } else {
+                $activeTab = array_key_first($tabs) ?: 'division';
+            }
+
+            $tableFilter = match ($activeTab) {
+                'company'     => 'company',
+                'direksi'     => 'direksi',
+                'division'    => 'division',
+                'department'  => 'department',
+                'section'     => 'section',
+                'sub_section' => 'sub_section',
+                default       => 'division',
+            };
+
+            /* ===== Division dropdown utk Dept/Section/Sub =====
+           - GM: divisions yg gm_id = employee->id
+           - Direktur: divisions dalam plant yang dia pegang
+           - Manager: divisions yang berisi department (manager_id = employee->id)
+        ===== */
             $divisionsForSelect = collect();
-            if ($isGM) {
-                $divisionsForSelect = Division::where('gm_id', $employee->id)->orderBy('name')->get(['id', 'name']);
-            } elseif ($plantIdForDivision) {
-                $divisionsForSelect = Division::where('plant_id', $plantIdForDivision)->orderBy('name')->get(['id', 'name']);
+            if (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
+                if ($isGM) {
+                    $divisionsForSelect = Division::where('gm_id', $employee->id)
+                        ->orderBy('name')->get(['id', 'name']);
+                } elseif ($isDirektur && $employee->plant) {
+                    $divisionsForSelect = Division::where('plant_id', $employee->plant->id)
+                        ->orderBy('name')->get(['id', 'name']);
+                } elseif ($isMg) {
+                    $divisionsForSelect = Division::whereHas('departments', function ($q) use ($employee) {
+                        $q->where('manager_id', $employee->id);
+                    })
+                        ->orderBy('name')->get(['id', 'name']);
+                } else {
+                    $divisionsForSelect = collect();
+                }
             }
 
             /* ===== Employees utk modal Add (select2) ===== */
@@ -409,44 +494,24 @@ class RtcController extends Controller
                 'employees_select_count' => $employees instanceof \Illuminate\Support\Collection ? $employees->count() : 0,
             ]);
 
-            /* ===== Tabs ===== */
-            $tabs = [
-                'company'     => ['label' => 'Company',    'show' => ($isHRD || $isTop2),                 'id' => null],
-                'direksi'     => ['label' => 'Direksi',    'show' => ($isDirektur || $isHRD || $isTop2),  'id' => null],
-                'division'    => ['label' => 'Division',   'show' => true,                                'id' => $plantIdForDivision],
-                'department'  => ['label' => 'Department', 'show' => true,                                'id' => null],
-                'section'     => ['label' => 'Section',    'show' => true,                                'id' => null],
-                'sub_section' => ['label' => 'Sub Section', 'show' => true,                                'id' => null],
-            ];
-
-            // Default active tab
-            if ($level) {
-                $activeTab = $level;
-            } elseif ($isGM) {
-                $activeTab = 'division';
-            } elseif ($isDirektur) {
-                $activeTab = 'direksi';
-            } elseif ($isHRD || $isTop2) {
-                $activeTab = 'company';
-            } else {
-                $activeTab = 'division';
-            }
-
-            $tableFilter = match ($activeTab) {
-                'company'     => 'company',
-                'direksi'     => 'direksi',
-                'division'    => 'division',
-                'department'  => 'department',
-                'section'     => 'section',
-                'sub_section' => 'sub_section',
-                default       => 'division',
-            };
-
-            // Container ID awal (yang butuh saja)
+            /* ===== Container ID awal (yang butuh saja) ===== */
             if ($tableFilter === 'division') {
-                $containerId = $isGM ? null : ($plantIdForDivision ? (int)$plantIdForDivision : null);
+                if ($isGM) {
+                    $containerId = null; // GM tak perlu pilih plant
+                } elseif ($isDirektur && $employee->plant) {
+                    $containerId = (int) $employee->plant->id; // Direktur: kunci ke plant dia
+                } else {
+                    $containerId = null;
+                }
             } elseif (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
-                $containerId = $isGM ? (int) optional($employee->division)->id ?: null : null;
+                if ($isMg) {
+                    $managerDivisionId = Division::whereHas('departments', function ($q) use ($employee) {
+                        $q->where('manager_id', $employee->id);
+                    })->value('id');
+                    $containerId = $managerDivisionId ? (int) $managerDivisionId : null;
+                } else {
+                    $containerId = null;
+                }
             } else { // company / direksi
                 $containerId = null;
             }
@@ -462,7 +527,7 @@ class RtcController extends Controller
             };
 
             // Visibilitas KPI & Add
-            $hideKpiCols  = in_array($tableFilter, ['company', 'direksi'], true) || ($isGM && $tableFilter === 'division');
+            $hideKpiCols  = in_array($tableFilter, ['company'], true);
             $forceHideAdd = $hideKpiCols;
 
             // ===============================
@@ -486,9 +551,9 @@ class RtcController extends Controller
 
             // Direksi
             if ($tabs['direksi']['show'] ?? false) {
-                if ($isDirektur && $plantIdForDivision) {
+                if ($isDirektur && $employee->plant) {
                     $counts['direksi'] = $nz(RtcService::countNotSet('direksi', [
-                        'plant_ids' => [$plantIdForDivision],
+                        'plant_ids' => [$employee->plant->id],
                     ]));
                 } else {
                     $plantIds = Plant::pluck('id')->all();
@@ -502,33 +567,33 @@ class RtcController extends Controller
             if ($tabs['division']['show'] ?? false) {
                 if ($isGM) {
                     $divIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
-                    $counts['division'] = $nz(RtcService::countNotSet('division', [
-                        'division_ids' => $divIds,
-                    ]));
-                } elseif ($isDirektur && $plantIdForDivision) {
-                    $divIds = Division::where('plant_id', $plantIdForDivision)->pluck('id')->all();
-                    $counts['division'] = $nz(RtcService::countNotSet('division', [
-                        'division_ids' => $divIds,
-                    ]));
+                } elseif ($isDirektur && $employee->plant) {
+                    $divIds = Division::where('plant_id', $employee->plant->id)->pluck('id')->all();
+                } elseif ($isHRD || $isTop2) {
+                    $divIds = Division::pluck('id')->all();
                 } else {
                     $divIds = Division::pluck('id')->all();
-                    $counts['division'] = $nz(RtcService::countNotSet('division', [
-                        'division_ids' => $divIds,
-                    ]));
                 }
+                $counts['division'] = $nz(RtcService::countNotSet('division', [
+                    'division_ids' => $divIds,
+                ]));
             }
 
-            // Base division untuk level di bawahnya
+            // Base division untuk level di bawahnya (dept/section/sub_section)
             if ($isGM) {
                 $baseDivisionIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
-            } elseif ($isDirektur && $plantIdForDivision) {
-                $baseDivisionIds = Division::where('plant_id', $plantIdForDivision)->pluck('id')->all();
+            } elseif ($isDirektur && $employee->plant) {
+                $baseDivisionIds = Division::where('plant_id', $employee->plant->id)->pluck('id')->all();
+            } elseif ($isMg) {
+                $baseDivisionIds = Division::whereHas('departments', function ($q) use ($employee) {
+                    $q->where('manager_id', $employee->id);
+                })->pluck('id')->all();
             } else {
                 $baseDivisionIds = Division::pluck('id')->all();
             }
 
             foreach (['department', 'section', 'sub_section'] as $lvl) {
-                if ($tabs[$lvl]['show'] ?? false) {
+                if (($tabs[$lvl]['show'] ?? false) && !empty($baseDivisionIds)) {
                     $counts[$lvl] = $nz(RtcService::countNotSet($lvl, [
                         'division_ids' => $baseDivisionIds,
                     ]));
@@ -600,6 +665,7 @@ class RtcController extends Controller
             return back()->with('error', 'Terjadi masalah saat membuka halaman RTC. (trace: ' . $trace . ')');
         }
     }
+
     public function detail(Request $request)
     {
         // Ambil filter dan id dari query string
