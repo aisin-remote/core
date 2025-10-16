@@ -464,10 +464,12 @@ class RtcController extends Controller
            - Manager: divisions yang berisi department (manager_id = employee->id)
         ===== */
             $divisionsForSelect = collect();
+            $preselectedDivisionId = null;
             if (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
                 if ($isGM) {
                     $divisionsForSelect = Division::where('gm_id', $employee->id)
                         ->orderBy('name')->get(['id', 'name']);
+                    $preselectedDivisionId = optional($divisionsForSelect->first())->id;
                 } elseif ($isDirektur && $employee->plant) {
                     $divisionsForSelect = Division::where('plant_id', $employee->plant->id)
                         ->orderBy('name')->get(['id', 'name']);
@@ -497,14 +499,16 @@ class RtcController extends Controller
             /* ===== Container ID awal (yang butuh saja) ===== */
             if ($tableFilter === 'division') {
                 if ($isGM) {
-                    $containerId = null; // GM tak perlu pilih plant
+                    $containerId = null;
                 } elseif ($isDirektur && $employee->plant) {
-                    $containerId = (int) $employee->plant->id; // Direktur: kunci ke plant dia
+                    $containerId = (int) $employee->plant->id;
                 } else {
                     $containerId = null;
                 }
             } elseif (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
-                if ($isMg) {
+                if ($isGM) {
+                    $containerId = $preselectedDivisionId ? (int) $preselectedDivisionId : null;
+                } elseif ($isMg) {
                     $managerDivisionId = Division::whereHas('departments', function ($q) use ($employee) {
                         $q->where('manager_id', $employee->id);
                     })->value('id');
@@ -528,7 +532,8 @@ class RtcController extends Controller
 
             // Visibilitas KPI & Add
             $hideKpiCols  = in_array($tableFilter, ['company'], true);
-            $forceHideAdd = $hideKpiCols;
+            $forceHideAdd = $hideKpiCols || ($isGM && in_array($tableFilter, ['department', 'section', 'sub_section'], true)) ||
+                ($isDirektur && in_array($tableFilter, ['division', 'department', 'section', 'sub_section'], true));
 
             // ===============================
             // ===== Hitung Not-Set Tabs =====
@@ -1249,39 +1254,138 @@ class RtcController extends Controller
         try {
             $request->validate([
                 'short_term' => 'nullable|exists:employees,id',
-                'mid_term' => 'nullable|exists:employees,id',
-                'long_term' => 'nullable|exists:employees,id',
+                'mid_term'   => 'nullable|exists:employees,id',
+                'long_term'  => 'nullable|exists:employees,id',
+                'filter'     => 'required|string|in:company,direksi,division,department,section,sub_section',
+                'id'         => 'required|integer|min:1',
             ]);
 
-            $filter = $request->input('filter');
-            $id = $request->input('id');
+            $filter = strtolower($request->input('filter'));
+            $areaId = (int) $request->input('id');
 
             $terms = [
                 'short' => $request->input('short_term'),
-                'mid' => $request->input('mid_term'),
-                'long' => $request->input('long_term'),
+                'mid'   => $request->input('mid_term'),
+                'long'  => $request->input('long_term'),
             ];
+            $terms = array_filter($terms, fn($v) => !empty($v));
 
-            // update rtc table
-            foreach ($terms as $term => $employeeId) {
-                Rtc::create([
-                    'employee_id' => $employeeId,
-                    'area' => $filter,
-                    'area_id' => $id,
-                    'term' => $term,
-                    'status' => 0,
-                ]);
+            if (empty($terms)) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Pilih minimal satu kandidat (ST/MT/LT).',
+                ], 422);
             }
 
-            session()->flash('success', 'Plan submited successfully');
+            $user     = auth()->user();
+            $employee = $user->employee;
+
+            $posRaw = $employee && method_exists($employee, 'getNormalizedPosition')
+                ? strtolower((string) $employee->getNormalizedPosition())
+                : strtolower((string) ($employee->position ?? ''));
+
+            $isHRD      = ($user->role === 'HRD');
+            $isTop2     = in_array($posRaw, ['president', 'vpd', 'vice president director', 'wakil presdir'], true);
+            $isDirektur = ($user->role === 'User') && in_array($posRaw, ['direktur', 'director'], true);
+            $isGM       = in_array($posRaw, ['gm', 'act gm'], true);
+            $isMg       = in_array($posRaw, ['manager', 'coordinator'], true);
+
+            if ($isHRD || $isTop2) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Tidak diizinkan: HRD/Top2 hanya dapat melihat.',
+                ], 403);
+            }
+
+            $allowed = false;
+
+            switch ($filter) {
+                case 'direksi':
+                    if ($isDirektur) {
+                        $allowed = Plant::where('id', $areaId)
+                            ->where('director_id', $employee->id)->exists();
+                    }
+                    break;
+
+                case 'division':
+                    if ($isGM) {
+                        $allowed = Division::where('id', $areaId)
+                            ->where('gm_id', $employee->id)->exists();
+                    }
+                    break;
+
+                case 'department':
+                    if ($isMg) {
+                        $allowed = Department::where('id', $areaId)
+                            ->where('manager_id', $employee->id)->exists();
+                    }
+                    break;
+
+                case 'section':
+                    if ($isMg) {
+                        $allowed = Section::where('id', $areaId)
+                            ->whereHas(
+                                'department',
+                                fn($q) =>
+                                $q->where('manager_id', $employee->id)
+                            )->exists();
+                    }
+                    break;
+
+                case 'sub_section':
+                    if ($isMg) {
+                        $allowed = SubSection::where('id', $areaId)
+                            ->whereHas(
+                                'section.department',
+                                fn($q) =>
+                                $q->where('manager_id', $employee->id)
+                            )->exists();
+                    }
+                    break;
+
+                default:
+                    $allowed = false;
+            }
+
+            if (!$allowed) {
+                return response()->json([
+                    'status'  => 'error',
+                    'message' => 'Tidak diizinkan untuk mengisi RTC pada level ini.',
+                ], 403);
+            }
+
+            DB::beginTransaction();
+
+            foreach ($terms as $term => $employeeId) {
+                if (!in_array($term, ['short', 'mid', 'long'], true)) {
+                    continue;
+                }
+
+                Rtc::updateOrCreate(
+                    [
+                        'area'    => $filter,
+                        'area_id' => $areaId,
+                        'term'    => $term,
+                    ],
+                    [
+                        'employee_id' => $employeeId,
+                        'status'      => 0,
+                    ]
+                );
+            }
+
+            DB::commit();
+
+            session()->flash('success', 'Plan submitted successfully');
 
             return response()->json([
-                'status' => 'success',
+                'status'  => 'success',
                 'message' => 'Plan updated successfully',
             ]);
         } catch (\Throwable $th) {
+            DB::rollBack();
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Terjadi kesalahan saat memperbarui data: ' . $th->getMessage(),
             ], 500);
         }

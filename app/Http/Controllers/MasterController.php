@@ -697,7 +697,7 @@ class MasterController extends Controller
             };
             $areas = $areaAliases($areaKey);
 
-            $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey) {
+            $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey, $isGM) {  // ✅ tambahkan $isGM
                 $rtcShort = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
                     ->whereIn('term', $termAliases('short'))->orderByDesc('id')
                     ->with(['employee:id,name,grade,birthday_date'])->first();
@@ -756,6 +756,8 @@ class MasterController extends Controller
 
                 $picEmp = $this->currentPicFor($areaKey, $item);
 
+                $canAddByRole = !($isGM && in_array($areaKey, ['department', 'section', 'sub_section'], true));
+
                 return [
                     'id'   => $item->id,
                     'name' => $item->name,
@@ -764,9 +766,10 @@ class MasterController extends Controller
                     'mid'   => ['name' => $midEmp?->name,  'status' => $m],
                     'long'  => ['name' => $longEmp?->name, 'status' => $l],
                     'overall' => ['label' => $label, 'class' => $class, 'code' => $code],
-                    'can_add' => !$complete3,
+                    'can_add' => $canAddByRole && !$complete3, // 🔒
                 ];
             });
+
 
             $resp = response()->json(['items' => $items->values()]);
 
