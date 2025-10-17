@@ -1,6 +1,5 @@
-{{-- === MODAL POINT === --}}
 <div class="modal fade" id="pointModal" tabindex="-1" aria-labelledby="pointModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <form id="pointForm">
                 <div class="modal-header">
@@ -9,13 +8,14 @@
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="pmCat">
-                    <input type="hidden" id="pmMode" value="create"> {{-- create|edit --}}
-                    <input type="hidden" id="pmRowId"> {{-- id baris saat edit --}}
+                    <input type="hidden" id="pmMode" value="create">
+                    <input type="hidden" id="pmRowId">
 
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label fs-6">Program / Activity <span class="text-danger">*</span></label>
-                            <textarea class="form-control form-control-lg" id="pmActivity" rows="3"></textarea>
+                            <textarea class="form-control form-control-lg" id="pmActivity" rows="3"
+                                placeholder="Apa yang akan dicapai / dilakukan?"></textarea>
                         </div>
 
                         {{-- <div class="col-md-6">
@@ -26,33 +26,33 @@
 
                         <div class="col-md-12">
                             <label class="form-label fs-6">Target One Year (Apr–Mar)</label>
-                            <textarea class="form-control form-control-lg" id="pmTargetOne" rows="3"></textarea>
+                            <textarea class="form-control form-control-lg" id="pmTargetOne" rows="3"
+                                placeholder="Hasil akhir sebelum Maret (akhir fiscal)."></textarea>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fs-6">Start Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control form-control-lg" id="pmStart">
+                            <input type="date" class="form-control form-control-lg" id="pmStart" required>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fs-6">Due Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control form-control-lg" id="pmDue">
+                            <input type="date" class="form-control form-control-lg" id="pmDue" required>
                         </div>
 
                         <div class="col-md-6">
                             <label class="form-label fs-6">Weight (%) <span class="text-danger">*</span></label>
                             <div class="input-group input-group-lg">
                                 <input type="number" min="0" max="100" step="1" class="form-control"
-                                    id="pmWeight" placeholder="0">
+                                    id="pmWeight" placeholder="0" required>
                                 <span class="input-group-text">%</span>
                             </div>
+                            <small class="text-muted">Pastikan total seluruh kategori = 100%.</small>
                         </div>
                     </div>
 
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
-
-                    {{-- Simpan sebagai Draft --}}
                     <button type="submit" class="btn btn-primary" id="pmSaveBtn">
                         <i class="bi bi-save2"></i>
                         Simpan
