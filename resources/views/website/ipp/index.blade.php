@@ -49,6 +49,27 @@
             color: var(--primary);
         }
 
+        .period-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 9999px;
+            padding: .35rem .7rem;
+            font-weight: 700;
+            letter-spacing: .2px;
+            color: #0f172a;
+        }
+
+        .period-pill .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 9999px;
+            background: #2563eb;
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, .12)
+        }
+
         .accordion.ipp .accordion-item {
             border: 1px solid var(--ipp-border);
             border-radius: 12px;
@@ -136,7 +157,7 @@
             font-style: italic
         }
 
-        /* ===== COMMENT HISTORY — modal & timeline ===== */
+        /* ===== COMMENT MODAL ===== */
         .comment-modal .modal-dialog {
             max-width: 860px;
         }
@@ -144,7 +165,7 @@
         .comment-modal .modal-content {
             border-radius: 14px;
             border: 1px solid #e6e8ee;
-            box-shadow: 0 20px 50px rgba(2, 6, 23, .12);
+            box-shadow: 0 20px 50px rgba(2, 6, 23, .12)
         }
 
         .comment-modal .modal-header {
@@ -153,12 +174,12 @@
             z-index: 2;
             padding: .9rem 1rem;
             background: linear-gradient(180deg, #fbfcfe 0%, #f7f9fc 100%);
-            border-bottom: 1px solid #e9eef5;
+            border-bottom: 1px solid #e9eef5
         }
 
         .comment-modal .modal-title {
             font-weight: 800;
-            letter-spacing: .2px;
+            letter-spacing: .2px
         }
 
         .cmt-timeline {
@@ -169,7 +190,7 @@
             overflow: auto;
             scrollbar-gutter: stable;
             -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
-            mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%);
+            mask-image: linear-gradient(180deg, transparent 0, #000 12px, #000 calc(100% - 12px), transparent 100%)
         }
 
         .cmt-timeline::-webkit-scrollbar {
@@ -190,7 +211,7 @@
             bottom: .8rem;
             width: 3px;
             background: linear-gradient(180deg, #eef2f7, #e5e9f0);
-            border-radius: 9999px;
+            border-radius: 9999px
         }
 
         .cmt-item {
@@ -201,7 +222,7 @@
             border-radius: 12px;
             background: #fff;
             transition: .18s;
-            animation: itemEnter .24s ease-out both;
+            animation: itemEnter .24s ease-out both
         }
 
         .cmt-item+.cmt-item {
@@ -211,7 +232,7 @@
         .cmt-item:hover {
             transform: translateY(-1px);
             box-shadow: 0 8px 22px rgba(2, 6, 23, .08);
-            border-color: #e5eaf3;
+            border-color: #e5eaf3
         }
 
         .cmt-dot {
@@ -223,7 +244,7 @@
             border-radius: 9999px;
             border: 2px solid #fff;
             box-shadow: 0 0 0 2px #e6ebf3;
-            background: #94a3b8;
+            background: #94a3b8
         }
 
         .cmt-dot.revise {
@@ -251,12 +272,12 @@
             flex-wrap: wrap;
             align-items: center;
             gap: .5rem .7rem;
-            line-height: 1.15;
+            line-height: 1.15
         }
 
         .cmt-name {
             font-weight: 800;
-            color: #0f172a;
+            color: #0f172a
         }
 
         .cmt-meta {
@@ -265,7 +286,7 @@
             background: #f1f5f9;
             border: 1px solid #e2e8f0;
             padding: .16rem .55rem;
-            border-radius: 9999px;
+            border-radius: 9999px
         }
 
         .cmt-badge {
@@ -276,7 +297,7 @@
             border-radius: 9999px;
             font-weight: 700;
             font-size: .78rem;
-            letter-spacing: .2px;
+            letter-spacing: .2px
         }
 
         .cmt-badge.submitted {
@@ -314,7 +335,7 @@
             color: #0f172a;
             font-size: .95rem;
             line-height: 1.6;
-            word-break: break-word;
+            word-break: break-word
         }
 
         .cmt-body .more {
@@ -322,7 +343,7 @@
             cursor: pointer;
             font-weight: 600;
             margin-left: .35rem;
-            white-space: nowrap;
+            white-space: nowrap
         }
 
         @keyframes itemEnter {
@@ -340,7 +361,7 @@
         .btn-comment-indicator {
             position: relative;
             border-radius: 9999px;
-            padding: .35rem .7rem;
+            padding: .35rem .7rem
         }
 
         .btn-comment-indicator .count {
@@ -358,11 +379,11 @@
             align-items: center;
             justify-content: center;
             padding: 0 .35rem;
-            border: 2px solid #fff;
+            border: 2px solid #fff
         }
 
         .btn-comment-indicator .count.is-hidden {
-            display: none;
+            display: none
         }
 
         .pulse {
@@ -372,7 +393,7 @@
             background: #ef4444;
             border-radius: 9999px;
             box-shadow: 0 0 0 0 rgba(239, 68, 68, .6);
-            animation: pulse 1.5s infinite;
+            animation: pulse 1.5s infinite
         }
 
         @keyframes pulse {
@@ -384,7 +405,7 @@
         @media (max-width:576px) {
             .comment-modal .modal-dialog {
                 max-width: calc(100% - 1rem);
-                margin: .5rem auto;
+                margin: .5rem auto
             }
 
             .cmt-meta {
@@ -407,6 +428,12 @@
                 <i class="bi bi-clipboard2-check text-primary"></i>
                 <span>Individual Performance Plan</span>
             </h3>
+
+            {{-- Fiscal Period Pill (Apr–Mar) --}}
+            <div class="period-pill" id="periodPill" title="Periode IPP mengikuti fiscal year: April–Maret">
+                <span class="dot"></span>
+                <span id="periodText">Periode: Apr — Mar</span>
+            </div>
         </div>
 
         @php
@@ -481,7 +508,7 @@
                                                     <th style="width:22%">Target One</th>
                                                     <th style="width:14%">Start → Due</th>
                                                     <th style="width:6%">W%</th>
-                                                    <th style="width:6%">Action</th>
+                                                    <th style="width:8%">Action</th>
                                                 </tr>
                                             </thead>
                                             <tbody class="js-tbody">
@@ -499,12 +526,7 @@
                 </div>
 
                 {{-- Toolbar: Activity Plan link + Export --}}
-                <div class="d-flex justify-content-between mt-3 gap-2">
-                    <a href="#" class="btn btn-light" id="btnGoActivityPlan"
-                        data-href-template="{{ route('activity-plan.index') }}?ipp_id=__IPP__">
-                        <i class="bi bi-list-check"></i> Activity Plan
-                    </a>
-
+                <div class="d-flex justify-content-end mt-3 gap-2">
                     <div class="d-flex gap-2">
                         <a href="#" class="btn btn-success d-none" id="btnExportExcel"
                             data-href-template="{{ route('ipp.export.excel', '__ID__') }}">
@@ -515,6 +537,9 @@
                             data-href-template="{{ route('ipp.export.pdf', '__ID__') }}">
                             <i class="bi bi-file-earmark-pdf"></i> Export PDF
                         </a>
+                        <button id="btnSubmitAll" class="btn btn-warning">
+                            <i class="bi bi-send-check"></i> Submit IPP + Activity Plan
+                        </button>
                     </div>
                 </div>
 
@@ -532,6 +557,9 @@
 @push('scripts')
     <script>
         (function($) {
+            // === template URL ke Activity Plan utk point terpilih ===
+            const AP_MANAGE_URL_TPL = "{{ route('activity-plan.byPoint', ['point' => '__POINT__']) }}?ipp_id=__IPP__";
+
             let CAT_CAP = {
                 activity_management: 70,
                 people_development: 10,
@@ -556,7 +584,7 @@
             '`': '&#x60;',
                 '=': '&#x3D;'
             } [c]));
-            const fmt = (n) => (Math.round(n + Number.EPSILON)).toFixed(0);
+            const fmt = (n) => (Math.round((parseFloat(n) || 0) + Number.EPSILON)).toFixed(0);
 
             function sumWeights(cat) {
                 let sum = 0;
@@ -589,34 +617,39 @@
                 Object.keys(CAT_CAP).forEach(updateCategoryCard);
             }
 
-            /* ===== Row HTML (Start→Due sudah include) ===== */
+            /* ===== Row HTML (dengan tombol Manage Plan) ===== */
             function makeRowHtml(rowId, data) {
                 const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
                 const oneShort = (data.target_one || '').length > 110 ? data.target_one.slice(0, 110) + '…' : (data
                     .target_one || '-');
                 const startTxt = data.start_date ? data.start_date : '-';
                 const dueTxt = data.due_date ? data.due_date : '-';
+                const canManage = !!rowId && String(rowId).match(
+                    /^\d+$/); // hanya aktif kalau sudah tersimpan di server
                 return `
-      <tr class="align-middle point-row"
-          data-row-id="${esc(rowId)}"
-          data-activity="${esc(data.activity||'')}"
-          data-mid="${esc(data.target_mid||'')}"
-          data-one="${esc(data.target_one||'')}"
-          data-start="${esc(startTxt)}"
-          data-due="${esc(dueTxt)}"
-          data-status="${esc(data.status||'draft')}"
-          data-weight="${w}">
-        <td class="fw-semibold">${esc(data.activity||'-')}</td>
-        <td class="text-muted">${esc(oneShort)}</td>
-        <td><span class="badge badge-light">${esc(startTxt)}</span> &rarr; <span class="badge badge-light">${esc(dueTxt)}</span></td>
-        <td><span>${fmt(w)}</span></td>
-        <td class="text-end">
-          <div class="btn-group btn-group-sm" role="group">
-            <button type="button" class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
-            <button type="button" class="btn btn-danger js-remove" title="Hapus"><i class="bi bi-trash"></i></button>
-          </div>
-        </td>
-      </tr>`;
+<tr class="align-middle point-row"
+    data-row-id="${esc(rowId)}"
+    data-activity="${esc(data.activity||'')}"
+    data-mid="${esc(data.target_mid||'')}"
+    data-one="${esc(data.target_one||'')}"
+    data-start="${esc(startTxt)}"
+    data-due="${esc(dueTxt)}"
+    data-status="${esc(data.status||'draft')}"
+    data-weight="${w}">
+  <td class="fw-semibold">${esc(data.activity||'-')}</td>
+  <td class="text-muted">${esc(oneShort)}</td>
+  <td><span class="badge badge-light">${esc(startTxt)}</span> &rarr; <span class="badge badge-light">${esc(dueTxt)}</span></td>
+  <td><span>${fmt(w)}</span></td>
+  <td class="text-end">
+    <div class="btn-group btn-group-sm" role="group">
+      <button type="button" class="btn btn-info js-manage" title="Manage Plan" ${canManage?'':'disabled'}>
+        <i class="bi bi-kanban"></i>
+      </button>
+      <button type="button" class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
+      <button type="button" class="btn btn-danger js-remove" title="Hapus"><i class="bi bi-trash"></i></button>
+    </div>
+  </td>
+</tr>`;
             }
 
             /* ===== Status badge ===== */
@@ -656,7 +689,7 @@
                     .addClass(info.cls).text(info.text);
             }
 
-            /* ===== Comments rendering (tetap) ===== */
+            /* ===== Comments (tetap) ===== */
             function statusClass(s) {
                 return (s || '').toLowerCase();
             }
@@ -691,17 +724,17 @@
                     const itemId = 'cmt-' + (c.id || Math.random().toString(36).slice(2));
                     const isNew = (Number(c.id) || 0) > lastSeenId;
                     const $li = $(`
-                        <li class="cmt-item ${isNew ? 'is-new' : ''}">
-                          <span class="cmt-dot ${dotCls}"></span>
-                          <div class="cmt-head">
-                            <span class="cmt-name ${isNew ? 'text-white':''}">${who}</span>
-                            <span class="cmt-meta">• ${at}</span>
-                          </div>
-                          <div class="cmt-body ${isNew ? 'text-white':''}" id="${itemId}">
-                            <span class="text">${toHtmlWithBreak(short)}</span>
-                            ${needMore ? `<span class="more" data-full="${esc(raw)}">…more</span>` : ``}
-                          </div>
-                        </li>`);
+                <li class="cmt-item ${isNew?'is-new':''}">
+                  <span class="cmt-dot ${dotCls}"></span>
+                  <div class="cmt-head">
+                    <span class="cmt-name ${isNew?'text-white':''}">${who}</span>
+                    <span class="cmt-meta">• ${at}</span>
+                  </div>
+                  <div class="cmt-body ${isNew?'text-white':''}" id="${itemId}">
+                    <span class="text">${toHtmlWithBreak(short)}</span>
+                    ${needMore?`<span class="more" data-full="${esc(raw)}">…more</span>`:``}
+                  </div>
+                </li>`);
                     $ul.append($li);
                 });
             }
@@ -802,7 +835,6 @@
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
-
             $(document).on('click', '.js-edit', function() {
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
@@ -819,6 +851,24 @@
                 $('#pmWeight').val($tr.data('weight'));
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
+            });
+
+            /* ===== NEW: Manage Activity Plan per point ===== */
+            $(document).on('click', '.js-manage', function() {
+                const $tr = $(this).closest('tr');
+                const pointId = $tr.data('row-id');
+                const ippId = window.__currentIppId;
+                if (!ippId) {
+                    toast('IPP belum terinisialisasi.', 'danger');
+                    return;
+                }
+                if (!pointId || !String(pointId).match(/^\d+$/)) {
+                    toast('Simpan dulu point ini sebelum manage Activity Plan.', 'warning');
+                    return;
+                }
+                const url = AP_MANAGE_URL_TPL.replace('__IPP__', encodeURIComponent(ippId)).replace('__POINT__',
+                    encodeURIComponent(pointId));
+                window.location.href = url;
             });
 
             /* ===== SUBMIT point (create/edit) ===== */
@@ -843,23 +893,46 @@
                     weight: parseFloat($('#pmWeight').val()),
                 };
 
+                // FE validation (termasuk fiscal check)
                 if (!data.activity) {
                     toast('Isi "Program / Activity".', 'danger');
+                    return unlock();
+                }
+                if (!data.start_date) {
+                    toast('Pilih "Start Date".', 'danger');
                     return unlock();
                 }
                 if (!data.due_date) {
                     toast('Pilih "Due Date".', 'danger');
                     return unlock();
                 }
-                if (data.start_date && data.due_date) {
-                    if (new Date(data.start_date) > new Date(data.due_date)) {
-                        toast('Start Date tidak boleh setelah Due Date.', 'danger');
-                        return unlock();
-                    }
+                if (new Date(data.start_date) > new Date(data.due_date)) {
+                    toast('Start Date tidak boleh setelah Due Date.', 'danger');
+                    return unlock();
                 }
                 if (isNaN(data.weight)) {
                     toast('Isi "Weight (%)" dengan angka.', 'danger');
                     return unlock();
+                }
+
+                const fy = Number(window.__onYear || 0);
+                if (fy) {
+                    const fStart = new Date(fy, 3, 1),
+                        fEnd = new Date(fy + 1, 2, 31);
+                    const dStart = new Date(data.start_date),
+                        dDue = new Date(data.due_date);
+                    const strip = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                    if (strip(dStart) < strip(fStart) || strip(dStart) > strip(fEnd) || strip(dDue) < strip(
+                            fStart) || strip(dDue) > strip(fEnd)) {
+                        toast(`Tanggal harus dalam periode fiscal Apr ${fy} – Mar ${fy+1}.`, 'danger');
+                        return unlock();
+                    }
+                    const fyOf = (d) => (d.getMonth() + 1) >= 4 ? d.getFullYear() : (d.getFullYear() - 1);
+                    if (fyOf(dStart) !== fyOf(dDue)) {
+                        toast(`Start & Due harus pada fiscal year yang sama (Apr ${fy} – Mar ${fy+1}).`,
+                            'danger');
+                        return unlock();
+                    }
                 }
 
                 const payload = {
@@ -972,10 +1045,10 @@
 
             /* ===== Link helper ===== */
             function syncExportLinks(ippId) {
-                const $excel = $('#btnExportExcel');
-                const $pdf = $('#btnExportPDF');
-                const tExcel = $excel.data('href-template');
-                const tPdf = $pdf.data('href-template');
+                const $excel = $('#btnExportExcel'),
+                    $pdf = $('#btnExportPDF');
+                const tExcel = $excel.data('href-template'),
+                    tPdf = $pdf.data('href-template');
                 if (ippId) {
                     $excel.attr('href', String(tExcel || '').replace('__ID__', ippId));
                     $pdf.attr('href', String(tPdf || '').replace('__ID__', ippId));
@@ -995,7 +1068,7 @@
                 }
             }
 
-            /* ===== Lock tampilan (tanpa tombol submit) ===== */
+            /* ===== Lock tampilan ===== */
             function applyLockDom(locked) {
                 LOCKED = !!locked;
                 $('.js-open-modal').toggleClass('d-none', LOCKED);
@@ -1008,6 +1081,13 @@
                 });
             }
 
+            /* ===== Fiscal period pill ===== */
+            function setPeriodPill(onYearStr) {
+                const y = parseInt(onYearStr || 0, 10);
+                if (!y) return;
+                $('#periodText').text(`Periode: Apr ${y} – Mar ${y+1}`);
+            }
+
             /* ===== INIT ===== */
             function loadInitial() {
                 $.ajax({
@@ -1017,6 +1097,10 @@
                     })
                     .done((res) => {
                         if (res?.cap) CAT_CAP = res.cap;
+
+                        const onYear = res?.identitas?.on_year || '';
+                        setPeriodPill(onYear);
+                        window.__onYear = parseInt(onYear, 10) || 0;
 
                         if (res?.points) {
                             Object.keys(res.points).forEach((cat) => {
@@ -1040,14 +1124,11 @@
 
                         const ippStatus = res?.ipp?.status || 'draft';
                         renderIppStatus(ippStatus);
-
                         const locked = !!(res?.locked || res?.ipp?.locked || (res?.ipp?.status === 'submitted'));
                         applyLockDom(locked);
 
                         const ippId = res?.ipp?.id || null;
                         window.__currentIppId = ippId;
-
-                        // Sinkronkan link export & Activity Plan
                         syncExportLinks(ippId);
                         syncActivityPlanLink(ippId);
 
@@ -1060,21 +1141,19 @@
                             if (localStorage.getItem(bannerKey(year)) !== '1') {
                                 if (!document.getElementById('ippApprovedBanner')) {
                                     const banner = $(`
-                                    <div id="ippApprovedBanner"
-                                        class="alert alert-info alert-dismissible fade show d-flex align-items-center"
-                                        role="alert" style="border-radius:12px;">
-                                        <i class="bi bi-info-circle me-2 fs-5"></i>
-                                        <div class="me-3">
-                                            <div class="fw-bold mb-0">
-                                                Anda sudah memiliki IPP ${year} yang <span class="text-success">APPROVED</span>.
-                                            </div>
-                                            <small class="text-muted">
-                                                Halaman ini untuk memulai IPP baru (siklus berikutnya). Silakan tambah point.
-                                            </small>
-                                        </div>
-                                        <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                            <div id="ippApprovedBanner" class="alert alert-info alert-dismissible fade show d-flex align-items-center"
+                                 role="alert" style="border-radius:12px;">
+                                <i class="bi bi-info-circle me-2 fs-5"></i>
+                                <div class="me-3">
+                                    <div class="fw-bold mb-0">
+                                        Anda sudah memiliki IPP ${year} yang <span class="text-success">APPROVED</span>.
                                     </div>
-                                `);
+                                    <small class="text-muted">
+                                        Halaman ini untuk memulai IPP baru (siklus berikutnya). Silakan tambah point.
+                                    </small>
+                                </div>
+                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>`);
                                     $('.accordion.mt-3.ipp').before(banner);
                                     banner.on('closed.bs.alert', () => {
                                         try {
@@ -1084,7 +1163,6 @@
                                 }
                             }
 
-                            // pastikan tabel kosong, siap input baru
                             $('table.js-table tbody.js-tbody').each(function() {
                                 if ($(this).find('tr').not('.empty-row').length === 0) {
                                     $(this).html(
@@ -1093,7 +1171,6 @@
                                 }
                             });
 
-                            // sembunyikan export saat belum ada data
                             $('#btnExportExcel, #btnExportPDF').addClass('d-none');
                         }
 
@@ -1145,5 +1222,44 @@
                 $t.on('hidden.bs.toast', () => $t.remove());
             }
         })(jQuery);
+    </script>
+    <script>
+        // ===== Submit gabungan: IPP + Activity Plan =====
+        $('#btnSubmitAll').on('click', async function() {
+            if (LOCKED) {
+                toast('IPP sudah submitted. Tidak bisa submit ulang.', 'danger');
+                return;
+            }
+            if (!window.__currentIppId) {
+                toast('IPP belum terinisialisasi.', 'danger');
+                return;
+            }
+            if (!confirm('Submit IPP + Activity Plan sekarang?')) return;
+
+            const $btn = $(this).prop('disabled', true);
+            try {
+                const url = new URL(@json(route('activity-plan.submitAll')), window.location.origin);
+                url.searchParams.set('ipp_id', String(window.__currentIppId));
+                const res = await fetch(url.toString(), {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json?.message || 'Submit gagal.');
+                toast(json?.message || 'Berhasil submit.');
+
+                $('.accordion.mt-3.ipp tbody.js-tbody').each(function() {
+                    // opsional: bersihkan/biarkan – yang penting reload data
+                });
+                location.reload();
+            } catch (err) {
+                toast(esc(err?.message || 'Submit gagal.'), 'danger');
+            } finally {
+                $btn.prop('disabled', false);
+            }
+        });
     </script>
 @endpush
