@@ -404,7 +404,7 @@
                 $userCompany = strtolower(optional(optional(auth()->user())->employee)->company_name ?? 'aii');
             @endphp
             @if ($isUserRole)
-                <div class="disabled menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
+                <div class="menu-item menu-accordion {{ request()->routeIs('ipp.*') || request()->is('ipa*') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
                     <span
@@ -455,7 +455,14 @@
                                         <span class="menu-title">IPA Assign</span>
                                     </a>
                                 </div>
-                                <div class="disabled menu-item">
+                                <div class="menu-item">
+                                    <a href="{{ route('reviews.index') }}"
+                                        class="menu-link {{ request()->routeIs('reviews.index') ? 'active' : '' }}">
+                                        <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                                        <span class="menu-title">Performance Review</span>
+                                    </a>
+                                </div>
+                                <div class="menu-item">
                                     @if (Route::has('ipa.list'))
                                         <a href="{{ route('ipa.list', ['company' => $userCompany]) }}"
                                             class="menu-link {{ request()->routeIs('ipa.list') ? 'active' : '' }}">
@@ -473,7 +480,7 @@
                     </div>
                 </div>
             @elseif ($isHRDorTop)
-                <div class="disabled menu-item menu-accordion
+                <div class="menu-item menu-accordion
         {{ request()->routeIs('ipp.list') || request()->routeIs('ipa.list') ? 'show' : '' }}"
                     id="menu-ipp" data-kt-menu-trigger="click" data-kt-menu-expand="true">
 
@@ -512,7 +519,7 @@
                         </div>
 
                         <div
-                            class="disabled menu-item menu-accordion {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'show' : '' }}">
+                            class="menu-item menu-accordion {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'show' : '' }}">
                             <span
                                 class="menu-link {{ request()->routeIs('ipa.list') || request()->is('ipa/list/*') ? 'active' : '' }}">
                                 <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
