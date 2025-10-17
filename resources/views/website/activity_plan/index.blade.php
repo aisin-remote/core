@@ -9,7 +9,7 @@
             --ap-border: #e5e7eb;
             --ap-head: #f8fafc;
             --ap-alt: #fbfdff;
-            --ap-hover: #eef2ff;
+            --ap-hover: #eef2ff
         }
 
         .page-head {
@@ -56,12 +56,6 @@
             font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace
         }
 
-        .req::after {
-            content: "*";
-            color: #dc3545;
-            margin-left: .25rem
-        }
-
         .container-xxl {
             max-width: 1360px
         }
@@ -69,7 +63,7 @@
 @endpush
 
 @section('main')
-    <div class="container-xxl py-3 px-6">
+    <div class="container-xxl py-3 px-6" id="apApp" data-ipp-id="{{ $ippId ?? '' }}" data-point-id="{{ $pointId ?? '' }}">
 
         {{-- Header --}}
         <div class="page-head mb-3">
@@ -77,15 +71,12 @@
                 <i class="bi bi-list-check text-primary"></i>
                 <span>Activity Plan</span>
             </h3>
-            <div class="d-flex gap-2">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
                 <a href="{{ route('ipp.index') }}" class="btn btn-light">
                     <i class="bi bi-arrow-left"></i> Kembali ke IPP
                 </a>
                 <button id="btnAddItem" class="btn btn-primary">
                     <i class="bi bi-plus-lg"></i> Tambah Item
-                </button>
-                <button id="btnSubmitAll" class="btn btn-warning">
-                    <i class="bi bi-send-check"></i> Submit IPP + Activity Plan
                 </button>
                 <a id="btnExportExcel" href="#" class="btn btn-success d-none"
                     data-href-template="{{ route('activity-plan.export.excel') }}?ipp_id=__IPP__">
@@ -94,7 +85,7 @@
             </div>
         </div>
 
-        {{-- Identitas / Info singkat --}}
+        {{-- Identitas --}}
         <div class="card mb-3">
             <div class="card-body d-flex flex-wrap gap-3 align-items-center">
                 <div><span class="text-muted">Nama/NPK:</span> <strong id="apEmpName">—</strong></div>
@@ -108,7 +99,7 @@
             </div>
         </div>
 
-        {{-- Tabel items --}}
+        {{-- Tabel items (selalu untuk 1 IPP Point ini saja) --}}
         <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
@@ -134,82 +125,106 @@
                 </div>
             </div>
         </div>
-
     </div>
 
-    {{-- Modal Tambah/Edit Item --}}
+    {{-- Modal Tambah/Edit Item (lihat catatan field di atas) --}}
     @include('website.activity_plan.modal.create')
-
 @endsection
 
 @push('scripts')
     <script>
         (function($) {
-            // === Konstanta & util ===
             const MONTHS = ['APR', 'MAY', 'JUN', 'JUL', 'AGT', 'SEPT', 'OCT', 'NOV', 'DEC', 'JAN', 'FEB', 'MAR'];
             const MONTHS_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
-            const QS = new URLSearchParams(window.location.search);
-            const IPP_ID = QS.get('ipp_id');
+            const esc = (s) => String(s ?? '').replace(/[&<>"'`=\/]/g, c => ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+            '/': '&#x2F;',
+            '`': '&#x60;',
+                '=': '&#x3D;'
+            } [c]));
+
+            function parseYmd(s) {
+                const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                if (!m) return null;
+                return new Date(+m[1], +m[2] - 1, +m[3]);
+            }
+
+            function labelDate(s) {
+                const d = parseYmd(s);
+                if (!d) return '—';
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${dd} ${MONTHS_ID[d.getMonth()]||''} ${d.getFullYear()}`;
+            }
+
+            function fmtRange(s, e) {
+                return `${esc(labelDate(s))} → ${esc(labelDate(e))}`;
+            }
+
+            function fiscalYearOf(d) {
+                const dt = parseYmd(d);
+                if (!dt) return null;
+                return dt.getMonth() + 1 >= 4 ? dt.getFullYear() : dt.getFullYear() - 1;
+            }
+
+            function fyWindow(fy) {
+                return {
+                    start: new Date(fy, 3, 1),
+                    end: new Date(fy + 1, 2, 31)
+                };
+            }
+
+            function overlap(a1, a2, b1, b2) {
+                return a1 <= b2 && b1 <= a2;
+            }
+
+            function applyScheduleFromItemDates(startStr, dueStr, fyStartYear) {
+                MONTHS.forEach(m => $('#m' + m).prop('checked', false));
+                const s = parseYmd(startStr),
+                    d = parseYmd(dueStr);
+                if (!s || !d || s > d) return;
+                const {
+                    start: FY_S,
+                    end: FY_E
+                } = fyWindow(fyStartYear);
+                for (let i = 0; i < 12; i++) {
+                    const monthIdx = (3 + i) % 12,
+                        year = fyStartYear + ((3 + i) >= 12 ? 1 : 0);
+                    const mS = new Date(year, monthIdx, 1),
+                        mE = new Date(year, monthIdx + 1, 0);
+                    const segS = mS < FY_S ? FY_S : mS,
+                        segE = mE > FY_E ? FY_E : mE;
+                    if (overlap(segS, segE, s, d)) $('#m' + MONTHS[i]).prop('checked', true);
+                }
+            }
+
+            function schedText(mask) {
+                if (!mask) return '-';
+                const out = [];
+                for (let i = 0; i < 12; i++)
+                    if (mask & (1 << i)) out.push(MONTHS[i]);
+                return out.join(', ');
+            }
+
+            const $root = $('#apApp');
+            const IPP_ID = $root.data('ipp-id') || new URLSearchParams(location.search).get('ipp_id');
+            const POINT_ID = $root.data('point-id') ||
+                new URLSearchParams(location.search).get('point_id') ||
+                (location.pathname.match(/\/activity-plan\/point\/(\d+)/)?.[1] ?? '');
+
 
             let BOOT = {
                 ipp: null,
                 plan: null,
-                points: [],
+                point: null,
                 items: [],
                 employees: []
             };
             let LOCKED = false;
-
-            // Sanitasi text
-            function esc(s) {
-                return String(s ?? '').replace(/[&<>"'`=\/]/g, c => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                "'": '&#39;',
-                '/': '&#x2F;',
-                '`': '&#x60;',
-                    '=': '&#x3D;'
-                } [c]));
-            }
-
-            // Parser ISO (YYYY-MM-DD) aman
-            function parseISODate(str) {
-                if (!str || typeof str !== 'string') return null;
-                const m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
-                if (!m) return null;
-                const y = Number(m[1]),
-                    mo = Number(m[2]) - 1,
-                    d = Number(m[3]);
-                const dt = new Date(y, mo, d);
-                // validasi: JS Date auto-roll; pastikan sama
-                if (dt.getFullYear() !== y || dt.getMonth() !== mo || dt.getDate() !== d) return null;
-                return dt;
-            }
-
-            // Format ke "DD Mon YYYY" (ID)
-            function formatDateID(str) {
-                const dt = parseISODate(str);
-                if (!dt) return '-';
-                const dd = String(dt.getDate()).padStart(2, '0');
-                const mon = MONTHS_ID[dt.getMonth()] || '';
-                const yyyy = dt.getFullYear();
-                return `${dd} ${mon} ${yyyy}`;
-            }
-
-            function fmtDateRange(s, e) {
-                return `${esc(formatDateID(s))} → ${esc(formatDateID(e))}`;
-            }
-
-            function schedToText(mask) {
-                if (!mask || Number(mask) === 0) return '-';
-                const arr = [];
-                for (let i = 0; i < 12; i++)
-                    if (mask & (1 << i)) arr.push(MONTHS[i]);
-                return arr.join(', ');
-            }
 
             function rowHtml(it) {
                 const pic = (it.pic && it.pic.name) ? it.pic.name : (it.pic_name || '-');
@@ -218,34 +233,34 @@
                 const cat = it.cached_category || it.ipp_point?.category || '-';
                 const act = it.cached_activity || it.ipp_point?.activity || '-';
                 return `
-      <tr data-id="${esc(it.id||'')}" data-ipp-point-id="${esc(it.ipp_point_id)}">
-        <td><span class="badge badge-mono">${esc(cat)}</span></td>
-        <td class="fw-semibold">${esc(act)}</td>
-        <td><span class="badge bg-light text-dark">${fmtDateRange(start, due)}</span></td>
-        <td>${esc(it.kind_of_activity||'-')}</td>
-        <td class="text-muted">${esc(it.target||'-')}</td>
-        <td>${esc(pic)}</td>
-        <td class="sched-badge"><small>${esc(schedToText(Number(it.schedule_mask)||0))}</small></td>
-        <td class="text-end">
-          <div class="btn-group btn-group-sm">
-            <button class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
-            <button class="btn btn-danger js-del" title="Hapus"><i class="bi bi-trash"></i></button>
-          </div>
-        </td>
-      </tr>`;
+<tr data-id="${esc(it.id||'')}">
+  <td><span class="badge badge-mono">${esc(cat)}</span></td>
+  <td class="fw-semibold">${esc(act)}</td>
+  <td><span class="badge bg-light text-dark">${fmtRange(start,due)}</span></td>
+  <td>${esc(it.kind_of_activity||'-')}</td>
+  <td class="text-muted">${esc(it.target||'-')}</td>
+  <td>${esc(pic)}</td>
+  <td class="sched-badge"><small>${esc(schedText(Number(it.schedule_mask)||0))}</small></td>
+  <td class="text-end">
+    <div class="btn-group btn-group-sm">
+      <button class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
+      <button class="btn btn-danger js-del" title="Hapus"><i class="bi bi-trash"></i></button>
+    </div>
+  </td>
+</tr>`;
             }
 
             function renderAll() {
                 const $tb = $('#itemsBody').empty();
-                if (!BOOT.items.length) {
+                const items = BOOT.items || [];
+                if (!items.length) {
                     $tb.html(
                         '<tr class="empty-row"><td colspan="8" class="text-muted fst-italic">Belum ada item. Klik “Tambah Item”.</td></tr>'
                     );
                 } else {
-                    BOOT.items.forEach(it => $tb.append(rowHtml(it)));
+                    items.forEach(it => $tb.append(rowHtml(it)));
                 }
 
-                // Header info
                 const empName = BOOT.ipp?.nama || (BOOT.plan?.employee?.name || '—');
                 $('#apEmpName').text(empName);
                 $('#apOrg').text([BOOT.plan?.division, BOOT.plan?.department, BOOT.plan?.section].filter(Boolean).join(
@@ -253,122 +268,106 @@
                 $('#apFormNo').text(BOOT.plan?.form_no || '—');
 
                 const fy = BOOT.plan?.fy_start_year;
-                $('#apFy').text(fy ? `${fy}/04–${(Number(fy)+1)}/03` : '—');
+                $('#apFy').text(fy ? `Apr ${fy} – Mar ${Number(fy)+1}` : '—');
 
                 const st = (BOOT.plan?.status || 'draft').toLowerCase();
-                $('#apStatus')
-                    .removeClass('bg-secondary bg-warning bg-success')
+                $('#apStatus').removeClass('bg-secondary bg-warning bg-success')
                     .addClass(st === 'submitted' ? 'bg-warning' : (st === 'approved' ? 'bg-success' : 'bg-secondary'))
                     .text(st.toUpperCase());
 
-                // export link
                 const $exp = $('#btnExportExcel');
                 if (IPP_ID) $exp.attr('href', ($exp.data('href-template') || '').replace('__IPP__', encodeURIComponent(
-                    IPP_ID)));
-                else $exp.attr('href', '#');
+                    IPP_ID))).removeClass('d-none');
+                else $exp.attr('href', '#').addClass('d-none');
 
-                // locking
                 LOCKED = ['submitted', 'approved'].includes(st);
-                $('#btnAddItem,#btnSubmitAll').prop('disabled', LOCKED);
+                $('#btnAddItem').prop('disabled', LOCKED);
                 if (LOCKED) $('.js-edit,.js-del').prop('disabled', true);
             }
 
-            function withIppId(url) {
-                const u = new URL(url, window.location.origin);
-                if (IPP_ID) u.searchParams.set('ipp_id', IPP_ID);
-                return u.toString();
+            const INIT_TPL = @json(route('activity-plan.init.byPoint', ['point' => '__POINT__']));
+            const STORE_TPL = @json(route('activity-plan.item.store.byPoint', ['point' => '__POINT__']));
+
+            function routeInit() {
+                const url = new URL(INIT_TPL.replace('__POINT__', encodeURIComponent(String(POINT_ID || ''))), window
+                    .location.origin);
+                if (IPP_ID) url.searchParams.set('ipp_id', IPP_ID);
+                return url.toString();
             }
 
-            // ===== FY helpers & auto-schedule from dates =====
-            function fyWindow(fyStartYear) {
-                const start = new Date(fyStartYear, 3, 1); // Apr 1
-                const end = new Date(fyStartYear + 1, 2, 31); // Mar 31
-                return {
-                    start,
-                    end
-                };
+            function routeStore() {
+                const url = new URL(STORE_TPL.replace('__POINT__', encodeURIComponent(String(POINT_ID || ''))), window
+                    .location.origin);
+                if (IPP_ID) url.searchParams.set('ipp_id', IPP_ID);
+                return url.toString();
             }
 
-            function rangeOverlap(a1, a2, b1, b2) {
-                return a1 <= b2 && b1 <= a2;
-            }
-
-            function applyScheduleFromDates(startStr, dueStr, fyStartYear) {
-                // kosongkan dulu
-                MONTHS.forEach(m => $('#m' + m).prop('checked', false));
-                if (!startStr || !dueStr || !fyStartYear) return;
-
-                const s = parseISODate(startStr),
-                    d = parseISODate(dueStr);
-                if (!s || !d || s > d) return;
-
-                const {
-                    start: FY_S,
-                    end: FY_E
-                } = fyWindow(Number(fyStartYear));
-
-                // loop month Apr..Mar
-                for (let i = 0; i < 12; i++) {
-                    const monthIdx = (3 + i) % 12; // 3=Apr
-                    const year = Number(fyStartYear) + ((3 + i) >= 12 ? 1 : 0);
-                    const monthStart = new Date(year, monthIdx, 1);
-                    const monthEnd = new Date(year, monthIdx + 1, 0);
-                    const segStart = monthStart < FY_S ? FY_S : monthStart;
-                    const segEnd = monthEnd > FY_E ? FY_E : monthEnd;
-                    if (rangeOverlap(segStart, segEnd, s, d)) $('#m' + MONTHS[i]).prop('checked', true);
-                }
-            }
-
-            // ==== INIT (ambil data awal) ====
+            // ===== INIT =====
             async function init() {
                 try {
-                    if (!IPP_ID) {
-                        toast('ipp_id tidak ditemukan di URL. Buka halaman ini dari IPP.', 'danger');
+                    if (!IPP_ID || !POINT_ID) {
+                        toast('Parameter ipp_id/point_id tidak ditemukan.', 'danger');
                         return;
                     }
-
-                    const res = await fetch(withIppId("{{ route('activity-plan.init') }}"), {
+                    const res = await fetch(routeInit(), {
                         headers: {
                             'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
                     const json = await res.json();
                     if (!res.ok) throw new Error(json?.message || 'Gagal memuat data.');
-
                     BOOT.ipp = json.ipp || null;
                     BOOT.plan = json.plan || null;
-                    BOOT.points = json.points || [];
+                    BOOT.point = json.point || null;
                     BOOT.items = json.items || [];
                     BOOT.employees = json.employees || [];
 
-                    // seed select options (semua label di-esc)
-                    const $selPoint = $('#apPoint').empty().append('<option value="">— pilih IPP Point —</option>');
-                    BOOT.points.forEach(p => {
-                        const label =
-                            `[${p.category}] ${p.activity} — ${formatDateID(p.start_date)}→${formatDateID(p.due_date)}`;
+                    // Seed point (1 opsi, disabled)
+                    const $selPoint = $('#apPoint').empty();
+                    if (BOOT.point) {
                         $selPoint.append(
-                            `<option value="${String(p.id).replace(/"/g,'&quot;')}">${esc(label)}</option>`
-                        );
-                    });
+                                `<option value="${String(BOOT.point.id)}">[${esc(BOOT.point.category)}] ${esc(BOOT.point.activity)}</option>`
+                            )
+                            .val(String(BOOT.point.id)).prop('disabled', true);
+                    } else {
+                        $selPoint.append('<option value="">IPP Point tidak ditemukan</option>').prop('disabled',
+                            true);
+                    }
 
-                    const $selPic = $('#apPic').empty().append('<option value="">— pilih PIC —</option>');
+                    // Seed PIC
+                    const $selPic = $('#apPic').empty().append('<option value="">Pilih PIC</option>');
                     BOOT.employees.forEach(e => {
-                        const val = String(e.id).replace(/"/g, '&quot;');
                         const label = `${e.name}${e.npk?(' — '+e.npk):''}`;
-                        $selPic.append(`<option value="${val}">${esc(label)}</option>`);
+                        $selPic.append(`<option value="${String(e.id)}">${esc(label)}</option>`);
                     });
 
                     renderAll();
                 } catch (e) {
-                    toast(esc(e?.message || 'Gagal memuat data Activity Plan.'), 'danger');
+                    toast(esc(e?.message || 'Gagal memuat data.'), 'danger');
                 }
             }
 
-            // ==== Modal & Form ====
+            // ===== Modal & Form =====
             const apModal = new bootstrap.Modal(document.getElementById('apItemModal'), {
                 backdrop: 'static',
                 keyboard: false
             });
+
+            function resetForm() {
+                $('#apForm')[0].reset();
+                $('#apPic').val('').trigger('change');
+                $('#apStart,#apDue').val('');
+                MONTHS.forEach(m => $('#m' + m).prop('checked', false).prop('disabled', true));
+                $('#apYearly').prop('checked', false).prop('disabled', true);
+                $('#apStart').attr({
+                    min: '',
+                    max: ''
+                });
+                $('#apDue').attr({
+                    min: '',
+                    max: ''
+                });
+            }
 
             $('#btnAddItem').on('click', function() {
                 if (LOCKED) return;
@@ -376,33 +375,87 @@
                 $('#apMode').val('create');
                 $('#apRowId').val('');
                 $('#apItemLabel').text('Tambah Activity Plan Item');
+
+                // Batas tanggal = cached_* dari IPP Point (bukan FY)
+                const p = BOOT.point;
+                if (p) {
+                    const min = (p.cached_start_date || p.start_date || '').slice(0, 10);
+                    const max = (p.cached_due_date || p.due_date || '').slice(0, 10);
+                    $('#apStart').attr({
+                        min,
+                        max
+                    });
+                    $('#apDue').attr({
+                        min,
+                        max
+                    });
+                    $('#apPoint').val(String(p.id)).prop('disabled', true);
+                }
                 apModal.show();
             });
 
             $(document).on('click', '.js-edit', function() {
                 if (LOCKED) return;
-                const $tr = $(this).closest('tr');
-                const id = $tr.data('id');
+                const id = $(this).closest('tr').data('id');
                 const it = BOOT.items.find(x => String(x.id) === String(id));
                 if (!it) return;
-
                 resetForm();
                 $('#apMode').val('edit');
                 $('#apRowId').val(it.id);
-                $('#apPoint').val(it.ipp_point_id).trigger('change'); // schedule auto dari point
+                $('#apItemLabel').text('Edit Activity Plan Item');
+
+                const p = BOOT.point;
+                if (p) {
+                    const min = (p.cached_start_date || p.start_date || '').slice(0, 10);
+                    const max = (p.cached_due_date || p.due_date || '').slice(0, 10);
+                    $('#apStart').attr({
+                        min,
+                        max
+                    });
+                    $('#apDue').attr({
+                        min,
+                        max
+                    });
+                    $('#apPoint').val(String(p.id)).prop('disabled', true);
+                }
+
                 $('#apKind').val(it.kind_of_activity || '');
                 $('#apTarget').val(it.target || '');
                 $('#apPic').val(it.pic_employee_id || '').trigger('change');
 
-                $('#apItemLabel').text('Edit Activity Plan Item');
+                if (it.cached_start_date) $('#apStart').val(String(it.cached_start_date).slice(0, 10));
+                if (it.cached_due_date) $('#apDue').val(String(it.cached_due_date).slice(0, 10));
+
+                // Isi jadwal berdasar tanggal item (FY diambil dari start item agar konsisten)
+                const itemFy = fiscalYearOf($('#apStart').val()) || BOOT.plan?.fy_start_year || BOOT.ipp
+                    ?.on_year;
+                const s = $('#apStart').val(),
+                    d = $('#apDue').val();
+                if (s && d) applyScheduleFromItemDates(s, d, itemFy);
+
                 apModal.show();
             });
 
+            // Update jadwal saat user memilih tanggal item
+            function onItemDatesChange() {
+                const p = BOOT.point;
+                if (!p) return;
+                const min = (p.cached_start_date || p.start_date || '').slice(0, 10);
+                const max = (p.cached_due_date || p.due_date || '').slice(0, 10);
+                const s = $('#apStart').val(),
+                    d = $('#apDue').val();
+                if (!s || !d) return;
+                if (s < min || s > max || d < min || d > max || s > d) return;
+                const fy = fiscalYearOf(s) || BOOT.plan?.fy_start_year || BOOT.ipp?.on_year;
+                applyScheduleFromItemDates(s, d, fy);
+            }
+            $('#apStart,#apDue').on('change', onItemDatesChange);
+
+            // Hapus
             $(document).on('click', '.js-del', async function() {
                 if (LOCKED) return;
                 if (!confirm('Hapus item ini?')) return;
-                const $tr = $(this).closest('tr');
-                const id = $tr.data('id');
+                const id = $(this).closest('tr').data('id');
                 try {
                     const res = await fetch("{{ route('activity-plan.item.destroy', ':id') }}".replace(
                         ':id', encodeURIComponent(id)), {
@@ -425,68 +478,37 @@
                 }
             });
 
-            function resetForm() {
-                $('#apForm')[0].reset();
-                $('#apPoint,#apPic').val('').trigger('change');
-                // Schedule read-only & kosong
-                MONTHS.forEach(m => $('#m' + m).prop('checked', false).prop('disabled', true));
-                $('#apYearly').prop('checked', false).prop('disabled', true);
-            }
-
-            // Yearly toggle (disabled, no-op)
-            $('#apYearly').off('change').on('change', function() {
-                /* read-only */
-            });
-
-            // Saat pilih IPP Point: auto-apply schedule dari Start–Due
-            $('#apPoint').on('change', function() {
-                const pid = $(this).val();
-                const p = BOOT.points.find(x => String(x.id) === String(pid));
-
-                // kunci tetap
-                MONTHS.forEach(m => $('#m' + m).prop('disabled', true));
-                $('#apYearly').prop('disabled', true);
-
-                if (!p) {
-                    MONTHS.forEach(m => $('#m' + m).prop('checked', false));
-                    return;
-                }
-
-                const fy = BOOT.plan?.fy_start_year || BOOT.ipp?.on_year;
-                applyScheduleFromDates(p.start_date, p.due_date, fy);
-            });
-
-            // Submit form (create/edit)
+            // Submit form (create/edit) — endpoint byPoint
             $('#apForm').on('submit', async function(e) {
                 e.preventDefault();
                 if (LOCKED) return;
 
-                const mode = $('#apMode').val();
-                const rowId = $('#apRowId').val();
-                const ipp_point_id = $('#apPoint').val();
-                const kind_of_activity = ($('#apKind').val() || '').trim();
-                const target = ($('#apTarget').val() || '').trim();
-                const pic_employee_id = $('#apPic').val();
-
-                if (!ipp_point_id) return toast('Pilih IPP Point.', 'danger');
-                if (!kind_of_activity) return toast('Isi Kind of Activity.', 'danger');
-                if (!pic_employee_id) return toast('Pilih PIC.', 'danger');
-
-                // months dari auto-checked (tetap kebaca walau disabled)
-                const months = MONTHS.filter(m => $('#m' + m).is(':checked'));
-
                 const payload = {
-                    mode,
-                    row_id: rowId || null,
-                    ipp_point_id,
-                    kind_of_activity,
-                    target,
-                    pic_employee_id,
-                    months
+                    mode: $('#apMode').val(),
+                    row_id: $('#apRowId').val() || null,
+                    ipp_point_id: $('#apPoint')
+                        .val(), // tetap dikirim, tapi server sudah tahu point param
+                    kind_of_activity: ($('#apKind').val() || '').trim(),
+                    target: ($('#apTarget').val() || '').trim(),
+                    pic_employee_id: $('#apPic').val(),
+                    start_date: $('#apStart').val(),
+                    due_date: $('#apDue').val(),
+                    months: MONTHS.filter(m => $('#m' + m).is(':checked'))
                 };
 
+                // FE checks ringan
+                if (!payload.ipp_point_id) return toast('IPP Point tidak valid.', 'danger');
+                if (!payload.kind_of_activity) return toast('Isi Kind of Activity.', 'danger');
+                if (!payload.pic_employee_id) return toast('Pilih PIC.', 'danger');
+                if (!payload.start_date) return toast('Pilih Start Date item.', 'danger');
+                if (!payload.due_date) return toast('Pilih Due Date item.', 'danger');
+                if (payload.start_date > payload.due_date) return toast(
+                    'Start Date item tidak boleh setelah Due Date item.', 'danger');
+                if (payload.months.length === 0) return toast(
+                    'Schedule otomatis belum terisi. Sesuaikan Start/Due item.', 'danger');
+
                 try {
-                    const res = await fetch(withIppId("{{ route('activity-plan.item.store') }}"), {
+                    const res = await fetch(routeStore(), {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -511,51 +533,26 @@
                 }
             });
 
-            // Submit gabungan
-            $('#btnSubmitAll').on('click', async function() {
-                if (LOCKED) return;
-                if (!confirm('Submit IPP + Activity Plan sekarang?')) return;
-                const $btn = $(this).prop('disabled', true);
-                try {
-                    const res = await fetch(withIppId("{{ route('activity-plan.submitAll') }}"), {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    const json = await res.json();
-                    if (!res.ok) throw new Error(json?.message || 'Submit gagal.');
-                    toast(json?.message || 'Berhasil submit.');
-                    await init();
-                } catch (err) {
-                    toast(esc(err?.message || 'Submit gagal.'), 'danger');
-                } finally {
-                    $btn.prop('disabled', false);
-                }
-            });
-
-            // tiny toast
             function toast(msg, type = 'success') {
                 const id = 't' + Date.now();
-                const $t = $(`
-      <div class="toast align-items-center text-bg-${type} border-0" id="${id}" role="status" aria-live="polite" aria-atomic="true"
-           style="position:fixed;top:1rem;right:1rem;z-index:1080;">
-        <div class="d-flex">
-          <div class="toast-body">${esc(msg)}</div>
-          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
-        </div>
-      </div>`);
+                const $t = $(
+                    `<div class="toast align-items-center text-bg-${type} border-0" id="${id}" role="status" aria-live="polite" aria-atomic="true" style="position:fixed;top:1rem;right:1rem;z-index:1080;"><div class="d-flex"><div class="toast-body">${esc(msg)}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button></div></div>`
+                );
                 $('body').append($t);
-                const t = new bootstrap.Toast($t[0], {
+                new bootstrap.Toast($t[0], {
                     delay: 2200
-                });
-                t.show();
+                }).show();
                 $t.on('hidden.bs.toast', () => $t.remove());
             }
 
-            // init page
             $(document).ready(function() {
+                if (!IPP_ID || !POINT_ID) {
+                    toast('Buka halaman ini dari IPP (parameter kurang).', 'danger');
+                    setTimeout(() => {
+                        window.location.href = "{{ route('ipp.index') }}";
+                    }, 1200);
+                    return;
+                }
                 init();
                 if ($.fn.select2) {
                     $('#apPoint').select2({
@@ -566,6 +563,7 @@
                     });
                 }
             });
+
         })(jQuery);
     </script>
 @endpush
