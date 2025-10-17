@@ -11,6 +11,7 @@ use App\Models\IppPoint;
 use App\Models\Section;
 use App\Models\SubSection;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -102,7 +103,8 @@ class IppController
             $npk      = (string) $request->query('npk', '');
             $filterUi = (string) $request->query('filter', 'all');
             $norm     = $this->mapTabToNormalized($filterUi);
-            $year     = (string) $request->query('filter_year', now()->format('Y'));
+            // Default sekarang = 'all' agar GET tidak mengunci tahun
+            $year     = (string) $request->query('filter_year', 'all');
             $status   = (string) $request->query('status', '');
             $page     = max(1, (int) $request->query('page', 1));
             $perPage  = min(100, max(5, (int) $request->query('per_page', 20)));
@@ -120,6 +122,7 @@ class IppController
                 'status'       => $status,
                 'page'         => $page,
                 'per_page'     => $perPage,
+                'filter_year'  => $year,
             ]);
 
             $aliasesBucket = $this->aliasesByNormalized();
@@ -127,6 +130,7 @@ class IppController
             $empQuery = null;
             $total    = 0;
             $records  = collect();
+            $planYear = (string) $this->planOnYear();
 
             // =========================================================
             //                HRD / DIREKSI  (FULL COMPANY)
@@ -159,7 +163,7 @@ class IppController
                 // hitung bawahan & karyawan yang menunjuk saya sebagai PIC → HANYA untuk non-HRD
                 $subordinateIds = $this->getSubordinatesFromStructure($me)->pluck('id')->toArray();
 
-                $picEmployeeIds = Ipp::where('on_year', $year)
+                $picEmployeeIds = Ipp::when(strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
                     ->where('pic_review_id', $me->id)
                     ->pluck('employee_id')
                     ->toArray();
@@ -194,13 +198,18 @@ class IppController
             }
 
             // --- mapping output (dipakai kedua branch) ---
-            $data = $records->values()->map(function (Employee $row, $idx) use ($page, $perPage, $year) {
+            $planYearLocal = $planYear; // capture untuk closure
+            $data = $records->values()->map(function (Employee $row, $idx) use ($page, $perPage, $year, $planYearLocal) {
                 $hasIpp     = !is_null($row->ipp_id);
                 $normalized = method_exists($row, 'getNormalizedPosition')
                     ? strtolower($row->getNormalizedPosition())
                     : strtolower($row->position ?? '');
 
                 $department = $row->ipp_department ?: $row->bagian;
+
+                $onYearValue = $hasIpp
+                    ? (string) $row->ipp_on_year
+                    : (strtolower($year) === 'all' ? (string) $planYearLocal : (string) $year);
 
                 return [
                     'no'       => ($page - 1) * $perPage + $idx + 1,
@@ -216,7 +225,7 @@ class IppController
                         'department'          => (string) $department,
                         'grade'               => (string) $row->grade,
                     ],
-                    'on_year'    => $hasIpp ? (string) $row->ipp_on_year : $year,
+                    'on_year'    => $onYearValue,
                     'status'     => $hasIpp ? (string) $row->ipp_status : 'not_created',
                     'summary'    => [],
                     'updated_at' => $hasIpp && $row->ipp_updated_at ? (string) $row->ipp_updated_at : null,
@@ -295,7 +304,7 @@ class IppController
             ->orderByDesc('on_year')
             ->get();
 
-        $nowYear = now()->format('Y');
+        $nowYear = (string) $this->planOnYear();
         $haveCurrent = $ipps->contains(fn($x) => (string)$x->on_year === $nowYear);
 
         $rows = $ipps->map(function (Ipp $ipp) {
@@ -308,7 +317,7 @@ class IppController
             ];
         })->values()->all();
 
-        // entri sintetis kalau tahun berjalan belum ada
+        // entri sintetis kalau tahun berjalan (fiscal) belum ada
         if (!$haveCurrent) {
             array_unshift($rows, [
                 'id'         => null,
@@ -338,7 +347,7 @@ class IppController
     {
         $user  = auth()->user();
         $emp   = $user->employee;
-        $year  = now()->format('Y');
+        $year  = (string) $this->planOnYear();
         $empId = (int) ($emp->id ?? 0);
 
         $picReviewId = null;
@@ -384,7 +393,7 @@ class IppController
         $approvedHeader = null;
 
         if ($empId) {
-            // Cari IPP yang masih bisa diedit (bukan approved)
+            // Cari IPP yang masih bisa diedit (bukan approved) untuk tahun rencana
             $ipp = Ipp::where('employee_id', $empId)
                 ->where('on_year', $year)
                 ->where('status', '!=', 'approved')
@@ -405,8 +414,6 @@ class IppController
                     'status'        => 'approved',
                     'summary'       => $approved->summary ?: null,
                     'locked'        => true,
-                    // (opsional) tambahkan url jika ada:
-                    // 'url_show'   => route('ipp.show', $approved->id),
                 ];
                 $commentsCount = $approved->comments->count();
             }
@@ -426,7 +433,7 @@ class IppController
                         'activity'   => (string) $p->activity,
                         'target_mid' => (string) $p->target_mid,
                         'target_one' => (string) $p->target_one,
-                        'start_date'   => $p->start_date ? substr((string)$p->start_date, 0, 10) : null,
+                        'start_date' => $p->start_date ? substr((string)$p->start_date, 0, 10) : null,
                         'due_date'   => $p->due_date ? substr((string)$p->due_date, 0, 10) : null,
                         'weight'     => (int) $p->weight,
                         'status'     => (string) ($p->status ?? 'draft'),
@@ -481,6 +488,23 @@ class IppController
         return response()->json(['message' => 'Unsupported payload form. Kirim via modal per-point'], 422);
     }
 
+    /** -----------------------------------------------------------------------
+     * Fiscal helpers (Apr–Mar)
+     * --------------------------------------------------------------------- */
+    private function fiscalYearFromDate(Carbon $d): int
+    {
+        // Apr–Dec: fiscal = tahun berjalan; Jan–Mar: fiscal = tahun-1
+        return $d->month >= 4 ? $d->year : $d->year - 1;
+    }
+
+    private function fiscalBounds(int $onYear): array
+    {
+        // Apr onYear s/d Mar onYear+1
+        $start = Carbon::create($onYear, 4, 1, 0, 0, 0)->startOfDay();
+        $end   = Carbon::create($onYear + 1, 3, 31, 23, 59, 59)->endOfDay();
+        return [$start, $end];
+    }
+
     private function storeSinglePoint(Request $request, array $payload)
     {
         $v = validator($payload, [
@@ -509,26 +533,55 @@ class IppController
         $user  = auth()->user();
         $emp   = $user->employee;
         $empId = (int)($emp->id ?? 0);
-        $year  = now()->format('Y');
 
         if (!$empId) {
             return response()->json(['message' => 'Employee tidak ditemukan pada akun ini.'], 422);
         }
 
+        // === Fiscal validation (Apr–Mar) ===
+        try {
+            $start = Carbon::parse($p['start_date'])->startOfDay();
+            $due   = Carbon::parse($p['due_date'])->endOfDay();
+        } catch (\Throwable $e) {
+            return response()->json(['message' => 'Format tanggal tidak valid.'], 422);
+        }
+
+        if ($due->lt($start)) {
+            return response()->json(['message' => 'Due Date tidak boleh sebelum Start Date.'], 422);
+        }
+
+        // Tentukan fiscal on_year dari START DATE
+        $onYear = $this->fiscalYearFromDate($start);
+        [$fStart, $fEnd] = $this->fiscalBounds($onYear);
+
+        // Kedua tanggal wajib masuk ke fiscal bounds dan berada di fiscal year yang sama
+        $dueFY = $this->fiscalYearFromDate($due);
+        if ($dueFY !== $onYear) {
+            return response()->json([
+                'message' => "Start dan Due harus dalam fiscal year yang sama (Apr {$onYear} – Mar " . ($onYear + 1) . ")."
+            ], 422);
+        }
+
+        if ($start->lt($fStart) || $start->gt($fEnd) || $due->lt($fStart) || $due->gt($fEnd)) {
+            return response()->json([
+                'message' => "Tanggal di luar periode fiscal Apr {$onYear} – Mar " . ($onYear + 1) . "."
+            ], 422);
+        }
+
+        // === PIC & header ===
         $picReviewId = null;
+        $picReviewName = '';
         try {
             $assignLevel = method_exists($emp, 'getCreateAuth') ? $emp->getCreateAuth() : null;
             $superior    = $assignLevel && method_exists($emp, 'getSuperiorsByLevel')
                 ? $emp->getSuperiorsByLevel($assignLevel)->first()
                 :  null;
-            $picReviewId = (int) ($superior->id ?? 0) ?: null;
+            $picReviewId   = (int) ($superior->id ?? 0) ?: null;
             $picReviewName = (string) ($superior->name ?? '');
         } catch (\Throwable $e) {
-            $picReviewId = null;
-            $picReviewName = '';
         }
 
-        $headerAttrs = ['employee_id' => $empId, 'on_year' => $year];
+        $headerAttrs = ['employee_id' => $empId, 'on_year' => $onYear];
 
         try {
             DB::beginTransaction();
@@ -561,8 +614,8 @@ class IppController
                     'activity'   => $p['activity'],
                     'target_mid' => $p['target_mid'] ?? null,
                     'target_one' => $p['target_one'] ?? null,
-                    'start_date' => $p['start_date'],
-                    'due_date'   => $p['due_date'],
+                    'start_date' => $start->toDateString(),
+                    'due_date'   => $due->toDateString(),
                     'weight'     => (int)$p['weight'],
                     'status'     => $status,
                 ]);
@@ -572,7 +625,7 @@ class IppController
                     DB::rollBack();
                     return response()->json(['message' => 'Point not found'], 404);
                 }
-                if ((int) $point->ipp->employee_id !== $empId || (string)$point->ipp->on_year !== $year) {
+                if ((int) $point->ipp->employee_id !== $empId || (int)$point->ipp->on_year !== $onYear) {
                     DB::rollBack();
                     return response()->json(['message' => 'Tidak diizinkan mengubah point ini.'], 403);
                 }
@@ -581,13 +634,14 @@ class IppController
                     'activity'   => $p['activity'],
                     'target_mid' => $p['target_mid'] ?? null,
                     'target_one' => $p['target_one'] ?? null,
-                    'start_date' => $p['start_date'],
-                    'due_date'   => $p['due_date'],
+                    'start_date' => $start->toDateString(),
+                    'due_date'   => $due->toDateString(),
                     'weight'     => (int)$p['weight'],
                     'status'     => $status,
                 ]);
             }
 
+            // summary
             $summary = IppPoint::where('ipp_id', $ipp->id)
                 ->selectRaw('category, SUM(weight) as used')
                 ->groupBy('category')
@@ -617,7 +671,7 @@ class IppController
     {
         $user  = auth()->user();
         $emp   = $user->employee;
-        $year  = now()->format('Y');
+        $year  = (string) $this->planOnYear();
         $empId = (int)($emp->id ?? 0);
 
         $ipp = Ipp::where('employee_id', $empId)->where('on_year', $year)->first();
@@ -663,12 +717,15 @@ class IppController
     {
         $user  = auth()->user();
         $emp   = $user->employee;
-        $year  = now()->format('Y');
+        $year  = (string) $this->planOnYear();
         $empId = (int)($emp->id ?? 0);
 
         $ipp = $point->ipp;
 
-        if (!$ipp || (int)$ipp->employee_id !== $empId || (string)$ipp->on_year !== $year) {
+        if ($ipp && (int)$ipp->employee_id === $empId && (string)$ipp->on_year !== $year) {
+            return response()->json(['message' => 'Tidak diizinkan menghapus point ini.'], 403);
+        }
+        if (!$ipp || (int)$ipp->employee_id !== $empId) {
             return response()->json(['message' => 'Tidak diizinkan menghapus point ini.'], 403);
         }
 
@@ -737,9 +794,9 @@ class IppController
             }
 
             // Query params
-            $year   = (string) $request->query('filter_year', now()->format('Y'));
-            $search = trim((string) $request->query('search', ''));
-            $page   = max(1, (int) $request->query('page', 1));
+            $year    = (string) $request->query('filter_year', 'all');
+            $search  = trim((string) $request->query('search', ''));
+            $page    = max(1, (int) $request->query('page', 1));
             $perPage = min(100, max(5, (int) $request->query('per_page', 10)));
 
             // Levels (guard if null / methods not exist)
@@ -758,7 +815,7 @@ class IppController
 
             // Helpers: common constraints
             $baseIPP = Ipp::with(['employee.user'])
-                ->where('on_year', $year)
+                ->when(strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
                 ->where('employee_id', '!=', $me->id) // jangan tampilkan milik saya sendiri
                 // skip owner role HRD
                 ->whereHas('employee.user', function ($q) {
@@ -780,7 +837,6 @@ class IppController
                 $checkIpps = (clone $baseIPP)
                     ->where('status', 'submitted')
                     ->whereHas('employee', function ($q) use ($subCheckIds) {
-                        // IMPORTANT: filter by employees.id (not employee_id)
                         $q->whereIn('id', $subCheckIds->all());
                     })
                     ->get()
@@ -923,7 +979,6 @@ class IppController
         }
     }
 
-
     public function revise(Request $request, int $id)
     {
         try {
@@ -992,7 +1047,6 @@ class IppController
         return response()->json(['data' => $comments]);
     }
 
-
     /** ====== EXPORT EXCEL DAN PDF ====== */
     public function exportExcel(?int $id = null)
     {
@@ -1007,7 +1061,7 @@ class IppController
 
             $ipp = $id
                 ? Ipp::find($id)
-                : Ipp::where('employee_id', $authEmp->id)->where('on_year', now()->format('Y'))->first();
+                : Ipp::where('employee_id', $authEmp->id)->where('on_year', (string)$this->planOnYear())->first();
             abort_if(!$ipp, 404, 'IPP not found.');
 
             // owner
@@ -1309,6 +1363,7 @@ class IppController
             $approvedDate = $approvedAt ? substr((string)$approvedAt, 0, 10) : null;
 
             // Resolve file path tanda tangan
+            $owner    = $owner; // already defined
             $ownerSig    = $resolveSignaturePath($owner);
             $checkedSig  = $resolveSignaturePath($checkedByEmp);
             $approvedSig = $resolveSignaturePath($approvedByEmp);
@@ -1355,6 +1410,7 @@ class IppController
             return redirect()->back()->with('warning', 'Gagal mengekspor Excel: ' . $e->getMessage());
         }
     }
+
     public function exportPdf(?int $id = null)
     {
         try {
@@ -1368,7 +1424,7 @@ class IppController
             // 1) Ambil header IPP
             $ipp = $id
                 ? Ipp::find($id)
-                : Ipp::where('employee_id', $authEmp->id)->where('on_year', now()->format('Y'))->first();
+                : Ipp::where('employee_id', $authEmp->id)->where('on_year', (string)$this->planOnYear())->first();
             abort_if(!$ipp, 404, 'IPP not found.');
 
             // 2) Owner IPP
@@ -1447,8 +1503,8 @@ class IppController
 
             $status = strtolower((string) $ipp->status);
 
-            $checkedBy   = method_exists($ipp, 'checkedBy')  ? $ipp->checkedBy  : ($ipp->checked_by  ? Employee::find($ipp->checked_by)  : null);
-            $approvedBy  = method_exists($ipp, 'approvedBy') ? $ipp->approvedBy : ($ipp->approved_by ? Employee::find($ipp->approved_by) : null);
+            $checkedBy  = method_exists($ipp, 'checkedBy')  ? $ipp->checkedBy  : ($ipp->checked_by  ? Employee::find($ipp->checked_by)  : null);
+            $approvedBy = method_exists($ipp, 'approvedBy') ? $ipp->approvedBy : ($ipp->approved_by ? Employee::find($ipp->approved_by) : null);
 
             $submitAt    = $ipp->last_submitted_at ?? $ipp->submitted_at;
             $checkedAt   = $ipp->checked_at;
@@ -1669,29 +1725,45 @@ class IppController
         ];
     }
 
-    private function ippSelects(string $year): array
+    private function ippSelects(?string $year): array
     {
+        // Jika year=all atau null → ambil IPP terbaru (on_year DESC LIMIT 1)
+        $idBase = Ipp::select('id')
+            ->whereColumn('employee_id', 'employees.id')
+            ->when($year && strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
+            ->when(!$year || strtolower($year) === 'all', fn($q) => $q->orderByDesc('on_year'))
+            ->limit(1);
+
+        $onYearBase = Ipp::select('on_year')
+            ->whereColumn('employee_id', 'employees.id')
+            ->when($year && strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
+            ->when(!$year || strtolower($year) === 'all', fn($q) => $q->orderByDesc('on_year'))
+            ->limit(1);
+
+        $statusBase = Ipp::select('status')
+            ->whereColumn('employee_id', 'employees.id')
+            ->when($year && strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
+            ->when(!$year || strtolower($year) === 'all', fn($q) => $q->orderByDesc('on_year'))
+            ->limit(1);
+
+        $deptBase = Ipp::select('department')
+            ->whereColumn('employee_id', 'employees.id')
+            ->when($year && strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
+            ->when(!$year || strtolower($year) === 'all', fn($q) => $q->orderByDesc('on_year'))
+            ->limit(1);
+
+        $updatedBase = Ipp::select('updated_at')
+            ->whereColumn('employee_id', 'employees.id')
+            ->when($year && strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
+            ->when(!$year || strtolower($year) === 'all', fn($q) => $q->orderByDesc('on_year'))
+            ->limit(1);
+
         return [
-            'ipp_id' => Ipp::select('id')
-                ->where('on_year', $year)
-                ->whereColumn('employee_id', 'employees.id')
-                ->limit(1),
-            'ipp_on_year' => Ipp::select('on_year')
-                ->where('on_year', $year)
-                ->whereColumn('employee_id', 'employees.id')
-                ->limit(1),
-            'ipp_status' => Ipp::select('status')
-                ->where('on_year', $year)
-                ->whereColumn('employee_id', 'employees.id')
-                ->limit(1),
-            'ipp_department' => Ipp::select('department')
-                ->where('on_year', $year)
-                ->whereColumn('employee_id', 'employees.id')
-                ->limit(1),
-            'ipp_updated_at' => Ipp::select('updated_at')
-                ->where('on_year', $year)
-                ->whereColumn('employee_id', 'employees.id')
-                ->limit(1),
+            'ipp_id'         => $idBase,
+            'ipp_on_year'    => $onYearBase,
+            'ipp_status'     => $statusBase,
+            'ipp_department' => $deptBase,
+            'ipp_updated_at' => $updatedBase,
         ];
     }
 
@@ -1739,5 +1811,17 @@ class IppController
         } catch (\Throwable $e) {
             Log::debug($label . ' (failed to render SQL)', ['error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Tahun rencana (fiscal) Apr–Mar:
+     * - Jika bulan >= April → on_year = year+1 (periode Apr (year+1) – Mar (year+2))
+     * - Jika bulan Jan–Mar → on_year = year   (periode Apr year – Mar (year+1))
+     */
+    private function planOnYear(?\Carbon\Carbon $date = null): int
+    {
+        $d = $date ?: now();
+        $y = (int) $d->year;
+        return $d->month >= 4 ? $y + 1 : $y;
     }
 }
