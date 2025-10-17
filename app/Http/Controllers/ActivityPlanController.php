@@ -10,28 +10,23 @@ use App\Models\ActivityPlanItem;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-
-// (Opsional) aktifkan jika kamu pakai Maatwebsite Excel
 use Maatwebsite\Excel\Facades\Excel;
 // use App\Exports\IppActivityPlanExport;
+use Carbon\Carbon;
 
 class ActivityPlanController extends Controller
 {
-    /** Halaman utama Activity Plan (pakai query ?ipp_id=..) */
     public function index(Request $request)
     {
-        // view hanya butuh render blade; data diambil via /init (AJAX)
-        return view('website.activity_plan.index', [
-            'title' => 'Activity Plan',
-        ]);
+        return view('website.activity_plan.index', ['title' => 'Activity Plan']);
     }
 
-    /** INIT: dipanggil JS untuk load data awal (IPP, Plan, Points, Items, Employees) */
     public function init(Request $request)
     {
-        $ippId = (int) $request->query('ipp_id');
-        $user  = $request->user();
-        $emp   = $user?->employee;
+        $ippId   = (int) $request->query('ipp_id');
+        $pointId = (int) $request->query('point_id'); // <<— fokus point
+        $user    = $request->user();
+        $emp     = $user?->employee;
 
         if (!$ippId || !$emp) {
             return response()->json(['message' => 'ipp_id tidak valid atau employee tidak ditemukan.'], 422);
@@ -46,121 +41,7 @@ class ActivityPlanController extends Controller
             return response()->json(['message' => 'IPP tidak ditemukan / bukan milik Anda.'], 404);
         }
 
-        // Pastikan header ActivityPlan ada (draft)
-        $plan = ActivityPlan::firstOrCreate(
-            ['ipp_id' => $ipp->id],
-            [
-                'employee_id'   => $ipp->employee_id,
-                'fy_start_year' => (int) $ipp->on_year,  // FY Apr-(Apr+1)
-                'division'      => $ipp->division,
-                'department'    => $ipp->department,
-                'section'       => $ipp->section,
-                'form_no'       => $ipp->no_form ?? null,
-                'status'        => 'draft',
-            ]
-        );
-
-        // Ambil IPP Points (yang tahun & employee sesuai)
-        $points = IppPoint::query()
-            ->where('ipp_id', $ipp->id)
-            ->orderBy('category')
-            ->orderBy('id')
-            ->get(['id', 'ipp_id', 'category', 'activity', 'target_mid', 'target_one', 'start_date', 'due_date', 'weight', 'status']);
-
-        // Items AP (relasi pic & ipp_point)
-        $items = ActivityPlanItem::with([
-            'pic:id,name,npk',
-            'ippPoint:id,activity,category,start_date,due_date'
-        ])
-            ->where('activity_plan_id', $plan->id)
-            ->orderBy('id')
-            ->get();
-
-        // Karyawan (PIC) — customize filter sesuai kebutuhan
-        $employees = Employee::query()
-            ->orderBy('name')
-            ->get(['id', 'name', 'npk']);
-
-        return response()->json([
-            'ipp'       => [
-                'id'        => $ipp->id,
-                'nama'      => $ipp->nama,
-                'on_year'   => $ipp->on_year,
-                'status'    => $ipp->status,
-            ],
-            'plan'      => [
-                'id'            => $plan->id,
-                'ipp_id'        => $plan->ipp_id,
-                'status'        => $plan->status,
-                'form_no'       => $plan->form_no,
-                'fy_start_year' => $plan->fy_start_year,
-                'division'      => $plan->division,
-                'department'    => $plan->department,
-                'section'       => $plan->section,
-            ],
-            'points'    => $points,
-            'items'     => $items->map(function ($it) {
-                return [
-                    'id'                => $it->id,
-                    'ipp_point_id'      => $it->ipp_point_id,
-                    'kind_of_activity'  => $it->kind_of_activity,
-                    'target'            => $it->target,
-                    'pic_employee_id'   => $it->pic_employee_id,
-                    'schedule_mask'     => (int) $it->schedule_mask,
-                    'cached_category'   => $it->cached_category,
-                    'cached_activity'   => $it->cached_activity,
-                    'cached_start_date' => $it->cached_start_date,
-                    'cached_due_date'   => $it->cached_due_date,
-                    'pic'               => $it->pic ? [
-                        'id'   => $it->pic->id,
-                        'name' => $it->pic->name,
-                        'npk'  => $it->pic->npk,
-                    ] : null,
-                    'ipp_point'         => $it->ippPoint ? [
-                        'id'         => $it->ippPoint->id,
-                        'category'   => $it->ippPoint->category,
-                        'activity'   => $it->ippPoint->activity,
-                        'start_date' => optional($it->ippPoint->start_date)->toDateString(),
-                        'due_date'   => optional($it->ippPoint->due_date)->toDateString(),
-                    ] : null,
-                ];
-            }),
-            'employees' => $employees,
-        ]);
-    }
-
-    /** Create / Edit item AP (body JSON) */
-    public function storeItem(Request $request)
-    {
-        $user  = $request->user();
-        $emp   = $user?->employee;
-        $ippId = (int) $request->query('ipp_id'); // kirim di query agar konsisten
-
-        if (!$emp) return response()->json(['message' => 'Employee tidak ditemukan.'], 422);
-
-        $v = validator($request->all(), [
-            'mode'             => ['required', Rule::in(['create', 'edit'])],
-            'row_id'           => ['nullable', 'integer'],
-            'ipp_point_id'     => ['required', 'integer'],
-            'kind_of_activity' => ['required', 'string', 'max:255'],
-            'target'           => ['nullable', 'string'],
-            'pic_employee_id'  => ['required', 'integer', 'exists:employees,id'],
-            'months'           => ['array'],
-            'months.*'         => ['string', Rule::in($this->months())],
-        ]);
-
-        if ($v->fails()) {
-            return response()->json(['message' => $v->errors()->first()], 422);
-        }
-
-        // Pastikan IPP milik user
-        $ipp = Ipp::where('id', $ippId ?: $request->input('ipp_id'))
-            ->where('employee_id', $emp->id)
-            ->first();
-
-        if (!$ipp) return response()->json(['message' => 'IPP tidak ditemukan / bukan milik Anda.'], 404);
-
-        // Pastikan Plan ada
+        // header plan (draft jika blm ada)
         $plan = ActivityPlan::firstOrCreate(
             ['ipp_id' => $ipp->id],
             [
@@ -174,38 +55,187 @@ class ActivityPlanController extends Controller
             ]
         );
 
-        // Validasi IPP Point milik IPP ini
-        $point = IppPoint::where('id', $request->input('ipp_point_id'))
+        if (!$pointId) {
+            return response()->json(['message' => 'point_id wajib diisi untuk single-point mode.'], 422);
+        }
+
+        $point = IppPoint::query()
+            ->where('id', $pointId)
+            ->where('ipp_id', $ipp->id)
+            ->first(['id', 'ipp_id', 'category', 'activity', 'target_mid', 'target_one', 'start_date', 'due_date', 'weight', 'status']);
+
+        if (!$point) {
+            return response()->json(['message' => 'IPP Point tidak ditemukan / bukan milik IPP ini.'], 404);
+        }
+
+        $items = ActivityPlanItem::with([
+            'pic:id,name,npk',
+            'ippPoint:id,activity,category,start_date,due_date'
+        ])
+            ->where('activity_plan_id', $plan->id)
+            ->where('ipp_point_id', $point->id)
+            ->orderBy('id')
+            ->get();
+
+        $employees = Employee::query()->orderBy('name')->get(['id', 'name', 'npk']);
+
+        return response()->json([
+            'ipp'   => [
+                'id'      => $ipp->id,
+                'nama'    => $ipp->nama,
+                'on_year' => $ipp->on_year,
+                'status'  => $ipp->status,
+            ],
+            'plan'  => [
+                'id'            => $plan->id,
+                'ipp_id'        => $plan->ipp_id,
+                'status'        => $plan->status,
+                'form_no'       => $plan->form_no,
+                'fy_start_year' => $plan->fy_start_year,
+                'division'      => $plan->division,
+                'department'    => $plan->department,
+                'section'       => $plan->section,
+            ],
+            'points' => [$point],
+            'focus_point' => [
+                'id'         => $point->id,
+                'label'      => sprintf(
+                    '[%s] %s — %s→%s',
+                    $point->category,
+                    $point->activity,
+                    optional($point->start_date)->toDateString(),
+                    optional($point->due_date)->toDateString()
+                ),
+            ],
+            'items'  => $items->map(function ($it) {
+                return [
+                    'id'                => $it->id,
+                    'ipp_point_id'      => $it->ipp_point_id,
+                    'kind_of_activity'  => $it->kind_of_activity,
+                    'target'            => $it->target,
+                    'pic_employee_id'   => $it->pic_employee_id,
+                    'schedule_mask'     => (int) $it->schedule_mask,
+                    'cached_category'   => $it->cached_category,
+                    'cached_activity'   => $it->cached_activity,
+                    'cached_start_date' => optional($it->cached_start_date)->toDateString() ?: $it->cached_start_date,
+                    'cached_due_date'   => optional($it->cached_due_date)->toDateString() ?: $it->cached_due_date,
+                    'pic'               => $it->pic ? ['id' => $it->pic->id, 'name' => $it->pic->name, 'npk' => $it->pic->npk] : null,
+                    'ipp_point'         => $it->ippPoint ? [
+                        'id'         => $it->ippPoint->id,
+                        'category'   => $it->ippPoint->category,
+                        'activity'   => $it->ippPoint->activity,
+                        'start_date' => optional($it->ippPoint->start_date)->toDateString(),
+                        'due_date'   => optional($it->ippPoint->due_date)->toDateString(),
+                    ] : null,
+                ];
+            }),
+            'employees' => $employees,
+        ]);
+    }
+
+    /** Create / Edit item AP – validasi: tanggal item ⊆ tanggal point; months ⊆ rentang tanggal item */
+    public function storeItem(Request $request)
+    {
+        $user    = $request->user();
+        $emp     = $user?->employee;
+        $ippId   = (int) $request->query('ipp_id');
+        $pointId = (int) $request->query('point_id'); // <<— fokus point
+
+        if (!$emp) return response()->json(['message' => 'Employee tidak ditemukan.'], 422);
+        if (!$pointId) return response()->json(['message' => 'point_id wajib diisi.'], 422);
+
+        $v = validator($request->all(), [
+            'mode'             => ['required', Rule::in(['create', 'edit'])],
+            'row_id'           => ['nullable', 'integer'],
+            'ipp_point_id'     => ['required', 'integer'],
+            'kind_of_activity' => ['required', 'string', 'max:255'],
+            'target'           => ['nullable', 'string'],
+            'pic_employee_id'  => ['required', 'integer', 'exists:employees,id'],
+            'start_date'       => ['required', 'date_format:Y-m-d'],
+            'due_date'         => ['required', 'date_format:Y-m-d'],
+            'months'           => ['array', 'min:1'],
+            'months.*'         => ['string', Rule::in($this->months())],
+        ]);
+        if ($v->fails()) return response()->json(['message' => $v->errors()->first()], 422);
+
+        // ipp milik user
+        $ipp = Ipp::where('id', $ippId ?: $request->input('ipp_id'))
+            ->where('employee_id', $emp->id)->first();
+        if (!$ipp) return response()->json(['message' => 'IPP tidak ditemukan / bukan milik Anda.'], 404);
+
+        // header plan
+        $plan = ActivityPlan::firstOrCreate(
+            ['ipp_id' => $ipp->id],
+            [
+                'employee_id'   => $ipp->employee_id,
+                'fy_start_year' => (int)$ipp->on_year,
+                'division'      => $ipp->division,
+                'department'    => $ipp->department,
+                'section'       => $ipp->section,
+                'form_no'       => $ipp->no_form ?? null,
+                'status'        => 'draft',
+            ]
+        );
+
+        // point fokus (harus sama dgn ipp_point_id dari body)
+        $ippPointId = (int) $request->input('ipp_point_id');
+        if ($ippPointId !== $pointId) {
+            return response()->json(['message' => 'ipp_point_id tidak sesuai dengan point_id halaman ini.'], 422);
+        }
+
+        $point = IppPoint::where('id', $pointId)
             ->where('ipp_id', $ipp->id)
             ->first();
-
         if (!$point) return response()->json(['message' => 'IPP Point tidak ditemukan / tidak sesuai IPP.'], 404);
 
-        // Build schedule mask
-        $months = $request->input('months', []);
-        $mask   = $this->monthsToMask($months); // 12-bit
+        // ——— validasi tanggal item ⊆ FY & ⊆ point ———
+        $fyStartYear = (int) $ipp->on_year;
+        [$fyStart, $fyEnd] = $this->fiscalBounds($fyStartYear);
 
-        // Cache field dari IPPPoint (biar stabil saat export)
+        $pStart = Carbon::parse($point->start_date)->startOfDay();
+        $pDue   = Carbon::parse($point->due_date)->endOfDay();
+        if ($pDue->lt($pStart)) return response()->json(['message' => 'Data IPP Point tidak valid: Due < Start.'], 422);
+
+        $iStart = Carbon::createFromFormat('Y-m-d', $request->input('start_date'))->startOfDay();
+        $iDue   = Carbon::createFromFormat('Y-m-d', $request->input('due_date'))->endOfDay();
+        if ($iDue->lt($iStart)) return response()->json(['message' => 'Start Date item tidak boleh setelah Due Date item.'], 422);
+
+        if ($iStart->lt($fyStart) || $iStart->gt($fyEnd) || $iDue->lt($fyStart) || $iDue->gt($fyEnd)) {
+            return response()->json(['message' => "Tanggal item harus dalam periode fiscal Apr {$fyStartYear} – Mar " . ($fyStartYear + 1) . '.'], 422);
+        }
+        if ($iStart->lt($pStart) || $iDue->gt($pDue)) {
+            return response()->json(['message' => 'Tanggal item harus berada di dalam rentang Start–Due IPP Point.'], 422);
+        }
+
+        // months ⊆ rentang tanggal item
+        $months   = $request->input('months', []);
+        $allowed  = $this->monthIndicesInRange($iStart, $iDue, $fyStartYear);
+        $selected = array_map(fn($m) => $this->monthIndex($m), $months);
+        foreach ($selected as $idx) {
+            if (!in_array($idx, $allowed, true)) {
+                return response()->json(['message' => 'Schedule bulan harus berada di dalam rentang Start–Due item.'], 422);
+            }
+        }
+        $mask = $this->monthsToMask($months);
+
+        // cache: kategori & activity dari point + tanggal ITEM
         $cache = [
             'cached_category'   => $point->category,
             'cached_activity'   => $point->activity,
-            'cached_start_date' => optional($point->start_date)->toDateString(),
-            'cached_due_date'   => optional($point->due_date)->toDateString(),
+            'cached_start_date' => $iStart->toDateString(),
+            'cached_due_date'   => $iDue->toDateString(),
         ];
 
         try {
             DB::beginTransaction();
-
             if ($request->input('mode') === 'edit') {
                 $item = ActivityPlanItem::where('id', $request->input('row_id'))
                     ->where('activity_plan_id', $plan->id)
                     ->first();
-
                 if (!$item) {
                     DB::rollBack();
                     return response()->json(['message' => 'Item tidak ditemukan.'], 404);
                 }
-
                 $item->update(array_merge([
                     'ipp_point_id'     => $point->id,
                     'kind_of_activity' => $request->input('kind_of_activity'),
@@ -224,9 +254,7 @@ class ActivityPlanController extends Controller
                 ], $cache));
             }
 
-            // reload dengan relasi untuk dikirim balik
             $item->load(['pic:id,name,npk', 'ippPoint:id,activity,category,start_date,due_date']);
-
             DB::commit();
 
             return response()->json([
@@ -237,22 +265,18 @@ class ActivityPlanController extends Controller
                     'kind_of_activity'  => $item->kind_of_activity,
                     'target'            => $item->target,
                     'pic_employee_id'   => $item->pic_employee_id,
-                    'schedule_mask'     => (int) $item->schedule_mask,
+                    'schedule_mask'     => (int)$item->schedule_mask,
                     'cached_category'   => $item->cached_category,
                     'cached_activity'   => $item->cached_activity,
-                    'cached_start_date' => $item->cached_start_date,
-                    'cached_due_date'   => $item->cached_due_date,
-                    'pic' => $item->pic ? [
-                        'id'   => $item->pic->id,
-                        'name' => $item->pic->name,
-                        'npk'  => $item->pic->npk,
-                    ] : null,
-                    'ipp_point' => $item->ippPoint ? [
-                        'id'         => $item->ippPoint->id,
-                        'category'   => $item->ippPoint->category,
-                        'activity'   => $item->ippPoint->activity,
+                    'cached_start_date' => optional($item->cached_start_date)->toDateString() ?: $item->cached_start_date,
+                    'cached_due_date'   => optional($item->cached_due_date)->toDateString() ?: $item->cached_due_date,
+                    'pic'               => $item->pic ? ['id' => $item->pic->id, 'name' => $item->pic->name, 'npk' => $item->pic->npk] : null,
+                    'ipp_point'         => $item->ippPoint ? [
+                        'id' => $item->ippPoint->id,
+                        'category' => $item->ippPoint->category,
+                        'activity' => $item->ippPoint->activity,
                         'start_date' => optional($item->ippPoint->start_date)->toDateString(),
-                        'due_date'   => optional($item->ippPoint->due_date)->toDateString(),
+                        'due_date'  => optional($item->ippPoint->due_date)->toDateString(),
                     ] : null,
                 ],
             ]);
@@ -263,15 +287,12 @@ class ActivityPlanController extends Controller
         }
     }
 
-    /** Hapus item AP */
     public function destroyItem(Request $request, ActivityPlanItem $item)
     {
         $user = $request->user();
-        $emp  = $user?->employee;
-
+        $emp = $user?->employee;
         if (!$emp) return response()->json(['message' => 'Employee tidak ditemukan.'], 422);
 
-        // Pastikan item milik plan milik employee
         $plan = ActivityPlan::where('id', $item->activity_plan_id)->first();
         if (!$plan) return response()->json(['message' => 'Activity Plan tidak ditemukan.'], 404);
 
@@ -287,78 +308,66 @@ class ActivityPlanController extends Controller
         }
     }
 
-    /** Submit gabungan IPP + Activity Plan */
     public function submitAll(Request $request)
     {
-        $user  = $request->user();
-        $emp   = $user?->employee;
-        $ippId = (int) ($request->query('ipp_id') ?: $request->input('ipp_id'));
-
+        $user = $request->user();
+        $emp = $user?->employee;
+        $ippId = (int)($request->query('ipp_id') ?: $request->input('ipp_id'));
         if (!$emp) return response()->json(['message' => 'Employee tidak ditemukan.'], 422);
 
-        // Temukan IPP milik user (prioritas dari query ipp_id)
         $ippQuery = Ipp::with('points')->where('employee_id', $emp->id);
         if ($ippId) $ippQuery->where('id', $ippId);
-        else $ippQuery->where('on_year', now()->format('Y')); // fallback: tahun berjalan
-
+        else $ippQuery->where('on_year', now()->format('Y'));
         $ipp = $ippQuery->first();
         if (!$ipp) return response()->json(['message' => 'IPP tidak ditemukan.'], 404);
 
         $plan = ActivityPlan::with('items')->where('ipp_id', $ipp->id)->first();
         if (!$plan) return response()->json(['message' => 'Activity Plan belum dibuat.'], 422);
 
-        // ===== Validasi IPP (cap & total 100)
-        // Ambil CAP dari controller IPP jika ada konstanta; fallback manual
-        $caps = method_exists(\App\Http\Controllers\IppController::class, 'CAP')
-            ? \App\Http\Controllers\IppController::CAP
-            : [
-                'activity_management' => 70,
-                'people_development'  => 10,
-                'crp'                 => 10,
-                'special_assignment'  => 10,
-            ];
-
+        // IPP caps & total
+        $caps = ['activity_management' => 70, 'people_development' => 10, 'crp' => 10, 'special_assignment' => 10];
         $grouped = $ipp->points->groupBy('category')->map->sum('weight');
         foreach ($caps as $cat => $cap) {
-            if (($grouped[$cat] ?? 0) > $cap) {
-                return response()->json(['message' => "Bobot kategori {$cat} melebihi cap {$cap}%."], 422);
-            }
+            if (($grouped[$cat] ?? 0) > $cap) return response()->json(['message' => "Bobot kategori {$cat} melebihi cap {$cap}%."], 422);
         }
-        if ($ipp->points->isEmpty()) {
-            return response()->json(['message' => 'Tambahkan minimal satu IPP point.'], 422);
-        }
-        $total = (int) $ipp->points->sum('weight');
-        if ($total !== 100) {
-            return response()->json(['message' => 'Total bobot IPP harus tepat 100%.'], 422);
-        }
+        if ($ipp->points->isEmpty()) return response()->json(['message' => 'Tambahkan minimal satu IPP point.'], 422);
+        if ((int)$ipp->points->sum('weight') !== 100) return response()->json(['message' => 'Total bobot IPP harus tepat 100%.'], 422);
 
-        // ===== Validasi Activity Plan
-        if (!$plan->items || $plan->items->isEmpty()) {
-            return response()->json(['message' => 'Tambahkan minimal satu Activity Plan item.'], 422);
-        }
-        $validPointIds = $ipp->points->pluck('id')->all();
+        if (!$plan->items || $plan->items->isEmpty()) return response()->json(['message' => 'Tambahkan minimal satu Activity Plan item.'], 422);
+
+        [$fyStart, $fyEnd] = $this->fiscalBounds((int)$ipp->on_year);
         foreach ($plan->items as $it) {
-            if (!in_array($it->ipp_point_id, $validPointIds, true)) {
-                return response()->json(['message' => 'Terdapat item Activity Plan yang bukan berasal dari IPP ini.'], 422);
-            }
-            if (!$it->kind_of_activity) {
-                return response()->json(['message' => 'Kind of activity wajib diisi.'], 422);
-            }
-            if (!$it->pic_employee_id) {
-                return response()->json(['message' => 'PIC wajib dipilih.'], 422);
+            if (!$it->kind_of_activity) return response()->json(['message' => 'Kind of activity wajib diisi.'], 422);
+            if (!$it->pic_employee_id) return response()->json(['message' => 'PIC wajib dipilih.'], 422);
+
+            $pt = IppPoint::find($it->ipp_point_id);
+            if (!$pt || $pt->ipp_id !== $ipp->id) return response()->json(['message' => 'Terdapat item Activity Plan yang bukan berasal dari IPP ini.'], 422);
+
+            $pStart = Carbon::parse($pt->start_date)->startOfDay();
+            $pDue  = Carbon::parse($pt->due_date)->endOfDay();
+
+            // validasi tanggal item (gunakan cached_* sebagai sumber)
+            $iStart = Carbon::parse($it->cached_start_date ?? $pt->start_date)->startOfDay();
+            $iDue   = Carbon::parse($it->cached_due_date   ?? $pt->due_date)->endOfDay();
+            if ($iDue->lt($iStart)) return response()->json(['message' => 'Ada item dengan Due < Start.'], 422);
+            if ($iStart->lt($fyStart) || $iDue->gt($fyEnd)) return response()->json(['message' => 'Ada item di luar periode fiscal IPP.'], 422);
+            if ($iStart->lt($pStart) || $iDue->gt($pDue)) return response()->json(['message' => 'Ada item memiliki tanggal di luar rentang IPP Point.'], 422);
+
+            // months ⊆ rentang point (lebih ketat)
+            $allowedPoint = $this->monthIndicesInRange($pStart, $pDue, (int)$ipp->on_year);
+            $sel = $this->maskToMonthIndices((int)$it->schedule_mask);
+            foreach ($sel as $idx) {
+                if (!in_array($idx, $allowedPoint, true)) return response()->json(['message' => 'Ada item dengan schedule di luar rentang Start–Due IPP Point.'], 422);
             }
         }
 
-        // ===== Submit (lock) keduanya
         try {
             DB::transaction(function () use ($ipp, $plan) {
                 IppPoint::where('ipp_id', $ipp->id)->update(['status' => 'submitted']);
                 $ipp->update(['status' => 'submitted', 'submitted_at' => now()]);
-
-                ActivityPlanItem::where('activity_plan_id', $plan->id)->update(['status' => 'submitted']); // jika ada kolom status
+                ActivityPlanItem::where('activity_plan_id', $plan->id)->update(['status' => 'submitted']);
                 $plan->update(['status' => 'submitted', 'submitted_at' => now()]);
             });
-
             return response()->json(['message' => 'IPP + Activity Plan berhasil disubmit.']);
         } catch (\Throwable $e) {
             report($e);
@@ -366,47 +375,316 @@ class ActivityPlanController extends Controller
         }
     }
 
-    /** Export Excel multi-sheet (IPP & Activity Plan) – opsional */
     public function exportExcel(Request $request)
+    {
+        $ippId = (int)$request->query('ipp_id');
+        $user = $request->user();
+        $emp = $user?->employee;
+        if (!$ippId || !$emp) return back()->with('error', 'ipp_id tidak valid.');
+        $ipp = Ipp::where('id', $ippId)->where('employee_id', $emp->id)->first();
+        if (!$ipp) return back()->with('error', 'IPP tidak ditemukan / bukan milik Anda.');
+        // $fname='IPP-ActivityPlan-'.$ipp->on_year.'-'.$emp->name.'.xlsx';
+        // return Excel::download(new IppActivityPlanExport($ipp->id), $fname);
+        return back()->with('error', 'Export belum diimplementasikan (IppActivityPlanExport).');
+    }
+
+    public function showByPoint(Request $request, int $point)
+    {
+        return view('website.activity_plan.index', [
+            'title'   => 'Activity Plan',
+            'ippId'   => (int)$request->query('ipp_id'),
+            'pointId' => $point,
+        ]);
+    }
+
+    public function initByPoint(Request $request, IppPoint $point)
     {
         $ippId = (int) $request->query('ipp_id');
         $user  = $request->user();
         $emp   = $user?->employee;
 
         if (!$ippId || !$emp) {
-            return back()->with('error', 'ipp_id tidak valid.');
+            return response()->json(['message' => 'ipp_id tidak valid atau employee tidak ditemukan.'], 422);
         }
 
-        $ipp = Ipp::where('id', $ippId)->where('employee_id', $emp->id)->first();
-        if (!$ipp) return back()->with('error', 'IPP tidak ditemukan / bukan milik Anda.');
+        $ipp = Ipp::with('employee')
+            ->where('id', $ippId)
+            ->where('employee_id', $emp->id)
+            ->first();
+        if (!$ipp) return response()->json(['message' => 'IPP tidak ditemukan / bukan milik Anda.'], 404);
+        if ((int)$point->ipp_id !== (int)$ipp->id) {
+            return response()->json(['message' => 'IPP Point tidak sesuai dengan IPP.'], 422);
+        }
 
-        // Jika kamu sudah punya export class, uncomment 3 baris ini:
-        // $fname = 'IPP-ActivityPlan-'.$ipp->on_year.'-'.$emp->name.'.xlsx';
-        // return Excel::download(new IppActivityPlanExport($ipp->id), $fname);
+        $plan = ActivityPlan::firstOrCreate(
+            ['ipp_id' => $ipp->id],
+            [
+                'employee_id'   => $ipp->employee_id,
+                'fy_start_year' => (int)$ipp->on_year,
+                'division'      => $ipp->division,
+                'department'    => $ipp->department,
+                'section'       => $ipp->section,
+                'form_no'       => $ipp->no_form ?? null,
+                'status'        => 'draft',
+            ]
+        );
 
-        // Placeholder jika belum ada export
-        return back()->with('error', 'Export belum diimplementasikan (IppActivityPlanExport).');
+        $items = ActivityPlanItem::with(['pic:id,name,npk', 'ippPoint:id,activity,category,start_date,due_date'])
+            ->where('activity_plan_id', $plan->id)
+            ->where('ipp_point_id', $point->id)
+            ->orderBy('id')
+            ->get();
+
+        $employees = Employee::orderBy('name')->get(['id', 'name', 'npk']);
+
+        $pointPayload = [
+            'id'         => $point->id,
+            'ipp_id'     => $point->ipp_id,
+            'category'   => $point->category,
+            'activity'   => $point->activity,
+            'target_mid' => $point->target_mid,
+            'target_one' => $point->target_one,
+            'weight'     => $point->weight,
+            'cached_start_date' => optional($point->cached_start_date)->toDateString() ?: ($point->cached_start_date ?? optional($point->start_date)->toDateString()),
+            'cached_due_date'   => optional($point->cached_due_date)->toDateString()   ?: ($point->cached_due_date   ?? optional($point->due_date)->toDateString()),
+            'start_date'        => optional($point->start_date)->toDateString(),
+            'due_date'          => optional($point->due_date)->toDateString(),
+        ];
+
+        return response()->json([
+            'ipp'  => ['id' => $ipp->id, 'nama' => $ipp->nama, 'on_year' => $ipp->on_year, 'status' => $ipp->status],
+            'plan' => [
+                'id'            => $plan->id,
+                'ipp_id'        => $plan->ipp_id,
+                'status'        => $plan->status,
+                'form_no'       => $plan->form_no,
+                'fy_start_year' => $plan->fy_start_year,
+                'division'      => $plan->division,
+                'department'    => $plan->department,
+                'section'       => $plan->section,
+            ],
+            'point' => $pointPayload,
+            'items' => $items->map(function ($it) {
+                return [
+                    'id'                => $it->id,
+                    'ipp_point_id'      => $it->ipp_point_id,
+                    'kind_of_activity'  => $it->kind_of_activity,
+                    'target'            => $it->target,
+                    'pic_employee_id'   => $it->pic_employee_id,
+                    'schedule_mask'     => (int)$it->schedule_mask,
+                    'cached_category'   => $it->cached_category,
+                    'cached_activity'   => $it->cached_activity,
+                    'cached_start_date' => optional($it->cached_start_date)->toDateString() ?: $it->cached_start_date,
+                    'cached_due_date'   => optional($it->cached_due_date)->toDateString()   ?: $it->cached_due_date,
+                    'pic'               => $it->pic ? ['id' => $it->pic->id, 'name' => $it->pic->name, 'npk' => $it->pic->npk] : null,
+                    'ipp_point'         => $it->ippPoint ? [
+                        'id'         => $it->ippPoint->id,
+                        'category'   => $it->ippPoint->category,
+                        'activity'   => $it->ippPoint->activity,
+                        'start_date' => optional($it->ippPoint->start_date)->toDateString(),
+                        'due_date'   => optional($it->ippPoint->due_date)->toDateString(),
+                    ] : null,
+                ];
+            }),
+            'employees' => $employees,
+        ]);
     }
 
-    // ===== Helpers =====
+    public function storeItemByPoint(Request $request, IppPoint $point)
+    {
+        $user  = $request->user();
+        $emp   = $user?->employee;
+        $ippId = (int) $request->query('ipp_id');
 
-    /** Urutan bulan FY Apr–Mar (sesuai UI) */
+        if (!$emp) return response()->json(['message' => 'Employee tidak ditemukan.'], 422);
+
+        $v = validator($request->all(), [
+            'mode'             => ['required', Rule::in(['create', 'edit'])],
+            'row_id'           => ['nullable', 'integer'],
+            'ipp_point_id'     => ['required', 'integer'],
+            'kind_of_activity' => ['required', 'string', 'max:255'],
+            'target'           => ['nullable', 'string'],
+            'pic_employee_id'  => ['required', 'integer', 'exists:employees,id'],
+            'start_date'       => ['required', 'date_format:Y-m-d'],
+            'due_date'         => ['required', 'date_format:Y-m-d'],
+            'months'           => ['array', 'min:1'],
+            'months.*'         => ['string', Rule::in($this->months())],
+        ]);
+        if ($v->fails()) return response()->json(['message' => $v->errors()->first()], 422);
+
+        $ipp = Ipp::where('id', $ippId ?: $request->input('ipp_id'))
+            ->where('employee_id', $emp->id)->first();
+        if (!$ipp) return response()->json(['message' => 'IPP tidak ditemukan / bukan milik Anda.'], 404);
+        if ((int)$point->ipp_id !== (int)$ipp->id) {
+            return response()->json(['message' => 'IPP Point tidak sesuai dengan IPP.'], 422);
+        }
+
+        $plan = ActivityPlan::firstOrCreate(
+            ['ipp_id' => $ipp->id],
+            [
+                'employee_id'   => $ipp->employee_id,
+                'fy_start_year' => (int)$ipp->on_year,
+                'division'      => $ipp->division,
+                'department'    => $ipp->department,
+                'section'       => $ipp->section,
+                'form_no'       => $ipp->no_form ?? null,
+                'status'        => 'draft',
+            ]
+        );
+
+        $pStartRaw = $point->cached_start_date ?? $point->start_date;
+        $pDueRaw   = $point->cached_due_date   ?? $point->due_date;
+
+        $pStart = Carbon::parse($pStartRaw)->startOfDay();
+        $pDue   = Carbon::parse($pDueRaw)->endOfDay();
+        if ($pDue->lt($pStart)) return response()->json(['message' => 'Data IPP Point tidak valid: Due < Start.'], 422);
+
+        $iStart = Carbon::createFromFormat('Y-m-d', $request->input('start_date'))->startOfDay();
+        $iDue   = Carbon::createFromFormat('Y-m-d', $request->input('due_date'))->endOfDay();
+        if ($iDue->lt($iStart)) return response()->json(['message' => 'Start Date item tidak boleh setelah Due Date item.'], 422);
+
+        if ($iStart->lt($pStart) || $iDue->gt($pDue)) {
+            return response()->json(['message' => 'Tanggal item harus di dalam rentang Start–Due IPP Point terpilih.'], 422);
+        }
+
+        $fyStartYear = (int) ($iStart->month >= 4 ? $iStart->year : $iStart->year - 1);
+        $allowed = $this->monthIndicesInRange($iStart, $iDue, $fyStartYear);
+        $months  = $request->input('months', []);
+        $selected = array_map(fn($m) => $this->monthIndex($m), $months);
+        foreach ($selected as $idx) {
+            if (!in_array($idx, $allowed, true)) {
+                return response()->json(['message' => 'Schedule bulan harus berada di dalam rentang Start–Due item.'], 422);
+            }
+        }
+        $mask = $this->monthsToMask($months);
+
+        $cache = [
+            'cached_category'   => $point->category,
+            'cached_activity'   => $point->activity,
+            'cached_start_date' => $iStart->toDateString(),
+            'cached_due_date'   => $iDue->toDateString(),
+        ];
+
+        try {
+            DB::beginTransaction();
+
+            if ($request->input('mode') === 'edit') {
+                $item = ActivityPlanItem::where('id', $request->input('row_id'))
+                    ->where('activity_plan_id', $plan->id)
+                    ->where('ipp_point_id', $point->id) // pastikan item memang milik point ini
+                    ->first();
+                if (!$item) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'Item tidak ditemukan.'], 404);
+                }
+
+                $item->update(array_merge([
+                    'ipp_point_id'     => $point->id,
+                    'kind_of_activity' => $request->input('kind_of_activity'),
+                    'target'           => $request->input('target'),
+                    'pic_employee_id'  => (int)$request->input('pic_employee_id'),
+                    'schedule_mask'    => $mask,
+                ], $cache));
+            } else {
+                $item = ActivityPlanItem::create(array_merge([
+                    'activity_plan_id' => $plan->id,
+                    'ipp_point_id'     => $point->id,
+                    'kind_of_activity' => $request->input('kind_of_activity'),
+                    'target'           => $request->input('target'),
+                    'pic_employee_id'  => (int)$request->input('pic_employee_id'),
+                    'schedule_mask'    => $mask,
+                ], $cache));
+            }
+
+            $item->load(['pic:id,name,npk', 'ippPoint:id,activity,category,start_date,due_date']);
+            DB::commit();
+
+            return response()->json([
+                'message' => 'Draft tersimpan.',
+                'item'    => [
+                    'id'                => $item->id,
+                    'ipp_point_id'      => $item->ipp_point_id,
+                    'kind_of_activity'  => $item->kind_of_activity,
+                    'target'            => $item->target,
+                    'pic_employee_id'   => $item->pic_employee_id,
+                    'schedule_mask'     => (int)$item->schedule_mask,
+                    'cached_category'   => $item->cached_category,
+                    'cached_activity'   => $item->cached_activity,
+                    'cached_start_date' => optional($item->cached_start_date)->toDateString() ?: $item->cached_start_date,
+                    'cached_due_date'   => optional($item->cached_due_date)->toDateString()   ?: $item->cached_due_date,
+                    'pic'               => $item->pic ? ['id' => $item->pic->id, 'name' => $item->pic->name, 'npk' => $item->pic->npk] : null,
+                    'ipp_point'         => $item->ippPoint ? [
+                        'id' => $item->ippPoint->id,
+                        'category' => $item->ippPoint->category,
+                        'activity' => $item->ippPoint->activity,
+                        'start_date' => optional($item->ippPoint->start_date)->toDateString(),
+                        'due_date'  => optional($item->ippPoint->due_date)->toDateString(),
+                    ] : null,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            report($e);
+            DB::rollBack();
+            return response()->json(['message' => 'Gagal menyimpan item.'], 500);
+        }
+    }
+
+
+    // ===== Helpers =====
     private function months(): array
     {
         return ['APR', 'MAY', 'JUN', 'JUL', 'AGT', 'SEPT', 'OCT', 'NOV', 'DEC', 'JAN', 'FEB', 'MAR'];
     }
-
-    /** Encode array bulan ke bitmask 12-bit */
+    private function monthIndex(string $token): int
+    {
+        $map = array_flip($this->months());
+        return $map[$token] ?? -1;
+    }
     private function monthsToMask(array $months): int
     {
-        $list = $this->months();
-        $map  = array_flip($list); // 'APR' => 0, 'MAY' => 1, ...
         $mask = 0;
         foreach ($months as $m) {
-            if (isset($map[$m])) {
-                $mask |= (1 << $map[$m]);
-            }
+            $idx = $this->monthIndex($m);
+            if ($idx >= 0) $mask |= (1 << $idx);
         }
         return $mask;
+    }
+    private function maskToMonthIndices(int $mask): array
+    {
+        $out = [];
+        for ($i = 0; $i < 12; $i++) if ($mask & (1 << $i)) $out[] = $i;
+        return $out;
+    }
+
+    private function fiscalYearFromDate(Carbon $d): int
+    {
+        return $d->month >= 4 ? $d->year : $d->year - 1;
+    }
+    private function fiscalBounds(int $onYear): array
+    {
+        $start = Carbon::create($onYear, 4, 1, 0, 0, 0)->startOfDay();
+        $end  = Carbon::create($onYear + 1, 3, 31, 23, 59, 59)->endOfDay();
+        return [$start, $end];
+    }
+
+    /** index bulan Apr..Mar yang tertutup rentang tanggal */
+    private function monthIndicesInRange(Carbon $start, Carbon $due, int $onYear): array
+    {
+        [$fyStart, $fyEnd] = $this->fiscalBounds($onYear);
+        $s = $start->copy()->max($fyStart);
+        $e = $due->copy()->min($fyEnd);
+
+        $toAprMarIdx = function (Carbon $d) use ($onYear): int {
+            $y = (int)$d->year;
+            $m = (int)$d->month;
+            if ($y === $onYear) return max(0, min(11, $m - 4));     // Apr=4 -> 0
+            return max(0, min(11, $m + 8));                       // Jan=1 -> 9 ... Mar=3 -> 11
+        };
+
+        $sIdx = $toAprMarIdx($s->copy()->startOfMonth());
+        $eIdx = $toAprMarIdx($e->copy()->endOfMonth());
+        $list = [];
+        for ($i = $sIdx; $i <= $eIdx; $i++) $list[] = $i;
+        return $list;
     }
 }

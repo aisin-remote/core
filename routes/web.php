@@ -329,6 +329,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::delete('/item/{item}', [ActivityPlanController::class, 'destroyItem'])->name('item.destroy');
         Route::post('/submit-all', [ActivityPlanController::class, 'submitAll'])->name('submitAll');
         Route::get('/export-excel', [ActivityPlanController::class, 'exportExcel'])->name('export.excel');
+
+        Route::get('/point/{point}', [ActivityPlanController::class, 'showByPoint'])->name('byPoint');
+        Route::get('/point/{point}/init', [ActivityPlanController::class, 'initByPoint'])->name('init.byPoint');
+        Route::post('/point/{point}/item', [ActivityPlanController::class, 'storeItemByPoint'])->name('item.store.byPoint');
     });
 
     Route::prefix('ipa')->name('ipa.')->group(function () {
