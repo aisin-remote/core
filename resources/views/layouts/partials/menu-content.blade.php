@@ -383,6 +383,9 @@
                 } elseif ($isGM) {
                     $level = 'division';
                     $id = optional($employee->division)->id;
+                } elseif ($isMg) {
+                    $level = 'department';
+                    $id = optional($employee->department)->id;
                 }
 
                 // Jika id belum ada, biarkan null—controller akan fallback aman
