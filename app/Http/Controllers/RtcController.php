@@ -24,183 +24,38 @@ class RtcController extends Controller
         $user     = auth()->user();
         $employee = $user->employee;
 
-        // fallback company dari employee (tetap dipakai untuk cabang non-company)
-        $company ??= $employee->company_name;
-
         // Normalisasi posisi
-        $posRaw = trim((string)($employee->position ?? ''));
-        $pos    = strtolower($posRaw);
-
-        // Jika tersedia helper normalize
+        $posRaw     = trim((string)($employee->position ?? ''));
+        $pos        = strtolower($posRaw);
         $normalized = method_exists($employee, 'getNormalizedPosition')
             ? strtolower((string)$employee->getNormalizedPosition())
             : $pos;
 
         $isHRD       = ($user->role === 'HRD');
-        $isPresident = in_array($pos, ['president', 'presdir', 'president director', 'president director'], true)
+        $isPresident = in_array($pos, ['president', 'presdir', 'president director'], true)
             || in_array($normalized, ['president', 'presdir'], true);
         $isVPD       = in_array($pos, ['vpd', 'vice president director', 'wakil presdir'], true)
-            || ($normalized === 'vpd');
+            || $normalized === 'vpd';
+        $isDirektur  = in_array($pos, ['direktur', 'director'], true) || $normalized === 'direktur';
+        $isGM        = in_array($pos, ['gm', 'act gm'], true) || in_array($normalized, ['gm', 'act gm'], true);
+        $isMg        = in_array($pos, ['manager', 'coordinator'], true) || in_array($normalized, ['manager', 'coordinator'], true);
 
-        $isGM = $employee && in_array($pos, ['gm', 'act gm'], true);
-        $isDirektur  = ($pos === 'direktur');
-
-        // =====================================================================
-        // 0) PRESIDENT / VPD / HRD  -> Tampilkan daftar COMPANY (AII & AIIA)
-        // =====================================================================
+        // Tentukan tab default (level) sesuai role
         if ($isHRD || $isPresident || $isVPD) {
-            $title = 'RTC';
-            $table = 'Company';
-
-            // Karena tidak ada master company, define static di sini
-            $companies = collect([
-                (object)['id' => 'AII',  'name' => 'AII'],
-                (object)['id' => 'AIIA', 'name' => 'AIIA'],
-            ]);
-
-            // Tidak ada plan & status di level company
-            $showPlanColumns   = false;
-            $showStatusColumn  = false;
-
-            return view('website.rtc.index', [
-                'title'            => $title,
-                'table'            => $table,
-                'divisions'        => $companies,   // blade pakai $divisions untuk list
-                'items'            => $companies,   // kompat
-                'employees'        => collect(),
-                'rtcs'             => collect(),
-                'showPlanColumns'  => $showPlanColumns,
-                'showStatusColumn' => $showStatusColumn,
-            ]);
+            $level = 'company';
+        } elseif ($isDirektur) {
+            $level = 'direksi';
+        } elseif ($isGM) {
+            $level = 'division';
+        } elseif ($isMg) {
+            $level = 'department';
+        } else {
+            $level = 'division';
         }
 
-        // =====================================================================
-        // 1) DIREKTUR → Tampilkan PLANT yang dia pegang
-        // =====================================================================
-        if ($isDirektur) {
-            $table  = 'Plant';
-            $title  = 'RTC';
-
-            $items = Plant::query()
-                ->where('company', $company)
-                ->where('director_id', $employee->id)
-                ->orderBy('name')
-                ->get();
-
-            $showPlanColumns   = false;
-            $showStatusColumn  = false;
-
-            return view('website.rtc.index', [
-                'title'            => $title,
-                'table'            => $table,
-                'divisions'        => $items,
-                'items'            => $items,
-                'employees'        => collect(),
-                'rtcs'             => collect(),
-                'showPlanColumns'  => $showPlanColumns,
-                'showStatusColumn' => $showStatusColumn,
-            ]);
-        }
-
-        // =====================================================================
-        // 2) HRD (fallback lama) → Division + plan + status  (tetap dipertahankan)
-        //    (catatan: HRD sudah ditangani di branch company di atas. Jika ingin
-        //    HRD melihat langsung Division, comment out blok "company" di atas.)
-        // =====================================================================
-        if ($user->role === 'HRD') {
-            $table = 'Division';
-            $title = 'RTC';
-
-            $raw = Division::query()
-                ->where('company', $company)
-                ->orderBy('name')
-                ->get();
-
-            $items = $this->decoratePlansAndOverall($raw, 'division');
-
-            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
-                ->where('company_name', $company)
-                ->get();
-
-            $showPlanColumns   = true;
-            $showStatusColumn  = true;
-
-            return view('website.rtc.index', [
-                'title'            => $title,
-                'table'            => $table,
-                'divisions'        => $items,
-                'items'            => $items,
-                'employees'        => $employees,
-                'rtcs'             => Rtc::all(),
-                'showPlanColumns'  => $showPlanColumns,
-                'showStatusColumn' => $showStatusColumn,
-            ]);
-        }
-
-        // =====================================================================
-        // 3) GM → Division miliknya (tanpa plan & status)
-        // =====================================================================
-        if ($isGM) {
-            $table = 'Division';
-            $title = 'RTC';
-
-            $items = Division::query()
-                ->where('gm_id', $employee->id)
-                ->orderBy('name')
-                ->get();
-
-            $employees = Employee::whereIn('position', ['Manager', 'Coordinator'])
-                ->where('company_name', $employee->company_name)
-                ->get();
-
-            $showPlanColumns   = false;
-            $showStatusColumn  = false;
-
-            return view('website.rtc.list', [
-                'title'            => $title,
-                'table'            => $table,
-                'divisions'        => $items,
-                'items'            => $items,
-                'employees'        => $employees,
-                'rtcs'             => Rtc::all(),
-                'showPlanColumns'  => $showPlanColumns,
-                'showStatusColumn' => $showStatusColumn,
-            ]);
-        }
-
-        // =====================================================================
-        // 4) Role lain → Department + plan + status (berdasarkan division user)
-        // =====================================================================
-        $table      = 'Department';
-        $title      = 'RTC';
-        $divisionId = $employee->division_id ?? null;
-
-        $raw = Department::query()
-            ->when($divisionId, fn($q) => $q->where('division_id', $divisionId))
-            ->orderBy('name')
-            ->get();
-
-        $items = $this->decoratePlansAndOverall($raw, 'department');
-
-        $employees = Employee::whereIn('position', ['Supervisor', 'Section Head'])
-            ->where('company_name', $employee->company_name)
-            ->get();
-
-        $showPlanColumns   = true;
-        $showStatusColumn  = true;
-
-        return view('website.rtc.index', [
-            'title'            => $title,
-            'table'            => $table,
-            'divisions'        => $items,
-            'items'            => $items,
-            'employees'        => $employees,
-            'rtcs'             => Rtc::all(),
-            'showPlanColumns'  => $showPlanColumns,
-            'showStatusColumn' => $showStatusColumn,
-        ]);
+        // Semua rendering halaman list dialihkan ke RtcController@list
+        return redirect()->route('rtc.list', ['level' => $level]);
     }
-
 
     /**
      * Hias koleksi item (Division/Department) dengan:
@@ -343,11 +198,11 @@ class RtcController extends Controller
                 'isMg' => $isMg,
             ]);
 
-            $readOnly   = ($isTop2 || $isHRD);
+            $readOnly = ($isTop2 || $isHRD);
 
             /* ===== HRD/Top2: companies & direksi map ===== */
-            $companies = [];
-            $plantsByCompany = collect();
+            $companies       = collect();
+            $plantsByCompany = [];
             if ($isHRD || $isTop2) {
                 $companies = collect([
                     ['code' => 'AII',  'name' => 'AII'],
@@ -363,8 +218,8 @@ class RtcController extends Controller
             Log::debug('[RTC][list] company scope data', [
                 'trace' => $trace,
                 'company_scope' => ($isHRD || $isTop2),
-                'companies_count' => is_array($companies) ? count($companies) : ($companies instanceof \Illuminate\Support\Collection ? $companies->count() : 0),
-                'plants_map_companies' => array_keys(is_array($plantsByCompany) ? $plantsByCompany : []),
+                'companies_count' => $companies instanceof \Illuminate\Support\Collection ? $companies->count() : 0,
+                'plants_map_companies' => array_keys($plantsByCompany),
             ]);
 
             /* ===== Scope direksi utk tab Division (non GM) ===== */
@@ -390,13 +245,7 @@ class RtcController extends Controller
                 'plants_dropdown_count' => $plants instanceof \Illuminate\Support\Collection ? $plants->count() : 0,
             ]);
 
-            /* ===== Tabs =====
-           - HRD/Top2: seperti semula (Company, Direksi, Division, Department, Section, Sub Section)
-           - Direktur: Direksi, Division, Department, Section, Sub Section
-           - GM: Division, Department, Section, Sub Section
-           - Manager: Department, Section, Sub Section
-        ===== */
-            $tabs = [];
+            /* ===== Tabs ===== */
             if ($isHRD || $isTop2) {
                 $tabs = [
                     'company'     => ['label' => 'Company',     'show' => true, 'id' => null],
@@ -412,20 +261,17 @@ class RtcController extends Controller
                     'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
                     'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
                     'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
-                    // 'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
                 ];
             } elseif ($isGM) {
                 $tabs = [
                     'division'    => ['label' => 'Division',    'show' => true, 'id' => null],
                     'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
                     'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
-                    // 'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
                 ];
             } elseif ($isMg) {
                 $tabs = [
                     'department'  => ['label' => 'Department',  'show' => true, 'id' => null],
                     'section'     => ['label' => 'Section',     'show' => true, 'id' => null],
-                    // 'sub_section' => ['label' => 'Sub Section', 'show' => true, 'id' => null],
                 ];
             } else {
                 $tabs = [
@@ -458,7 +304,8 @@ class RtcController extends Controller
                 default       => 'division',
             };
 
-            $divisionsForSelect = collect();
+            // Divisions for select (dept/section/sub_section)
+            $divisionsForSelect   = collect();
             $preselectedDivisionId = null;
             if (in_array($tableFilter, ['department', 'section', 'sub_section'], true)) {
                 if ($isGM) {
@@ -471,14 +318,11 @@ class RtcController extends Controller
                 } elseif ($isMg) {
                     $divisionsForSelect = Division::whereHas('departments', function ($q) use ($employee) {
                         $q->where('manager_id', $employee->id);
-                    })
-                        ->orderBy('name')->get(['id', 'name']);
-                } else {
-                    $divisionsForSelect = collect();
+                    })->orderBy('name')->get(['id', 'name']);
                 }
             }
 
-            /* ===== Employees utk modal Add ===== */
+            /* ===== Employees utk modal Add (tetap dipakai untuk select2 emergency) ===== */
             $employeesQuery = Employee::select('id', 'name', 'position', 'company_name')->orderBy('name');
             if (!($isHRD || $isTop2)) {
                 $employeesQuery->where('company_name', $employee->company_name);
@@ -491,7 +335,7 @@ class RtcController extends Controller
                 'employees_select_count' => $employees instanceof \Illuminate\Support\Collection ? $employees->count() : 0,
             ]);
 
-            /* ===== Mengisi data di table setiap tab ===== */
+            /* ===== Container Id per tab ===== */
             if ($tableFilter === 'division') {
                 if ($isGM) {
                     $containerId = null;
@@ -512,11 +356,7 @@ class RtcController extends Controller
                     $containerId = null;
                 }
             } elseif ($tableFilter === 'direksi') {
-                if ($isDirektur && $employee->plant) {
-                    $containerId = (int) $employee->plant->id;
-                } else {
-                    $containerId = null;
-                }
+                $containerId = ($isDirektur && $employee->plant) ? (int) $employee->plant->id : null;
             } else {
                 $containerId = null;
             }
@@ -533,14 +373,12 @@ class RtcController extends Controller
 
             // Visibilitas KPI & Add
             $hideKpiCols  = in_array($tableFilter, ['company'], true);
-            $forceHideAdd = $hideKpiCols || ($isGM && in_array($tableFilter, ['department', 'section', 'sub_section'], true)) ||
-                ($isDirektur && in_array($tableFilter, ['division', 'department', 'section', 'sub_section'], true));
+            $forceHideAdd = $hideKpiCols
+                || ($isGM       && in_array($tableFilter, ['department', 'section', 'sub_section'], true))
+                || ($isDirektur && in_array($tableFilter, ['division', 'department', 'section', 'sub_section'], true));
 
-            // ===============================
-            // ===== Hitung Not-Set Tabs =====
-            // ===============================
+            // =============================== Not-Set count per tab ===============================
             $nz = fn($v) => (int) max(0, (int) ($v ?? 0));
-
             $counts = [
                 'company'     => 0,
                 'direksi'     => 0,
@@ -550,12 +388,9 @@ class RtcController extends Controller
                 'sub_section' => 0,
             ];
 
-            // Company
             if ($tabs['company']['show'] ?? false) {
                 $counts['company'] = $nz(RtcService::countNotSet('company', []));
             }
-
-            // Direksi
             if ($tabs['direksi']['show'] ?? false) {
                 if ($isDirektur && $employee->plant) {
                     $counts['direksi'] = $nz(RtcService::countNotSet('direksi', [
@@ -568,15 +403,11 @@ class RtcController extends Controller
                     ]));
                 }
             }
-
-            // Division
             if ($tabs['division']['show'] ?? false) {
                 if ($isGM) {
                     $divIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
                 } elseif ($isDirektur && $employee->plant) {
                     $divIds = Division::where('plant_id', $employee->plant->id)->pluck('id')->all();
-                } elseif ($isHRD || $isTop2) {
-                    $divIds = Division::pluck('id')->all();
                 } else {
                     $divIds = Division::pluck('id')->all();
                 }
@@ -585,7 +416,6 @@ class RtcController extends Controller
                 ]));
             }
 
-            // Base division untuk level di bawahnya (dept/section/sub_section)
             if ($isGM) {
                 $baseDivisionIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
             } elseif ($isDirektur && $employee->plant) {
@@ -606,7 +436,6 @@ class RtcController extends Controller
                 }
             }
 
-            // Sisipkan angka ke $tabs
             foreach ($tabs as $k => $tab) {
                 if (!($tab['show'] ?? false)) continue;
                 $tabs[$k]['not_set_count'] = $counts[$k] ?? 0;
@@ -624,7 +453,7 @@ class RtcController extends Controller
             ]);
 
             // === render view
-            $resp = view('website.rtc.list', [
+            return view('website.rtc.list', [
                 'title'            => 'RTC',
                 'cardTitle'        => $cardTitle,
 
@@ -651,14 +480,6 @@ class RtcController extends Controller
                 'hideKpiCols'      => $hideKpiCols,
                 'forceHideAdd'     => $forceHideAdd,
             ]);
-
-            Log::info('[RTC][list] end', [
-                'trace' => $trace,
-                'duration_ms' => round((microtime(true) - $t0) * 1000, 2),
-                'mem_mb' => round(memory_get_usage(true) / 1048576, 2),
-            ]);
-
-            return $resp;
         } catch (\Throwable $e) {
             Log::error('[RTC][list] ERROR', [
                 'trace' => $trace,

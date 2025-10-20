@@ -230,32 +230,44 @@
                 <form id="addPlanForm">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title">Add Plan</h5>
+                            <h5 class="modal-title" id="addPlanLabel">Add Plan</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
+
                         <div class="modal-body">
+                            {{-- Ringkasan jumlah kandidat yang termuat --}}
+                            <div id="rtc_counts" class="d-none small mb-3">
+                                <span class="me-3">ST: <span id="cnt_st" class="fw-semibold">0</span></span>
+                                <span class="me-3">MT: <span id="cnt_mt" class="fw-semibold">0</span></span>
+                                <span>LT: <span id="cnt_lt" class="fw-semibold">0</span></span>
+                            </div>
+
+                            {{-- Tiga slot kandidat --}}
                             <div class="mb-3">
                                 <label for="short_term" class="form-label">Short Term</label>
                                 <select id="short_term" name="short_term" class="form-select rtc-s2"
-                                    data-placeholder="Cari karyawan (ST) ...">
+                                    data-placeholder="Kandidat untuk ST (≤ 1 tahun)">
                                     <option value="">-- Select --</option>
                                 </select>
                             </div>
+
                             <div class="mb-3">
                                 <label for="mid_term" class="form-label">Mid Term</label>
                                 <select id="mid_term" name="mid_term" class="form-select rtc-s2"
-                                    data-placeholder="Cari karyawan (MT) ...">
+                                    data-placeholder="Kandidat untuk MT (2–3 tahun)">
                                     <option value="">-- Select --</option>
                                 </select>
                             </div>
+
                             <div class="mb-3">
                                 <label for="long_term" class="form-label">Long Term</label>
                                 <select id="long_term" name="long_term" class="form-select rtc-s2"
-                                    data-placeholder="Cari karyawan (LT) ...">
+                                    data-placeholder="Kandidat untuk LT (≥ 3 tahun)">
                                     <option value="">-- Select --</option>
                                 </select>
                             </div>
                         </div>
+
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-primary">Save</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -265,11 +277,12 @@
             </div>
         </div>
     @endunless
+
 @endsection
 
 @push('scripts')
     <script>
-        // Boot data
+        // ===== Boot data (tetap dari server) =====
         window.ACTIVE_FILTER = @json($tableFilter ?? 'division');
         window.CONTAINER_ID = @json($divisionId ?? null);
         window.READ_ONLY = @json((bool) ($readOnly ?? false));
@@ -284,9 +297,13 @@
         window.COLSPAN = @json(4 + (empty($hideKpiCols) ? 5 : 0));
         window.EMPLOYEES = @json($employees ?? []);
         window.VISIBLE_TABS = @json(collect($tabs)->filter(fn($t) => $t['show'])->keys()->values());
+
+        // Tambahan routes untuk kandidat ICP & update
+        window.ROUTE_RTC_CANDIDATES = @json(route('rtc.candidates'));
+        window.ROUTE_RTC_UPDATE = @json(route('rtc.update'));
     </script>
 
-    {{-- SCRIPT: Table render + fetch + events (punyamu, tanpa logika badge lagi) --}}
+    {{-- ===== Table render + fetch + events (tetap, dengan minor penyesuaian selector tombol Add) ===== --}}
     <script>
         $(function() {
             function esc(s) {
@@ -334,18 +351,16 @@
             function renderRows(items, filter) {
                 if (!items || !items.length) return renderEmpty('No data');
                 const rows = items.map((row, i) => {
-                    console.log(row);
-
                     const st = row.short?.name ? esc(row.short.name) :
                         '<span class="text-not-set">-</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) : '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) : '<span class="text-not-set">-</span>';
                     const statusHtml = statusChip(row.overall);
-                    const lastYear = row.last_year ? esc(row.last_year) : '-';
                     const previewBtn =
                         `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
                     let addBtn = '';
                     if (!window.READ_ONLY && !window.HIDE_ADD && row.can_add) {
+                        // gunakan class .btn-show-modal untuk membuka modal
                         addBtn =
                             `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>`;
                     }
@@ -437,19 +452,7 @@
                 });
             }
 
-            function populateEmployeeSelects() {
-                const all = window.EMPLOYEES || [];
-                const comp = ($('#companySelect').val() || '').toUpperCase();
-                const list = comp ? all.filter(e => (String(e.company_name || '').toUpperCase() === comp)) : all;
-                const opts = ['<option value="">-- Select --</option>'].concat(list.map(e =>
-                    `<option value="${e.id}">${$('<div>').text(e.name).html()}</option>`));
-                $('#short_term,#mid_term,#long_term').each(function() {
-                    $(this).html(opts.join(''));
-                });
-            }
-            $(document).on('click', '.btn-show-modal', populateEmployeeSelects);
-
-            // Initial load
+            // ===== Initial load =====
             (function init() {
                 if (window.IS_COMPANY_SCOPE) {
                     if (window.ACTIVE_FILTER === 'company') {
@@ -475,7 +478,7 @@
                 }
             })();
 
-            // Events
+            // ===== Filters (company/plant/division) =====
             function populatePlants(companyCode) {
                 const $plant = $('#plantSelect');
                 $plant.prop('disabled', !companyCode);
@@ -530,10 +533,23 @@
             });
         });
     </script>
-
-    {{-- Modal + Select2 helper + Submit (punyamu) --}}
+@endpush
+@push('scripts')
     <script>
         $(function() {
+            // Area ID yang sedang di-add dari tombol "Add"
+            window.CURRENT_AREA_ID = null;
+
+            // Mapping tab → daftar kode target (tanpa input user)
+            const TAB_TO_KODES = {
+                direksi: ['GM', 'SGM', 'AGM'], // Direktur / Act Direktur
+                division: ['SM', 'M'], // GM / Act GM
+                department: ['AM', 'SS'], // Manager / Coordinator
+                section: ['S', 'AS'], // Section Head / Supervisor
+                sub_section: []
+            };
+
+            // ---------- Helpers ----------
             function initSelect2InModal() {
                 $('#addPlanModal .rtc-s2').each(function() {
                     const $el = $(this);
@@ -547,67 +563,129 @@
                 });
             }
 
-            function populateEmployeeSelects() {
-                const all = window.EMPLOYEES || [];
-                const comp = ($('#companySelect').val() || '').toUpperCase();
-                const list = comp ? all.filter(e => (String(e.company_name || '').toUpperCase() === comp)) : all;
-                const opts = ['<option value=""></option>'].concat(list.map(e =>
-                    `<option value="${e.id}">${$('<div>').text(e.name).html()}</option>`));
-                $('#short_term, #mid_term, #long_term').each(function() {
-                    $(this).html(opts.join(''));
+            function resetRtcModal() {
+                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                    $(sel).empty().append('<option value="">-- Select --</option>').trigger('change');
                 });
-                initSelect2InModal();
+                $('#cnt_st').text(0);
+                $('#cnt_mt').text(0);
+                $('#cnt_lt').text(0);
+                $('#rtc_counts').addClass('d-none');
             }
+
+            // Ambil kandidat dari beberapa kode (sesuai tab) lalu gabungkan
+            function loadCandidatesForActiveTab() {
+                const filter = (window.ACTIVE_FILTER || '').toLowerCase();
+                const kodes = TAB_TO_KODES[filter] || [];
+                resetRtcModal();
+                if (!kodes.length) return;
+
+                const paramsBase = {};
+                const comp = ($('#companySelect').val() || '').toUpperCase();
+                if (comp) paramsBase.company = comp; // HRD/Top2 bisa lintas company
+
+                // Loading state
+                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                    $(sel).html('<option value="">Loading...</option>').trigger('change');
+                });
+
+                const reqs = kodes.map(k =>
+                    $.getJSON(window.ROUTE_RTC_CANDIDATES, {
+                        ...paramsBase,
+                        kode: k
+                    })
+                    .then(r => (r && r.data) ? r.data : [])
+                    .catch(() => [])
+                );
+                Promise.all(reqs).then(chunks => {
+                    const data = chunks.flat();
+
+                    // Dedup per (employee_id + term)
+                    const uniq = {};
+                    data.forEach(r => uniq[`${r.employee_id}|${r.term}`] = r);
+                    const rows = Object.values(uniq);
+
+                    const st = [],
+                        mt = [],
+                        lt = [];
+                    rows.forEach(r => {
+                        const opt = `
+          <option value="${r.employee_id}">
+            ${$('<div>').text(r.name).html()}
+            • ${$('<div>').text(r.job_function || '-').html()}
+            • ${$('<div>').text(r.level || '-').html()}
+            • ${$('<div>').text(r.plan_year || '-').html()}
+          </option>`;
+                        if (r.term === 'short') st.push(opt);
+                        else if (r.term === 'mid') mt.push(opt);
+                        else lt.push(opt);
+                    });
+
+                    $('#short_term').html('<option value="">-- Select --</option>' + st.join('')).trigger(
+                        'change');
+                    $('#mid_term').html('<option value="">-- Select --</option>' + mt.join('')).trigger(
+                        'change');
+                    $('#long_term').html('<option value="">-- Select --</option>' + lt.join('')).trigger(
+                        'change');
+
+                    $('#cnt_st').text(st.length);
+                    $('#cnt_mt').text(mt.length);
+                    $('#cnt_lt').text(lt.length);
+                    $('#rtc_counts').toggleClass('d-none', rows.length === 0);
+                }).catch(() => {
+                    Swal.fire('Error', 'Gagal memuat kandidat', 'error');
+                    resetRtcModal();
+                });
+            }
+
+            // ---------- Events ----------
+            // Klik tombol Add → buka modal + load kandidat sesuai tab
             $(document).on('click', '.btn-show-modal', function() {
-                populateEmployeeSelects();
+                window.CURRENT_AREA_ID = $(this).data('id') || null;
                 $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
+                loadCandidatesForActiveTab();
             });
+
+            // Jika HRD/Top2 ganti company saat modal terbuka → refresh kandidat
             $('#companySelect').on('change', function() {
-                if ($('#addPlanModal').is(':visible')) populateEmployeeSelects();
+                if ($('#addPlanModal').is(':visible')) loadCandidatesForActiveTab();
             });
+
+            // Tutup modal → bersihkan select2 & state
             $('#addPlanModal').on('hidden.bs.modal', function() {
                 $(this).find('.rtc-s2').each(function() {
                     if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
                 });
-            });
-            window.__populateEmployeeSelects = populateEmployeeSelects;
-        });
-    </script>
-
-    <script>
-        $(function() {
-            window.CURRENT_AREA_ID = null;
-
-            $(document).on('click', '.btn-show-modal', function() {
-                window.CURRENT_AREA_ID = $(this).data('id') || null;
-                if (typeof window.__populateEmployeeSelects === 'function') window
-                    .__populateEmployeeSelects();
+                window.CURRENT_AREA_ID = null;
+                resetRtcModal();
             });
 
+            // Submit RTC (pakai GET sesuai controller yang ada)
             $('#addPlanForm').on('submit', function(e) {
                 e.preventDefault();
 
-                if (!window.CURRENT_AREA_ID) {
-                    Swal.fire('Oops', 'Area tidak valid.', 'warning');
-                    return;
-                }
+                const areaId = window.CURRENT_AREA_ID || null;
+                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
 
                 const payload = {
-                    filter: window.ACTIVE_FILTER,
-                    id: window.CURRENT_AREA_ID,
+                    filter: (window.ACTIVE_FILTER || '').toLowerCase(),
+                    id: areaId,
                     short_term: $('#short_term').val() || '',
                     mid_term: $('#mid_term').val() || '',
-                    long_term: $('#long_term').val() || '',
+                    long_term: $('#long_term').val() || ''
                 };
 
+                if (!payload.short_term && !payload.mid_term && !payload.long_term) {
+                    return Swal.fire('Validasi', 'Pilih minimal satu kandidat (ST/MT/LT).', 'warning');
+                }
+
                 $.ajax({
-                    url: @json(route('rtc.update')),
+                    url: window.ROUTE_RTC_UPDATE,
                     type: 'GET',
-                    data: payload,
+                    data: payload
                 }).done(function() {
                     $('#addPlanModal').modal('hide');
                     Swal.fire('Berhasil', 'RTC berhasil disimpan.', 'success');
-
                     const cid = window.CONTAINER_ID || null;
                     if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
                     else location.reload();
@@ -616,11 +694,6 @@
                         'Gagal menyimpan RTC';
                     Swal.fire('Gagal', msg, 'error');
                 });
-            });
-
-            $('#addPlanModal').on('hidden.bs.modal', function() {
-                window.CURRENT_AREA_ID = null;
-                $(this).find('select').val('').trigger('change');
             });
         });
     </script>

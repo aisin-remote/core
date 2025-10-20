@@ -202,7 +202,7 @@
                                         <td class="text-center">
                                             {{-- Detail untuk level Company → ke list plant --}}
                                             @if ($table === 'Company')
-                                                <a href="{{ route('rtc.structure.dabeng', ['id' => $division->id, 'filter' => $table]) }}"
+                                                <a href="{{ route('rtc.list', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
                                                     Preview
                                                 </a>
@@ -212,7 +212,7 @@
                                                 </a>
                                             @elseif ($table === 'Plant')
                                                 <a class="btn btn-sm btn-info"
-                                                    href="{{ route('rtc.structure.dabeng', ['id' => $division->id]) }}?filter=plant"
+                                                    href="{{ route('rtc.list', ['id' => $division->id]) }}?filter=plant"
                                                     title="RTC Summary" target="_blank">
                                                     Preview
                                                 </a>
@@ -221,7 +221,7 @@
                                                     Detail
                                                 </a>
                                             @else
-                                                <a href="{{ route('rtc.structure.dabeng', ['id' => $division->id, 'filter' => $table]) }}"
+                                                <a href="{{ route('rtc.list', ['id' => $division->id, 'filter' => $table]) }}"
                                                     class="btn btn-sm btn-info" title="View" target="_blank">
                                                     Preview
                                                 </a>
@@ -264,21 +264,56 @@
                             <h5 class="modal-title">Add Plan</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
+
                         <div class="modal-body">
+                            {{-- area level yang sedang diisi --}}
                             <input type="hidden" name="filter" value="{{ strtolower($table) }}">
-                            @foreach (['short_term' => 'Short Term', 'mid_term' => 'Mid Term', 'long_term' => 'Long Term'] as $key => $label)
-                                <div class="mb-3">
-                                    <label for="{{ $key }}" class="form-label">{{ $label }}</label>
-                                    <select id="{{ $key }}" class="form-select select2-in-modal"
-                                        name="{{ $key }}">
-                                        <option value="">-- Select --</option>
-                                        @foreach ($employees as $employee)
-                                            <option value="{{ $employee->id }}">{{ $employee->name }}</option>
-                                        @endforeach
-                                    </select>
+                            {{-- term hasil kalkulasi dari kandidat terpilih (short|mid|long) --}}
+                            <input type="hidden" id="selected_term" name="term" value="">
+
+                            <div class="mb-3">
+                                <label for="kode_rtc" class="form-label">Kode RTC</label>
+                                <select id="kode_rtc" class="form-select select2-in-modal">
+                                    <option value="">-- Pilih Kode --</option>
+                                    @foreach (['AS', 'S', 'SS', 'AM', 'M', 'SM', 'AGM', 'GM', 'SGM'] as $kode)
+                                        <option value="{{ $kode }}">{{ $kode }}</option>
+                                    @endforeach
+                                </select>
+                                <small class="text-muted d-block mt-1">
+                                    Pilih target posisi (AS/S/SS/AM/M/SM/AGM/GM/SGM) untuk menarik kandidat dari ICP.
+                                </small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="candidate_select" class="form-label">Kandidat (otomatis dari ICP)</label>
+                                <select id="candidate_select" class="form-select select2-in-modal">
+                                    <option value="">-- Pilih kandidat --</option>
+                                </select>
+                                <small class="text-muted d-block mt-1">
+                                    Daftar sudah difilter berdasar ICP: posisi, level, dan plan_year (≥ tahun ini).
+                                </small>
+                            </div>
+
+                            {{-- Panel info kandidat terpilih --}}
+                            <div id="candidate_info" class="border rounded p-3 d-none">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <div class="fw-semibold" id="ci_name">-</div>
+                                        <div class="text-muted small" id="ci_company">-</div>
+                                    </div>
+                                    <span id="ci_term_badge" class="badge rounded-pill text-uppercase"></span>
                                 </div>
-                            @endforeach
+                                <hr class="my-2">
+                                <div class="row g-2 small">
+                                    <div class="col-6">Job Function: <span id="ci_job_function"
+                                            class="fw-semibold">-</span></div>
+                                    <div class="col-3">Level: <span id="ci_level" class="fw-semibold">-</span></div>
+                                    <div class="col-3">Plan Year: <span id="ci_plan_year" class="fw-semibold">-</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
+
                         <div class="modal-footer">
                             <button type="button" id="submitPlanBtn" class="btn btn-primary">Save</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -289,30 +324,34 @@
         </div>
     @endif
 @endsection
+@dd($showPlanColumns)
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     @if ($showPlanColumns)
         <script>
-            let currentDivisionId = null;
+            let currentDivisionId = null; // area_id yang sedang dibuka modalnya
+            const areaFilter = @json(strtolower($table)); // company/direksi/division/department/section/sub_section
 
-            $filterParam = strtolower(str_replace(' ', '_', $table));
-
-
+            // buka modal
             $(document).on('click', '.open-add-plan-modal', function() {
                 currentDivisionId = $(this).data('id');
                 const $modal = $('#addPlanModal');
+                // reset form
+                $('#kode_rtc').val('').trigger('change');
+                $('#candidate_select').empty().append('<option value="">-- Pilih kandidat --</option>').trigger(
+                    'change');
+                $('#candidate_info').addClass('d-none');
+                $('#selected_term').val('');
                 if ($modal.length) $modal.modal('show');
             });
 
-            // Init Select2 saat modal tampil (gunakan dropdownParent agar tidak "tembus" modal)
+            // init select2 setiap modal tampil
             $('#addPlanModal').on('shown.bs.modal', function() {
                 $(this).find('.select2-in-modal').each(function() {
                     const $sel = $(this);
-                    if ($sel.hasClass('select2-hidden-accessible')) {
-                        $sel.select2('destroy');
-                    }
+                    if ($sel.hasClass('select2-hidden-accessible')) $sel.select2('destroy');
                     $sel.select2({
                         dropdownParent: $('#addPlanModal'),
                         width: '100%',
@@ -322,18 +361,106 @@
                 });
             });
 
+            // helper: render badge term
+            function renderTermBadge(term) {
+                const $b = $('#ci_term_badge');
+                $b.removeClass('bg-success bg-warning bg-secondary');
+                if (term === 'short') $b.addClass('bg-success');
+                else if (term === 'mid') $b.addClass('bg-warning');
+                else $b.addClass('bg-secondary');
+                $b.text((term || '-').toUpperCase());
+            }
+
+            // saat Kode RTC berubah → load kandidat
+            $('#kode_rtc').on('change', function() {
+                const kode = $(this).val();
+                const $cand = $('#candidate_select');
+                $('#selected_term').val('');
+                $('#candidate_info').addClass('d-none');
+                $cand.empty().append('<option value="">Loading...</option>').trigger('change');
+
+                if (!kode) {
+                    $cand.empty().append('<option value="">-- Pilih kandidat --</option>').trigger('change');
+                    return;
+                }
+
+                $.getJSON('{{ route('rtc.candidates') }}', {
+                    kode: kode
+                }, function(resp) {
+                    $cand.empty().append('<option value="">-- Pilih kandidat --</option>');
+                    if (resp.status === 'ok') {
+                        resp.data.forEach(row => {
+                            console.log(row);
+
+                            // simpan payload ringkas di data-attributes
+                            const opt = $('<option>')
+                                .val(row.employee_id)
+                                .text(
+                                    `${row.name} • ${row.job_function} • ${row.level} • ${row.plan_year} (${row.term.toUpperCase()})`
+                                )
+                                .attr('data-term', row.term)
+                                .attr('data-name', row.name)
+                                .attr('data-company', row.company_name)
+                                .attr('data-job_function', row.job_function)
+                                .attr('data-level', row.level)
+                                .attr('data-year', row.plan_year);
+                            $cand.append(opt);
+                        });
+                    }
+                    $cand.trigger('change');
+                }).fail(function(xhr) {
+                    console.error(xhr.responseText);
+                    Swal.fire('Error', 'Gagal memuat kandidat ICP', 'error');
+                    $cand.empty().append('<option value="">-- Pilih kandidat --</option>').trigger('change');
+                });
+            });
+
+            // saat kandidat dipilih → tampilkan panel info + set hidden term
+            $('#candidate_select').on('change', function() {
+                const $opt = $(this).find('option:selected');
+                const id = $(this).val();
+                if (!id) {
+                    $('#candidate_info').addClass('d-none');
+                    $('#selected_term').val('');
+                    return;
+                }
+
+                const term = $opt.data('term') || '';
+                $('#selected_term').val(term);
+
+                $('#ci_name').text($opt.data('name') || '-');
+                $('#ci_company').text($opt.data('company') || '-');
+                $('#ci_job_function').text($opt.data('job_function') || '-');
+                $('#ci_level').text($opt.data('level') || '-');
+                $('#ci_plan_year').text($opt.data('year') || '-');
+                renderTermBadge(term);
+                $('#candidate_info').removeClass('d-none');
+            });
+
+            // submit: petakan employee ke field ST/MT/LT sesuai term (backend tetap sama)
             $('#submitPlanBtn').on('click', function() {
+                const kode = $('#kode_rtc').val();
+                const employeeId = $('#candidate_select').val();
+                const term = $('#selected_term').val();
+
+                if (!kode) return Swal.fire('Validasi', 'Pilih Kode RTC terlebih dahulu.', 'warning');
+                if (!employeeId) return Swal.fire('Validasi', 'Pilih kandidat terlebih dahulu.', 'warning');
+                if (!term) return Swal.fire('Validasi', 'Term kandidat tidak terbaca.', 'warning');
+
                 const formData = {
-                    filter: @json($table),
-                    id: currentDivisionId,
-                    short_term: $('#short_term').val(),
-                    mid_term: $('#mid_term').val(),
-                    long_term: $('#long_term').val(),
+                    filter: @json($table), // area (Division/Department/...)
+                    id: currentDivisionId, // area_id
+                    short_term: '',
+                    mid_term: '',
+                    long_term: ''
                 };
+                if (term === 'short') formData.short_term = employeeId;
+                else if (term === 'mid') formData.mid_term = employeeId;
+                else formData.long_term = employeeId;
 
                 $.ajax({
                     url: '{{ route('rtc.update') }}',
-                    type: 'GET', // idealnya POST/PUT
+                    type: 'GET', // (idealnya POST/PUT, mengikuti kode kamu sekarang)
                     data: formData,
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -343,11 +470,14 @@
                     window.location.reload();
                 }).fail(function(xhr) {
                     console.error(xhr.responseText);
-                    Swal.fire('Error', 'Something went wrong', 'error');
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message :
+                        'Something went wrong';
+                    Swal.fire('Error', msg, 'error');
                 });
             });
         </script>
     @endif
+
 
     <script>
         // Simple search di client
