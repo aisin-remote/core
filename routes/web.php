@@ -19,6 +19,7 @@ use App\Http\Controllers\ToDoListController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\ChecksheetController;
 use App\Http\Controllers\CompetencyController;
+use App\Http\Controllers\RtcCandidateController;
 use App\Http\Controllers\ActivityPlanController;
 use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
@@ -272,6 +273,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('rtc')->group(function () {
+        Route::get('/candidates', [RtcCandidateController::class, 'index'])->name('rtc.candidates');
         Route::get('/summary/{id?}', [RtcController::class, 'summary'])->name('rtc.summary');
         Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/list/{id?}', [RtcController::class, 'list'])->name('rtc.list');
