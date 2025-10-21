@@ -289,7 +289,7 @@ class AssessmentController extends Controller
     public function update(Request $request)
     {
         $validated = $this->validateAssessmentRequest($request, true);
-        $assessment = Assessment::findOrFail($request->assessment_id);
+        $assessment = Assessment::findOrFail($validated['assessment_id']);
 
         // cek apakah ini assessment terbaru dari employee
         $isLatestAssessment = $this->isLatestAssessment($assessment);

@@ -25,7 +25,7 @@ class AssessmentImport implements WithMultipleSheets, WithEvents
         $this->filePath = $filePath;
         $this->havId = $havId;
         $this->detailData = $detailData;
-        $this->updateHav = $updateHav; // Tambahkan parameter baru
+        $this->updateHav = $updateHav;
     }
 
     public function sheets(): array

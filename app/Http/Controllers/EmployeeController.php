@@ -1343,12 +1343,6 @@ class EmployeeController extends Controller
 
             // Get year hav terakhir
             $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->max('year');
-            if (!$havLastYear) {
-                DB::rollBack();
-                return redirect()
-                    ->back()
-                    ->with('error', 'Assessment karyawan belum di assess');
-            }
             // Update HAV Quadran
             (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
@@ -1380,13 +1374,6 @@ class EmployeeController extends Controller
 
             // Get year hav terakhir
             $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->max('year');
-            if (!$havLastYear) {
-                DB::rollBack();
-                return redirect()
-                    ->back()
-                    ->with('error', 'Assessment karyawan belum di assess');
-            }
-
             // Update HAV Quadran
             (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 
@@ -1409,12 +1396,6 @@ class EmployeeController extends Controller
 
             // Get year hav terakhir
             $havLastYear = Hav::where('employee_id', $appraisal->employee_id)->max("year");
-            if (!$havLastYear) {
-                DB::rollBack();
-                return redirect()
-                    ->back()
-                    ->with('error', 'Assessment karyawan belum di assess');
-            }
             // Update HAV Quadran
             (new HavQuadrant())->updateHavFromPerformance($appraisal->employee_id, (int) $havLastYear);
 

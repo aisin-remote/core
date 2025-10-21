@@ -58,7 +58,6 @@ class HavQuadrant extends Model
             [15, 9, 6, 5],
             [16, 12, 11, 10]
         ];
-
         // Insert or update the hav_quadrant table
         $havQuadrant = HavQuadrant::updateOrCreate(
             ['employee_id' => $employee_id],
@@ -113,8 +112,7 @@ class HavQuadrant extends Model
         }
 
         $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
-        $this->generateHavQuadrant($employee_id, $average, $pkScore);
-
+        $quadrant = $this->generateHavQuadrant($employee_id, $average, $pkScore);
         return $this->generateHavQuadrant($employee_id, $average, $pkScore);
     }
 
@@ -125,7 +123,6 @@ class HavQuadrant extends Model
         $getHavQuadrant = HavQuadrant::where('employee_id', $employee_id)->first();
         $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
         $quadrant = $this->generateHavQuadrant($employee_id, $getHavQuadrant->assessment_score ?? 1, $pkScore);
-
         Hav::where('employee_id', $employee_id)
             ->update(['quadrant' => $quadrant]);
     }
