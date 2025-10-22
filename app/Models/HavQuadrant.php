@@ -68,6 +68,8 @@ class HavQuadrant extends Model
             ]
         );
 
+        Log::info($havQuadrant);
+
         // Mengembalikan nilai sesuai posisi X dan Y
         return $matrix[$row][$col];
     }
@@ -122,9 +124,7 @@ class HavQuadrant extends Model
     {
         $getHavQuadrant = HavQuadrant::where('employee_id', $employee_id)->first();
         $pkScore = $this->getLastPerformanceAppraisal($employee_id, $year);
-        $quadrant = $this->generateHavQuadrant($employee_id, $getHavQuadrant->assessment_score ?? 1, $pkScore);
-        Hav::where('employee_id', $employee_id)
-            ->update(['quadrant' => $quadrant]);
+        $this->generateHavQuadrant($employee_id, $getHavQuadrant->assessment_score ?? 1, $pkScore);
     }
 
 

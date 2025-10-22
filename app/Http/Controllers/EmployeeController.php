@@ -553,6 +553,11 @@ class EmployeeController extends Controller
                 ->groupBy('quadrant', 'year')
                 ->orderByDesc('year')
                 ->get();
+            if ($humanAssets->isEmpty()) {
+                $humanAssets = HavQuadrant::with('employee')
+                    ->where('employee_id', $employee->id)
+                    ->get();
+            }
 
             // 3) Master data untuk tampilan
             $positions   = Employee::where('npk', $employee->npk)->pluck('position')->unique()->values();
@@ -649,6 +654,11 @@ class EmployeeController extends Controller
             ->groupBy('quadrant', 'year')
             ->orderByDesc('year')
             ->get();
+        if ($humanAssets->isEmpty()) {
+            $humanAssets = HavQuadrant::with('employee')
+                ->where('employee_id', $employee->id)
+                ->get();
+        }
 
         // ----- Dropdown/filter mengikuti company dari baris employee terpilih -----
         $positions   = Employee::where('npk', $npk)->pluck('position')->unique()->values();
@@ -1320,13 +1330,9 @@ class EmployeeController extends Controller
 
             $validatedData = $request->validate([
                 'score' => 'required',
-                // 'description' => 'required',
                 'date' => 'required|date',
             ]);
-
-            // Debugging setelah validasi berhasil
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Tangkap error validasi dan tampilkan dengan back()
             return redirect()->back()->with('error', $e->getMessage());
         }
 
