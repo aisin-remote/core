@@ -7,20 +7,21 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Jalankan migrasi.
      *
      * @return void
      */
     public function up()
     {
         Schema::table('performance_reviews', function (Blueprint $table) {
-            $table->json('b1_items')->nullable()->after('b1_pdca_values');
-            $table->json('b2_items')->nullable()->after('b2_people_mgmt');
+            // Ganti tipe json menjadi text agar kompatibel dengan server lama
+            $table->text('b1_items')->nullable()->after('b1_pdca_values');
+            $table->text('b2_items')->nullable()->after('b2_people_mgmt');
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Rollback migrasi.
      *
      * @return void
      */

@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * Jalankan migrasi.
      *
      * @return void
      */
@@ -15,19 +15,27 @@ return new class extends Migration
     {
         Schema::create('icp_snapshots', function (Blueprint $table) {
             $table->id();
+
+            // Relasi ke tabel icp
             $table->foreignId('icp_id')->constrained('icp')->cascadeOnDelete();
+
             $table->unsignedSmallInteger('plan_year')->nullable();
             $table->string('reason')->nullable();
-            $table->json('icp')->nullable();
-            $table->json('details')->nullable();
-            $table->json('steps')->nullable();
-            $table->foreignId('created_by')->constrained('employees')->nullable();
+
+            // Ganti tipe JSON menjadi longText agar kompatibel
+            $table->longText('icp')->nullable();
+            $table->longText('details')->nullable();
+            $table->longText('steps')->nullable();
+
+            // Relasi ke tabel employees
+            $table->foreignId('created_by')->nullable()->constrained('employees');
+
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Batalkan migrasi.
      *
      * @return void
      */
