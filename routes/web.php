@@ -143,6 +143,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/{id}/submit', [IcpController::class, 'submit'])->name('icp.submit');
 
         Route::get('/data/{company?}', [IcpController::class, 'data'])->name('icp.data');
+        Route::get('/{icp}/evaluate', [IcpController::class, 'evaluateCreate'])->name('icp.evaluate.create');
+        Route::post('/{icp}/evaluate', [IcpController::class, 'evaluateStore'])->name('icp.evaluate.store');
     });
 
     Route::prefix('hav')->group(function () {

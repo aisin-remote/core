@@ -6,20 +6,15 @@
 @push('custom-css')
     <style>
         /* =========================
-                       ICP Stage – Neutral High-Contrast
-                       ========================= */
+                                                   ICP Stage – Neutral High-Contrast
+                                                   ========================= */
         :root {
             --stage-border: #3f4a5a;
-            /* abu-abu kebiruan gelap */
             --stage-head-bg: #1f2937;
-            /* gray-800 */
             --stage-head-fg: #ffffff;
             --stage-accent: #111827;
-            /* gray-900 */
             --detail-bg: #f3f4f6;
-            /* gray-100 */
             --detail-border: #d1d5db;
-            /* gray-300 */
             --shadow-inset: rgba(63, 74, 90, .20);
             --shadow-card: rgba(0, 0, 0, .08);
             --radius-card: 1rem;
@@ -48,11 +43,11 @@
         }
 
         .stage-head strong {
-            font-size: 1.1rem;
+            font-size: 1.1rem
         }
 
         .stage-body {
-            padding: var(--space-card);
+            padding: var(--space-card)
         }
 
         .detail-row {
@@ -100,7 +95,7 @@
         }
 
         .stage-card.added {
-            animation: popIn .22s ease-out both;
+            animation: popIn .22s ease-out both
         }
 
         .hc-mode .stage-head {
@@ -131,6 +126,18 @@
 
         .select2-selection__rendered {
             font-size: .875rem
+        }
+
+        /* Readonly visual (dipakai saat evaluate tanpa men-disable supaya tetap terkirim) */
+        .ro {
+            pointer-events: none;
+            background: #f9fafb !important;
+            color: #334155 !important;
+        }
+
+        .ro:focus {
+            outline: none !important;
+            box-shadow: none !important;
         }
     </style>
 @endpush
@@ -168,15 +175,25 @@
         </script>
     @endif
 
+    @php $isEvaluate = ($mode ?? null) === 'evaluate'; @endphp
+
     <div id="kt_app_content" class="app-content flex-column-fluid">
         <div id="kt_app_content_container" class="app-container container-fluid">
-            <form action="{{ route('icp.update', $icp->id) }}" method="POST">
-                @csrf @method('PUT')
+
+            {{-- === Form action: beda untuk edit vs evaluate === --}}
+            <form action="{{ $isEvaluate ? route('icp.evaluate.store', $icp->id) : route('icp.update', $icp->id) }}"
+                method="POST">
+                @csrf
+                @unless ($isEvaluate)
+                    @method('PUT')
+                @endunless
                 <input type="hidden" name="employee_id" value="{{ $icp->employee_id }}">
 
-                {{-- HEADER: sama seperti create --}}
+                {{-- HEADER --}}
                 <div class="card p-4 shadow-sm rounded-3 mb-4">
-                    <h3 class="text-center fw-bold mb-4">Update Individual Career Plan</h3>
+                    <h3 class="text-center fw-bold mb-4">
+                        {{ $isEvaluate ? 'Evaluate Individual Career Plan' : 'Update Individual Career Plan' }}
+                    </h3>
 
                     <div class="row g-3">
                         <div class="col-md-12">
@@ -218,7 +235,8 @@
                                 @foreach ($careerTarget as $value => $label)
                                     <option value="{{ $value }}"
                                         {{ old('career_target', $icp->career_target) == $value ? 'selected' : '' }}>
-                                        {{ $label }}</option>
+                                        {{ $label }}
+                                    </option>
                                 @endforeach
                             </select>
                             @error('career_target')
@@ -229,12 +247,12 @@
                         <div class="col-md-6">
                             <label class="form-label">Date Target</label>
                             <input type="date" name="date" id="date" class="form-control form-select-sm"
-                                value="{{ \Carbon\Carbon::parse($icp->date)->format('Y-m-d') }}">
+                                value="{{ optional(\Carbon\Carbon::parse($icp->date))->format('Y-m-d') }}">
                         </div>
                     </div>
                 </div>
 
-                {{-- DEVELOPMENT STAGE (match create) --}}
+                {{-- DEVELOPMENT STAGE --}}
                 <div class="card p-4 shadow-sm rounded-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <h3 class="fw-bold mb-0">Development Stage</h3>
@@ -253,8 +271,8 @@
                     <a href="{{ url()->previous() }}" class="btn btn-secondary">
                         <i class="bi bi-arrow-left-circle"></i> Back
                     </a>
-                    <button type="submit" class="btn btn-warning">
-                        <i class="bi bi-save"></i> Update
+                    <button type="submit" class="btn {{ $isEvaluate ? 'btn-primary' : 'btn-warning' }}">
+                        <i class="bi bi-save"></i> {{ $isEvaluate ? 'Save Evaluation' : 'Update' }}
                     </button>
                 </div>
             </form>
@@ -376,8 +394,9 @@
             'Operator': 'Operator',
             'Direktur': 'Direktur'
         };
-        const EXISTING_STAGES = @json($stages); // dari controller (sudah termasuk details)
+        const EXISTING_STAGES = @json($stages); // dari controller
         const TECHS = @json($technicalCompetencies->pluck('competency'));
+        const IS_EVALUATE = @json($isEvaluate);
 
         /* ====== Select2 untuk Tech ====== */
         function initTechSelects(scope) {
@@ -388,16 +407,14 @@
             $(scope).find('.tech-select').each(function() {
                 const $el = $(this);
                 if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
-
                 $el.select2({
                     data,
                     tags: true,
                     placeholder: 'Select or type…',
                     allowClear: true,
-                    width: '100%',
+                    width: '100%'
                 });
 
-                // prefill jika ada data-value (untuk edit)
                 const preset = $el.attr('data-value');
                 if (preset && !$el.val()) {
                     if (!TECHS.includes(preset)) {
@@ -406,6 +423,9 @@
                     } else {
                         $el.val(preset).trigger('change');
                     }
+                }
+                if (IS_EVALUATE) { // kunci teknikal saat evaluate? kalau tidak mau dikunci, hapus blok ini
+                    // $el.prop('disabled', true); // jika ingin benar2 terkunci
                 }
             });
         }
@@ -493,8 +513,8 @@
             const detailsBox = stageEl.querySelector('.details-container');
             const dIndex = detailsBox.querySelectorAll('.detail-row').length;
 
-            const tpl = document.getElementById('detail-template').innerHTML
-                .replaceAll('__S__', sIndex).replaceAll('__D__', dIndex);
+            const tpl = document.getElementById('detail-template').innerHTML.replaceAll('__S__', sIndex).replaceAll('__D__',
+                dIndex);
             const wrap = document.createElement('div');
             wrap.innerHTML = tpl.trim();
             const row = wrap.firstElementChild;
@@ -504,15 +524,13 @@
                 reindexDetails(stageEl);
             });
 
-            // prefill untuk edit
             if (data) {
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][current_technical]"]`)
-                    .setAttribute('data-value', data.current_technical ?? '');
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][required_technical]"]`)
-                    .setAttribute('data-value', data.required_technical ?? '');
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][development_technical]"]`)
-                    .setAttribute('data-value', data.development_technical ?? '');
-
+                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][current_technical]"]`).setAttribute(
+                    'data-value', data.current_technical ?? '');
+                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][required_technical]"]`).setAttribute(
+                    'data-value', data.required_technical ?? '');
+                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][development_technical]"]`).setAttribute(
+                    'data-value', data.development_technical ?? '');
                 row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][current_nontechnical]"]`).value = data
                     .current_nontechnical ?? '';
                 row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][required_nontechnical]"]`).value = data
@@ -523,6 +541,11 @@
 
             detailsBox.appendChild(row);
             initTechSelects(row);
+
+            if (IS_EVALUATE) {
+                // jika saat evaluate detail tak boleh dihapus/ditambah:
+                row.querySelector('.btn-remove-detail')?.classList.add('d-none');
+            }
         }
 
         /* ====== Add Stage ====== */
@@ -568,17 +591,14 @@
                 }
             });
 
-            // Prefill dari controller untuk edit
             if (data) {
                 yearInput.value = data.plan_year ?? '';
                 stage.querySelector(`[name="stages[${idx}][job_function]"]`).value = data.job_function ?? '';
                 stage.querySelector(`[name="stages[${idx}][position]"]`).value = data.position ?? '';
                 stage.querySelector(`[name="stages[${idx}][level]"]`).value = data.level ?? '';
-
                 (data.details || []).forEach(d => addDetail(stage, d));
                 if (!data.details || !data.details.length) addDetail(stage);
             } else {
-                // kalau user menambah stage baru saat edit
                 addDetail(stage);
             }
 
@@ -588,7 +608,8 @@
         /* ====== Init + submit guard ====== */
         document.addEventListener('DOMContentLoaded', () => {
             // tombol add
-            document.getElementById('btn-add-stage').addEventListener('click', addStage);
+            const addBtn = document.getElementById('btn-add-stage');
+            addBtn.addEventListener('click', addStage);
 
             // render stages dari database
             if (Array.isArray(EXISTING_STAGES) && EXISTING_STAGES.length) {
@@ -597,7 +618,7 @@
                 addStage();
             }
 
-            // defaultkan tanggal jika kosong (edge case saat null)
+            // defaultkan tanggal jika kosong
             const dateEl = document.getElementById('date');
             if (dateEl && !dateEl.value) {
                 const d = new Date();
@@ -606,8 +627,8 @@
                 dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
             }
 
-            // guard submit (sanitize + minimal 1 detail per stage + tahun unik)
-            const form = document.querySelector('form[action="{{ route('icp.update', $icp->id) }}"]');
+            // guard submit
+            const form = document.querySelector('form[action]');
             form.addEventListener('submit', (e) => {
                 form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
                     el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();

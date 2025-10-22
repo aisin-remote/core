@@ -21,6 +21,7 @@ use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use App\Models\PerformanceAppraisalHistory;
 use App\Services\IcpApproval;
+use App\Services\IcpSnapshotUpdateService;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
@@ -894,5 +895,74 @@ class IcpController extends Controller
             DB::rollBack();
             return back()->with('error', 'Gagal submit: ' . $e->getMessage());
         }
+    }
+
+    /* =================== EVALUATE =================== */
+    public function evaluateCreate(Icp $icp)
+    {
+        abort_if($icp->status !== Icp::STATUS_APPROVED, 403);
+
+        $title = 'Evaluate ICP';
+        $employee = Employee::findOrFail($icp->employee_id);
+        $departments = Department::where('company', $employee->company_name)->get();
+        $employees = Employee::where('company_name', $employee->company_name)->get();
+        $grades = GradeConversion::all();
+        $technicalCompetencies = MatrixCompetency::all();
+
+        $stages = $icp->details
+            ->groupBy('plan_year')
+            ->map(function ($g) {
+                $first = $g->first();
+                return [
+                    'plan_year'    => (int)$first->plan_year,
+                    'job_function' => (string)$first->job_function,
+                    'position'     => (string)$first->position,
+                    'level'        => (string)$first->level,
+                    'details' => $g->map(fn($d) => [
+                        'current_technical' => (string) $d->current_technical,
+                        'current_nontechnical' => (string) $d->current_nontechnical,
+                        'required_technical' => (string) $d->required_technical,
+                        'required_nontechnical' => (string) $d->required_nontechnical,
+                        'development_technical' => (string) $d->development_technical,
+                        'development_nontechnical' => (string) $d->development_nontechnical,
+                    ])->values()->all(),
+                ];
+            })
+            ->values();
+
+        $mode = 'evaluate';
+        return view('website.icp.update', compact('title', 'grades', 'departments', 'employees', 'technicalCompetencies', 'icp', 'stages', 'mode'));
+    }
+
+    public function evaluateStore(Request $r, Icp $icp, IcpSnapshotUpdateService $svc)
+    {
+        abort_if($icp->status !== Icp::STATUS_APPROVED, 403);
+        $this->validate($r, [
+            'employee_id'   => ['required', 'exists:employees,id'],
+            'aspiration'    => ['required', 'string'],
+            'career_target' => ['required', 'string'],
+            'date'          => ['required', 'date'],
+            'stages'                => ['required', 'array', 'min:1'],
+            'stages.*.plan_year'    => ['required', 'digits:4', 'numeric', 'distinct'],
+            'stages.*.job_function' => ['required', 'string'],
+            'stages.*.position'     => ['required', 'string'],
+            'stages.*.level'        => ['required', 'string'],
+            'stages.*.details'      => ['required', 'array', 'min:1'],
+            'stages.*.details.*.current_technical'        => ['required', 'string'],
+            'stages.*.details.*.current_nontechnical'     => ['required', 'string'],
+            'stages.*.details.*.required_technical'       => ['required', 'string'],
+            'stages.*.details.*.required_nontechnical'    => ['required', 'string'],
+            'stages.*.details.*.development_technical'    => ['required', 'string'],
+            'stages.*.details.*.development_nontechnical' => ['required', 'string'],
+        ]);
+
+        // tentukan planYear yang dievaluasi (umumnya tahun lalu)
+        $planYear = now()->subYear()->year;
+
+
+        // backup lalu update
+        $svc->run($icp, $r->all(), $planYear, "Annual Evaluation ICP {$planYear}");
+
+        return redirect()->route('icp.assign')->with('success', 'Evaluation saved (Create backup ICP)');
     }
 }

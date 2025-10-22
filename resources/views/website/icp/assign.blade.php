@@ -276,7 +276,7 @@
                                             : e('No history yet');
 
                                         $chipStatus = 'unknown';
-                                        $chipIcon = 'fa-regular fa-circle';
+                                        $chipIcon = 'fa-regular fa-stack-exchange';
                                         $chipText = '-';
                                         if (!$icp) {
                                             $chipStatus = 'not_created';
@@ -318,9 +318,12 @@
                                         }
                                     @endphp
 
-                                    <span class="status-chip" data-status="{{ $chipStatus }}" data-bs-toggle="tooltip"
-                                        data-bs-html="true" title="{!! $tooltip !!}">
-                                        <i class="{{ $chipIcon }}"></i>
+                                    <span class="status-chip w-100 justify-content-center"
+                                        data-status="{{ $chipStatus }}" data-bs-toggle="tooltip" data-bs-html="true"
+                                        title="{!! $tooltip !!}">
+                                        <div>
+                                            <i class="{{ $chipIcon }}"></i>
+                                        </div>
                                         {{ $chipText }}
                                     </span>
                                 </td>
@@ -328,7 +331,7 @@
                                 {{-- Actions --}}
                                 <td class="text-center">
                                     <div class="action-stack">
-                                        @if ($act['add'])
+                                        @if ($act['add'] && !$icp)
                                             <a href="{{ route('icp.create', $e->id) }}" class="btn btn-primary">
                                                 <i class="fas fa-plus"></i> Add
                                             </a>
@@ -355,14 +358,14 @@
                                         @if ($icp && $icp->status === \App\Models\Icp::STATUS_APPROVED && $ev)
                                             @if (!empty($ev['show']))
                                                 <a href="{{ route('icp.evaluate.create', $ev['icp_id']) }}"
-                                                    class="btn btn-primary btn-sm">
+                                                    class="btn btn-primary">
                                                     Evaluate
                                                 </a>
                                             @else
                                                 <span
                                                     @if (!empty($ev['next_date'])) data-bs-toggle="tooltip"
                                                         title="Next evaluation on {{ \Carbon\Carbon::parse($ev['next_date'])->format('d/m/Y') }}" @endif>
-                                                    <button class="btn btn-light btn-sm" disabled>Evaluate</button>
+                                                    <button class="btn btn-light w-100" disabled>Evaluate</button>
                                                 </span>
                                             @endif
                                         @endif
