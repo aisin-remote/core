@@ -261,7 +261,6 @@ class IcpController extends Controller
         ]);
     }
 
-
     public function assign(Request $request, $company = null)
     {
         $title   = 'ICP Assign';
@@ -271,7 +270,7 @@ class IcpController extends Controller
         $filter  = $request->input('filter', 'all');
         $search  = $request->input('search');
 
-        // tab posisi yang terlihat (seperti sebelumnya)
+        // tab posisi
         $allPositions = ['Direktur', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
         $rawPosition  = $emp->position ?? 'Operator';
         $currentPos   = Str::startsWith($rawPosition, 'Act ') ? trim(substr($rawPosition, 4)) : $rawPosition;
@@ -284,7 +283,7 @@ class IcpController extends Controller
 
         $employees = Employee::with([
             'departments:id,name',
-            'latestIcp.steps.actor',    // ambil steps + siapa check/approve
+            'latestIcp.steps.actor',
         ])
             ->whereIn('id', $subordinateIds)
             ->when($company ?: $emp->company_name, fn($q, $c) => $q->where('company_name', $c))
@@ -295,42 +294,52 @@ class IcpController extends Controller
             ->orderBy('name')
             ->get();
 
-        // siapkan baris
         $rows = $employees->map(function ($e) {
             $icp   = $e->latestIcp; // bisa null
             $steps = $icp?->steps?->sortBy('step_order') ?? collect();
 
-            // garis status selesai
             $done = $steps->where('status', 'done')
                 ->map(fn($s) => "✓ {$s->label}" . ($s->actor ? " ({$s->actor->name}, " . $s->acted_at?->format('d/m/Y') . ")" : ""))
                 ->values()->all();
 
-            // antrian berikutnya
             $next = $steps->where('status', 'pending')->sortBy('step_order')->first();
             $waiting = $next ? "⏳ Waiting: {$next->label}" : null;
 
-            // gunakan waktu approve terakhir untuk expiry (bukan created_at)
             $lastApprovedStep = $steps->where('type', 'approve')->where('status', 'done')
                 ->sortByDesc('acted_at')->first();
             $approvedAt = $lastApprovedStep?->acted_at;
+
+            $anchor = $icp?->last_evaluated_at ?: $approvedAt; // Carbon|string|null
+            $anchorDate = $anchor ? Carbon::parse($anchor) : null;
+
+            $isDue = $icp && $icp->status === Icp::STATUS_APPROVED
+                && $anchorDate
+                && $anchorDate->copy()->addYear()->isPast();
+
             $statusCode = $icp?->status ?? null;
-            $expired    = ($statusCode === 3 && $approvedAt)
-                ? \Carbon\Carbon::parse($approvedAt)->addYear()->isPast()
+            $expired    = ($statusCode === Icp::STATUS_APPROVED && $approvedAt)
+                ? Carbon::parse($approvedAt)->addYear()->isPast()
                 : false;
 
             $badgeMap = [
-                null => ['No ICP', 'badge-light'],
-                0    => ['Revise', 'badge-light-danger'],
-                1    => ['Submitted', 'badge-light-primary'],
-                2    => ['Checked', 'badge-light-warning'],
-                3    => [$expired ? 'Approved (Expired)' : 'Approved', $expired ? 'badge-light-dark' : 'badge-light-success'],
+                null                                        => ['No ICP', 'badge-light'],
+                Icp::STATUS_REVISE              => ['Revise', 'badge-light-danger'],
+                Icp::STATUS_SUBMITTED           => ['Submitted', 'badge-light-primary'],
+                Icp::STATUS_CHECKED             => ['Checked', 'badge-light-warning'],
+                Icp::STATUS_APPROVED            => [$expired ? 'Approved (Expired)' : 'Approved', $expired ? 'badge-light-dark' : 'badge-light-success'],
             ];
             [$label, $badge] = $badgeMap[$statusCode] ?? ['-', 'badge-light'];
 
             $actions = [
-                'add'    => (!$icp) || $expired,
-                'revise' => ($statusCode === 0 && $icp),
-                'export' => (bool) $icp,
+                'add'      => (!$icp) || $expired,
+                'revise'   => ($statusCode === Icp::STATUS_REVISE && $icp),
+                'export'   => (bool) $icp,
+                'evaluate' => [
+                    'show'      => (bool) $isDue,
+                    'next_date' => $anchorDate ? $anchorDate->copy()->addYear()->format('Y-m-d') : null,
+                    'anchor'    => $anchorDate?->format('Y-m-d'),
+                    'icp_id'    => $icp?->id,
+                ],
             ];
 
             return compact('e', 'icp', 'done', 'waiting', 'label', 'badge', 'actions');

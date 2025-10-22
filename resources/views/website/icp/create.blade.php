@@ -6,8 +6,8 @@
 @push('custom-css')
     <style>
         /* =========================
-                                                                                                                                                                                                                                                                                                   ICP Stage – Neutral High-Contrast
-                                                                                                                                                                                                                                                                                                   ========================= */
+                                                                                                                                                                                                                                                                                                           ICP Stage – Neutral High-Contrast
+                                                                                                                                                                                                                                                                                                           ========================= */
         :root {
             --stage-border: #3f4a5a;
             /* abu-abu kebiruan gelap */

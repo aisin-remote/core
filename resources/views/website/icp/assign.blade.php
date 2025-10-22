@@ -139,7 +139,6 @@
             font-weight: 600;
             border-radius: .5rem;
             font-size: .75rem;
-            /* kecil */
         }
 
         .action-stack .btn i {
@@ -153,10 +152,7 @@
         }
 
         /* ===== Table polish ===== */
-        #kt_table_users th {
-            vertical-align: middle
-        }
-
+        #kt_table_users th,
         #kt_table_users td {
             vertical-align: middle
         }
@@ -282,36 +278,29 @@
                                         $chipStatus = 'unknown';
                                         $chipIcon = 'fa-regular fa-circle';
                                         $chipText = '-';
-
                                         if (!$icp) {
                                             $chipStatus = 'not_created';
                                             $chipText = 'Not created';
                                         } else {
                                             $expired =
                                                 $icp->status === 3 && optional($icp->created_at)->addYear()->isPast();
-
                                             if ($icp->status === 4) {
-                                                // Draft
                                                 $chipStatus = 'draft';
                                                 $chipIcon = 'fa-regular fa-file-lines';
                                                 $chipText = 'Draft';
                                             } elseif ($icp->status === 0) {
-                                                // Revise
                                                 $chipStatus = 'revise';
                                                 $chipIcon = 'fa-solid fa-triangle-exclamation';
                                                 $chipText = 'Revise';
                                             } elseif ($icp->status === 1) {
-                                                // Submitted / checks
                                                 $chipStatus = 'waiting';
                                                 $chipIcon = 'fa-solid fa-hourglass-half';
                                                 $chipText = isset($next) && $next ? $next->label : 'Submitted';
                                             } elseif ($icp->status === 2) {
-                                                // Checked
                                                 $chipStatus = 'checked';
                                                 $chipIcon = 'fa-solid fa-hourglass-half';
                                                 $chipText = isset($next) && $next ? $next->label : 'Checked';
                                             } elseif ($icp->status === 3) {
-                                                // Approved
                                                 $chipStatus = $expired ? 'draft' : 'approved';
                                                 $chipIcon = 'fa-solid fa-check-circle';
                                                 $apprDone = $icp->steps
@@ -360,6 +349,22 @@
                                                 class="btn btn-success">
                                                 <i class="fas fa-file-excel"></i> Export
                                             </a>
+                                        @endif
+
+                                        @php $ev = $row['actions']['evaluate'] ?? null; @endphp
+                                        @if ($icp && $icp->status === \App\Models\Icp::STATUS_APPROVED && $ev)
+                                            @if (!empty($ev['show']))
+                                                <a href="{{ route('icp.evaluate.create', $ev['icp_id']) }}"
+                                                    class="btn btn-primary btn-sm">
+                                                    Evaluate
+                                                </a>
+                                            @else
+                                                <span
+                                                    @if (!empty($ev['next_date'])) data-bs-toggle="tooltip"
+                                                        title="Next evaluation on {{ \Carbon\Carbon::parse($ev['next_date'])->format('d/m/Y') }}" @endif>
+                                                    <button class="btn btn-light btn-sm" disabled>Evaluate</button>
+                                                </span>
+                                            @endif
                                         @endif
 
                                         @if (($act['submit'] ?? false) || ($icp && $icp->status === 4))
@@ -494,7 +499,6 @@
             });
         });
 
-        // Tooltips
         document.addEventListener('DOMContentLoaded', function() {
             var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
             tooltipTriggerList.map(function(el) {

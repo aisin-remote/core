@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\CompanyScoped;
+use IcpSnapshot;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
@@ -15,6 +16,7 @@ class Icp extends Model
     protected $guarded = ['id'];
     protected $casts = [
         'date' => 'date',
+        'last_evaluated_at' => 'datetime',
     ];
 
     public const STATUS_REVISE    = 0;
@@ -40,5 +42,10 @@ class Icp extends Model
     public function steps()
     {
         return $this->hasMany(IcpApprovalStep::class, 'icp_id');
+    }
+
+    public function snapshots()
+    {
+        return $this->hasMany(IcpSnapshot::class, 'icp_id');
     }
 }
