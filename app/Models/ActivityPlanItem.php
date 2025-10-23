@@ -20,6 +20,7 @@ class ActivityPlanItem extends Model
         'cached_due_date',
         'impact_note',
         'cr_value',
+        'status',
         'sort_order'
     ];
 

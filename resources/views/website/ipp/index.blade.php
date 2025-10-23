@@ -627,29 +627,29 @@
                 const canManage = !!rowId && String(rowId).match(
                     /^\d+$/); // hanya aktif kalau sudah tersimpan di server
                 return `
-<tr class="align-middle point-row"
-    data-row-id="${esc(rowId)}"
-    data-activity="${esc(data.activity||'')}"
-    data-mid="${esc(data.target_mid||'')}"
-    data-one="${esc(data.target_one||'')}"
-    data-start="${esc(startTxt)}"
-    data-due="${esc(dueTxt)}"
-    data-status="${esc(data.status||'draft')}"
-    data-weight="${w}">
-  <td class="fw-semibold">${esc(data.activity||'-')}</td>
-  <td class="text-muted">${esc(oneShort)}</td>
-  <td><span class="badge badge-light">${esc(startTxt)}</span> &rarr; <span class="badge badge-light">${esc(dueTxt)}</span></td>
-  <td><span>${fmt(w)}</span></td>
-  <td class="text-end">
-    <div class="btn-group btn-group-sm" role="group">
-      <button type="button" class="btn btn-info js-manage" title="Manage Plan" ${canManage?'':'disabled'}>
-        <i class="bi bi-kanban"></i>
-      </button>
-      <button type="button" class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
-      <button type="button" class="btn btn-danger js-remove" title="Hapus"><i class="bi bi-trash"></i></button>
-    </div>
-  </td>
-</tr>`;
+                    <tr class="align-middle point-row"
+                        data-row-id="${esc(rowId)}"
+                        data-activity="${esc(data.activity||'')}"
+                        data-mid="${esc(data.target_mid||'')}"
+                        data-one="${esc(data.target_one||'')}"
+                        data-start="${esc(startTxt)}"
+                        data-due="${esc(dueTxt)}"
+                        data-status="${esc(data.status||'draft')}"
+                        data-weight="${w}">
+                    <td class="fw-semibold">${esc(data.activity||'-')}</td>
+                    <td class="text-muted">${esc(oneShort)}</td>
+                    <td><span class="badge badge-light">${esc(startTxt)}</span> &rarr; <span class="badge badge-light">${esc(dueTxt)}</span></td>
+                    <td><span>${fmt(w)}</span></td>
+                    <td class="text-end">
+                        <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-info js-manage" title="Manage Plan" ${canManage?'':'disabled'}>
+                            <i class="bi bi-kanban"></i>
+                        </button>
+                        <button type="button" class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
+                        <button type="button" class="btn btn-danger js-remove" title="Hapus"><i class="bi bi-trash"></i></button>
+                        </div>
+                    </td>
+                    </tr>`;
             }
 
             /* ===== Status badge ===== */
@@ -1201,19 +1201,58 @@
                 loadInitial();
             });
 
+            $(document).on('click', '#btnSubmitAll', async function() {
+                // ===== Submit gabungan: IPP + Activity Plan =====
+                if (LOCKED) {
+                    toast('IPP sudah submitted. Tidak bisa submit ulang.', 'danger');
+                    return;
+                }
+                if (!window.__currentIppId) {
+                    toast('IPP belum terinisialisasi.', 'danger');
+                    return;
+                }
+                if (!confirm('Submit IPP + Activity Plan sekarang?')) return;
+
+                const $btn = $(this).prop('disabled', true);
+                try {
+                    const url = new URL(@json(route('activity-plan.submitAll')), window.location
+                        .origin);
+                    url.searchParams.set('ipp_id', String(window.__currentIppId));
+                    const res = await fetch(url.toString(), {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    });
+                    const json = await res.json();
+                    if (!res.ok) throw new Error(json?.message || 'Submit gagal.');
+                    toast(json?.message || 'Berhasil submit.');
+
+                    $('.accordion.mt-3.ipp tbody.js-tbody').each(function() {
+                        // opsional: bersihkan/biarkan – yang penting reload data
+                    });
+                    location.reload();
+                } catch (err) {
+                    toast(esc(err?.message || 'Submit gagal.'), 'danger');
+                } finally {
+                    $btn.prop('disabled', false);
+                }
+            });
+
             /* ===== Toast kecil ===== */
             function toast(msg, type = 'success') {
                 const id = 'toast-' + Date.now();
                 const $t = $(`
-<div class="toast align-items-center badge-${type} border-0" id="${id}"
-     role="status" aria-live="polite" aria-atomic="true"
-     style="position:fixed;top:1rem;right:1rem;z-index:1080;">
-  <div class="d-flex">
-    <div class="toast-body">${esc(msg)}</div>
-    <button type="button" class="btn-close btn-close-white me-2 m-auto"
-            data-bs-dismiss="toast" aria-label="Tutup"></button>
-  </div>
-</div>`);
+                    <div class="toast align-items-center badge-${type} border-0" id="${id}"
+                        role="status" aria-live="polite" aria-atomic="true"
+                        style="position:fixed;top:1rem;right:1rem;z-index:1080;">
+                    <div class="d-flex">
+                        <div class="toast-body">${esc(msg)}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                                data-bs-dismiss="toast" aria-label="Tutup"></button>
+                    </div>
+                    </div>`);
                 $('body').append($t);
                 const t = new bootstrap.Toast($t[0], {
                     delay: 2500
@@ -1222,44 +1261,5 @@
                 $t.on('hidden.bs.toast', () => $t.remove());
             }
         })(jQuery);
-    </script>
-    <script>
-        // ===== Submit gabungan: IPP + Activity Plan =====
-        $('#btnSubmitAll').on('click', async function() {
-            if (LOCKED) {
-                toast('IPP sudah submitted. Tidak bisa submit ulang.', 'danger');
-                return;
-            }
-            if (!window.__currentIppId) {
-                toast('IPP belum terinisialisasi.', 'danger');
-                return;
-            }
-            if (!confirm('Submit IPP + Activity Plan sekarang?')) return;
-
-            const $btn = $(this).prop('disabled', true);
-            try {
-                const url = new URL(@json(route('activity-plan.submitAll')), window.location.origin);
-                url.searchParams.set('ipp_id', String(window.__currentIppId));
-                const res = await fetch(url.toString(), {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                const json = await res.json();
-                if (!res.ok) throw new Error(json?.message || 'Submit gagal.');
-                toast(json?.message || 'Berhasil submit.');
-
-                $('.accordion.mt-3.ipp tbody.js-tbody').each(function() {
-                    // opsional: bersihkan/biarkan – yang penting reload data
-                });
-                location.reload();
-            } catch (err) {
-                toast(esc(err?.message || 'Submit gagal.'), 'danger');
-            } finally {
-                $btn.prop('disabled', false);
-            }
-        });
     </script>
 @endpush
