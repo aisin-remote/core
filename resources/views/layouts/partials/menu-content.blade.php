@@ -930,19 +930,17 @@
 
             {{-- FLYOUT --}}
             <div class="menu-sub menu-sub-dropdown">
-                <div class="menu-item menu-accordion" data-kt-menu-trigger="click">
-                    <span class="menu-link"><span class="menu-title">Employee Competency</span><span
-                            class="menu-arrow"></span></span>
-                    <div class="menu-sub menu-sub-dropdown">
-                        <div class="menu-item"><a
-                                class="menu-link {{ request()->is('employeeCompetencies/aii') ? 'active' : '' }}"
-                                href="{{ route('employeeCompetencies.index', ['company' => 'aii']) }}"><span
-                                    class="menu-title">AII</span></a></div>
-                        <div class="menu-item"><a
-                                class="menu-link {{ request()->is('employeeCompetencies/aiia') ? 'active' : '' }}"
-                                href="{{ route('employeeCompetencies.index', ['company' => 'aiia']) }}"><span
-                                    class="menu-title">AIIA</span></a></div>
-                    </div>
+                <span class="menu-link"><span class="menu-title">Employee Competency</span><span
+                        class="menu-arrow"></span></span>
+                <div class="menu-item">
+                    <div class="menu-item"><a
+                            class="menu-link {{ request()->is('employeeCompetencies/aii') ? 'active' : '' }}"
+                            href="{{ route('employeeCompetencies.index', ['company' => 'aii']) }}"><span
+                                class="menu-title">AII</span></a></div>
+                    <div class="menu-item"><a
+                            class="menu-link {{ request()->is('employeeCompetencies/aiia') ? 'active' : '' }}"
+                            href="{{ route('employeeCompetencies.index', ['company' => 'aiia']) }}"><span
+                                class="menu-title">AIIA</span></a></div>
                 </div>
             </div>
         </div>
@@ -1091,22 +1089,13 @@
                     </div>
                 </div>
 
-                <div class="menu-item menu-accordion {{ request()->is('matrixCompetencies/*') ? 'show' : '' }}"
-                    id="menu-users-master" data-kt-menu-trigger="click">
-                    <span class="menu-link {{ request()->is('matrixCompetencies/*') ? 'active' : '' }}"><span
-                            class="menu-title">Matrix Compentenccie</span><span class="menu-arrow"></span></span>
-                    <div class="menu-sub menu-sub-accordion menu-active-bg">
-                        <div class="menu-item"><a
-                                class="menu-link {{ request()->is('matrixCompetencies/aii') ? 'active' : '' }}"
-                                href="{{ route('matrix.master.index') }}"><span class="menu-bullet"><span
-                                        class="bullet bullet-dot"></span></span><span
-                                    class="menu-title">AII</span></a></div>
-                        <div class="menu-item"><a
-                                class="menu-link {{ request()->is('matrixCompetencies/aiia') ? 'active' : '' }}"
-                                href="{{ route('matrix.master.index') }}"><span class="menu-bullet"><span
-                                        class="bullet bullet-dot"></span></span><span
-                                    class="menu-title">AIIA</span></a></div>
-                    </div>
+                <div class="menu-heading {{ request()->is('matrixCompetencies/*') ? 'show' : '' }}"
+                    id="menu-users-master">
+                    <a class="menu-link {{ request()->is('matrixCompetencies/aii') ? 'active' : '' }}"
+                        href="{{ route('matrix.master.index') }}">
+                        <span class="menu-icon"></span>
+                        <span class="menu-title">MatrixCompetency</span>
+                    </a>
                 </div>
             </div>
 

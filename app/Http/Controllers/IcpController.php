@@ -353,15 +353,56 @@ class IcpController extends Controller
     {
         $title = 'Add icp';
 
-        $employee = Employee::with('subSection.section.department', 'leadingSection.department', 'leadingDepartment.division')
-            ->findOrFail($employeeId);
+        $employee = Employee::with(
+            'subSection.section.department',
+            'leadingSection.department',
+            'leadingDepartment.division'
+        )->findOrFail($employeeId);
+
         $departments = Department::where('company', $employee->company_name)->get();
-        $employees = Employee::where('company_name', $employee->company_name)->get();
-        $grades = GradeConversion::all();
+        $employees   = Employee::where('company_name', $employee->company_name)->get();
+        $grades      = GradeConversion::all();
 
-        $technicalCompetencies = MatrixCompetency::all();
+        $deptId = optional(optional($employee->subSection)->section)->department->id
+            ?? optional($employee->leadingSection)->department->id
+            ?? optional($employee->leadingDepartment)->id;
 
-        return view('website.icp.create', compact('title', 'employee', 'grades', 'departments', 'employees', 'technicalCompetencies'));
+        $divId  = optional(optional($employee->leadingDepartment)->division)->id;
+
+        $technicalCompetencies = MatrixCompetency::with(['department:id,name', 'division:id,name'])
+            ->when($deptId || $divId, function ($q) use ($deptId, $divId) {
+                $q->where(function ($qq) use ($deptId, $divId) {
+                    if ($deptId) {
+                        $qq->orWhere(function ($x) use ($deptId) {
+                            $x->whereNotNull('dept_id')->where('dept_id', $deptId);
+                        });
+                    }
+                    if ($divId) {
+                        $qq->orWhere(function ($x) use ($divId) {
+                            $x->whereNotNull('divs_id')->where('divs_id', $divId);
+                        });
+                    }
+                });
+            })
+            ->orderBy('competency')
+            ->get();
+
+        // (Opsional) Pecah untuk tampilan: biar jelas mana yang dari Department vs Division
+        $deptCompetencies = $technicalCompetencies->whereNotNull('dept_id')->values();
+        $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
+
+        return view('website.icp.create', compact(
+            'title',
+            'employee',
+            'grades',
+            'departments',
+            'employees',
+            'technicalCompetencies',
+            'deptCompetencies',
+            'divsCompetencies',
+            'deptId',
+            'divId'
+        ));
     }
 
     public function store(Request $request)
