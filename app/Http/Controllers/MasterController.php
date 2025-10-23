@@ -12,6 +12,8 @@ use App\Models\SubSection;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Models\MatrixCompetency;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
 class MasterController extends Controller
@@ -169,9 +171,6 @@ class MasterController extends Controller
             return redirect()->back()->with('error', 'Gagal mengupdate department: ' . $e->getMessage());
         }
     }
-
-
-
 
     public function departmentDestroy($id)
     {
@@ -358,6 +357,7 @@ class MasterController extends Controller
             return redirect()->back()->with('error', 'Gagal menghapus Sub Section: ' . $e->getMessage());
         }
     }
+
     public function department($company = null)
     {
         $divisions = Division::when($company, function ($q) use ($company) {
@@ -795,7 +795,6 @@ class MasterController extends Controller
         }
     }
 
-
     private function currentPicFor(string $area, $model)
     {
         $empId = match ($area) {
@@ -808,5 +807,114 @@ class MasterController extends Controller
         };
 
         return $empId ? Employee::select('id', 'name', 'position')->find($empId) : null;
+    }
+
+    public function matrixCompetencies(Request $request)
+    {
+        // validasi basic + mutual exclusion
+        $request->validate([
+            'dept_id' => 'nullable|exists:departments,id',
+            'divs_id' => 'nullable|exists:divisions,id',
+        ], [], [
+            'dept_id' => 'department',
+            'divs_id' => 'division',
+        ]);
+
+        if ($request->filled('dept_id') && $request->filled('divs_id')) {
+            return back()->with('error', 'Pilih salah satu: Department atau Division saja.');
+        }
+
+        $query = MatrixCompetency::with(['department', 'division'])->latest('id');
+
+        $query->when($request->filled('dept_id'), function ($q) use ($request) {
+            $q->whereNotNull('dept_id')->where('dept_id', $request->dept_id);
+        });
+
+        $query->when($request->filled('divs_id'), function ($q) use ($request) {
+            $q->whereNotNull('divs_id')->where('divs_id', $request->divs_id);
+        });
+
+        $datas = $query->get();
+
+        $departments = Department::orderBy('name')->get(['id', 'name']);
+        $divisions   = Division::orderBy('name')->get(['id', 'name']);
+        $title = 'Matrix Competencies';
+
+        // kirim juga nilai filter aktif (untuk preselect di Blade)
+        $activeDept = $request->dept_id;
+        $activeDivs = $request->divs_id;
+
+        return view('website.master.matrix-competencies.index', compact(
+            'datas',
+            'departments',
+            'divisions',
+            'title',
+            'activeDept',
+            'activeDivs'
+        ));
+    }
+
+    public function matrixCompetenciesStore(Request $request)
+    {
+        $validated = $request->validate([
+            'competency' => ['required', 'string', 'max:255'],
+            // Minimal salah satu, dan saling melarang
+            'dept_id'    => ['nullable', 'integer', 'exists:departments,id', 'required_without:divs_id', 'prohibits:divs_id'],
+            'divs_id'    => ['nullable', 'integer', 'exists:divisions,id', 'required_without:dept_id', 'prohibits:dept_id'],
+        ], [
+            'dept_id.required_without' => 'Pilih Department atau Division.',
+            'divs_id.required_without' => 'Pilih Department atau Division.',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            MatrixCompetency::create([
+                'competency' => $validated['competency'],
+                'dept_id'    => $validated['dept_id'] ?? null,
+                'divs_id'    => $validated['divs_id'] ?? null,
+            ]);
+            DB::commit();
+            return back()->with('success', 'Data berhasil ditambahkan.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Gagal menyimpan: ' . $e->getMessage());
+        }
+    }
+
+    public function matrixCompetenciesUpdate(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'competency' => ['required', 'string', 'max:255'],
+            'dept_id'    => ['nullable', 'integer', 'exists:departments,id', 'required_without:divs_id', 'prohibits:divs_id'],
+            'divs_id'    => ['nullable', 'integer', 'exists:divisions,id', 'required_without:dept_id', 'prohibits:dept_id'],
+        ], [
+            'dept_id.required_without' => 'Pilih Department atau Division.',
+            'divs_id.required_without' => 'Pilih Department atau Division.',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $row = MatrixCompetency::findOrFail($id);
+            $row->update([
+                'competency' => $validated['competency'],
+                'dept_id'    => $validated['dept_id'] ?? null,
+                'divs_id'    => $validated['divs_id'] ?? null,
+            ]);
+            DB::commit();
+            return back()->with('success', 'Data berhasil diupdate.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            return back()->withInput()->with('error', 'Gagal update: ' . $e->getMessage());
+        }
+    }
+
+    public function matrixCompetenciesDestroy($id)
+    {
+        try {
+            MatrixCompetency::findOrFail($id)->delete();
+            return back()->with('success', 'Data berhasil dihapus.');
+        } catch (\Throwable $e) {
+            return back()->with('error', 'Gagal menghapus: ' . $e->getMessage());
+        }
     }
 }

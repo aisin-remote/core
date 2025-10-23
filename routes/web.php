@@ -419,6 +419,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
             Route::post('/store', [MasterController::class, 'gradeStore'])->name('grade.master.store');
             Route::delete('/delete/{id}', [MasterController::class, 'gradeDestroy'])->name('grade.master.destroy');
         });
+        Route::prefix('matrixCompetencies')->group(function () {
+            Route::get('/', [MasterController::class, 'matrixCompetencies'])->name('matrix.master.index');
+            Route::post('/store', [MasterController::class, 'matrixCompetenciesStore'])->name('matrix.master.store');
+            Route::put('/update/{id}', [MasterController::class, 'matrixCompetenciesUpdate'])->name('matrix.master.update');
+            Route::delete('/delete/{id}', [MasterController::class, 'matrixCompetenciesDestroy'])->name('matrix.master.destroy');
+        });
     });
 
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout.auth');

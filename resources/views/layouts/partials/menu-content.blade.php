@@ -1090,6 +1090,24 @@
                                     class="menu-title">AIIA</span></a></div>
                     </div>
                 </div>
+
+                <div class="menu-item menu-accordion {{ request()->is('matrixCompetencies/*') ? 'show' : '' }}"
+                    id="menu-users-master" data-kt-menu-trigger="click">
+                    <span class="menu-link {{ request()->is('matrixCompetencies/*') ? 'active' : '' }}"><span
+                            class="menu-title">Matrix Compentenccie</span><span class="menu-arrow"></span></span>
+                    <div class="menu-sub menu-sub-accordion menu-active-bg">
+                        <div class="menu-item"><a
+                                class="menu-link {{ request()->is('matrixCompetencies/aii') ? 'active' : '' }}"
+                                href="{{ route('matrix.master.index') }}"><span class="menu-bullet"><span
+                                        class="bullet bullet-dot"></span></span><span
+                                    class="menu-title">AII</span></a></div>
+                        <div class="menu-item"><a
+                                class="menu-link {{ request()->is('matrixCompetencies/aiia') ? 'active' : '' }}"
+                                href="{{ route('matrix.master.index') }}"><span class="menu-bullet"><span
+                                        class="bullet bullet-dot"></span></span><span
+                                    class="menu-title">AIIA</span></a></div>
+                    </div>
+                </div>
             </div>
 
             {{-- FLYOUT --}}

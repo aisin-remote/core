@@ -11,12 +11,16 @@ class MatrixCompetency extends Model
 
     protected $table = 'matrix_competencies'; // Nama tabel di database
 
-   protected $guarded = ['id'];
+    protected $guarded = ['id'];
 
     // Relasi ke Assessment
     public function department()
     {
-        return $this->belongsTo(Department::class);
+        return $this->belongsTo(Department::class, 'dept_id');
     }
 
+    public function division()
+    {
+        return $this->belongsTo(Division::class, 'divs_id');
+    }
 }
