@@ -8,6 +8,7 @@ use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\IcpDetail;
+use App\Helpers\RtcTarget;
 use App\Models\Department;
 use App\Models\SubSection;
 use Illuminate\Support\Str;
@@ -15,6 +16,7 @@ use Illuminate\Http\Request;
 use App\Models\GradeConversion;
 use App\Models\IcpApprovalStep;
 use App\Helpers\ApprovalHelper;
+use App\Http\Requests\StoreIcpRequest;
 use App\Models\MatrixCompetency;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -391,6 +393,20 @@ class IcpController extends Controller
         $deptCompetencies = $technicalCompetencies->whereNotNull('dept_id')->values();
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
+
+        $currentYear = now()->year;
+        // opsi posisi (semua), front-end akan batasi dinamis begitu career target dipilih
+        $rtcMap = RtcTarget::mapAll();
+        $rtcList = collect(RtcTarget::order())
+            ->map(fn($code) => ['code' => $code, 'position' => $rtcMap[$code]['position'] ?? $code])
+            ->values();
+
+        // default stage pertama
+        $defaultStages = [
+            ['year' => $currentYear, 'position_code' => null, 'level' => null],
+        ];
+
+
         return view('website.icp.create', compact(
             'title',
             'employee',
@@ -401,54 +417,36 @@ class IcpController extends Controller
             'deptCompetencies',
             'divsCompetencies',
             'deptId',
-            'divId'
+            'divId',
+            'rtcList',
+            'currentYear',
+            'defaultStages'
         ));
     }
 
-    public function store(Request $request)
+    public function store(StoreIcpRequest $request)
     {
-        $request->validate([
-            'employee_id'   => ['required', 'exists:employees,id'],
-            'aspiration'    => ['required', 'string'],
-            'career_target' => ['required', 'string'],
-            'date'          => ['required', 'date'],
-
-            'stages'                => ['required', 'array', 'min:1'],
-            'stages.*.plan_year'    => ['required', 'digits:4', 'numeric', 'distinct'],
-            'stages.*.job_function' => ['required', 'string'],
-            'stages.*.position'     => ['required', 'string'],
-            'stages.*.level'        => ['required', 'string'],
-
-            'stages.*.details'                            => ['required', 'array', 'min:1'],
-            'stages.*.details.*.current_technical'        => ['required', 'string'],
-            'stages.*.details.*.current_nontechnical'     => ['required', 'string'],
-            'stages.*.details.*.required_technical'       => ['required', 'string'],
-            'stages.*.details.*.required_nontechnical'    => ['required', 'string'],
-            'stages.*.details.*.development_technical'    => ['required', 'string'],
-            'stages.*.details.*.development_nontechnical' => ['required', 'string'],
-        ], [
-            'stages.required'             => 'Minimal 1 tahun harus ditambahkan',
-            'stages.*.plan_year.digits'   => 'Plan year harus 4 digit (YYYY)',
-            'stages.*.plan_year.distinct' => 'Plan year tidak boleh sama antar stage.',
-        ]);
+        $data = $request->validated(); // <-- array, JANGAN ditimpa jadi object
 
         DB::beginTransaction();
         try {
-            // Simpan data utama ICP
+            // Simpan HEADER ICP
             $icp = Icp::create([
-                'employee_id' => $request->employee_id,
-                'aspiration' => $request->aspiration,
-                'career_target' => $request->career_target,
-                'date' => $request->date,
-                'status' => Icp::STATUS_DRAFT, // status awal "Draft" (4)
+                'employee_id'   => $data['employee_id'],
+                'aspiration'    => $data['aspiration'],
+                'career_target' => $data['career_target_code'],
+                'date'          => $data['date'],
+                'status'        => Icp::STATUS_DRAFT, // 4
             ]);
-            $this->seedStepsForIcp($icp);
 
-            // Loop semua detail dan simpan satu per satu
-            foreach ($request->stages as $stage) {
-                $year  = (int) $stage['plan_year'];
+            if (method_exists($this, 'seedStepsForIcp')) {
+                $this->seedStepsForIcp($icp);
+            }
+
+            foreach ($data['stages'] as $stage) {
+                $year  = (int) $stage['year'];
                 $job   = $stage['job_function'];
-                $pos   = $stage['position'];
+                $pos   = $stage['position_code'];
                 $level = $stage['level'];
 
                 $rows = [];
@@ -472,8 +470,9 @@ class IcpController extends Controller
             }
 
             DB::commit();
+
             return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil disimpan.');
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
         }
@@ -1005,5 +1004,33 @@ class IcpController extends Controller
         $svc->run($icp, $r->all(), $planYear, "Annual Evaluation ICP {$planYear}");
 
         return redirect()->route('icp.assign')->with('success', 'Evaluation saved (Create backup ICP)');
+    }
+
+    /* =================== HELPERS =================== */
+    public function levelsForPosition(Request $request)
+    {
+        $pos = strtoupper($request->query('position_code', ''));
+        $career = strtoupper($request->query('career_target_code', ''));
+
+        // guard: posisi harus <= carrer target
+        if ($career && !RtcTarget::lte($pos, $career)) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Position melebihi career target.'
+            ], 422);
+        }
+
+        $map = RtcTarget::map($pos);
+        if (!$map) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Kode posisi tidak dikenal.'
+            ], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'levels' => $map['levels'] ?? []
+        ]);
     }
 }

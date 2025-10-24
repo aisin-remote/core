@@ -6,20 +6,15 @@
 @push('custom-css')
     <style>
         /* =========================
-                                                                                                                                                                                                                                                                                                           ICP Stage – Neutral High-Contrast
-                                                                                                                                                                                                                                                                                                           ========================= */
+               ICP Stage – Neutral High-Contrast
+               ========================= */
         :root {
             --stage-border: #3f4a5a;
-            /* abu-abu kebiruan gelap */
             --stage-head-bg: #1f2937;
-            /* gray-800 */
-            --stage-head-fg: #ffffff;
+            --stage-head-fg: #fff;
             --stage-accent: #111827;
-            /* gray-900 */
             --detail-bg: #f3f4f6;
-            /* gray-100 */
             --detail-border: #d1d5db;
-            /* gray-300 */
             --shadow-inset: rgba(63, 74, 90, .20);
             --shadow-card: rgba(0, 0, 0, .08);
             --radius-card: 1rem;
@@ -27,17 +22,15 @@
             --space-card: 1.25rem;
         }
 
-        /* Card utama */
         .stage-card {
             position: relative;
             border: 2.5px solid var(--stage-border);
             border-radius: var(--radius-card);
             background: #fff;
             overflow: hidden;
-            box-shadow: 0 6px 18px var(--shadow-card);
+            box-shadow: 0 6px 18px var(--shadow-card)
         }
 
-        /* Header */
         .stage-head {
             display: flex;
             align-items: center;
@@ -46,34 +39,31 @@
             color: var(--stage-head-fg);
             border-bottom: 2px solid var(--stage-border);
             padding: 1rem 1.25rem;
-            font-weight: 700;
+            font-weight: 700
         }
 
         .stage-head strong {
-            font-size: 1.1rem;
+            font-size: 1.1rem
         }
 
-        /* Body */
         .stage-body {
-            padding: var(--space-card);
+            padding: var(--space-card)
         }
 
-        /* Detail baris */
         .detail-row {
             background: var(--detail-bg);
             border: 2px solid var(--detail-border);
             border-radius: var(--radius-detail);
-            padding: 14px;
+            padding: 14px
         }
 
-        /* Samakan SEMUA tema ke palet netral di atas (biar tidak warna-warni) */
         .stage-card.theme-blue,
         .stage-card.theme-green,
         .stage-card.theme-amber,
         .stage-card.theme-purple,
         .stage-card.theme-rose {
             border-color: var(--stage-border);
-            box-shadow: 0 0 0 3px var(--shadow-inset) inset, 0 6px 18px var(--shadow-card);
+            box-shadow: 0 0 0 3px var(--shadow-inset) inset, 0 6px 18px var(--shadow-card)
         }
 
         .stage-card.theme-blue .stage-head,
@@ -83,25 +73,15 @@
         .stage-card.theme-rose .stage-head {
             background: var(--stage-head-bg);
             border-bottom-color: var(--stage-border);
-            color: var(--stage-head-fg);
+            color: var(--stage-head-fg)
         }
 
-        .stage-card.theme-blue::before,
-        .stage-card.theme-green::before,
-        .stage-card.theme-amber::before,
-        .stage-card.theme-purple::before,
-        .stage-card.theme-rose::before {
-            background: var(--stage-accent);
-        }
-
-        /* Aksesibilitas kecil: fokus jelas untuk tombol dalam card */
         .stage-card :is(button, .btn, select, input, textarea):focus-visible {
             outline: 3px solid #000;
             outline-offset: 2px;
-            box-shadow: 0 0 0 4px rgba(0, 0, 0, .15);
+            box-shadow: 0 0 0 4px rgba(0, 0, 0, .15)
         }
 
-        /* Animasi masuk (opsional) */
         @keyframes popIn {
             from {
                 transform: scale(.97);
@@ -115,46 +95,43 @@
         }
 
         .stage-card.added {
-            animation: popIn .22s ease-out both;
+            animation: popIn .22s ease-out both
         }
 
-        /* Opsional: high-contrast mode (aktifkan dengan class .hc-mode pada container) */
         .hc-mode .stage-head {
-            background: #000;
+            background: #000
         }
 
         .hc-mode .stage-card {
-            border-color: #000;
+            border-color: #000
         }
 
         .hc-mode .stage-card::before {
-            background: #000;
+            background: #000
         }
     </style>
     <style>
-        /* biar Select2 ukuran kecil selaras form-select-sm */
+        /* Select2 kecil selaras form-select-sm */
         .select2-container .select2-selection--single {
-            height: calc(1.5em + .5rem + 2px);
+            height: calc(1.5em + .5rem + 2px)
         }
 
         .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: calc(1.5em + .5rem);
+            line-height: calc(1.5em + .5rem)
         }
 
         .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: calc(1.5em + .5rem);
+            height: calc(1.5em + .5rem)
         }
 
         .select2-container .select2-selection--single {
             border: 1px solid #ced4da;
-            padding: .25rem .5rem;
+            padding: .25rem .5rem
         }
 
         .select2-selection__rendered {
-            font-size: .875rem;
+            font-size: .875rem
         }
-
-        /* match .form-select-sm */
     </style>
 @endpush
 
@@ -196,20 +173,19 @@
             <form action="{{ route('icp.store') }}" method="POST">
                 @csrf
 
-                {{-- HEADER: cuma 3 field --}}
+                {{-- HEADER --}}
                 <div class="card p-4 shadow-sm rounded-3 mb-4">
                     <h3 class="text-center fw-bold mb-4">Individual Career Plan</h3>
-
                     <div class="row g-3">
                         <div class="col-md-12">
-                            <label class="form-label">Employee</label>
+                            <label class="form-label fw-bold">Employee</label>
                             <input type="text" class="form-control form-select-sm" value="{{ $employee->name }}"
                                 disabled>
                             <input type="hidden" name="employee_id" value="{{ $employee->id }}">
                         </div>
 
                         <div class="col-12">
-                            <label class="form-label">Aspiration</label>
+                            <label class="form-label fw-bold">Aspiration</label>
                             <textarea name="aspiration" class="form-control form-select-sm" rows="3" required>{{ old('aspiration') }}</textarea>
                             @error('aspiration')
                                 <div class="text-danger small">{{ $message }}</div>
@@ -217,46 +193,30 @@
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Career Target</label>
-                            <select name="career_target" id="career_target" class="form-select form-select-sm">
+                            <label class="form-label fw-bold">Career Target</label>
+                            <select name="career_target_code" id="career_target" class="form-select form-select-sm"
+                                required>
                                 <option value="">Select Position</option>
-                                @php
-                                    $careerTarget = [
-                                        'GM' => 'General Manager',
-                                        'Act GM' => 'Act General Manager',
-                                        'Manager' => 'Manager',
-                                        'Act Manager' => 'Act Manager',
-                                        'Coordinator' => 'Coordinator',
-                                        'Act Coordinator' => 'Act Coordinator',
-                                        'Section Head' => 'Section Head',
-                                        'Act Section Head' => 'Act Section Head',
-                                        'Supervisor' => 'Supervisor',
-                                        'Act Supervisor' => 'Act Supervisor',
-                                        'Act Leader' => 'Act Leader',
-                                        'Act JP' => 'Act JP',
-                                        'Operator' => 'Operator',
-                                        'Direktur' => 'Direktur',
-                                    ];
-                                @endphp
-                                @foreach ($careerTarget as $value => $label)
-                                    <option value="{{ $value }}"
-                                        {{ old('career_target', $employee->position ?? '') == $value ? 'selected' : '' }}>
-                                        {{ $label }}</option>
+                                @foreach ($rtcList as $rt)
+                                    {{-- $rtcList: [['code'=>'AL','position'=>'Act Leader'], ...] urut terendah→tertinggi --}}
+                                    <option value="{{ $rt['code'] }}">{{ $rt['position'] }} ({{ $rt['code'] }})</option>
                                 @endforeach
                             </select>
-                            @error('career_target')
+                            <small class="text-muted">Pilihan Position & Level di Development Stage dibatasi hingga target
+                                ini.</small>
+                            @error('career_target_code')
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label">Date Target</label>
+                            <label class="form-label fw-bold">Date Target</label>
                             <input type="date" name="date" id="date" class="form-control form-select-sm">
                         </div>
                     </div>
                 </div>
 
-                {{-- DEVELOPMENT STAGE (per Tahun) --}}
+                {{-- DEVELOPMENT STAGE --}}
                 <div class="card p-4 shadow-sm rounded-3">
                     <div class="d-flex align-items-center justify-content-between">
                         <h3 class="fw-bold mb-0">Development Stage</h3>
@@ -289,8 +249,9 @@
                 <div class="stage-head d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-3">
                         <strong>Stage Tahun</strong>
-                        <input type="number" min="2000" max="2100" pattern="\d{4}" class="form-control form-control-sm"
-                            name="stages[__S__][plan_year]" placeholder="YYYY" style="width:110px" required>
+                        <!-- Tahun otomatis & readonly -->
+                        <input type="number" min="2000" max="2100" class="form-control form-control-sm stage-year"
+                            name="stages[__S__][year]" style="width:110px" readonly required>
                     </div>
                     <button type="button" class="btn btn-danger btn-sm btn-remove-stage">Remove</button>
                 </div>
@@ -298,23 +259,24 @@
                 <div class="stage-body">
                     <div class="row g-3">
                         <div class="col-md-4">
-                            <label class="form-label">Job Function</label>
+                            <label class="form-label fw-bold">Job Function</label>
                             <select class="form-select form-select-sm stage-job" name="stages[__S__][job_function]" required>
                                 <option value="">Select Job Function</option>
-                                <!-- akan diisi server-side via data-options, atau inject via JS -->
                             </select>
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Position</label>
-                            <select class="form-select form-select-sm stage-position" name="stages[__S__][position]" required>
+                            <label class="form-label fw-bold">Position</label>
+                            <select class="form-select form-select-sm stage-position" name="stages[__S__][position_code]"
+                                required disabled>
                                 <option value="">Select Position</option>
                             </select>
                         </div>
 
                         <div class="col-md-4">
-                            <label class="form-label">Level</label>
-                            <select class="form-select form-select-sm stage-level" name="stages[__S__][level]" required>
+                            <label class="form-label fw-bold">Level</label>
+                            <select class="form-select form-select-sm stage-level" name="stages[__S__][level]" required
+                                disabled>
                                 <option value="">-- Select Level --</option>
                             </select>
                         </div>
@@ -344,108 +306,81 @@
                 </div>
                 <div class="row g-2">
                     <div class="col-md-4">
-                        <label class="form-label">Current Tech</label>
+                        <label class="form-label fw-bold">Current Tech</label>
                         <select class="form-select form-select-sm tech-select"
                             name="stages[__S__][details][__D__][current_technical]">
                             <option value=""></option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Required Tech</label>
+                        <label class="form-label fw-bold">Required Tech</label>
                         <select class="form-select form-select-sm tech-select"
                             name="stages[__S__][details][__D__][required_technical]">
                             <option value=""></option>
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Development Technical</label>
+                        <label class="form-label fw-bold">Development Technical</label>
                         <select class="form-select form-select-sm tech-select"
                             name="stages[__S__][details][__D__][development_technical]">
                             <option value=""></option>
                         </select>
                     </div>
 
-                    <!-- Non-Tech tetap input text -->
                     <div class="col-md-4">
-                        <label class="form-label">Current Non-Tech</label>
+                        <label class="form-label fw-bold">Current Non-Tech</label>
                         <input type="text" class="form-control form-select-sm"
                             name="stages[__S__][details][__D__][current_nontechnical]" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Required Non-Tech</label>
+                        <label class="form-label fw-bold">Required Non-Tech</label>
                         <input type="text" class="form-control form-select-sm"
                             name="stages[__S__][details][__D__][required_nontechnical]" required>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Development Non-Tech</label>
+                        <label class="form-label fw-bold">Development Non-Tech</label>
                         <input type="text" class="form-control form-select-sm"
                             name="stages[__S__][details][__D__][development_nontechnical]" required>
                     </div>
                 </div>
             </div>
         </template>
-
     @endverbatim
 
     <script>
-        /* ====== Data dari server (sekali) ====== */
+        /* ===== Data server ===== */
         const DEPARTMENTS = @json($departments->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' — ' . $d->company])->values());
-        const GRADES = @json($grades->pluck('aisin_grade'));
-        const POSITIONS = {
-            'GM': 'General Manager',
-            'Act GM': 'Act General Manager',
-            'Manager': 'Manager',
-            'Act Manager': 'Act Manager',
-            'Coordinator': 'Coordinator',
-            'Act Coordinator': 'Act Coordinator',
-            'Section Head': 'Section Head',
-            'Act Section Head': 'Act Section Head',
-            'Supervisor': 'Supervisor',
-            'Act Supervisor': 'Act Supervisor',
-            'Act Leader': 'Act Leader',
-            'Act JP': 'Act JP',
-            'Operator': 'Operator',
-            'Direktur': 'Direktur'
-        };
+        const TECHS = @json($technicalCompetencies->pluck('competency'));
+        // rtcList dari server (URUT dari terendah→tertinggi)
+        const RTC_LIST = @json($rtcList); // [{code:'AL', position:'Act Leader'}, ...]
+        // rank map untuk pembatasan (semakin besar index = semakin tinggi)
+        const RTC_RANK = Object.fromEntries(RTC_LIST.map((x, i) => [x.code.toUpperCase(), i]));
+
         const DEFAULTS = {
             plan_year: (new Date()).getFullYear(),
-            job_function: @json($employee->job_function ?? ''),
-            position: @json($employee->position ?? ''),
-            level: @json($employee->grade ?? '')
+            job_function: @json($employee->job_function ?? '')
         };
 
-        const TECHS = @json($technicalCompetencies->pluck('competency'));
-
         function initTechSelects(scope) {
-            // siapkan data: [{id:'Java', text:'Java'}, ...]
             const data = (TECHS || []).map(t => ({
                 id: t,
                 text: t
             }));
-
             $(scope).find('.tech-select').each(function() {
                 const $el = $(this);
-
-                // jika sudah pernah diinisialisasi, destroy dulu (aman untuk re-call)
-                if ($el.hasClass('select2-hidden-accessible')) {
-                    $el.select2('destroy');
-                }
-
+                if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
                 $el.select2({
                     data,
-                    tags: true, // boleh ngetik value baru yang belum ada
+                    tags: true,
                     placeholder: 'Select or type…',
                     allowClear: true,
-                    width: '100%',
+                    width: '100%'
                 });
-
-                // jika mau prefill value lama dari old() (optional): baca data-value attr
                 const preset = $el.attr('data-value');
                 if (preset && !$el.val()) {
-                    // pastikan preset ada di options atau tambahkan sebagai tag
-                    if (!TECHS.includes(preset)) {
-                        const newOpt = new Option(preset, preset, true, true);
-                        $el.append(newOpt).trigger('change');
+                    if (!(TECHS || []).includes(preset)) {
+                        const opt = new Option(preset, preset, true, true);
+                        $el.append(opt).trigger('change');
                     } else {
                         $el.val(preset).trigger('change');
                     }
@@ -453,8 +388,7 @@
             });
         }
 
-
-        /* ====== Helpers isi opsi ====== */
+        /* ===== Helpers ===== */
         function fillOptions(selectEl, items, valueKey = 'v', textKey = 't') {
             selectEl.innerHTML = '<option value="">Select</option>';
             items.forEach(it => {
@@ -465,43 +399,75 @@
             });
         }
 
-        function fillPositions(selectEl) {
+        function fillJobs(selectEl) {
+            fillOptions(selectEl, DEPARTMENTS);
+        }
+
+        // Isi posisi dengan batas career target (≤ target)
+        function fillPositionsLimited(selectEl, careerCode) {
             selectEl.innerHTML = '<option value="">Select Position</option>';
-            Object.entries(POSITIONS).forEach(([v, t]) => {
-                const opt = document.createElement('option');
-                opt.value = v;
-                opt.textContent = t;
-                selectEl.appendChild(opt);
+            if (!careerCode || !(careerCode.toUpperCase() in RTC_RANK)) {
+                // belum pilih career target → disable sementara
+                selectEl.disabled = true;
+                return;
+            }
+            const targetRank = RTC_RANK[careerCode.toUpperCase()];
+            RTC_LIST.forEach(rt => {
+                if (RTC_RANK[rt.code.toUpperCase()] <= targetRank) {
+                    const opt = document.createElement('option');
+                    opt.value = rt.code;
+                    opt.textContent = `${rt.position} (${rt.code})`;
+                    selectEl.appendChild(opt);
+                }
             });
+            selectEl.disabled = false;
         }
 
-        function fillGrades(selectEl) {
-            selectEl.innerHTML = '<option value="">-- Select Level --</option>';
-            GRADES.forEach(g => {
-                const opt = document.createElement('option');
-                opt.value = g;
-                opt.textContent = g;
-                selectEl.appendChild(opt);
-            });
+        // Load levels dari backend untuk posisi tertentu (divalidasi ≤ career target)
+        async function loadLevels(levelSelect, positionCode, careerCode) {
+            levelSelect.innerHTML = '<option value="">Loading...</option>';
+            levelSelect.disabled = true;
+            try {
+                const qs = new URLSearchParams({
+                    position_code: positionCode,
+                    career_target_code: careerCode
+                });
+                const res = await fetch(`{{ route('icp.levels') }}?` + qs.toString(), {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                const js = await res.json();
+                if (!js.ok) {
+                    levelSelect.innerHTML = `<option value="">${js.message || 'Level unavailable'}</option>`;
+                    return;
+                }
+                levelSelect.innerHTML = '<option value="">-- Select Level --</option>';
+                (js.levels || []).forEach(lv => {
+                    const opt = document.createElement('option');
+                    opt.value = lv;
+                    opt.textContent = lv;
+                    levelSelect.appendChild(opt);
+                });
+                levelSelect.disabled = false;
+            } catch (e) {
+                levelSelect.innerHTML = '<option value="">Failed to load</option>';
+            }
         }
 
-        /* ====== Utils ====== */
+        /* ===== Utils ===== */
         const getStageCards = () => [...document.querySelectorAll('.stage-card')];
-        const getPlanYearInputs = () => [...document.querySelectorAll('input[name^="stages"][name$="[plan_year]"]')];
-        const getPlanYears = () => getPlanYearInputs().map(i => i.value.trim()).filter(Boolean);
 
         function updateAddBtn() {
-            document.getElementById('btn-add-stage').disabled = getStageCards().length >= 5;
+            document.getElementById('btn-add-stage').disabled = false; // tidak dibatasi; ubah jika perlu
         }
 
-        function scrollToEl(el) {
-            el?.scrollIntoView({
-                behavior: 'smooth',
-                block: 'center'
-            });
+        function applyTheme(stageEl, idx) {
+            const THEMES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
+            THEMES.forEach(c => stageEl.classList.remove(c));
+            stageEl.classList.add(THEMES[idx % THEMES.length]);
         }
 
-        /* ====== Reindex ====== */
         function reindexDetails(stage) {
             const sIdx = Number(stage.dataset.sIndex);
             const rows = stage.querySelectorAll('.details-container .detail-row');
@@ -512,7 +478,7 @@
                 });
             });
         }
-        /* ====== Reindex (tambahkan applyTheme di akhir loop) ====== */
+
         function reindexStages() {
             getStageCards().forEach((stage, sIdx) => {
                 stage.dataset.sIndex = String(sIdx);
@@ -520,14 +486,17 @@
                     el.name = el.name.replace(/stages\[\d+]/, `stages[${sIdx}]`);
                 });
                 reindexDetails(stage);
-
-                // terapkan tema sesuai index baru
                 applyTheme(stage, sIdx);
             });
             updateAddBtn();
+            // Perbarui tahun otomatis berurutan mulai tahun sekarang
+            const base = DEFAULTS.plan_year;
+            getStageCards().forEach((stage, i) => {
+                const yearInput = stage.querySelector('.stage-year');
+                yearInput.value = base + i;
+            });
         }
 
-        /* ====== Add Detail ====== */
         function addDetail(stageEl) {
             const sIndex = Number(stageEl.dataset.sIndex);
             const detailsBox = stageEl.querySelector('.details-container');
@@ -549,18 +518,9 @@
             initTechSelects(row);
         }
 
-        /* ====== Themes ====== */
-        const THEME_CLASSES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
-
-        function applyTheme(stageEl, idx) {
-            THEME_CLASSES.forEach(c => stageEl.classList.remove(c));
-            stageEl.classList.add(THEME_CLASSES[idx % THEME_CLASSES.length]);
-        }
-
         function addStage() {
             const container = document.getElementById('stages-container');
             const idx = container.querySelectorAll('.stage-card').length;
-            if (idx >= 5) return;
 
             const tpl = document.getElementById('stage-template').innerHTML.replaceAll('__S__', idx);
             const wrap = document.createElement('div');
@@ -570,51 +530,59 @@
             stage.dataset.sIndex = String(idx);
             container.appendChild(stage);
 
-            /* (*) terapkan tema + animasi */
             applyTheme(stage, idx);
             stage.classList.add('added');
             setTimeout(() => stage.classList.remove('added'), 300);
 
-            // isi dropdown, tombol, guard, prefill, dll (tetap sama)
-            fillOptions(stage.querySelector('.stage-job'), DEPARTMENTS);
-            fillPositions(stage.querySelector('.stage-position'));
-            fillGrades(stage.querySelector('.stage-level'));
+            // isi dropdown
+            fillJobs(stage.querySelector('.stage-job'));
 
+            // posisi dibatasi oleh career target
+            const careerSelect = document.getElementById('career_target');
+            const posSel = stage.querySelector('.stage-position');
+            const lvlSel = stage.querySelector('.stage-level');
+
+            // set tahun otomatis (readonly)
+            const yearInput = stage.querySelector('.stage-year');
+            yearInput.readOnly = true; // jaga-jaga
+            yearInput.value = DEFAULTS.plan_year + idx;
+
+            // tombol remove
             stage.querySelector('.btn-remove-stage').addEventListener('click', () => {
                 stage.remove();
                 reindexStages();
             });
+
+            // tombol add detail
             stage.querySelector('.btn-add-detail').addEventListener('click', () => addDetail(stage));
 
-            const yearInput = stage.querySelector(`[name="stages[${idx}][plan_year]"]`);
-            yearInput.addEventListener('change', () => {
-                const val = yearInput.value.trim();
-                if (!val) return;
-                const years = getPlanYears();
-                if (years.filter(y => y === val).length > 1) {
-                    Swal.fire('Plan year duplikat', 'Tahun tersebut sudah dipakai pada stage lain.', 'warning');
-                    yearInput.value = '';
-                    yearInput.focus();
+            // saat posisi berubah → ambil level dari backend
+            posSel.addEventListener('change', () => {
+                const pos = posSel.value;
+                const career = careerSelect.value;
+                if (!pos || !career) {
+                    lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
+                    lvlSel.disabled = true;
+                    return;
                 }
+                loadLevels(lvlSel, pos, career);
             });
 
-            if (idx === 0) {
-                yearInput.value = DEFAULTS.plan_year;
-                stage.querySelector(`[name="stages[${idx}][job_function]"]`).value = DEFAULTS.job_function || '';
-                stage.querySelector(`[name="stages[${idx}][position]"]`).value = DEFAULTS.position || '';
-                stage.querySelector(`[name="stages[${idx}][level]"]`).value = DEFAULTS.level || '';
-            }
-
+            // buat minimal 1 detail
             addDetail(stage);
             updateAddBtn();
+
+            // pertama kali render, isi posisi sesuai target (kalau sudah dipilih)
+            if (careerSelect.value) {
+                fillPositionsLimited(posSel, careerSelect.value);
+            }
         }
 
-        /* ====== Init + submit guard ====== */
         document.addEventListener('DOMContentLoaded', () => {
             // tombol add tahun
             document.getElementById('btn-add-stage').addEventListener('click', addStage);
 
-            // buat 1 stage saat load
+            // buat 1 stage saat load (tahun sekarang)
             addStage();
 
             // defaultkan tanggal jika kosong
@@ -626,42 +594,42 @@
                 dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
             }
 
-            // sebelum submit: cek & sanitize
+            // ketika career target berubah: reset semua posisi/level & batasi opsi
+            const careerSelect = document.getElementById('career_target');
+            careerSelect.addEventListener('change', () => {
+                const career = careerSelect.value;
+                getStageCards().forEach(stage => {
+                    const posSel = stage.querySelector('.stage-position');
+                    const lvlSel = stage.querySelector('.stage-level');
+                    fillPositionsLimited(posSel, career);
+                    // reset pilihan sebelumnya agar tidak melanggar batas
+                    posSel.value = '';
+                    lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
+                    lvlSel.disabled = true;
+                });
+            });
+
+            // sebelum submit: sanitasi ringan & cek minimal 1 detail per stage
             const form = document.querySelector('form[action="{{ route('icp.store') }}"]');
             form.addEventListener('submit', (e) => {
-                // sanitize
                 form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
                     el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
                 });
-
                 const stages = getStageCards();
                 if (stages.length === 0) {
                     e.preventDefault();
                     Swal.fire('Oops', 'Minimal 1 tahun harus ditambahkan.', 'warning');
                     return;
                 }
-                const years = getPlanYears();
-                if (years.length !== stages.length) {
-                    e.preventDefault();
-                    Swal.fire('Oops', 'Setiap Stage Tahun wajib diisi 4 digit.', 'warning');
-                    return;
-                }
-                if (new Set(years).size !== years.length) {
-                    e.preventDefault();
-                    Swal.fire('Oops', 'Plan year tidak boleh duplikat.', 'warning');
-                    return;
-                }
                 for (const stage of stages) {
-                    const count = stage.querySelectorAll('.details-container .detail-row').length;
-                    if (count === 0) {
+                    const cnt = stage.querySelectorAll('.details-container .detail-row').length;
+                    if (cnt === 0) {
                         e.preventDefault();
                         Swal.fire('Oops', 'Setiap tahun minimal punya 1 detail.', 'warning');
-                        scrollToEl(stage);
                         return;
                     }
                 }
             });
         });
     </script>
-
 @endsection

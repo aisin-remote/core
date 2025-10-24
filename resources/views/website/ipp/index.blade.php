@@ -504,9 +504,9 @@
                                             data-cat="{{ $cat['key'] }}">
                                             <thead class="table-light">
                                                 <tr>
-                                                    <th style="width:34%">Program / Activity</th>
+                                                    <th style="width:25%">Program / Activity</th>
                                                     <th style="width:22%">Target One</th>
-                                                    <th style="width:14%">Start → Due</th>
+                                                    <th style="width:20%">Start → Due</th>
                                                     <th style="width:6%">W%</th>
                                                     <th style="width:8%">Action</th>
                                                 </tr>
