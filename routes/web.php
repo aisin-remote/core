@@ -147,6 +147,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/{icp}/evaluate', [IcpController::class, 'evaluateStore'])->name('icp.evaluate.store');
 
         Route::get('/levels', [IcpController::class, 'levelsForPosition'])->name('icp.levels');
+        Route::get('/techs', [IcpController::class, 'techs'])->name('icp.techs');
     });
 
     Route::prefix('hav')->group(function () {

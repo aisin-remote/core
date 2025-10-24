@@ -348,288 +348,385 @@
     @endverbatim
 
     <script>
-        /* ===== Data server ===== */
-        const DEPARTMENTS = @json($departments->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' — ' . $d->company])->values());
-        const TECHS = @json($technicalCompetencies->pluck('competency'));
+        /* ===== Data dari server ===== */
+        const DEPARTMENTS = @json($departments->map(fn($d) => ['v'=>$d->name, 't'=>$d->name . ' — ' . $d->company])->values());
+        const DIVISIONS  = @json($divisions->map(fn($d) => ['v'=>$d->name, 't'=>$d->name . ' - ' . $d->company])->values());
+        const TECHS      = @json($technicalCompetencies->pluck('competency'));
+        const COMPANY    = @json($employee->company_name);
+
         // rtcList dari server (URUT dari terendah→tertinggi)
         const RTC_LIST = @json($rtcList); // [{code:'AL', position:'Act Leader'}, ...]
         // rank map untuk pembatasan (semakin besar index = semakin tinggi)
         const RTC_RANK = Object.fromEntries(RTC_LIST.map((x, i) => [x.code.toUpperCase(), i]));
 
         const DEFAULTS = {
-            plan_year: (new Date()).getFullYear(),
-            job_function: @json($employee->job_function ?? '')
+          plan_year: (new Date()).getFullYear(),
+          job_function: @json($employee->job_function ?? '')
         };
 
-        function initTechSelects(scope) {
-            const data = (TECHS || []).map(t => ({
-                id: t,
-                text: t
-            }));
-            $(scope).find('.tech-select').each(function() {
-                const $el = $(this);
-                if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
-                $el.select2({
-                    data,
-                    tags: true,
-                    placeholder: 'Select or type…',
-                    allowClear: true,
-                    width: '100%'
-                });
-                const preset = $el.attr('data-value');
-                if (preset && !$el.val()) {
-                    if (!(TECHS || []).includes(preset)) {
-                        const opt = new Option(preset, preset, true, true);
-                        $el.append(opt).trigger('change');
-                    } else {
-                        $el.val(preset).trigger('change');
-                    }
-                }
+        /* ====== Select2 Tech per-stage (mendukung override list) ====== */
+        function initTechSelects(scope, techListOverride = null) {
+          const base = (techListOverride ?? TECHS ?? []).map(t => ({ id: t, text: t }));
+
+          $(scope).find('.tech-select').each(function () {
+            const $el = $(this);
+            if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+            $el.select2({
+              data: base,
+              tags: true,
+              placeholder: 'Select or type…',
+              allowClear: true,
+              width: '100%'
             });
+
+            // restore preset bila ada
+            const preset = $el.attr('data-value');
+            if (preset && !$el.val()) {
+              if (!base.some(x => x.id === preset)) {
+                const opt = new Option(preset, preset, true, true);
+                $el.append(opt).trigger('change');
+              } else {
+                $el.val(preset).trigger('change');
+              }
+            }
+          });
         }
 
-        /* ===== Helpers ===== */
+        /* ===== Helpers umum ===== */
         function fillOptions(selectEl, items, valueKey = 'v', textKey = 't') {
-            selectEl.innerHTML = '<option value="">Select</option>';
-            items.forEach(it => {
-                const opt = document.createElement('option');
-                opt.value = valueKey ? it[valueKey] : it;
-                opt.textContent = textKey ? it[textKey] : it;
-                selectEl.appendChild(opt);
-            });
+          selectEl.innerHTML = '<option value="">Select</option>';
+          items.forEach(it => {
+            const opt = document.createElement('option');
+            opt.value = valueKey ? it[valueKey] : it;
+            opt.textContent = textKey ? it[textKey] : it;
+            selectEl.appendChild(opt);
+          });
         }
 
+        /* Job Function berkelompok + tandai sumber di data-source */
         function fillJobs(selectEl) {
-            fillOptions(selectEl, DEPARTMENTS);
-        }
+          // reset + placeholder
+          selectEl.innerHTML = '';
+          const ph = document.createElement('option');
+          ph.value = '';
+          ph.textContent = 'Select';
+          ph.disabled = true;
+          ph.selected = true;
+          selectEl.appendChild(ph);
 
-        // Isi posisi dengan batas career target (≤ target)
-        function fillPositionsLimited(selectEl, careerCode) {
-            selectEl.innerHTML = '<option value="">Select Position</option>';
-            if (!careerCode || !(careerCode.toUpperCase() in RTC_RANK)) {
-                // belum pilih career target → disable sementara
-                selectEl.disabled = true;
-                return;
-            }
-            const targetRank = RTC_RANK[careerCode.toUpperCase()];
-            RTC_LIST.forEach(rt => {
-                if (RTC_RANK[rt.code.toUpperCase()] <= targetRank) {
-                    const opt = document.createElement('option');
-                    opt.value = rt.code;
-                    opt.textContent = `${rt.position} (${rt.code})`;
-                    selectEl.appendChild(opt);
-                }
+          const makeGroup = (label, items, src) => {
+            const og = document.createElement('optgroup');
+            og.label = label;
+            items.forEach(it => {
+              const opt = document.createElement('option');
+              opt.value = it.v;
+              opt.textContent = it.t;
+              opt.dataset.source = src; // <<— penanda asal
+              og.appendChild(opt);
             });
-            selectEl.disabled = false;
+            selectEl.appendChild(og);
+          };
+
+          makeGroup('Departments', DEPARTMENTS, 'department');
+          makeGroup('Divisions',   DIVISIONS,   'division');
         }
 
-        // Load levels dari backend untuk posisi tertentu (divalidasi ≤ career target)
-        async function loadLevels(levelSelect, positionCode, careerCode) {
-            levelSelect.innerHTML = '<option value="">Loading...</option>';
-            levelSelect.disabled = true;
-            try {
-                const qs = new URLSearchParams({
-                    position_code: positionCode,
-                    career_target_code: careerCode
-                });
-                const res = await fetch(`{{ route('icp.levels') }}?` + qs.toString(), {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                const js = await res.json();
-                if (!js.ok) {
-                    levelSelect.innerHTML = `<option value="">${js.message || 'Level unavailable'}</option>`;
-                    return;
-                }
-                levelSelect.innerHTML = '<option value="">-- Select Level --</option>';
-                (js.levels || []).forEach(lv => {
-                    const opt = document.createElement('option');
-                    opt.value = lv;
-                    opt.textContent = lv;
-                    levelSelect.appendChild(opt);
-                });
-                levelSelect.disabled = false;
-            } catch (e) {
-                levelSelect.innerHTML = '<option value="">Failed to load</option>';
+        /* Isi posisi dengan batas career target (≤ target) */
+        function fillPositionsLimited(selectEl, careerCode) {
+          selectEl.innerHTML = '<option value="">Select Position</option>';
+          if (!careerCode || !(careerCode.toUpperCase() in RTC_RANK)) {
+            selectEl.disabled = true;
+            return;
+          }
+          const targetRank = RTC_RANK[careerCode.toUpperCase()];
+          RTC_LIST.forEach(rt => {
+            if (RTC_RANK[rt.code.toUpperCase()] <= targetRank) {
+              const opt = document.createElement('option');
+              opt.value = rt.code;
+              opt.textContent = `${rt.position} (${rt.code})`;
+              selectEl.appendChild(opt);
             }
+          });
+          selectEl.disabled = false;
+        }
+
+        /* Load levels dari backend untuk posisi tertentu (divalidasi ≤ career target) */
+        async function loadLevels(levelSelect, positionCode, careerCode) {
+          levelSelect.innerHTML = '<option value="">Loading...</option>';
+          levelSelect.disabled = true;
+          try {
+            const qs = new URLSearchParams({
+              position_code: positionCode,
+              career_target_code: careerCode
+            });
+            const res = await fetch(`{{ route('icp.levels') }}?` + qs.toString(), {
+              headers: { 'Accept': 'application/json' }
+            });
+            const js = await res.json();
+            if (!js.ok) {
+              levelSelect.innerHTML = `<option value="">${js.message || 'Level unavailable'}</option>`;
+              return;
+            }
+            levelSelect.innerHTML = '<option value="">-- Select Level --</option>';
+            (js.levels || []).forEach(lv => {
+              const opt = document.createElement('option');
+              opt.value = lv;
+              opt.textContent = lv;
+              levelSelect.appendChild(opt);
+            });
+            levelSelect.disabled = false;
+          } catch (e) {
+            levelSelect.innerHTML = '<option value="">Failed to load</option>';
+          }
         }
 
         /* ===== Utils ===== */
         const getStageCards = () => [...document.querySelectorAll('.stage-card')];
 
         function updateAddBtn() {
-            document.getElementById('btn-add-stage').disabled = false; // tidak dibatasi; ubah jika perlu
+          document.getElementById('btn-add-stage').disabled = false; // tidak dibatasi; ubah jika perlu
         }
 
         function applyTheme(stageEl, idx) {
-            const THEMES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
-            THEMES.forEach(c => stageEl.classList.remove(c));
-            stageEl.classList.add(THEMES[idx % THEMES.length]);
+          const THEMES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
+          THEMES.forEach(c => stageEl.classList.remove(c));
+          stageEl.classList.add(THEMES[idx % THEMES.length]);
         }
 
         function reindexDetails(stage) {
-            const sIdx = Number(stage.dataset.sIndex);
-            const rows = stage.querySelectorAll('.details-container .detail-row');
-            rows.forEach((row, dIdx) => {
-                row.querySelectorAll('[name*="[details]"]').forEach(el => {
-                    el.name = el.name.replace(/stages\[\d+]\[details]\[\d+]/,
-                        `stages[${sIdx}][details][${dIdx}]`);
-                });
+          const sIdx = Number(stage.dataset.sIndex);
+          const rows = stage.querySelectorAll('.details-container .detail-row');
+          rows.forEach((row, dIdx) => {
+            row.querySelectorAll('[name*="[details]"]').forEach(el => {
+              el.name = el.name.replace(/stages\[\d+]\[details]\[\d+]/,
+                `stages[${sIdx}][details][${dIdx}]`);
             });
+          });
         }
 
         function reindexStages() {
-            getStageCards().forEach((stage, sIdx) => {
-                stage.dataset.sIndex = String(sIdx);
-                stage.querySelectorAll('[name^="stages["]').forEach(el => {
-                    el.name = el.name.replace(/stages\[\d+]/, `stages[${sIdx}]`);
-                });
-                reindexDetails(stage);
-                applyTheme(stage, sIdx);
+          getStageCards().forEach((stage, sIdx) => {
+            stage.dataset.sIndex = String(sIdx);
+            stage.querySelectorAll('[name^="stages["]').forEach(el => {
+              el.name = el.name.replace(/stages\[\d+]/, `stages[${sIdx}]`);
             });
-            updateAddBtn();
-            // Perbarui tahun otomatis berurutan mulai tahun sekarang
-            const base = DEFAULTS.plan_year;
-            getStageCards().forEach((stage, i) => {
-                const yearInput = stage.querySelector('.stage-year');
-                yearInput.value = base + i;
-            });
-        }
-
-        function addDetail(stageEl) {
-            const sIndex = Number(stageEl.dataset.sIndex);
-            const detailsBox = stageEl.querySelector('.details-container');
-            const dIndex = detailsBox.querySelectorAll('.detail-row').length;
-
-            const tpl = document.getElementById('detail-template').innerHTML
-                .replaceAll('__S__', sIndex).replaceAll('__D__', dIndex);
-
-            const wrap = document.createElement('div');
-            wrap.innerHTML = tpl.trim();
-            const row = wrap.firstElementChild;
-
-            row.querySelector('.btn-remove-detail').addEventListener('click', () => {
-                row.remove();
-                reindexDetails(stageEl);
-            });
-
-            detailsBox.appendChild(row);
-            initTechSelects(row);
-        }
-
-        function addStage() {
-            const container = document.getElementById('stages-container');
-            const idx = container.querySelectorAll('.stage-card').length;
-
-            const tpl = document.getElementById('stage-template').innerHTML.replaceAll('__S__', idx);
-            const wrap = document.createElement('div');
-            wrap.innerHTML = tpl.trim();
-            const stage = wrap.firstElementChild;
-
-            stage.dataset.sIndex = String(idx);
-            container.appendChild(stage);
-
-            applyTheme(stage, idx);
-            stage.classList.add('added');
-            setTimeout(() => stage.classList.remove('added'), 300);
-
-            // isi dropdown
-            fillJobs(stage.querySelector('.stage-job'));
-
-            // posisi dibatasi oleh career target
-            const careerSelect = document.getElementById('career_target');
-            const posSel = stage.querySelector('.stage-position');
-            const lvlSel = stage.querySelector('.stage-level');
-
-            // set tahun otomatis (readonly)
+            reindexDetails(stage);
+            applyTheme(stage, sIdx);
+          });
+          updateAddBtn();
+          // Perbarui tahun otomatis berurutan mulai tahun sekarang
+          const base = DEFAULTS.plan_year;
+          getStageCards().forEach((stage, i) => {
             const yearInput = stage.querySelector('.stage-year');
-            yearInput.readOnly = true; // jaga-jaga
-            yearInput.value = DEFAULTS.plan_year + idx;
-
-            // tombol remove
-            stage.querySelector('.btn-remove-stage').addEventListener('click', () => {
-                stage.remove();
-                reindexStages();
-            });
-
-            // tombol add detail
-            stage.querySelector('.btn-add-detail').addEventListener('click', () => addDetail(stage));
-
-            // saat posisi berubah → ambil level dari backend
-            posSel.addEventListener('change', () => {
-                const pos = posSel.value;
-                const career = careerSelect.value;
-                if (!pos || !career) {
-                    lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
-                    lvlSel.disabled = true;
-                    return;
-                }
-                loadLevels(lvlSel, pos, career);
-            });
-
-            // buat minimal 1 detail
-            addDetail(stage);
-            updateAddBtn();
-
-            // pertama kali render, isi posisi sesuai target (kalau sudah dipilih)
-            if (careerSelect.value) {
-                fillPositionsLimited(posSel, careerSelect.value);
-            }
+            yearInput.value = base + i;
+          });
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // tombol add tahun
-            document.getElementById('btn-add-stage').addEventListener('click', addStage);
+        /* ====== Refresh daftar tech berdasarkan Job Function stage ====== */
+        async function refreshStageTechs(stageEl, source, jobName) {
+          // beri feedback kosong sementara
+          initTechSelects(stageEl.querySelector('.details-container'), []);
 
-            // buat 1 stage saat load (tahun sekarang)
-            addStage();
+          try {
+            const qs = new URLSearchParams({
+              source,              // 'department' | 'division'
+              name: jobName,       // nama job function (dept/div name)
+              company: COMPANY
+            });
+            const res = await fetch(`{{ route('icp.techs') }}?` + qs.toString(), {
+              headers: { 'Accept': 'application/json' }
+            });
+            const js = await res.json();
+            const items = (js.ok ? js.items : []) || [];
 
-            // defaultkan tanggal jika kosong
-            const dateEl = document.getElementById('date');
-            if (dateEl && !dateEl.value) {
-                const d = new Date();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
+            // cache ke stage (dipakai add detail berikutnya)
+            stageEl._techList = items;
+
+            // re-init semua tech-select di stage pakai daftar baru
+            initTechSelects(stageEl.querySelector('.details-container'), items);
+          } catch (e) {
+            stageEl._techList = [];
+            initTechSelects(stageEl.querySelector('.details-container'), []);
+          }
+        }
+
+        /* ====== Detail row ====== */
+        function addDetail(stageEl) {
+          const sIndex = Number(stageEl.dataset.sIndex);
+          const detailsBox = stageEl.querySelector('.details-container');
+          const dIndex = detailsBox.querySelectorAll('.detail-row').length;
+
+          const tpl = document.getElementById('detail-template').innerHTML
+            .replaceAll('__S__', sIndex).replaceAll('__D__', dIndex);
+
+          const wrap = document.createElement('div');
+          wrap.innerHTML = tpl.trim();
+          const row = wrap.firstElementChild;
+
+          row.querySelector('.btn-remove-detail').addEventListener('click', () => {
+            row.remove();
+            reindexDetails(stageEl);
+          });
+
+          detailsBox.appendChild(row);
+
+          // gunakan tech list spesifik stage bila tersedia, fallback ke global TECHS
+          initTechSelects(row, stageEl._techList ?? TECHS);
+        }
+
+        /* ====== Stage card ====== */
+        function addStage() {
+          const container = document.getElementById('stages-container');
+          const idx = container.querySelectorAll('.stage-card').length;
+
+          const tpl = document.getElementById('stage-template').innerHTML.replaceAll('__S__', idx);
+          const wrap = document.createElement('div');
+          wrap.innerHTML = tpl.trim();
+          const stage = wrap.firstElementChild;
+
+          // index & inject
+          stage.dataset.sIndex = String(idx);
+          container.appendChild(stage);
+
+          applyTheme(stage, idx);
+          stage.classList.add('added');
+          setTimeout(() => stage.classList.remove('added'), 300);
+
+          // isi Job Function (dengan optgroup & data-source)
+          const jobSel = stage.querySelector('.stage-job');
+          fillJobs(jobSel);
+
+          // siapkan hidden input untuk kirim sumber job
+          let jobSrc = stage.querySelector('.job-source');
+          if (!jobSrc) {
+            jobSrc = document.createElement('input');
+            jobSrc.type = 'hidden';
+            jobSrc.className = 'job-source';
+            jobSrc.name = `stages[${idx}][job_source]`; // ikut index stage
+            stage.appendChild(jobSrc);
+          }
+
+          // posisi & level
+          const careerSelect = document.getElementById('career_target');
+          const posSel = stage.querySelector('.stage-position');
+          const lvlSel = stage.querySelector('.stage-level');
+
+          // set tahun otomatis (readonly)
+          const yearInput = stage.querySelector('.stage-year');
+          yearInput.readOnly = true;
+          yearInput.value = DEFAULTS.plan_year + idx;
+
+          // tombol remove stage
+          stage.querySelector('.btn-remove-stage').addEventListener('click', () => {
+            stage.remove();
+            reindexStages();
+          });
+
+          // tombol add detail
+          stage.querySelector('.btn-add-detail').addEventListener('click', () => addDetail(stage));
+
+          // saat posisi berubah → ambil level dari backend
+          posSel.addEventListener('change', () => {
+            const pos = posSel.value;
+            const career = careerSelect.value;
+            if (!pos || !career) {
+              lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
+              lvlSel.disabled = true;
+              return;
             }
+            loadLevels(lvlSel, pos, career);
+          });
 
-            // ketika career target berubah: reset semua posisi/level & batasi opsi
-            const careerSelect = document.getElementById('career_target');
-            careerSelect.addEventListener('change', () => {
-                const career = careerSelect.value;
-                getStageCards().forEach(stage => {
-                    const posSel = stage.querySelector('.stage-position');
-                    const lvlSel = stage.querySelector('.stage-level');
-                    fillPositionsLimited(posSel, career);
-                    // reset pilihan sebelumnya agar tidak melanggar batas
-                    posSel.value = '';
-                    lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
-                    lvlSel.disabled = true;
-                });
-            });
+          // Job Function berubah → refresh competencies
+          stage._techList = []; // awalnya kosong
+          jobSel.addEventListener('change', () => {
+            const opt = jobSel.options[jobSel.selectedIndex];
+            const source = opt?.dataset.source || ''; // 'department' / 'division'
+            const jobName = jobSel.value || '';
 
-            // sebelum submit: sanitasi ringan & cek minimal 1 detail per stage
-            const form = document.querySelector('form[action="{{ route('icp.store') }}"]');
-            form.addEventListener('submit', (e) => {
-                form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
-                    el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
-                });
-                const stages = getStageCards();
-                if (stages.length === 0) {
-                    e.preventDefault();
-                    Swal.fire('Oops', 'Minimal 1 tahun harus ditambahkan.', 'warning');
-                    return;
-                }
-                for (const stage of stages) {
-                    const cnt = stage.querySelectorAll('.details-container .detail-row').length;
-                    if (cnt === 0) {
-                        e.preventDefault();
-                        Swal.fire('Oops', 'Setiap tahun minimal punya 1 detail.', 'warning');
-                        return;
-                    }
-                }
+            // sinkronkan hidden job_source
+            jobSrc.value = source;
+
+            if (!source || !jobName) {
+              stage._techList = [];
+              initTechSelects(stage.querySelector('.details-container'), []);
+              return;
+            }
+            refreshStageTechs(stage, source, jobName);
+          });
+
+          // detail awal minimal 1
+          addDetail(stage);
+          updateAddBtn();
+
+          // pertama kali render, isi posisi sesuai target (kalau sudah dipilih)
+          if (careerSelect.value) {
+            fillPositionsLimited(posSel, careerSelect.value);
+          }
+
+          // (Opsional) preset job function default karyawan
+          if (DEFAULTS.job_function) {
+            const match = [...jobSel.options].find(o => o.value === DEFAULTS.job_function);
+            if (match) {
+              jobSel.value = DEFAULTS.job_function;
+              jobSel.dispatchEvent(new Event('change'));
+            }
+          }
+        }
+
+        /* ====== Lifecycle halaman ====== */
+        document.addEventListener('DOMContentLoaded', () => {
+          // tombol add tahun
+          document.getElementById('btn-add-stage').addEventListener('click', addStage);
+
+          // buat 1 stage saat load (tahun sekarang)
+          addStage();
+
+          // defaultkan tanggal jika kosong
+          const dateEl = document.getElementById('date');
+          if (dateEl && !dateEl.value) {
+            const d = new Date();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
+          }
+
+          // ketika career target berubah: reset semua posisi/level & batasi opsi
+          const careerSelect = document.getElementById('career_target');
+          careerSelect.addEventListener('change', () => {
+            const career = careerSelect.value;
+            getStageCards().forEach(stage => {
+              const posSel = stage.querySelector('.stage-position');
+              const lvlSel = stage.querySelector('.stage-level');
+              fillPositionsLimited(posSel, career);
+              posSel.value = '';
+              lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
+              lvlSel.disabled = true;
             });
+          });
+
+          // sebelum submit: sanitasi ringan & cek minimal 1 detail per stage
+          const form = document.querySelector('form[action="{{ route('icp.store') }}"]');
+          form.addEventListener('submit', (e) => {
+            form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
+              el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
+            });
+            const stages = getStageCards();
+            if (stages.length === 0) {
+              e.preventDefault();
+              Swal.fire('Oops', 'Minimal 1 tahun harus ditambahkan.', 'warning');
+              return;
+            }
+            for (const stage of stages) {
+              const cnt = stage.querySelectorAll('.details-container .detail-row').length;
+              if (cnt === 0) {
+                e.preventDefault();
+                Swal.fire('Oops', 'Setiap tahun minimal punya 1 detail.', 'warning');
+                return;
+              }
+            }
+          });
         });
-    </script>
+        </script>
+
 @endsection

@@ -103,8 +103,8 @@ class IcpController extends Controller
 
     public function index(Request $request, $company = null)
     {
-        $title  = 'Employee ICP';
-        $user   = auth()->user();
+        $title = 'Employee ICP';
+        $user = auth()->user();
         $search = $request->input('search');               // diteruskan ke querystring agar tab/URL konsisten
         $filter = $request->input('filter', 'all');
 
@@ -128,7 +128,8 @@ class IcpController extends Controller
             : $rawPosition;
 
         $positionIndex = array_search($currentPosition, $allPositions);
-        if ($positionIndex === false) $positionIndex = array_search('Operator', $allPositions);
+        if ($positionIndex === false)
+            $positionIndex = array_search('Operator', $allPositions);
         $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
 
         // View tidak membawa $icp lagi; DataTables akan fetch via AJAX
@@ -143,11 +144,11 @@ class IcpController extends Controller
 
     public function data(Request $request, $company = null)
     {
-        $user   = auth()->user();
+        $user = auth()->user();
 
         // Parameter standar DataTables
-        $draw   = (int) $request->input('draw', 1);
-        $start  = (int) $request->input('start', 0);
+        $draw = (int) $request->input('draw', 1);
+        $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
         $searchValue = trim($request->input('search.value', ''));
         $filter = $request->input('filter', 'all');
@@ -212,7 +213,7 @@ class IcpController extends Controller
 
         // Ordering (opsional; default by newest)
         $orderColIdx = (int) data_get($request->input('order.0'), 'column', 0);
-        $orderDir    = data_get($request->input('order.0'), 'dir', 'desc') === 'asc' ? 'asc' : 'desc';
+        $orderDir = data_get($request->input('order.0'), 'dir', 'desc') === 'asc' ? 'asc' : 'desc';
         // mapping index kolom front-end
         $cols = ['id', 'photo', 'npk', 'name', 'company_name', 'position', 'department', 'grade', 'actions'];
         $orderCol = $cols[$orderColIdx] ?? 'id';
@@ -235,54 +236,54 @@ class IcpController extends Controller
 
             // Unit dinamis sesuai posisi
             $unit = match ($emp?->position) {
-                'Direktur', 'Act Direktur'   => $emp?->plant?->name,
+                'Direktur', 'Act Direktur' => $emp?->plant?->name,
                 'GM', 'Act GM' => $emp?->division?->name,
-                default      => $emp?->department?->name,
+                default => $emp?->department?->name,
             };
 
             $photoUrl = $emp?->photo ? asset('storage/' . $emp->photo) : asset('assets/media/avatars/300-1.jpg');
 
             $data[] = [
                 // Serahkan "No" dihitung client dari start + row index, atau kirim kolom hidden index
-                'no'           => $start + $i + 1,
-                'photo'        => '<img src="' . $photoUrl . '" class="rounded" width="40" height="40" style="object-fit:cover" />',
-                'npk'          => e($emp?->npk ?? '-'),
-                'name'         => e($emp?->name ?? '-'),
+                'no' => $start + $i + 1,
+                'photo' => '<img src="' . $photoUrl . '" class="rounded" width="40" height="40" style="object-fit:cover" />',
+                'npk' => e($emp?->npk ?? '-'),
+                'name' => e($emp?->name ?? '-'),
                 'company_name' => e($emp?->company_name ?? '-'),
-                'position'     => e($emp?->position ?? '-'),
-                'department'   => e($unit ?? '-'),
-                'grade'        => e($emp?->grade ?? '-'),
-                'actions'      => '<a href="#" data-employee-id="' . $emp?->id . '" class="btn btn-info btn-sm history-btn">History</a>',
+                'position' => e($emp?->position ?? '-'),
+                'department' => e($unit ?? '-'),
+                'grade' => e($emp?->grade ?? '-'),
+                'actions' => '<a href="#" data-employee-id="' . $emp?->id . '" class="btn btn-info btn-sm history-btn">History</a>',
             ];
         }
 
         return response()->json([
-            'draw'            => $draw,
-            'recordsTotal'    => $recordsTotal,
+            'draw' => $draw,
+            'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
-            'data'            => $data,
+            'data' => $data,
         ]);
     }
 
     public function assign(Request $request, $company = null)
     {
-        $title   = 'ICP Assign';
-        $user    = auth()->user();
-        $emp     = $user->employee;
+        $title = 'ICP Assign';
+        $user = auth()->user();
+        $emp = $user->employee;
 
-        $filter  = $request->input('filter', 'all');
-        $search  = $request->input('search');
+        $filter = $request->input('filter', 'all');
+        $search = $request->input('search');
 
         // tab posisi
         $allPositions = ['Direktur', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
-        $rawPosition  = $emp->position ?? 'Operator';
-        $currentPos   = Str::startsWith($rawPosition, 'Act ') ? trim(substr($rawPosition, 4)) : $rawPosition;
-        $posIdx       = array_search($currentPos, $allPositions);
+        $rawPosition = $emp->position ?? 'Operator';
+        $currentPos = Str::startsWith($rawPosition, 'Act ') ? trim(substr($rawPosition, 4)) : $rawPosition;
+        $posIdx = array_search($currentPos, $allPositions);
         $visiblePositions = $posIdx !== false ? array_slice($allPositions, $posIdx) : $allPositions;
 
         // bawahan yg boleh dibuat
-        $createLevel     = $emp->getCreateAuth();
-        $subordinateIds  = $emp->getSubordinatesByLevel($createLevel)->pluck('id');
+        $createLevel = $emp->getCreateAuth();
+        $subordinateIds = $emp->getSubordinatesByLevel($createLevel)->pluck('id');
 
         $employees = Employee::with([
             'departments:id,name',
@@ -298,7 +299,7 @@ class IcpController extends Controller
             ->get();
 
         $rows = $employees->map(function ($e) {
-            $icp   = $e->latestIcp; // bisa null
+            $icp = $e->latestIcp; // bisa null
             $steps = $icp?->steps?->sortBy('step_order') ?? collect();
 
             $done = $steps->where('status', 'done')
@@ -320,28 +321,28 @@ class IcpController extends Controller
                 && $anchorDate->copy()->addYear()->isPast();
 
             $statusCode = $icp?->status ?? null;
-            $expired    = ($statusCode === Icp::STATUS_APPROVED && $approvedAt)
+            $expired = ($statusCode === Icp::STATUS_APPROVED && $approvedAt)
                 ? Carbon::parse($approvedAt)->addYear()->isPast()
                 : false;
 
             $badgeMap = [
-                null                                        => ['No ICP', 'badge-light'],
-                Icp::STATUS_REVISE              => ['Revise', 'badge-light-danger'],
-                Icp::STATUS_SUBMITTED           => ['Submitted', 'badge-light-primary'],
-                Icp::STATUS_CHECKED             => ['Checked', 'badge-light-warning'],
-                Icp::STATUS_APPROVED            => [$expired ? 'Approved (Expired)' : 'Approved', $expired ? 'badge-light-dark' : 'badge-light-success'],
+                null => ['No ICP', 'badge-light'],
+                Icp::STATUS_REVISE => ['Revise', 'badge-light-danger'],
+                Icp::STATUS_SUBMITTED => ['Submitted', 'badge-light-primary'],
+                Icp::STATUS_CHECKED => ['Checked', 'badge-light-warning'],
+                Icp::STATUS_APPROVED => [$expired ? 'Approved (Expired)' : 'Approved', $expired ? 'badge-light-dark' : 'badge-light-success'],
             ];
             [$label, $badge] = $badgeMap[$statusCode] ?? ['-', 'badge-light'];
 
             $actions = [
-                'add'      => (!$icp) || $expired,
-                'revise'   => ($statusCode === Icp::STATUS_REVISE && $icp),
-                'export'   => (bool) $icp,
+                'add' => (!$icp) || $expired,
+                'revise' => ($statusCode === Icp::STATUS_REVISE && $icp),
+                'export' => (bool) $icp,
                 'evaluate' => [
-                    'show'      => (bool) $isDue,
+                    'show' => (bool) $isDue,
                     'next_date' => $anchorDate ? $anchorDate->copy()->addYear()->format('Y-m-d') : null,
-                    'anchor'    => $anchorDate?->format('Y-m-d'),
-                    'icp_id'    => $icp?->id,
+                    'anchor' => $anchorDate?->format('Y-m-d'),
+                    'icp_id' => $icp?->id,
                 ],
             ];
 
@@ -362,14 +363,15 @@ class IcpController extends Controller
         )->findOrFail($employeeId);
 
         $departments = Department::where('company', $employee->company_name)->get();
-        $employees   = Employee::where('company_name', $employee->company_name)->get();
-        $grades      = GradeConversion::all();
+        $divisions = Division::where('company', $employee->company_name)->get();
+        $employees = Employee::where('company_name', $employee->company_name)->get();
+        $grades = GradeConversion::all();
 
         $deptId = optional(optional($employee->subSection)->section)->department->id
             ?? optional($employee->leadingSection)->department->id
             ?? optional($employee->leadingDepartment)->id;
 
-        $divId  = optional(optional($employee->leadingDepartment)->division)->id;
+        $divId = optional(optional($employee->leadingDepartment)->division)->id;
 
         $technicalCompetencies = MatrixCompetency::with(['department:id,name', 'division:id,name'])
             ->when($deptId || $divId, function ($q) use ($deptId, $divId) {
@@ -412,6 +414,7 @@ class IcpController extends Controller
             'employee',
             'grades',
             'departments',
+            'divisions',
             'employees',
             'technicalCompetencies',
             'deptCompetencies',
@@ -432,11 +435,11 @@ class IcpController extends Controller
         try {
             // Simpan HEADER ICP
             $icp = Icp::create([
-                'employee_id'   => $data['employee_id'],
-                'aspiration'    => $data['aspiration'],
+                'employee_id' => $data['employee_id'],
+                'aspiration' => $data['aspiration'],
                 'career_target' => $data['career_target_code'],
-                'date'          => $data['date'],
-                'status'        => Icp::STATUS_DRAFT, // 4
+                'date' => $data['date'],
+                'status' => Icp::STATUS_DRAFT, // 4
             ]);
 
             if (method_exists($this, 'seedStepsForIcp')) {
@@ -444,24 +447,26 @@ class IcpController extends Controller
             }
 
             foreach ($data['stages'] as $stage) {
-                $year  = (int) $stage['year'];
-                $job   = $stage['job_function'];
-                $pos   = $stage['position_code'];
+                $year = (int) $stage['year'];
+                $job = $stage['job_function'];
+                $jobSource = $stage['job_source'] ?? null;
+                $pos = $stage['position_code'];
                 $level = $stage['level'];
 
                 $rows = [];
                 foreach ($stage['details'] as $d) {
                     $rows[] = [
-                        'icp_id'                   => $icp->id,
-                        'plan_year'                => $year,
-                        'job_function'             => $job,
-                        'position'                 => $pos,
-                        'level'                    => $level,
-                        'current_technical'        => $d['current_technical'],
-                        'current_nontechnical'     => $d['current_nontechnical'],
-                        'required_technical'       => $d['required_technical'],
-                        'required_nontechnical'    => $d['required_nontechnical'],
-                        'development_technical'    => $d['development_technical'],
+                        'icp_id' => $icp->id,
+                        'plan_year' => $year,
+                        'job_function' => $job,
+                        'job_source' => $jobSource,
+                        'position' => $pos,
+                        'level' => $level,
+                        'current_technical' => $d['current_technical'],
+                        'current_nontechnical' => $d['current_nontechnical'],
+                        'required_technical' => $d['required_technical'],
+                        'required_nontechnical' => $d['required_nontechnical'],
+                        'development_technical' => $d['development_technical'],
                         'development_nontechnical' => $d['development_nontechnical'],
                     ];
                 }
@@ -642,14 +647,17 @@ class IcpController extends Controller
     /* =================== APPROVAL LIST =================== */
     public function approval()
     {
-        $me   = auth()->user()->employee;
+        $me = auth()->user()->employee;
         $role = ApprovalHelper::roleKeyFor($me);
 
         $rolesToMatch = [$role];
         // toleransi data lama
-        if ($role === 'director') $rolesToMatch[] = 'direktur';
-        if ($role === 'president') $rolesToMatch[] = 'presiden';
-        if ($role === 'gm') $rolesToMatch[] = 'general manager';
+        if ($role === 'director')
+            $rolesToMatch[] = 'direktur';
+        if ($role === 'president')
+            $rolesToMatch[] = 'presiden';
+        if ($role === 'gm')
+            $rolesToMatch[] = 'general manager';
 
         $steps = IcpApprovalStep::with(['icp.employee', 'icp.steps'])
             ->whereIn('role', $rolesToMatch)
@@ -671,9 +679,9 @@ class IcpController extends Controller
 
     public function approve($icpId)
     {
-        $me    = auth()->user()->employee;
+        $me = auth()->user()->employee;
         $isHRD = auth()->user()->role === 'HRD';
-        $role  = ApprovalHelper::roleKeyFor($me);
+        $role = ApprovalHelper::roleKeyFor($me);
 
         $icp = Icp::with('steps')->findOrFail($icpId);
 
@@ -697,13 +705,13 @@ class IcpController extends Controller
 
         DB::transaction(function () use ($icp, $step, $me) {
             $step->update([
-                'status'   => 'done',
+                'status' => 'done',
                 'actor_id' => $me->id,
                 'acted_at' => now(),
             ]);
 
             // Hitung status ringkas ICP
-            $remainingChecks   = $icp->steps->where('status', 'pending')->where('type', 'check')->count();
+            $remainingChecks = $icp->steps->where('status', 'pending')->where('type', 'check')->count();
             $hasApprovePending = $icp->steps->where('status', 'pending')->where('type', 'approve')->count() > 0;
 
             if ($remainingChecks > 0) {
@@ -735,7 +743,7 @@ class IcpController extends Controller
             // catat komentar (kalau punya tabel comment history ICP)
             if ($emp = auth()->user()->employee) {
                 $icp->commentHistory()->create([
-                    'comment'     => (string) $request->input('comment', ''),
+                    'comment' => (string) $request->input('comment', ''),
                     'employee_id' => $emp->id,
                 ]);
             }
@@ -747,23 +755,23 @@ class IcpController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'employee_id'   => ['required', 'exists:employees,id'],
-            'aspiration'    => ['required', 'string'],
+            'employee_id' => ['required', 'exists:employees,id'],
+            'aspiration' => ['required', 'string'],
             'career_target' => ['required', 'string'],
-            'date'          => ['required', 'date'],
+            'date' => ['required', 'date'],
 
-            'stages'                => ['required', 'array', 'min:1'],
-            'stages.*.plan_year'    => ['required', 'digits:4', 'numeric', 'distinct'],
+            'stages' => ['required', 'array', 'min:1'],
+            'stages.*.plan_year' => ['required', 'digits:4', 'numeric', 'distinct'],
             'stages.*.job_function' => ['required', 'string'],
-            'stages.*.position'     => ['required', 'string'],
-            'stages.*.level'        => ['required', 'string'],
-            'stages.*.details'      => ['required', 'array', 'min:1'],
+            'stages.*.position' => ['required', 'string'],
+            'stages.*.level' => ['required', 'string'],
+            'stages.*.details' => ['required', 'array', 'min:1'],
 
-            'stages.*.details.*.current_technical'        => ['required', 'string'],
-            'stages.*.details.*.current_nontechnical'     => ['required', 'string'],
-            'stages.*.details.*.required_technical'       => ['required', 'string'],
-            'stages.*.details.*.required_nontechnical'    => ['required', 'string'],
-            'stages.*.details.*.development_technical'    => ['required', 'string'],
+            'stages.*.details.*.current_technical' => ['required', 'string'],
+            'stages.*.details.*.current_nontechnical' => ['required', 'string'],
+            'stages.*.details.*.required_technical' => ['required', 'string'],
+            'stages.*.details.*.required_nontechnical' => ['required', 'string'],
+            'stages.*.details.*.development_technical' => ['required', 'string'],
             'stages.*.details.*.development_nontechnical' => ['required', 'string'],
         ]);
 
@@ -774,11 +782,11 @@ class IcpController extends Controller
             DB::beginTransaction();
 
             $icp->update([
-                'employee_id'   => $request->employee_id,
-                'aspiration'    => $request->aspiration,
+                'employee_id' => $request->employee_id,
+                'aspiration' => $request->aspiration,
                 'career_target' => $request->career_target,
-                'date'          => $request->date,
-                'status'        => Icp::STATUS_DRAFT, // 4
+                'date' => $request->date,
+                'status' => Icp::STATUS_DRAFT, // 4
             ]);
 
             // Hapus semua detail lama (bisa diubah kalau ingin granular update)
@@ -823,12 +831,12 @@ class IcpController extends Controller
     }
     public function edit($id)
     {
-        $title                 = 'Update ICP';
-        $icp                   = Icp::with('details', 'employee')->findOrFail($id);
-        $employee              = Employee::findOrFail($icp->employee_id);
-        $departments           = Department::where('company', $employee->company_name)->get();
-        $employees             = Employee::where('company_name', $employee->company_name)->get();
-        $grades                = GradeConversion::all();
+        $title = 'Update ICP';
+        $icp = Icp::with('details', 'employee')->findOrFail($id);
+        $employee = Employee::findOrFail($icp->employee_id);
+        $departments = Department::where('company', $employee->company_name)->get();
+        $employees = Employee::where('company_name', $employee->company_name)->get();
+        $grades = GradeConversion::all();
         $technicalCompetencies = MatrixCompetency::all();
 
         // Tambahkan array posisi secara manual atau ambil dari konfigurasi/tabel
@@ -844,7 +852,7 @@ class IcpController extends Controller
             'Operator' => 'Operator',
         ];
 
-        $now       = Carbon::now();
+        $now = Carbon::now();
         $icp->date = $now->format('Y-m-d');
 
         $stages = $icp->details
@@ -852,16 +860,16 @@ class IcpController extends Controller
             ->map(function ($g) {
                 $first = $g->first();
                 return [
-                    'plan_year'    => (int) $first->plan_year,
+                    'plan_year' => (int) $first->plan_year,
                     'job_function' => (string) $first->job_function,
-                    'position'     => (string) $first->position,
-                    'level'        => (string) $first->level,
-                    'details'      => $g->map(fn($d) => [
-                        'current_technical'        => (string) $d->current_technical,
-                        'current_nontechnical'     => (string) $d->current_nontechnical,
-                        'required_technical'       => (string) $d->required_technical,
-                        'required_nontechnical'    => (string) $d->required_nontechnical,
-                        'development_technical'    => (string) $d->development_technical,
+                    'position' => (string) $first->position,
+                    'level' => (string) $first->level,
+                    'details' => $g->map(fn($d) => [
+                        'current_technical' => (string) $d->current_technical,
+                        'current_nontechnical' => (string) $d->current_nontechnical,
+                        'required_technical' => (string) $d->required_technical,
+                        'required_nontechnical' => (string) $d->required_nontechnical,
+                        'development_technical' => (string) $d->development_technical,
                         'development_nontechnical' => (string) $d->development_nontechnical,
                     ])->values()->all(),
                 ];
@@ -898,11 +906,11 @@ class IcpController extends Controller
         $icp->steps()->delete();
         foreach ($chain as $i => $s) {
             IcpApprovalStep::create([
-                'icp_id'     => $icp->id,
+                'icp_id' => $icp->id,
                 'step_order' => $i + 1,
-                'type'       => $s['type'],
-                'role'       => $s['role'],
-                'label'      => $s['label']
+                'type' => $s['type'],
+                'role' => $s['role'],
+                'label' => $s['label']
             ]);
         }
 
@@ -954,10 +962,10 @@ class IcpController extends Controller
             ->map(function ($g) {
                 $first = $g->first();
                 return [
-                    'plan_year'    => (int)$first->plan_year,
-                    'job_function' => (string)$first->job_function,
-                    'position'     => (string)$first->position,
-                    'level'        => (string)$first->level,
+                    'plan_year' => (int) $first->plan_year,
+                    'job_function' => (string) $first->job_function,
+                    'position' => (string) $first->position,
+                    'level' => (string) $first->level,
                     'details' => $g->map(fn($d) => [
                         'current_technical' => (string) $d->current_technical,
                         'current_nontechnical' => (string) $d->current_nontechnical,
@@ -978,21 +986,21 @@ class IcpController extends Controller
     {
         abort_if($icp->status !== Icp::STATUS_APPROVED, 403);
         $this->validate($r, [
-            'employee_id'   => ['required', 'exists:employees,id'],
-            'aspiration'    => ['required', 'string'],
+            'employee_id' => ['required', 'exists:employees,id'],
+            'aspiration' => ['required', 'string'],
             'career_target' => ['required', 'string'],
-            'date'          => ['required', 'date'],
-            'stages'                => ['required', 'array', 'min:1'],
-            'stages.*.plan_year'    => ['required', 'digits:4', 'numeric', 'distinct'],
+            'date' => ['required', 'date'],
+            'stages' => ['required', 'array', 'min:1'],
+            'stages.*.plan_year' => ['required', 'digits:4', 'numeric', 'distinct'],
             'stages.*.job_function' => ['required', 'string'],
-            'stages.*.position'     => ['required', 'string'],
-            'stages.*.level'        => ['required', 'string'],
-            'stages.*.details'      => ['required', 'array', 'min:1'],
-            'stages.*.details.*.current_technical'        => ['required', 'string'],
-            'stages.*.details.*.current_nontechnical'     => ['required', 'string'],
-            'stages.*.details.*.required_technical'       => ['required', 'string'],
-            'stages.*.details.*.required_nontechnical'    => ['required', 'string'],
-            'stages.*.details.*.development_technical'    => ['required', 'string'],
+            'stages.*.position' => ['required', 'string'],
+            'stages.*.level' => ['required', 'string'],
+            'stages.*.details' => ['required', 'array', 'min:1'],
+            'stages.*.details.*.current_technical' => ['required', 'string'],
+            'stages.*.details.*.current_nontechnical' => ['required', 'string'],
+            'stages.*.details.*.required_technical' => ['required', 'string'],
+            'stages.*.details.*.required_nontechnical' => ['required', 'string'],
+            'stages.*.details.*.development_technical' => ['required', 'string'],
             'stages.*.details.*.development_nontechnical' => ['required', 'string'],
         ]);
 
@@ -1032,5 +1040,39 @@ class IcpController extends Controller
             'ok' => true,
             'levels' => $map['levels'] ?? []
         ]);
+    }
+
+    public function techs(Request $r)
+    {
+        // Ambil nilai biasa, bukan Stringable
+        $source = strtolower($r->input('source', ''));   // 'department' | 'division'
+        $name = trim($r->input('name', ''));
+        $company = trim($r->input('company', ''));
+
+        // Validasi cepat
+        if (!in_array($source, ['department', 'division'], true)) {
+            return response()->json(['ok' => false, 'message' => 'Invalid source'], 422);
+        }
+        if ($name === '') {
+            return response()->json(['ok' => false, 'message' => 'Missing name'], 422);
+        }
+
+        if ($source === 'department') {
+            $dept = Department::where('name', $name)->where('company', $company)->first();
+            if (!$dept) {
+                return response()->json(['ok' => true, 'items' => []]); // tidak error, hanya kosong
+            }
+            $items = MatrixCompetency::where('dept_id', $dept->id)
+                ->orderBy('competency')->pluck('competency')->values();
+        } else { // 'division'
+            $div = Division::where('name', $name)->where('company', $company)->first();
+            if (!$div) {
+                return response()->json(['ok' => true, 'items' => []]);
+            }
+            $items = MatrixCompetency::where('divs_id', $div->id)
+                ->orderBy('competency')->pluck('competency')->values();
+        }
+
+        return response()->json(['ok' => true, 'items' => $items]);
     }
 }

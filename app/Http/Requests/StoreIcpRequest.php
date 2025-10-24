@@ -28,6 +28,7 @@ class StoreIcpRequest extends FormRequest
             'stages'                 => ['required', 'array', 'min:1'],
             'stages.*.year'          => ['required', 'integer', 'min:1900', 'max:2999'],
             'stages.*.job_function'  => ['required', 'string'],
+            'stages.*.job_source'    => ['nullable', 'in:department,division'],
             'stages.*.position_code' => ["required", "string", "in:$validCodes"],
             'stages.*.level'         => ['required', 'string'],
 
