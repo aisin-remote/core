@@ -1079,6 +1079,7 @@
                         $(this).find('td:last-child').toggleClass('d-none', LOCKED);
                     });
                 });
+                $('#btnSubmitAll').toggleClass('d-none', LOCKED).prop('disabled', LOCKED);
             }
 
             /* ===== Fiscal period pill ===== */

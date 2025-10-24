@@ -6,8 +6,8 @@
 @push('custom-css')
     <style>
         /* =========================
-                                                                                                                                                                                                                                                                                                                                                                                               ICP Stage – Neutral High-Contrast
-                                                                                                                                                                                                                                                                                                                                                                                               ========================= */
+                                                                                                                                                                                                                                                                                                                                                                                                                                                   ICP Stage – Neutral High-Contrast
+                                                                                                                                                                                                                                                                                                                                                                                                                                                   ========================= */
         :root {
             --stage-border: #3f4a5a;
             --stage-head-bg: #1f2937;
@@ -372,31 +372,88 @@
 
         /* ====== Select2 Tech per-stage (mendukung override list) ====== */
         function initTechSelects(scope, techListOverride = null) {
+            // susun sumber data: array objek {id,text}
             const base = (techListOverride ?? TECHS ?? []).map(t => ({
-                id: t,
-                text: t
+                id: String(t),
+                text: String(t)
             }));
 
             $(scope).find('.tech-select').each(function() {
                 const $el = $(this);
-                if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+
+                // simpan nilai sebelumnya agar tidak hilang saat re-init
+                const prevVal = $el.val();
+                const prevDataValue = $el.attr('data-value');
+
+                if ($el.hasClass('select2-hidden-accessible')) {
+                    $el.select2('destroy');
+                }
+
                 $el.select2({
                     data: base,
-                    tags: true,
+                    tags: true, // ← freetext
                     placeholder: 'Select or type…',
                     allowClear: true,
-                    width: '100%'
+                    width: '100%',
+
+                    // tampilkan hasil yang "contains" (bukan hanya prefix), case-insensitive
+                    matcher: function(params, data) {
+                        if ($.trim(params.term) === '') return data; // kosong → tampilkan semua
+                        if (typeof data.text === 'undefined') return null;
+
+                        const term = params.term.toLowerCase();
+                        const text = data.text.toLowerCase();
+                        const id = String(data.id || '').toLowerCase();
+
+                        // cocokkan di text ATAU id
+                        if (text.indexOf(term) > -1 || id.indexOf(term) > -1) return data;
+
+                        // tidak match → sembunyikan
+                        return null;
+                    },
+
+                    // izinkan membuat opsi baru, tapi jangan duplikasi jika sudah ada
+                    createTag: function(params) {
+                        const term = params.term?.trim();
+                        if (!term) return null;
+
+                        // cek apakah sudah ada opsi dengan teks sama (case-insensitive)
+                        const exists = base.some(opt => String(opt.text).toLowerCase() === term
+                                .toLowerCase()) ||
+                            $el.find('option').toArray().some(o => o.text.toLowerCase() === term
+                                .toLowerCase());
+
+                        if (exists) return null; // sudah ada → tidak bikin tag baru
+
+                        return {
+                            id: term,
+                            text: term,
+                            isNew: true
+                        };
+                    },
+
+                    // beri label “Add: …” untuk item baru
+                    templateResult: function(data) {
+                        if (data.isNew) {
+                            const $result = $('<span>').text('Add: ' + data.text);
+                            return $result;
+                        }
+                        return data.text;
+                    }
                 });
 
-                // restore preset bila ada
-                const preset = $el.attr('data-value');
-                if (preset && !$el.val()) {
-                    if (!base.some(x => x.id === preset)) {
-                        const opt = new Option(preset, preset, true, true);
+                // restore preset dari atribut data-value (kalau ada)
+                if (prevDataValue && !$el.val()) {
+                    // jika belum ada di opsi, tambahkan sebagai opsi baru
+                    if (!$el.find('option').toArray().some(o => o.value === prevDataValue)) {
+                        const opt = new Option(prevDataValue, prevDataValue, true, true);
                         $el.append(opt).trigger('change');
                     } else {
-                        $el.val(preset).trigger('change');
+                        $el.val(prevDataValue).trigger('change');
                     }
+                } else if (prevVal) {
+                    // atau kembalikan nilai sebelumnya
+                    $el.val(prevVal).trigger('change');
                 }
             });
         }

@@ -752,141 +752,167 @@ class IcpController extends Controller
         return response()->json(['message' => 'ICP has been revised.']);
     }
 
-    public function update(Request $request, $id)
+    public function update(StoreIcpRequest $request, $id)
     {
-        $request->validate([
-            'employee_id' => ['required', 'exists:employees,id'],
-            'aspiration' => ['required', 'string'],
-            'career_target' => ['required', 'string'],
-            'date' => ['required', 'date'],
+        $data = $request->validated();
 
-            'stages' => ['required', 'array', 'min:1'],
-            'stages.*.plan_year' => ['required', 'digits:4', 'numeric', 'distinct'],
-            'stages.*.job_function' => ['required', 'string'],
-            'stages.*.position' => ['required', 'string'],
-            'stages.*.level' => ['required', 'string'],
-            'stages.*.details' => ['required', 'array', 'min:1'],
-
-            'stages.*.details.*.current_technical' => ['required', 'string'],
-            'stages.*.details.*.current_nontechnical' => ['required', 'string'],
-            'stages.*.details.*.required_technical' => ['required', 'string'],
-            'stages.*.details.*.required_nontechnical' => ['required', 'string'],
-            'stages.*.details.*.development_technical' => ['required', 'string'],
-            'stages.*.details.*.development_nontechnical' => ['required', 'string'],
-        ]);
-
-        // Update data utama ICP
-        $icp = Icp::findOrFail($id);
-
+        DB::beginTransaction();
         try {
-            DB::beginTransaction();
+            $icp = Icp::findOrFail($id);
 
             $icp->update([
-                'employee_id' => $request->employee_id,
-                'aspiration' => $request->aspiration,
-                'career_target' => $request->career_target,
-                'date' => $request->date,
-                'status' => Icp::STATUS_DRAFT, // 4
+                'employee_id'    => $data['employee_id'],
+                'aspiration'     => $data['aspiration'],
+                'career_target'  => $data['career_target_code'],
+                'date'           => $data['date'],
+                'status'         => Icp::STATUS_DRAFT,
             ]);
 
-            // Hapus semua detail lama (bisa diubah kalau ingin granular update)
             $icp->details()->delete();
 
-            // sanitasi ringan
-            $clean = fn($v, $max = 255) => mb_substr(trim(strip_tags((string) $v)), 0, $max);
+            $rowsToInsert = [];
+            foreach ($data['stages'] as $stage) {
+                $year      = (int) $stage['year'];
+                $job       = $stage['job_function'];
+                $jobSource = $stage['job_source'] ?? null;
+                $pos       = $stage['position_code'];
+                $level     = $stage['level'];
 
-            foreach ($request->stages as $stage) {
-                $year = (int) $stage['plan_year'];
-                $job = $clean($stage['job_function'], 100);
-                $pos = $clean($stage['position'], 50);
-                $level = $clean($stage['level'], 30);
-
-                $rows = [];
-                // Simpan ulang detail baru
                 foreach ($stage['details'] as $d) {
-                    $rows[] = [
-                        'plan_year' => $year,
-                        'job_function' => $job,
-                        'position' => $pos,
-                        'level' => $level,
-                        'current_technical' => $clean($d['current_technical']),
-                        'current_nontechnical' => $clean($d['current_nontechnical']),
-                        'required_technical' => $clean($d['required_technical']),
-                        'required_nontechnical' => $clean($d['required_nontechnical']),
-                        'development_technical' => $clean($d['development_technical']),
-                        'development_nontechnical' => $clean($d['development_nontechnical']),
+                    $rowsToInsert[] = [
+                        'icp_id'                    => $icp->id,
+                        'plan_year'                 => $year,
+                        'job_function'              => $job,
+                        'job_source'                => $jobSource,
+                        'position'                  => $pos,
+                        'level'                     => $level,
+                        'current_technical'         => $d['current_technical'],
+                        'current_nontechnical'      => $d['current_nontechnical'],
+                        'required_technical'        => $d['required_technical'],
+                        'required_nontechnical'     => $d['required_nontechnical'],
+                        'development_technical'     => $d['development_technical'],
+                        'development_nontechnical'  => $d['development_nontechnical'],
                     ];
                 }
+            }
 
-                $icp->details()->createMany($rows);
+            if (!empty($rowsToInsert)) {
+                $icp->details()->createMany($rowsToInsert);
             }
 
             DB::commit();
 
-            return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil diperbarui.');
-        } catch (\Exception $e) {
+            return redirect()
+                ->route('icp.assign')
+                ->with('success', 'Data ICP berhasil diperbarui.');
+        } catch (\Throwable $e) {
             DB::rollBack();
-            return back()->with('error', 'Gagal memperbarui ICP: ' . $e->getMessage());
+            return redirect()
+                ->back()
+                ->with('error', 'Gagal memperbarui ICP: ' . $e->getMessage());
         }
     }
+
     public function edit($id)
     {
         $title = 'Update ICP';
-        $icp = Icp::with('details', 'employee')->findOrFail($id);
-        $employee = Employee::findOrFail($icp->employee_id);
+
+        $icp = Icp::with([
+            'details',
+            'employee.subSection.section.department',
+            'employee.leadingSection.department',
+            'employee.leadingDepartment.division',
+        ])->findOrFail($id);
+
+        $employee = $icp->employee;
+
         $departments = Department::where('company', $employee->company_name)->get();
-        $employees = Employee::where('company_name', $employee->company_name)->get();
-        $grades = GradeConversion::all();
-        $technicalCompetencies = MatrixCompetency::all();
+        $divisions   = Division::where('company', $employee->company_name)->get();
+        $employees   = Employee::where('company_name', $employee->company_name)->get();
+        $grades      = GradeConversion::all();
 
-        // Tambahkan array posisi secara manual atau ambil dari konfigurasi/tabel
-        $positions = [
-            'Direktur' => 'Direktur',
-            'GM' => 'GM',
-            'Manager' => 'Manager',
-            'Coordinator' => 'Coordinator',
-            'Section Head' => 'Section Head',
-            'Supervisor' => 'Supervisor',
-            'Leader' => 'Leader',
-            'JP' => 'JP',
-            'Operator' => 'Operator',
-        ];
+        $deptId = optional(optional($employee->subSection)->section)->department->id
+            ?? optional($employee->leadingSection)->department->id
+            ?? optional($employee->leadingDepartment)->id;
 
-        $now = Carbon::now();
-        $icp->date = $now->format('Y-m-d');
+        $divId = optional(optional($employee->leadingDepartment)->division)->id;
+
+        $technicalCompetencies = MatrixCompetency::with(['department:id,name', 'division:id,name'])
+            ->when($deptId || $divId, function ($q) use ($deptId, $divId) {
+                $q->where(function ($qq) use ($deptId, $divId) {
+                    if ($deptId) {
+                        $qq->orWhere(function ($x) use ($deptId) {
+                            $x->whereNotNull('dept_id')->where('dept_id', $deptId);
+                        });
+                    }
+                    if ($divId) {
+                        $qq->orWhere(function ($x) use ($divId) {
+                            $x->whereNotNull('divs_id')->where('divs_id', $divId);
+                        });
+                    }
+                });
+            })
+            ->orderBy('competency')
+            ->get();
+
+        $deptCompetencies = $technicalCompetencies->whereNotNull('dept_id')->values();
+        $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
+
+        $rtcMap  = RtcTarget::mapAll();
+        $rtcList = collect(RtcTarget::order())
+            ->map(fn($code) => [
+                'code'     => $code,
+                'position' => $rtcMap[$code]['position'] ?? $code,
+            ])
+            ->values();
 
         $stages = $icp->details
             ->groupBy('plan_year')
-            ->map(function ($g) {
-                $first = $g->first();
+            ->map(function ($group) {
+                $first = $group->first();
+
                 return [
-                    'plan_year' => (int) $first->plan_year,
-                    'job_function' => (string) $first->job_function,
-                    'position' => (string) $first->position,
-                    'level' => (string) $first->level,
-                    'details' => $g->map(fn($d) => [
-                        'current_technical' => (string) $d->current_technical,
-                        'current_nontechnical' => (string) $d->current_nontechnical,
-                        'required_technical' => (string) $d->required_technical,
-                        'required_nontechnical' => (string) $d->required_nontechnical,
-                        'development_technical' => (string) $d->development_technical,
-                        'development_nontechnical' => (string) $d->development_nontechnical,
-                    ])->values()->all(),
+                    'year'           => (int) $first->plan_year,
+                    'job_function'   => (string) ($first->job_function ?? ''),
+                    'job_source'     => (string) ($first->job_source ?? ''),
+                    'position_code'  => (string) ($first->position ?? ''),
+                    'level'          => (string) ($first->level ?? ''),
+                    'details'        => $group->map(function ($d) {
+                        return [
+                            'current_technical'        => (string) ($d->current_technical ?? ''),
+                            'required_technical'       => (string) ($d->required_technical ?? ''),
+                            'development_technical'    => (string) ($d->development_technical ?? ''),
+                            'current_nontechnical'     => (string) ($d->current_nontechnical ?? ''),
+                            'required_nontechnical'    => (string) ($d->required_nontechnical ?? ''),
+                            'development_nontechnical' => (string) ($d->development_nontechnical ?? ''),
+                        ];
+                    })->values()->all(),
                 ];
             })
-            ->values();
+            ->values()
+            ->all();
+
+        $mode = request('mode');
 
         return view('website.icp.update', compact(
             'title',
+            'employee',
             'grades',
             'departments',
+            'divisions',
             'employees',
             'technicalCompetencies',
+            'deptCompetencies',
+            'divsCompetencies',
+            'deptId',
+            'divId',
+            'rtcList',
             'icp',
-            'positions',
-            'stages'
+            'stages',
+            'mode' // dipakai blade buat $isEvaluate
         ));
     }
+
     public function destroy($id)
     {
         $icp = Icp::find($id);
