@@ -12,18 +12,38 @@
                     <input type="hidden" id="apRowId">
 
                     <div class="row g-3">
-                        <!-- IPP Point -->
+
+                        <!-- ===== IPP Point Info (read-only preview) ===== -->
                         <div class="col-12">
+                            <div class="border rounded-3 p-3"
+                                style="background:#f8fafc;border-color:#e5e7eb !important;">
+                                <div class="d-flex flex-column flex-md-row flex-wrap gap-2">
+                                    <div class="flex-grow-1">
+                                        <div class="small text-muted mb-1">Activity / Program</div>
+                                        <div class="fw-semibold text-dark" id="apPointActivity">—</div>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted mb-1">Category</div>
+                                        <div class="badge bg-light text-dark border" id="apPointCategory"
+                                            style="border-color:#cbd5e1!important;">—</div>
+                                    </div>
+                                    <div>
+                                        <div class="small text-muted mb-1">Periode Point</div>
+                                        <div class="fw-semibold text-dark" id="apPointRange">—</div>
+                                        <div class="text-muted small" id="apPointRangeNote" style="line-height:1.3;">
+                                            Item kamu harus berada di rentang ini
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- IPP Point (hidden, tetap dikirim) -->
+                        <div class="col-12 d-none">
                             <label class="form-label fs-6">IPP Point <span class="text-danger">*</span></label>
                             <select id="apPoint" class="form-select form-select-lg">
                                 <option value="">— pilih IPP Point —</option>
                             </select>
-                            <small class="text-muted d-block">
-                                Tanggal item <strong>wajib berada</strong> di dalam rentang Start–Due IPP Point.
-                            </small>
-                            <small class="text-muted d-block">
-                                Setelah pilih IPP Point, batas tanggal (min/max) akan otomatis diterapkan.
-                            </small>
                         </div>
 
                         <!-- Kind of Activity -->
@@ -42,25 +62,25 @@
                         <div class="col-md-6">
                             <label class="form-label fs-6">PIC <span class="text-danger">*</span></label>
                             <select id="apPic" class="form-select form-select-lg">
-                                <option value="">— pilih PIC —</option>
+                                <option value="">PILIH PIC</option>
                             </select>
                         </div>
+                        <div class="col-md-6"></div>
 
                         <!-- Start & Due (per ITEM) -->
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label class="form-label fs-6">Start Date Item <span class="text-danger">*</span></label>
                             <input type="date" id="apStart" class="form-control form-control-lg" />
-                            <small class="text-muted">Dibatasi oleh Start–Due IPP Point.</small>
+                            <small class="text-muted">Harus dalam periode point.</small>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-md-6">
                             <label class="form-label fs-6">Due Date Item <span class="text-danger">*</span></label>
                             <input type="date" id="apDue" class="form-control form-control-lg" />
-                            <small class="text-muted">Dibatasi oleh Start–Due IPP Point.</small>
+                            <small class="text-muted">Harus dalam periode point.</small>
                         </div>
 
-                        <!-- Schedule -->
-                        <div class="col-12">
-                            <label class="form-label fs-6">Schedule (Apr–Mar)</label>
+                        <!-- Schedule (hidden, backend use only) -->
+                        <div class="col-12 d-none" id="apScheduleWrapper">
                             <div class="d-flex flex-wrap gap-2">
                                 @php $mList=['APR','MAY','JUN','JUL','AGT','SEPT','OCT','NOV','DEC','JAN','FEB','MAR']; @endphp
                                 @foreach ($mList as $m)
@@ -78,10 +98,6 @@
                                     Diisi otomatis dari Start–Due item.
                                 </label>
                             </div>
-                            <small class="text-muted d-block">
-                                Centang bulan akan <strong>terisi otomatis</strong> berdasarkan rentang Start–Due item
-                                (dan tetap dibatasi by FY Apr–Mar).
-                            </small>
                         </div>
 
                     </div>
