@@ -14,8 +14,7 @@
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label fs-6">Program / Activity <span class="text-danger">*</span></label>
-                            <textarea class="form-control form-control-lg" id="pmActivity" rows="3"
-                                placeholder="Apa yang akan dicapai / dilakukan?"></textarea>
+                            <textarea class="form-control form-control-lg" id="pmActivity" rows="3"></textarea>
                         </div>
 
                         {{-- <div class="col-md-6">
@@ -26,17 +25,29 @@
 
                         <div class="col-md-12">
                             <label class="form-label fs-6">Target One Year (Apr–Mar)</label>
-                            <textarea class="form-control form-control-lg" id="pmTargetOne" rows="3"
-                                placeholder="Hasil akhir sebelum Maret (akhir fiscal)."></textarea>
+                            <textarea class="form-control form-control-lg" id="pmTargetOne" rows="3"></textarea>
                         </div>
 
                         <div class="col-md-6">
-                            <label class="form-label fs-6">Start Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control form-control-lg" id="pmStart" required>
+                            <label class="form-label fs-6">
+                                Start Date <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control form-control-lg" id="pmStart"
+                                data-role="fiscal-start" required>
+                            <small class="text-muted d-block" id="pmStartHint">
+                                Harus dalam periode fiscal.
+                            </small>
                         </div>
+
                         <div class="col-md-6">
-                            <label class="form-label fs-6">Due Date <span class="text-danger">*</span></label>
-                            <input type="date" class="form-control form-control-lg" id="pmDue" required>
+                            <label class="form-label fs-6">
+                                Due Date <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control form-control-lg" id="pmDue"
+                                data-role="fiscal-due" required>
+                            <small class="text-muted d-block" id="pmDueHint">
+                                Harus dalam periode fiscal.
+                            </small>
                         </div>
 
                         <div class="col-md-6">

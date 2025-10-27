@@ -617,6 +617,72 @@
                 Object.keys(CAT_CAP).forEach(updateCategoryCard);
             }
 
+            /* ===== Fiscal helpers (NEW) ===== */
+            function getFiscalWindow() {
+                // window.__onYear = fiscal start year (misal 2026 -> Apr 2026 - Mar 2027)
+                const fy = Number(window.__onYear || 0);
+                if (!fy) return null;
+
+                // month index: 0=Jan ... 3=Apr
+                const start = new Date(fy, 3, 1); // 1 Apr fy
+                const end = new Date(fy + 1, 2, 31); // 31 Mar fy+1
+
+                return {
+                    fy,
+                    start,
+                    end
+                };
+            }
+
+            function ymd(dateObj) {
+                // YYYY-MM-DD
+                const y = dateObj.getFullYear();
+                const m = dateObj.getMonth() + 1;
+                const d = dateObj.getDate();
+                const mm = (m < 10 ? '0' : '') + m;
+                const dd = (d < 10 ? '0' : '') + d;
+                return `${y}-${mm}-${dd}`;
+            }
+
+            function applyFiscalDateLimits() {
+                const win = getFiscalWindow();
+                if (!win) return; // kalau belum tau fiscal year, skip
+
+                const {
+                    start,
+                    end
+                } = win;
+                const minStr = ymd(start);
+                const maxStr = ymd(end);
+
+                const $start = $('#pmStart');
+                const $due = $('#pmDue');
+
+                // set min / max utk native datepicker
+                $start.attr('min', minStr).attr('max', maxStr);
+                $due.attr('min', minStr).attr('max', maxStr);
+
+                // update hint bawah input date
+                $('#pmStartHint').text(`Hanya boleh antara 1 Apr ${start.getFullYear()} – 31 Mar ${end.getFullYear()}`);
+                $('#pmDueHint').text(`Hanya boleh antara 1 Apr ${start.getFullYear()} – 31 Mar ${end.getFullYear()}`);
+
+                // clamp nilai existing supaya tidak keluar range
+                function clampVal($inp) {
+                    const v = $inp.val();
+                    if (!v) return;
+                    if (v < minStr) $inp.val(minStr);
+                    if (v > maxStr) $inp.val(maxStr);
+                }
+                clampVal($start);
+                clampVal($due);
+
+                // auto prefilling utk mode create (biar enak)
+                if ($('#pmMode').val() === 'create') {
+                    if (!$start.val()) $start.val(minStr);
+                    if (!$due.val()) $due.val(maxStr);
+                }
+            }
+
             /* ===== Row HTML (dengan tombol Manage Plan) ===== */
             function makeRowHtml(rowId, data) {
                 const w = isNaN(parseFloat(data.weight)) ? 0 : parseFloat(data.weight);
@@ -636,19 +702,27 @@
                         data-due="${esc(dueTxt)}"
                         data-status="${esc(data.status||'draft')}"
                         data-weight="${w}">
-                    <td class="fw-semibold">${esc(data.activity||'-')}</td>
-                    <td class="text-muted">${esc(oneShort)}</td>
-                    <td><span class="badge badge-light">${esc(startTxt)}</span> &rarr; <span class="badge badge-light">${esc(dueTxt)}</span></td>
-                    <td><span>${fmt(w)}</span></td>
-                    <td class="text-end">
-                        <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-info js-manage" title="Manage Plan" ${canManage?'':'disabled'}>
-                            <i class="bi bi-kanban"></i>
-                        </button>
-                        <button type="button" class="btn btn-warning js-edit" title="Edit"><i class="bi bi-pencil-square"></i></button>
-                        <button type="button" class="btn btn-danger js-remove" title="Hapus"><i class="bi bi-trash"></i></button>
-                        </div>
-                    </td>
+                        <td class="fw-semibold">${esc(data.activity||'-')}</td>
+                        <td class="text-muted">${esc(oneShort)}</td>
+                        <td>
+                            <span class="badge badge-light">${esc(startTxt)}</span>
+                            &rarr;
+                            <span class="badge badge-light">${esc(dueTxt)}</span>
+                        </td>
+                        <td><span>${fmt(w)}</span></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-info js-manage" title="Manage Plan" ${canManage?'':'disabled'}>
+                                    <i class="bi bi-kanban"></i>
+                                </button>
+                                <button type="button" class="btn btn-warning js-edit" title="Edit">
+                                    <i class="bi bi-pencil-square"></i>
+                                </button>
+                                <button type="button" class="btn btn-danger js-remove" title="Hapus">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </td>
                     </tr>`;
             }
 
@@ -724,17 +798,17 @@
                     const itemId = 'cmt-' + (c.id || Math.random().toString(36).slice(2));
                     const isNew = (Number(c.id) || 0) > lastSeenId;
                     const $li = $(`
-                <li class="cmt-item ${isNew?'is-new':''}">
-                  <span class="cmt-dot ${dotCls}"></span>
-                  <div class="cmt-head">
-                    <span class="cmt-name ${isNew?'text-white':''}">${who}</span>
-                    <span class="cmt-meta">• ${at}</span>
-                  </div>
-                  <div class="cmt-body ${isNew?'text-white':''}" id="${itemId}">
-                    <span class="text">${toHtmlWithBreak(short)}</span>
-                    ${needMore?`<span class="more" data-full="${esc(raw)}">…more</span>`:``}
-                  </div>
-                </li>`);
+                        <li class="cmt-item ${isNew?'is-new':''}">
+                            <span class="cmt-dot ${dotCls}"></span>
+                            <div class="cmt-head">
+                                <span class="cmt-name ${isNew?'text-white':''}">${who}</span>
+                                <span class="cmt-meta">• ${at}</span>
+                            </div>
+                            <div class="cmt-body ${isNew?'text-white':''}" id="${itemId}">
+                                <span class="text">${toHtmlWithBreak(short)}</span>
+                                ${needMore?`<span class="more" data-full="${esc(raw)}">…more</span>`:``}
+                            </div>
+                        </li>`);
                     $ul.append($li);
                 });
             }
@@ -774,6 +848,7 @@
                 } catch (e) {}
                 setCommentIndicator(ippId, totalCount);
             }
+
             async function loadComments(ippId) {
                 const url = "{{ route('ipp.comments', ['ipp' => '__ID__']) }}".replace('__ID__', ippId);
                 try {
@@ -799,6 +874,7 @@
                     };
                 }
             }
+
             window.openCommentsModal = async function(ippId) {
                 if (!ippId) return;
                 const {
@@ -813,6 +889,7 @@
                 modal.show();
                 markCommentsSeen(ippId, count, latestId);
             };
+
             document.getElementById('btnRefreshComments')?.addEventListener('click', async () => {
                 const ippId = window.__currentIppId;
                 if (!ippId) return;
@@ -832,9 +909,14 @@
                 $('#pointModalLabel').text('Tambah Point — ' + $(this).closest('.accordion-item').find(
                     '.accordion-button span:first').text());
                 $('#pointForm')[0].reset();
+
+                // fiscal range (NEW)
+                applyFiscalDateLimits();
+
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
+
             $(document).on('click', '.js-edit', function() {
                 const $tr = $(this).closest('tr');
                 const cat = $(this).closest('table').data('cat');
@@ -849,6 +931,10 @@
                 $('#pmStart').val($tr.data('start') || '');
                 $('#pmDue').val($tr.data('due'));
                 $('#pmWeight').val($tr.data('weight'));
+
+                // fiscal range + clamp (NEW)
+                applyFiscalDateLimits();
+
                 setTimeout(() => $('#pmActivity').trigger('focus'), 150);
                 pointModal.show();
             });
@@ -866,8 +952,9 @@
                     toast('Simpan dulu point ini sebelum manage Activity Plan.', 'warning');
                     return;
                 }
-                const url = AP_MANAGE_URL_TPL.replace('__IPP__', encodeURIComponent(ippId)).replace('__POINT__',
-                    encodeURIComponent(pointId));
+                const url = AP_MANAGE_URL_TPL
+                    .replace('__IPP__', encodeURIComponent(ippId))
+                    .replace('__POINT__', encodeURIComponent(pointId));
                 window.location.href = url;
             });
 
@@ -922,8 +1009,11 @@
                     const dStart = new Date(data.start_date),
                         dDue = new Date(data.due_date);
                     const strip = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-                    if (strip(dStart) < strip(fStart) || strip(dStart) > strip(fEnd) || strip(dDue) < strip(
-                            fStart) || strip(dDue) > strip(fEnd)) {
+                    if (strip(dStart) < strip(fStart) ||
+                        strip(dStart) > strip(fEnd) ||
+                        strip(dDue) < strip(fStart) ||
+                        strip(dDue) > strip(fEnd)
+                    ) {
                         toast(`Tanggal harus dalam periode fiscal Apr ${fy} – Mar ${fy+1}.`, 'danger');
                         return unlock();
                     }
@@ -964,7 +1054,8 @@
                         $tbody.append(makeRowHtml(newRowId, rowData));
                     } else {
                         const $old = $(
-                            `table.js-table[data-cat="${cat}"] tbody tr[data-row-id="${rowId}"]`);
+                            `table.js-table[data-cat="${cat}"] tbody tr[data-row-id="${rowId}"]`
+                        );
                         if ($old.length) $old.replaceWith(makeRowHtml(newRowId, rowData));
                         else {
                             $tbody.find('.empty-row').remove();
@@ -999,6 +1090,7 @@
                     dataType: "json"
                 });
             }
+
             $(document).on('click', '.js-remove', function() {
                 if (LOCKED) {
                     toast('IPP sudah submitted. Tidak bisa menghapus point.', 'danger');
@@ -1008,6 +1100,7 @@
                 const cat = $(this).closest('table').data('cat');
                 const id = $tr.data('row-id');
                 if (!id) {
+                    // belum pernah ke server -> hapus lokal aja
                     $tr.remove();
                     const $tb = $(`table.js-table[data-cat="${cat}"] tbody.js-tbody`);
                     if ($tb.find('tr').not('.empty-row').length === 0) {
@@ -1103,6 +1196,8 @@
                         setPeriodPill(onYear);
                         window.__onYear = parseInt(onYear, 10) || 0;
 
+                        applyFiscalDateLimits();
+
                         if (res?.points) {
                             Object.keys(res.points).forEach((cat) => {
                                 const list = res.points[cat] || [];
@@ -1125,6 +1220,7 @@
 
                         const ippStatus = res?.ipp?.status || 'draft';
                         renderIppStatus(ippStatus);
+
                         const locked = !!(res?.locked || res?.ipp?.locked || (res?.ipp?.status === 'submitted'));
                         applyLockDom(locked);
 
@@ -1142,19 +1238,20 @@
                             if (localStorage.getItem(bannerKey(year)) !== '1') {
                                 if (!document.getElementById('ippApprovedBanner')) {
                                     const banner = $(`
-                            <div id="ippApprovedBanner" class="alert alert-info alert-dismissible fade show d-flex align-items-center"
-                                 role="alert" style="border-radius:12px;">
-                                <i class="bi bi-info-circle me-2 fs-5"></i>
-                                <div class="me-3">
-                                    <div class="fw-bold mb-0">
-                                        Anda sudah memiliki IPP ${year} yang <span class="text-success">APPROVED</span>.
-                                    </div>
-                                    <small class="text-muted">
-                                        Halaman ini untuk memulai IPP baru (siklus berikutnya). Silakan tambah point.
-                                    </small>
-                                </div>
-                                <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-                            </div>`);
+                                        <div id="ippApprovedBanner"
+                                            class="alert alert-info alert-dismissible fade show d-flex align-items-center"
+                                            role="alert" style="border-radius:12px;">
+                                            <i class="bi bi-info-circle me-2 fs-5"></i>
+                                            <div class="me-3">
+                                                <div class="fw-bold mb-0">
+                                                    Anda sudah memiliki IPP ${year} yang <span class="text-success">APPROVED</span>.
+                                                </div>
+                                                <small class="text-muted">
+                                                    Halaman ini untuk memulai IPP baru (siklus berikutnya). Silakan tambah point.
+                                                </small>
+                                            </div>
+                                            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+                                        </div>`);
                                     $('.accordion.mt-3.ipp').before(banner);
                                     banner.on('closed.bs.alert', () => {
                                         try {
@@ -1182,7 +1279,6 @@
             }
 
             $(document).ready(function() {
-                // buka semua panel
                 $('#accordionPrograms .accordion-collapse').each(function() {
                     this.removeAttribute('data-bs-parent');
                     this.classList.add('show');
@@ -1216,8 +1312,7 @@
 
                 const $btn = $(this).prop('disabled', true);
                 try {
-                    const url = new URL(@json(route('activity-plan.submitAll')), window.location
-                        .origin);
+                    const url = new URL(@json(route('activity-plan.submitAll')), window.location.origin);
                     url.searchParams.set('ipp_id', String(window.__currentIppId));
                     const res = await fetch(url.toString(), {
                         method: 'POST',
@@ -1230,9 +1325,6 @@
                     if (!res.ok) throw new Error(json?.message || 'Submit gagal.');
                     toast(json?.message || 'Berhasil submit.');
 
-                    $('.accordion.mt-3.ipp tbody.js-tbody').each(function() {
-                        // opsional: bersihkan/biarkan – yang penting reload data
-                    });
                     location.reload();
                 } catch (err) {
                     toast(esc(err?.message || 'Submit gagal.'), 'danger');
@@ -1248,11 +1340,11 @@
                     <div class="toast align-items-center badge-${type} border-0" id="${id}"
                         role="status" aria-live="polite" aria-atomic="true"
                         style="position:fixed;top:1rem;right:1rem;z-index:1080;">
-                    <div class="d-flex">
-                        <div class="toast-body">${esc(msg)}</div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto"
+                        <div class="d-flex">
+                            <div class="toast-body">${esc(msg)}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto"
                                 data-bs-dismiss="toast" aria-label="Tutup"></button>
-                    </div>
+                        </div>
                     </div>`);
                 $('body').append($t);
                 const t = new bootstrap.Toast($t[0], {
