@@ -5,9 +5,6 @@
 
 @push('custom-css')
     <style>
-        /* =========================
-                                                                                                                                                                                                                                                                                                                                                                                                                                                   ICP Stage – Neutral High-Contrast
-                                                                                                                                                                                                                                                                                                                                                                                                                                                   ========================= */
         :root {
             --stage-border: #3f4a5a;
             --stage-head-bg: #1f2937;
@@ -109,8 +106,7 @@
         .hc-mode .stage-card::before {
             background: #000
         }
-    </style>
-    <style>
+
         /* Select2 kecil selaras form-select-sm */
         .select2-container .select2-selection--single {
             height: calc(1.5em + .5rem + 2px)
@@ -198,12 +194,12 @@
                                 required>
                                 <option value="">Select Position</option>
                                 @foreach ($rtcList as $rt)
-                                    {{-- $rtcList: [['code'=>'AL','position'=>'Act Leader'], ...] urut terendah→tertinggi --}}
                                     <option value="{{ $rt['code'] }}">{{ $rt['position'] }} ({{ $rt['code'] }})</option>
                                 @endforeach
                             </select>
-                            <small class="text-muted">Pilihan Position & Level di Development Stage dibatasi hingga target
-                                ini.</small>
+                            <small class="text-muted">
+                                Pilihan Position & Level di Development Stage dibatasi hingga target ini.
+                            </small>
                             @error('career_target_code')
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
@@ -212,6 +208,9 @@
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Date Target</label>
                             <input type="date" name="date" id="date" class="form-control form-select-sm">
+                            <small class="text-muted">
+                                Development Stage akan dibuat otomatis setelah memilih tanggal ini.
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -224,11 +223,12 @@
 
                     <div id="stages-container" class="mt-3 d-grid gap-3"></div>
 
-                    <div class="d-flex justify-content-center mt-3">
+                    {{-- [REMOVED] manual add button --}}
+                    {{-- <div class="d-flex justify-content-center mt-3">
                         <button type="button" class="btn btn-primary btn-sm w-100" id="btn-add-stage">
                             <i class="bi bi-plus-lg"></i> Add Year
                         </button>
-                    </div>
+                    </div> --}}
                 </div>
 
                 <div class="text-end mt-4">
@@ -354,9 +354,7 @@
         const TECHS = @json($technicalCompetencies->pluck('competency'));
         const COMPANY = @json($employee->company_name);
 
-        // rtcList dari server (URUT dari terendah→tertinggi)
-        const RTC_LIST = @json($rtcList); // [{code:'AL', position:'Act Leader'}, ...]
-        // rank map untuk pembatasan (semakin besar index = semakin tinggi)
+        const RTC_LIST = @json($rtcList);
         const RTC_RANK = Object.fromEntries(RTC_LIST.map((x, i) => [x.code.toUpperCase(), i]));
 
         const DEFAULTS = {
@@ -364,15 +362,9 @@
             job_function: @json($employee->job_function ?? '')
         };
 
-        // batas maksimal stage
-        const MAX_STAGE = 5;
-        const ADD_BTN_ENABLED_HTML = '<i class="bi bi-plus-lg"></i> Add Year'
-        const ADD_BTN_DISABLED_HTML = 'Max 5 Years Reached'
+        const HARD_MAX_STAGE = 10;
 
-
-        /* ====== Select2 Tech per-stage (mendukung override list) ====== */
         function initTechSelects(scope, techListOverride = null) {
-            // susun sumber data: array objek {id,text}
             const base = (techListOverride ?? TECHS ?? []).map(t => ({
                 id: String(t),
                 text: String(t)
@@ -380,8 +372,6 @@
 
             $(scope).find('.tech-select').each(function() {
                 const $el = $(this);
-
-                // simpan nilai sebelumnya agar tidak hilang saat re-init
                 const prevVal = $el.val();
                 const prevDataValue = $el.attr('data-value');
 
@@ -391,39 +381,31 @@
 
                 $el.select2({
                     data: base,
-                    tags: true, // ← freetext
+                    tags: true,
                     placeholder: 'Select or type…',
                     allowClear: true,
                     width: '100%',
-
-                    // tampilkan hasil yang "contains" (bukan hanya prefix), case-insensitive
                     matcher: function(params, data) {
-                        if ($.trim(params.term) === '') return data; // kosong → tampilkan semua
+                        if ($.trim(params.term) === '') return data;
                         if (typeof data.text === 'undefined') return null;
 
                         const term = params.term.toLowerCase();
                         const text = data.text.toLowerCase();
                         const id = String(data.id || '').toLowerCase();
 
-                        // cocokkan di text ATAU id
                         if (text.indexOf(term) > -1 || id.indexOf(term) > -1) return data;
-
-                        // tidak match → sembunyikan
                         return null;
                     },
-
-                    // izinkan membuat opsi baru, tapi jangan duplikasi jika sudah ada
                     createTag: function(params) {
                         const term = params.term?.trim();
                         if (!term) return null;
 
-                        // cek apakah sudah ada opsi dengan teks sama (case-insensitive)
                         const exists = base.some(opt => String(opt.text).toLowerCase() === term
                                 .toLowerCase()) ||
                             $el.find('option').toArray().some(o => o.text.toLowerCase() === term
                                 .toLowerCase());
 
-                        if (exists) return null; // sudah ada → tidak bikin tag baru
+                        if (exists) return null;
 
                         return {
                             id: term,
@@ -431,20 +413,15 @@
                             isNew: true
                         };
                     },
-
-                    // beri label “Add: …” untuk item baru
                     templateResult: function(data) {
                         if (data.isNew) {
-                            const $result = $('<span>').text('Add: ' + data.text);
-                            return $result;
+                            return $('<span>').text('Add: ' + data.text);
                         }
                         return data.text;
                     }
                 });
 
-                // restore preset dari atribut data-value (kalau ada)
                 if (prevDataValue && !$el.val()) {
-                    // jika belum ada di opsi, tambahkan sebagai opsi baru
                     if (!$el.find('option').toArray().some(o => o.value === prevDataValue)) {
                         const opt = new Option(prevDataValue, prevDataValue, true, true);
                         $el.append(opt).trigger('change');
@@ -452,7 +429,6 @@
                         $el.val(prevDataValue).trigger('change');
                     }
                 } else if (prevVal) {
-                    // atau kembalikan nilai sebelumnya
                     $el.val(prevVal).trigger('change');
                 }
             });
@@ -469,9 +445,7 @@
             });
         }
 
-        /* Job Function berkelompok + tandai sumber di data-source */
         function fillJobs(selectEl) {
-            // reset + placeholder
             selectEl.innerHTML = '';
             const ph = document.createElement('option');
             ph.value = '';
@@ -487,7 +461,7 @@
                     const opt = document.createElement('option');
                     opt.value = it.v;
                     opt.textContent = it.t;
-                    opt.dataset.source = src; // <<— penanda asal
+                    opt.dataset.source = src;
                     og.appendChild(opt);
                 });
                 selectEl.appendChild(og);
@@ -497,7 +471,6 @@
             makeGroup('Divisions', DIVISIONS, 'division');
         }
 
-        /* Isi posisi dengan batas career target (≤ target) */
         function fillPositionsLimited(selectEl, careerCode) {
             selectEl.innerHTML = '<option value="">Select Position</option>';
             if (!careerCode || !(careerCode.toUpperCase() in RTC_RANK)) {
@@ -516,7 +489,6 @@
             selectEl.disabled = false;
         }
 
-        /* Load levels dari backend untuk posisi tertentu (divalidasi ≤ career target) */
         async function loadLevels(levelSelect, positionCode, careerCode) {
             levelSelect.innerHTML = '<option value="">Loading...</option>';
             levelSelect.disabled = true;
@@ -548,26 +520,7 @@
             }
         }
 
-        /* ===== Utils ===== */
         const getStageCards = () => [...document.querySelectorAll('.stage-card')];
-
-        function updateAddBtn() {
-            const btn = document.getElementById('btn-add-stage');
-            const count = getStageCards().length;
-
-            if (!btn) return;
-            if (count >= MAX_STAGE) {
-                btn.disabled = true;
-                btn.classList.remove('btn-primary');
-                btn.classList.add('btn-secondary');
-                btn.innerHTML = ADD_BTN_DISABLED_HTML;
-            } else {
-                btn.disabled = false;
-                btn.classList.remove('btn-secondary');
-                btn.classList.add('btn-primary');
-                btn.innerHTML = ADD_BTN_ENABLED_HTML;
-            }
-        }
 
         function applyTheme(stageEl, idx) {
             const THEMES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
@@ -595,24 +548,21 @@
                 reindexDetails(stage);
                 applyTheme(stage, sIdx);
             });
-            updateAddBtn();
-            // Perbarui tahun otomatis berurutan mulai tahun sekarang
-            const base = DEFAULTS.plan_year;
+
+            // [NEW] stage pertama mulai dari tahun setelah current year
+            const startYear = DEFAULTS.plan_year + 1; // contoh: 2025 + 1 = 2026
             getStageCards().forEach((stage, i) => {
                 const yearInput = stage.querySelector('.stage-year');
-                yearInput.value = base + i;
+                yearInput.value = startYear + i;
             });
         }
 
-        /* ====== Refresh daftar tech berdasarkan Job Function stage ====== */
         async function refreshStageTechs(stageEl, source, jobName) {
-            // beri feedback kosong sementara
             initTechSelects(stageEl.querySelector('.details-container'), []);
-
             try {
                 const qs = new URLSearchParams({
-                    source, // 'department' | 'division'
-                    name: jobName, // nama job function (dept/div name)
+                    source,
+                    name: jobName,
                     company: COMPANY
                 });
                 const res = await fetch(`{{ route('icp.techs') }}?` + qs.toString(), {
@@ -622,11 +572,7 @@
                 });
                 const js = await res.json();
                 const items = (js.ok ? js.items : []) || [];
-
-                // cache ke stage (dipakai add detail berikutnya)
                 stageEl._techList = items;
-
-                // re-init semua tech-select di stage pakai daftar baru
                 initTechSelects(stageEl.querySelector('.details-container'), items);
             } catch (e) {
                 stageEl._techList = [];
@@ -634,7 +580,6 @@
             }
         }
 
-        /* ====== Detail row ====== */
         function addDetail(stageEl) {
             const sIndex = Number(stageEl.dataset.sIndex);
             const detailsBox = stageEl.querySelector('.details-container');
@@ -653,73 +598,56 @@
             });
 
             detailsBox.appendChild(row);
-
-            // gunakan tech list spesifik stage bila tersedia, fallback ke global TECHS
             initTechSelects(row, stageEl._techList ?? TECHS);
         }
 
-        /* ====== Stage card ====== */
         function addStage() {
             const container = document.getElementById('stages-container');
-            const currentCount = container.querySelectorAll('.stage-card').length;
+            const idx = container.querySelectorAll('.stage-card').length;
 
-            if (currentCount >= MAX_STAGE) {
+            if (idx >= HARD_MAX_STAGE) {
                 if (typeof Swal !== 'undefined') {
-                    Swal.fire('Batas tercapai', `Maksimal ${MAX_STAGE} tahun (stage).`, 'info');
+                    Swal.fire('Batas tercapai', `Maksimal ${HARD_MAX_STAGE} stage.`, 'info');
                 }
-                updateAddBtn();
-                return;
+                return null;
             }
-
-            const idx = currentCount;
 
             const tpl = document.getElementById('stage-template').innerHTML.replaceAll('__S__', idx);
             const wrap = document.createElement('div');
             wrap.innerHTML = tpl.trim();
             const stage = wrap.firstElementChild;
 
-            // index & inject
             stage.dataset.sIndex = String(idx);
-            container.appendChild(stage);
-
-            applyTheme(stage, idx);
             stage.classList.add('added');
             setTimeout(() => stage.classList.remove('added'), 300);
 
-            // isi Job Function (dengan optgroup & data-source)
             const jobSel = stage.querySelector('.stage-job');
             fillJobs(jobSel);
 
-            // siapkan hidden input untuk kirim sumber job
             let jobSrc = stage.querySelector('.job-source');
             if (!jobSrc) {
                 jobSrc = document.createElement('input');
                 jobSrc.type = 'hidden';
                 jobSrc.className = 'job-source';
-                jobSrc.name = `stages[${idx}][job_source]`; // ikut index stage
+                jobSrc.name = `stages[${idx}][job_source]`;
                 stage.appendChild(jobSrc);
             }
 
-            // posisi & level
             const careerSelect = document.getElementById('career_target');
             const posSel = stage.querySelector('.stage-position');
             const lvlSel = stage.querySelector('.stage-level');
 
-            // set tahun otomatis (readonly)
             const yearInput = stage.querySelector('.stage-year');
             yearInput.readOnly = true;
-            yearInput.value = DEFAULTS.plan_year + idx;
+            yearInput.value = (DEFAULTS.plan_year + 1) + idx;
 
-            // tombol remove stage
             stage.querySelector('.btn-remove-stage').addEventListener('click', () => {
                 stage.remove();
                 reindexStages();
             });
 
-            // tombol add detail
             stage.querySelector('.btn-add-detail').addEventListener('click', () => addDetail(stage));
 
-            // saat posisi berubah → ambil level dari backend
             posSel.addEventListener('change', () => {
                 const pos = posSel.value;
                 const career = careerSelect.value;
@@ -731,14 +659,11 @@
                 loadLevels(lvlSel, pos, career);
             });
 
-            // Job Function berubah → refresh competencies
-            stage._techList = []; // awalnya kosong
+            stage._techList = [];
             jobSel.addEventListener('change', () => {
                 const opt = jobSel.options[jobSel.selectedIndex];
-                const source = opt?.dataset.source || ''; // 'department' / 'division'
+                const source = opt?.dataset.source || '';
                 const jobName = jobSel.value || '';
-
-                // sinkronkan hidden job_source
                 jobSrc.value = source;
 
                 if (!source || !jobName) {
@@ -749,16 +674,12 @@
                 refreshStageTechs(stage, source, jobName);
             });
 
-            // detail awal minimal 1
             addDetail(stage);
-            updateAddBtn();
 
-            // pertama kali render, isi posisi sesuai target (kalau sudah dipilih)
             if (careerSelect.value) {
                 fillPositionsLimited(posSel, careerSelect.value);
             }
 
-            // (Opsional) preset job function default karyawan
             if (DEFAULTS.job_function) {
                 const match = [...jobSel.options].find(o => o.value === DEFAULTS.job_function);
                 if (match) {
@@ -766,29 +687,69 @@
                     jobSel.dispatchEvent(new Event('change'));
                 }
             }
+
+            document.getElementById('stages-container').appendChild(stage);
+            applyTheme(stage, idx);
+
+            return stage;
         }
 
-        /* ====== Lifecycle halaman ====== */
-        document.addEventListener('DOMContentLoaded', () => {
-            // tombol add tahun
-            document.getElementById('btn-add-stage').addEventListener('click', addStage);
-
-            // buat 1 stage saat load (tahun sekarang)
-            addStage();
-
-            updateAddBtn();
-
-            // defaultkan tanggal jika kosong
+        function generateStagesFromTargetDate() {
+            const container = document.getElementById('stages-container');
             const dateEl = document.getElementById('date');
+            const val = dateEl.value; // format "YYYY-MM-DD"
+
+            // kosongkan stage kalau belum pilih tanggal
+            if (!val) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const currentYear = DEFAULTS.plan_year;
+            const targetYear = Number(val.split('-')[0]);
+
+            // contoh: now 2025, targetYear 2029 -> diff 4 -> 2025,26,27,28
+            let diff = targetYear - currentYear;
+            if (diff < 1) diff = 1; // minimal 1 stage biar ga kosong aneh
+            if (diff > HARD_MAX_STAGE) diff = HARD_MAX_STAGE;
+
+            // reset container
+            container.innerHTML = '';
+
+            for (let i = 0; i < diff; i++) {
+                addStage();
+            }
+
+            // pastikan index & tahun benar
+            reindexStages();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const careerSelect = document.getElementById('career_target');
+            const dateEl = document.getElementById('date');
+            const form = document.querySelector('form[action="{{ route('icp.store') }}"]');
+
+            // [NEW] jangan auto-add stage di awal load
+            // (dulu addStage() langsung dipanggil di sini, sekarang dihapus)
+
+            // defaultkan tanggal jika kosong (tetap boleh)
             if (dateEl && !dateEl.value) {
                 const d = new Date();
                 const mm = String(d.getMonth() + 1).padStart(2, '0');
                 const dd = String(d.getDate()).padStart(2, '0');
                 dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
+                // NOTE:
+                // kalau kamu mau supaya TIDAK auto generate pakai default ini,
+                // comment baris generateStagesFromTargetDate() di bawah.
+                generateStagesFromTargetDate(); // [NEW] bikin stage awal sesuai default date
             }
 
-            // ketika career target berubah: reset semua posisi/level & batasi opsi
-            const careerSelect = document.getElementById('career_target');
+            // [NEW] kalau user ubah Date Target -> regenerate semua stage
+            dateEl.addEventListener('change', () => {
+                generateStagesFromTargetDate();
+            });
+
+            // career target berubah → reset posisi/level tiap stage
             careerSelect.addEventListener('change', () => {
                 const career = careerSelect.value;
                 getStageCards().forEach(stage => {
@@ -801,8 +762,7 @@
                 });
             });
 
-            // sebelum submit: sanitasi ringan & cek minimal 1 detail per stage
-            const form = document.querySelector('form[action="{{ route('icp.store') }}"]');
+            // sebelum submit: sanitasi + validasi minimal 1 detail per stage
             form.addEventListener('submit', (e) => {
                 form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
                     el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
@@ -810,19 +770,18 @@
                 const stages = getStageCards();
                 if (stages.length === 0) {
                     e.preventDefault();
-                    Swal.fire('Oops', 'Minimal 1 tahun harus ditambahkan.', 'warning');
+                    Swal.fire('Oops', 'Development Stage masih kosong. Pilih Date Target dulu.', 'warning');
                     return;
                 }
                 for (const stage of stages) {
                     const cnt = stage.querySelectorAll('.details-container .detail-row').length;
                     if (cnt === 0) {
                         e.preventDefault();
-                        Swal.fire('Oops', 'Setiap tahun minimal punya 1 detail.', 'warning');
+                        Swal.fire('Oops', 'Setiap stage minimal punya 1 detail.', 'warning');
                         return;
                     }
                 }
             });
         });
     </script>
-
 @endsection
