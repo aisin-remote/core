@@ -90,8 +90,7 @@
             <div class="card-body d-flex flex-wrap gap-3 align-items-center">
                 <div><span class="text-muted">Nama/NPK:</span> <strong id="apEmpName">—</strong></div>
                 <div><span class="text-muted">Div/Dept/Sec:</span> <strong id="apOrg">—</strong></div>
-                <div><span class="text-muted">No Form:</span> <strong id="apFormNo">—</strong></div>
-                <div><span class="text-muted">FY Start:</span> <strong id="apFy">—</strong></div>
+                <div><span class="text-muted">Periode Point:</span> <strong id="apFy">—</strong></div>
                 <div class="ms-auto">
                     <span class="text-muted me-1">Status:</span>
                     <span id="apStatus" class="badge bg-secondary">—</span>
@@ -138,16 +137,17 @@
             const MONTHS_ID = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agt', 'Sep', 'Okt', 'Nov', 'Des'];
 
             /* ===== Utils ===== */
-            const esc = (s) => String(s ?? '').replace(/[&<>"'`=\/]/g, c => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#39;',
-            '/': '&#x2F;',
-            '`': '&#x60;',
-                '=': '&#x3D;'
-            } [c]));
+            const esc = (s) =>
+                String(s ?? '').replace(/[&<>"'`=\/]/g, c => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;',
+                '/': '&#x2F;',
+                '`': '&#x60;',
+                    '=': '&#x3D;'
+                } [c]));
 
             function parseYmd(s) {
                 const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -159,7 +159,7 @@
                 const d = parseYmd(s);
                 if (!d) return '—';
                 const dd = String(d.getDate()).padStart(2, '0');
-                return `${dd} ${MONTHS_ID[d.getMonth()]||''} ${d.getFullYear()}`;
+                return `${dd} ${MONTHS_ID[d.getMonth()] || ''} ${d.getFullYear()}`;
             }
 
             function fmtRange(s, e) {
@@ -249,14 +249,14 @@
                 const act = it.cached_activity || it.ipp_point?.activity || '-';
 
                 return `
-                <tr data-id="${esc(it.id||'')}">
+                <tr data-id="${esc(it.id || '')}">
                     <td><span class="badge badge-mono">${esc(cat)}</span></td>
                     <td class="fw-semibold">${esc(act)}</td>
-                    <td><span class="badge bg-light text-dark">${fmtRange(start,due)}</span></td>
-                    <td>${esc(it.kind_of_activity||'-')}</td>
-                    <td class="text-muted">${esc(it.target||'-')}</td>
+                    <td><span class="badge bg-light text-dark">${fmtRange(start, due)}</span></td>
+                    <td>${esc(it.kind_of_activity || '-')}</td>
+                    <td class="text-muted">${esc(it.target || '-')}</td>
                     <td>${esc(picName)}</td>
-                    <td class="sched-badge"><small>${esc(schedText(Number(it.schedule_mask)||0))}</small></td>
+                    <td class="sched-badge"><small>${esc(schedText(Number(it.schedule_mask) || 0))}</small></td>
                     <td class="text-end">
                         <div class="btn-group btn-group-sm">
                             <button class="btn btn-warning js-edit" title="Edit">
@@ -281,7 +281,6 @@
                     items.forEach(it => $tb.append(rowHtml(it)));
                 }
 
-                // header info employee/form/fy/status
                 const empName = BOOT.ipp?.nama || (BOOT.plan?.employee?.name || '—');
                 $('#apEmpName').text(empName);
 
@@ -291,34 +290,27 @@
                     .join(' / ') || '—'
                 );
 
-                $('#apFormNo').text(BOOT.plan?.form_no || '—');
-
-                const fy = BOOT.plan?.fy_start_year;
-                $('#apFy').text(fy ? `Apr ${fy} – Mar ${Number(fy)+1}` : '—');
+                const p = BOOT.point;
+                if (p) {
+                    const ps = p.cached_start_date || p.start_date || '';
+                    const pe = p.cached_due_date || p.due_date || '';
+                    $('#apFy').text(fmtRange(ps, pe));
+                } else {
+                    $('#apFy').text('—');
+                }
 
                 const st = (BOOT.plan?.status || 'draft').toLowerCase();
                 $('#apStatus')
                     .removeClass('bg-secondary bg-warning bg-success')
                     .addClass(
-                        st === 'submitted' ? 'bg-warning' :
-                        (st === 'approved' ? 'bg-success' :
+                        st === 'submitted' ?
+                        'bg-warning' :
+                        (st === 'approved' ?
+                            'bg-success' :
                             'bg-secondary')
                     )
                     .text(st.toUpperCase());
 
-                // export visibility
-                const $exp = $('#btnExportExcel');
-                if (IPP_ID) {
-                    $exp.attr(
-                        'href',
-                        ($exp.data('href-template') || '')
-                        .replace('__IPP__', encodeURIComponent(IPP_ID))
-                    ).removeClass('d-none');
-                } else {
-                    $exp.attr('href', '#').addClass('d-none');
-                }
-
-                // lock if submitted/approved
                 LOCKED = ['submitted', 'approved'].includes(st);
                 $('#btnAddItem').prop('disabled', LOCKED);
                 if (LOCKED) {
@@ -352,7 +344,7 @@
             async function init() {
                 try {
                     if (!IPP_ID || !POINT_ID) {
-                        toast('Parameter ipp_id/point_id tidak ditemukan.', 'danger');
+                        toast('Buka halaman ini dari IPP (parameter kurang).', 'danger');
                         return;
                     }
 
@@ -370,14 +362,13 @@
                     BOOT.items = json.items || [];
                     BOOT.employees = json.employees || [];
 
-                    // hidden apPoint dropdown, still used for value
                     const $selPoint = $('#apPoint').empty();
                     if (BOOT.point) {
                         $selPoint
                             .append(
                                 `<option value="${String(BOOT.point.id)}">
                                     [${esc(BOOT.point.category)}] ${esc(BOOT.point.activity)}
-                                 </option>`
+                                </option>`
                             )
                             .val(String(BOOT.point.id))
                             .prop('disabled', true);
@@ -393,7 +384,7 @@
                         .empty()
                         .append('<option value="">PILIH PIC</option>');
                     BOOT.employees.forEach(e => {
-                        const label = `${e.name}${e.npk ? (' — '+e.npk) : ''}`;
+                        const label = `${e.name}${e.npk ? (' — ' + e.npk) : ''}`;
                         $selPic.append(
                             `<option value="${String(e.id)}">${esc(label)}</option>`
                         );
@@ -406,13 +397,11 @@
             }
 
             /* ===== Modal helper ===== */
-
             const apModal = new bootstrap.Modal(document.getElementById('apItemModal'), {
                 backdrop: 'static',
                 keyboard: false
             });
 
-            // isi panel info point di modal
             function fillPointInfoInModal() {
                 const p = BOOT.point;
                 const $act = $('#apPointActivity');
@@ -435,7 +424,6 @@
                 $rng.text(rangeLabel || '—');
             }
 
-            // set min/max date fields dari point + clamp value
             function applyPointDateLimits() {
                 const p = BOOT.point;
                 if (!p) return;
@@ -508,7 +496,7 @@
                 $('#apRowId').val('');
                 $('#apItemLabel').text('Tambah Activity Plan Item');
 
-                // apPoint hidden -> isi value
+                // apPoint hidden → isi
                 const p = BOOT.point;
                 if (p) {
                     $('#apPoint')
@@ -516,10 +504,10 @@
                         .prop('disabled', true);
                 }
 
-                // info panel
+                // panel info point
                 fillPointInfoInModal();
 
-                // limit datepicker & prefill
+                // batas datepicker & prefilling
                 const lim = applyPointDateLimits();
                 if (lim && lim.min && !$('#apStart').val()) $('#apStart').val(lim.min);
                 if (lim && lim.max && !$('#apDue').val()) $('#apDue').val(lim.max);
@@ -540,7 +528,7 @@
                 $('#apRowId').val(it.id);
                 $('#apItemLabel').text('Edit Activity Plan Item');
 
-                // apPoint hidden -> isi value
+                // apPoint hidden → isi
                 const p = BOOT.point;
                 if (p) {
                     $('#apPoint')
@@ -548,13 +536,13 @@
                         .prop('disabled', true);
                 }
 
-                // isi panel info point
+                // info panel
                 fillPointInfoInModal();
 
-                // batas tanggal sesuai point
+                // batas datepicker
                 applyPointDateLimits();
 
-                // isi field item
+                // isi data existing
                 $('#apKind').val(it.kind_of_activity || '');
                 $('#apTarget').val(it.target || '');
                 $('#apPic').val(it.pic_employee_id || '').trigger('change');
@@ -566,10 +554,10 @@
                     $('#apDue').val(String(it.cached_due_date).slice(0, 10));
                 }
 
-                // clamp ulang karena kita baru set value
+                // clamp after setting
                 applyPointDateLimits();
 
-                // auto-generate schedule (hidden) biar months tetep masuk payload
+                // auto mark months (hidden)
                 const startVal = $('#apStart').val();
                 const dueVal = $('#apDue').val();
                 const itemFy = fiscalYearOf(startVal) ||
@@ -582,7 +570,7 @@
                 apModal.show();
             });
 
-            // ketika user ubah tanggal start/due di modal
+            // saat user ubah tanggal
             function onItemDatesChange() {
                 const p = BOOT.point;
                 if (!p) return;
@@ -594,7 +582,7 @@
                 const d = $('#apDue').val();
                 if (!s || !d) return;
 
-                // kalau invalid, kosongkan schedule hidden
+                // kalau invalid → kosongkan schedule hidden
                 if (s < min || s > max || d < min || d > max || s > d) {
                     MONTHS.forEach(m => $('#m' + m).prop('checked', false));
                     return;
@@ -674,7 +662,7 @@
                 if (payload.start_date > payload.due_date)
                     return toast('Start Date item tidak boleh setelah Due Date item.', 'danger');
 
-                // cek batas point
+                // cek rentang point
                 const p = BOOT.point;
                 if (p) {
                     const min = (p.cached_start_date || p.start_date || '').slice(0, 10);
@@ -686,7 +674,6 @@
                     }
                 }
 
-                // Kita tidak wajib monthsSelected.length > 0 karena hidden dari user.
 
                 try {
                     const res = await fetch(routeStore(), {
@@ -751,7 +738,6 @@
                 init();
 
                 if ($.fn.select2) {
-                    // apPoint hidden, jadi gak perlu select2
                     $('#apPic').select2({
                         dropdownParent: $('#apItemModal')
                     });
