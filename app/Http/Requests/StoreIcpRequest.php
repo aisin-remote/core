@@ -56,13 +56,21 @@ class StoreIcpRequest extends FormRequest
             $data   = $this->all();
             $career = strtoupper($data['career_target_code'] ?? '');
 
-            // 1) Tahun berurut: mulai tahun ini + bertambah 1 per index
-            $current = (int) now()->year;
-            $years   = array_map(fn($s) => (int)($s['year'] ?? 0), ($data['stages'] ?? []));
-            foreach ($years as $idx => $yr) {
-                $expected = $current + $idx;
-                if ($yr !== $expected) {
-                    $v->errors()->add("stages.$idx.year", "Tahun stage-$idx harus $expected.");
+            // 1) Tahun berurut: mulai tahun stage [0] + bertambah 1 per index
+            $stages = $data['stages'] ?? [];
+            if (!empty($stages)) {
+                // ambil tahun pertama stages
+                $baseYear = (int)($stages[0]['year'] ?? 0);
+                foreach ($stages as $idx => $s) {
+                    $yr  = (int)($s['year'] ?? 0);
+                    $expected = $baseYear + $idx;
+
+                    if ($yr !== $expected) {
+                        $v->errors()->add(
+                            "stages.$idx.year",
+                            "Tahun stage-$idx harus $expected."
+                        );
+                    }
                 }
             }
 
