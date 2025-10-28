@@ -183,8 +183,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
 
         Route::get('/rtc', [RtcController::class, 'approval'])->name('rtc.approval');
-        Route::get('/rtc/{id}', [RtcController::class, 'approve'])->name('rtc.approve');
-        Route::patch('/rtc/{id}/revise', [RtcController::class, 'revise'])->name('rtc.revise');
+        Route::post('/rtc/approve-area', [RtcController::class, 'approveArea'])->name('rtc.approve.area');
+        Route::post('/rtc/revise-area',  [RtcController::class, 'reviseArea'])->name('rtc.revise.area');
+        Route::get('/rtc/area-items', [RtcController::class, 'getAreaItems'])->name('rtc.area.items');
 
 
         Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');

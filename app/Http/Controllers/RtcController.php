@@ -57,104 +57,6 @@ class RtcController extends Controller
         return redirect()->route('rtc.list', ['level' => $level]);
     }
 
-    /**
-     * Hias koleksi item (Division/Department) dengan:
-     * - st_name / mt_name / lt_name (nama kandidat)
-     * - overall_label / overall_code (Not Set / Complete / Submitted / Checked / Approved / Partial)
-     * - can_add (false bila ST/MT/LT sudah lengkap)
-     *
-     * @param \Illuminate\Support\Collection $items
-     * @param string $areaKey 'division' | 'department' | 'section' | 'sub_section'
-     * @return \Illuminate\Support\Collection
-     */
-    private function decoratePlansAndOverall($items, string $areaKey)
-    {
-        // area variant agar tahan kasus 'Division' (huruf besar) / 'Sub_section'
-        $areas = [$areaKey, ucfirst($areaKey)];
-        if ($areaKey === 'division')    $areas[] = 'Division';
-        if ($areaKey === 'sub_section') $areas[] = 'Sub_section';
-
-        // alias term
-        $termAliases = [
-            'short' => ['short', 'short_term', 'st', 's/t'],
-            'mid'   => ['mid',   'mid_term',   'mt', 'm/t'],
-            'long'  => ['long',  'long_term',  'lt', 'l/t'],
-        ];
-
-        $findLatest = function ($areaId, $term) use ($areas, $termAliases) {
-            return Rtc::whereIn('area', $areas)
-                ->where('area_id', $areaId)
-                ->whereIn('term', $termAliases[$term])
-                ->with('employee:id,name')
-                ->orderByDesc('id')
-                ->first();
-        };
-
-        return $items->map(function ($item) use ($findLatest) {
-            $sid = $item->id;
-
-            $rS = $findLatest($sid, 'short');
-            $rM = $findLatest($sid, 'mid');
-            $rL = $findLatest($sid, 'long');
-
-            $st = optional($rS?->employee)->name;
-            $mt = optional($rM?->employee)->name;
-            $lt = optional($rL?->employee)->name;
-
-            $hasS = (bool) $st;
-            $hasM = (bool) $mt;
-            $hasL = (bool) $lt;
-            $complete3 = $hasS && $hasM && $hasL;
-
-            $statuses = collect([$rS?->status, $rM?->status, $rL?->status])
-                ->filter(fn($v) => in_array($v, [0, 1, 3], true)); // 0=submitted, 1=checked, 3=approved
-
-            $label = 'Not Set';
-            $code  = 'not_set';
-
-            if ($complete3) {
-                if ($statuses->isEmpty()) {
-                    $label = 'Complete';
-                    $code  = 'complete_no_submit';
-                } else {
-                    $allApproved  = $statuses->every(fn($v) => $v === 3);
-                    $allChecked   = $statuses->every(fn($v) => $v === 1);
-                    $allSubmitted = $statuses->every(fn($v) => $v === 0);
-
-                    if ($allApproved) {
-                        $label = 'Approved';
-                        $code = 'approved';
-                    } elseif ($allChecked) {
-                        $label = 'Checked';
-                        $code = 'checked';
-                    } elseif ($allSubmitted) {
-                        $label = 'Submitted';
-                        $code = 'submitted';
-                    } else {
-                        $label = 'Partial';
-                        $code = 'partial';
-                    }
-                }
-            }
-
-            $dtS = $rS?->updated_at ?? $rS?->created_at;
-            $dtM = $rM?->updated_at ?? $rM?->created_at;
-            $dtL = $rL?->updated_at ?? $rL?->created_at;
-            $max = collect([$dtS, $dtM, $dtL])->filter()->max();
-            $item->last_year = $max ? Carbon::parse($max)->format('Y') : null;
-
-            // set ke item agar langsung dipakai di blade
-            $item->st_name        = $st;
-            $item->mt_name        = $mt;
-            $item->lt_name        = $lt;
-            $item->overall_label  = $label;
-            $item->overall_code   = $code;
-            $item->can_add        = !$complete3;
-
-            return $item;
-        });
-    }
-
     public function list(Request $request, $id = null)
     {
         $trace = (string) Str::uuid();
@@ -322,7 +224,6 @@ class RtcController extends Controller
                 }
             }
 
-            /* ===== Employees utk modal Add (tetap dipakai untuk select2 emergency) ===== */
             $employeesQuery = Employee::select('id', 'name', 'position', 'company_name')->orderBy('name');
             if (!($isHRD || $isTop2)) {
                 $employeesQuery->where('company_name', $employee->company_name);
@@ -335,7 +236,6 @@ class RtcController extends Controller
                 'employees_select_count' => $employees instanceof \Illuminate\Support\Collection ? $employees->count() : 0,
             ]);
 
-            /* ===== Container Id per tab ===== */
             if ($tableFilter === 'division') {
                 if ($isGM) {
                     $containerId = null;
@@ -371,7 +271,6 @@ class RtcController extends Controller
                 default       => 'List',
             };
 
-            // Visibilitas KPI & Add
             $hideKpiCols  = in_array($tableFilter, ['company'], true);
             $forceHideAdd = $hideKpiCols
                 || ($isGM       && in_array($tableFilter, ['department', 'section', 'sub_section'], true))
@@ -1213,12 +1112,206 @@ class RtcController extends Controller
         }
     }
 
+    public function approveArea(Request $request)
+    {
+        $request->validate([
+            'area'    => 'required|string',
+            'area_id' => 'required|integer',
+            'comment' => 'nullable|string',
+        ]);
+
+        $user      = auth()->user();
+        $employee  = $user->employee;
+        $norm      = strtolower($employee->getNormalizedPosition());
+
+        $area      = strtolower($request->input('area'));
+        $areaId    = (int) $request->input('area_id');
+
+        // 1. Tentukan apakah user boleh approve/check area ini
+        //    dan tentukan nextStatus yg valid
+        $allowed = false;
+        $fromStatus = null;
+        $toStatus   = null;
+
+        if ($norm === 'gm') {
+            // GM boleh untuk dept/section/sub_section di bawah divisinya
+            $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
+            $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
+            $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
+            $subIds     = SubSection::whereIn('section_id', $sectionIds)->pluck('id');
+
+            $allowed =
+                ($area === 'department'  && $deptIds->contains($areaId)) ||
+                ($area === 'section'     && $sectionIds->contains($areaId)) ||
+                ($area === 'sub_section' && $subIds->contains($areaId));
+
+            // GM langsung final approve: 0 -> 2
+            if ($allowed) {
+                $fromStatus = 0;
+                $toStatus   = 2;
+            }
+        } elseif ($norm === 'direktur') {
+            // Direktur approve division di plant dia: 0 -> 2
+            $plantId = optional($employee->plant)->id;
+            $divIds  = Division::where('plant_id', $plantId)->pluck('id');
+
+            $allowed = ($area === 'division' && $divIds->contains($areaId));
+
+            if ($allowed) {
+                $fromStatus = 0;
+                $toStatus   = 2;
+            }
+        } elseif ($norm === 'vpd') {
+            // VPD melakukan CHECK: plant/direksi 0 -> 1
+            $plantIds = Plant::pluck('id');
+
+            $allowed = in_array($area, ['direksi', 'plant'], true)
+                && $plantIds->contains($areaId);
+
+            if ($allowed) {
+                $fromStatus = 0;
+                $toStatus   = 1;
+            }
+        } elseif ($norm === 'president') {
+            // President melakukan APPROVE FINAL: plant/direksi 1 -> 2
+            $plantIds = Plant::pluck('id');
+
+            $allowed = in_array($area, ['direksi', 'plant'], true)
+                && $plantIds->contains($areaId);
+
+            if ($allowed) {
+                $fromStatus = 1;
+                $toStatus   = 2;
+            }
+        }
+
+        if (!$allowed || is_null($fromStatus) || is_null($toStatus)) {
+            return response()->json([
+                'message' => 'Not allowed or invalid status transition.'
+            ], 403);
+        }
+
+        // 2. Ambil semua RTC yg match area+area_id dan status yg sesuai transition
+        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)]) // toleransi kapitalisasi
+            ->where('area_id', $areaId)
+            ->where('status', $fromStatus)
+            ->get();
+
+        if ($rtcs->isEmpty()) {
+            return response()->json([
+                'message' => 'No matching RTCs to update.'
+            ], 404);
+        }
+
+        // 3. Update semuanya dalam transaksi
+        DB::transaction(function () use ($rtcs, $toStatus, $area, $areaId) {
+            foreach ($rtcs as $rtc) {
+                $rtc->status = $toStatus;
+                $rtc->save();
+
+                // kalau status final = 2 dan areanya organisasi (bukan plant/direksi)
+                if (
+                    $rtc->status === 2 &&
+                    in_array($area, ['division', 'department', 'section', 'sub_section'], true)
+                ) {
+                    $modelClass = match ($area) {
+                        'division'    => Division::class,
+                        'department'  => Department::class,
+                        'section'     => Section::class,
+                        'sub_section' => SubSection::class,
+                        default       => null
+                    };
+
+                    if ($modelClass) {
+                        $record = $modelClass::find($areaId);
+                        if ($record) {
+                            // contoh: short_term / mid_term / long_term update
+                            $record->update([
+                                $rtc->term . '_term' => $rtc->employee_id
+                            ]);
+                        }
+                    }
+                }
+            }
+        });
+
+        return response()->json([
+            'message' => $toStatus === 1 ? 'Checked.' : 'Approved.'
+        ]);
+    }
+
+    public function reviseArea(Request $request)
+    {
+        $request->validate([
+            'area'    => 'required|string',
+            'area_id' => 'required|integer',
+            'comment' => 'nullable|string',
+        ]);
+
+        $user      = auth()->user();
+        $employee  = $user->employee;
+        $norm      = strtolower($employee->getNormalizedPosition());
+
+        $area      = strtolower($request->input('area'));
+        $areaId    = (int) $request->input('area_id');
+
+        $allowed = false;
+
+        if ($norm === 'gm') {
+            $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
+            $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
+            $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
+            $subIds     = SubSection::whereIn('section_id', $sectionIds)->pluck('id');
+
+            $allowed =
+                ($area === 'department'  && $deptIds->contains($areaId)) ||
+                ($area === 'section'     && $sectionIds->contains($areaId)) ||
+                ($area === 'sub_section' && $subIds->contains($areaId));
+        } elseif ($norm === 'direktur') {
+            $plantId = optional($employee->plant)->id;
+            $divIds  = Division::where('plant_id', $plantId)->pluck('id');
+            $allowed = ($area === 'division' && $divIds->contains($areaId));
+        } elseif ($norm === 'vpd' || $norm === 'president') {
+            $plantIds = Plant::pluck('id');
+            $allowed = in_array($area, ['direksi', 'plant'], true)
+                && $plantIds->contains($areaId);
+        }
+
+        if (!$allowed) {
+            return response()->json([
+                'message' => 'Not allowed.'
+            ], 403);
+        }
+
+        // Kembalikan semua rtc di area tsb ke status 0 (Submitted)
+        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)])
+            ->where('area_id', $areaId)
+            ->get();
+
+        if ($rtcs->isEmpty()) {
+            return response()->json([
+                'message' => 'No RTCs found in this area.'
+            ], 404);
+        }
+
+
+        DB::transaction(function () use ($rtcs) {
+            foreach ($rtcs as $rtc) {
+                $rtc->status = -1;
+                $rtc->save();
+            }
+        });
+
+        return response()->json([
+            'message' => 'Revised back to submitter.'
+        ]);
+    }
+
     public function approval()
     {
-        $user = auth()->user();
+        $user     = auth()->user();
         $employee = $user->employee;
-
-        $norm = strtolower($employee->getNormalizedPosition());
+        $norm     = strtolower($employee->getNormalizedPosition());
 
         $queue = collect();
         $stage = 'approve';
@@ -1229,47 +1322,162 @@ class RtcController extends Controller
             $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
             $subIds     = SubSection::whereIn('section_id', $sectionIds)->pluck('id');
 
-            $queue = Rtc::with('employee')
+            $queue = Rtc::with([
+                'employee',
+                'department',
+                'section',
+                'subsection',
+                'division',
+                'plant',
+            ])
                 ->where('status', 0)
                 ->where(function ($q) use ($deptIds, $sectionIds, $subIds) {
                     $q->where(fn($qq) => $qq->where('area', 'department')->whereIn('area_id', $deptIds))
                         ->orWhere(fn($qq) => $qq->where('area', 'section')->whereIn('area_id', $sectionIds))
                         ->orWhere(fn($qq) => $qq->where('area', 'sub_section')->whereIn('area_id', $subIds));
-                })->get();
+                })
+                ->get();
+
             $stage = 'approve';
         } elseif ($norm === 'direktur') {
             $plantId = optional($employee->plant)->id;
             $divIds  = Division::where('plant_id', $plantId)->pluck('id');
 
-            $queue = Rtc::with('employee')
+            $queue = Rtc::with([
+                'employee',
+                'department',
+                'section',
+                'subsection',
+                'division',
+                'plant',
+            ])
                 ->where('status', 0)
-                ->where('area', 'division')
-                ->whereIn('area_id', $divIds)->get();
+                ->whereIn('area', ['division', 'Division'])
+                ->whereIn('area_id', $divIds)
+                ->get();
+
             $stage = 'approve';
         } elseif ($norm === 'vpd') {
             $plantIds = Plant::pluck('id');
-            $queue = Rtc::with('employee')
+
+            $queue = Rtc::with([
+                'employee',
+                'department',
+                'section',
+                'subsection',
+                'division',
+                'plant',
+            ])
                 ->where('status', 0)
                 ->whereIn('area', ['direksi', 'plant'])
-                ->whereIn('area_id', $plantIds)->get();
+                ->whereIn('area_id', $plantIds)
+                ->get();
+
             $stage = 'check';
         } elseif ($norm === 'president') {
             $plantIds = Plant::pluck('id');
-            $queue = Rtc::with('employee')
+
+            $queue = Rtc::with([
+                'employee',
+                'department',
+                'section',
+                'subsection',
+                'division',
+                'plant',
+            ])
                 ->where('status', 1)
                 ->whereIn('area', ['direksi', 'plant'])
-                ->whereIn('area_id', $plantIds)->get();
+                ->whereIn('area_id', $plantIds)
+                ->get();
+
             $stage = 'approve';
         } else {
             $queue = collect();
             $stage = 'approve';
         }
 
+        // === NEW PART: group per area ===
+        $grouped = $queue
+            ->groupBy(function ($rtc) {
+                // key unik per area
+                return strtolower($rtc->area) . '#' . $rtc->area_id;
+            })
+            ->map(function ($items) {
+                $first = $items->first();
+
+                // bikin label status ringkas
+                $statusMap = [
+                    0  => 'Submitted',
+                    1  => 'Checked',
+                    2  => 'Approved',
+                    -1 => 'Revised',
+                ];
+
+                $statusCounts = $items
+                    ->groupBy('status')
+                    ->map(fn($col) => $col->count())
+                    ->mapWithKeys(function ($count, $statusCode) use ($statusMap) {
+                        $label = $statusMap[$statusCode] ?? 'Unknown';
+                        return [$label => $count];
+                    });
+
+                return [
+                    'area'        => strtolower($first->area),        // e.g "department"
+                    'area_id'     => $first->area_id,                 // e.g 12
+                    'area_name'   => $first->area_name,               // accessor dari model Rtc
+                    'total_rtc'   => $items->count(),                 // berapa RTC di area ini
+                    'terms'       => $items->pluck('term')->unique()->values()->all(),
+                    'status_info' => $statusCounts,                   // contoh: ['Submitted' => 3, 'Checked' => 1]
+                    'sample_ids'  => $items->pluck('id')->take(3)->values()->all(), // optional, buat action detail nanti
+                ];
+            })
+            ->values();
+
         return view('website.approval.rtc.index', [
-            'rtcs'  => $queue,
+            // ganti rtcs => grouped data per area, bukan per employee
+            'rtcs'  => $grouped,
             'stage' => $stage,
             'title' => 'Approval'
         ]);
+    }
+
+    public function getAreaItems(Request $request)
+    {
+        $request->validate([
+            'area'    => 'required|string',
+            'area_id' => 'required|integer',
+        ]);
+
+        $area   = strtolower($request->input('area'));
+        $areaId = (int) $request->input('area_id');
+
+        $rtcs = Rtc::with([
+            'employee'
+        ])
+            ->whereIn('area', [$area, ucfirst($area)])
+            ->where('area_id', $areaId)
+            ->get([
+                'id',
+                'employee_id',
+                'area',
+                'area_id',
+                'term',
+                'status',
+            ]);
+
+        $payload = $rtcs->map(function ($rtc) {
+            return [
+                'id'       => $rtc->id,
+                'term'     => $rtc->term,
+                'status'   => $rtc->status,
+                'employee' => [
+                    'npk'          => $rtc->employee->npk ?? null,
+                    'name'         => $rtc->employee->name ?? null
+                ],
+            ];
+        })->values();
+
+        return response()->json($payload);
     }
 
     public function approve($id)
@@ -1345,7 +1553,6 @@ class RtcController extends Controller
 
         return response()->json(['message' => $nextStatus === 1 ? 'Checked.' : 'Approved.']);
     }
-
     public function revise($id, Request $request)
     {
         $rtc = Rtc::findOrFail($id);
@@ -1389,18 +1596,5 @@ class RtcController extends Controller
         // (opsional) simpan comment revisi ke table audit/log terpisah
 
         return response()->json(['message' => 'Revised back to submitter.']);
-    }
-
-    private function currentPicFor(string $area, $model)
-    {
-        $empId = match ($area) {
-            'division' => $model->gm_id ?? null,
-            'department' => $model->manager_id ?? null,
-            'section' => $model->supervisor_id ?? null,
-            'sub_section' => $model->leader_id ?? null,
-            default => null,
-        };
-
-        return $empId ? Employee::select('id', 'name', 'position')->find($empId) : null;
     }
 }

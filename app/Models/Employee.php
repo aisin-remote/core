@@ -130,6 +130,12 @@ class Employee extends Model
         return $this->belongsTo(SubSection::class);
     }
 
+    // Relasi ke department
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
     // Relasi ke Section melalui SubSection
     public function section()
     {
