@@ -497,7 +497,7 @@ class ActivityPlanController extends Controller
             ->orderBy('id')
             ->get();
 
-        $employees = Employee::orderBy('name')->get(['id', 'name', 'npk']);
+        $employees = $this->subordinateEmployee($request);
 
         $pointPayload = [
             'id' => $point->id,
@@ -741,11 +741,6 @@ class ActivityPlanController extends Controller
         return $out;
     }
 
-    private function fiscalYearFromDate(Carbon $d): int
-    {
-        return $d->month >= 4 ? $d->year : $d->year - 1;
-    }
-
     private function fiscalBounds(int $onYear): array
     {
         $start = Carbon::create($onYear, 4, 1, 0, 0, 0)->startOfDay();
@@ -779,5 +774,28 @@ class ActivityPlanController extends Controller
         }
 
         return $list;
+    }
+
+    private function subordinateEmployee($request)
+    {
+        $user = auth()->user();
+        $employee = $user->employee;
+
+        $search = $request->input('search');
+
+        // Ambil subordinate berdasarkan level otorisasi
+        $subordinateIds = $employee->getSubordinatesByLevel(1)->pluck('id')->toArray();
+
+        $allIds = array_merge($subordinateIds, [$employee->id]);
+
+        $employees = Employee::with([
+            'departments:id,name',
+        ])
+            ->whereIn('id', $allIds)
+            ->when($search, fn($q) => $q->where('name', 'like', "%{$search}%"))
+            ->orderBy('name')
+            ->get();
+
+        return $employees;
     }
 }

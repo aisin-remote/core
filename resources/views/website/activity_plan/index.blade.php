@@ -273,6 +273,7 @@
             function renderAll() {
                 const $tb = $('#itemsBody').empty();
                 const items = BOOT.items || [];
+
                 if (!items.length) {
                     $tb.html(
                         '<tr class="empty-row"><td colspan="8" class="text-muted fst-italic">Belum ada item. Klik “Tambah Item”.</td></tr>'

@@ -944,10 +944,10 @@
                 const $tr = $(this).closest('tr');
                 const pointId = $tr.data('row-id');
                 const ippId = window.__currentIppId;
-                if (!ippId) {
-                    toast('IPP belum terinisialisasi.', 'danger');
-                    return;
-                }
+                // if (!ippId) {
+                //     toast('IPP belum terinisialisasi.', 'danger');
+                //     return;
+                // }
                 if (!pointId || !String(pointId).match(/^\d+$/)) {
                     toast('Simpan dulu point ini sebelum manage Activity Plan.', 'warning');
                     return;
