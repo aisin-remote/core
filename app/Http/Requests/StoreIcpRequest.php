@@ -73,33 +73,6 @@ class StoreIcpRequest extends FormRequest
                     }
                 }
             }
-
-            // 2) Posisi ≤ career target + level sesuai mapping
-            foreach (($data['stages'] ?? []) as $i => $s) {
-                $pos = strtoupper($s['position_code'] ?? '');
-
-                if ($career && $pos && !RtcTarget::lte($pos, $career)) {
-                    $v->errors()->add(
-                        "stages.$i.position_code",
-                        "Position tidak boleh melebihi career target ($career)."
-                    );
-                }
-
-                $map = $pos ? RtcTarget::map($pos) : null;
-                if (!$map) {
-                    $v->errors()->add("stages.$i.position_code", "Kode posisi tidak valid.");
-                    continue;
-                }
-
-                $allowed = $map['levels'] ?? [];
-                $lv      = strtoupper($s['level'] ?? '');
-                if ($allowed && !in_array($lv, array_map('strtoupper', $allowed), true)) {
-                    $v->errors()->add(
-                        "stages.$i.level",
-                        "Level tidak sesuai untuk posisi $pos. Pilihan: " . implode('/', $allowed)
-                    );
-                }
-            }
         });
     }
 }

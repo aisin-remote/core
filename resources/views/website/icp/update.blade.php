@@ -5,9 +5,6 @@
 
 @push('custom-css')
     <style>
-        /* =========================
-               ICP Stage – Neutral High-Contrast
-               ========================= */
         :root {
             --stage-border: #3f4a5a;
             --stage-head-bg: #1f2937;
@@ -120,7 +117,7 @@
             font-size: .875rem
         }
 
-        /* Readonly visual (evaluate mode) – tetap submit karena tidak disabled */
+        /* mode evaluate: readonly feel */
         .ro {
             pointer-events: none;
             background: #f9fafb !important;
@@ -177,7 +174,10 @@
                 @unless ($isEvaluate)
                     @method('PUT')
                 @endunless
+
                 <input type="hidden" name="employee_id" value="{{ $icp->employee_id }}">
+                {{-- Current RTC code (batas bawah posisi) harus dikirim dari controller edit juga --}}
+                <input type="hidden" id="employee_current_code" value="{{ $currentRtcCode ?? '' }}">
 
                 {{-- HEADER --}}
                 <div class="card p-4 shadow-sm rounded-3 mb-4">
@@ -214,6 +214,9 @@
                             @error('career_target_code')
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
+                            <small class="text-muted">
+                                Position tiap Stage hanya boleh antara posisi kamu sekarang sampai target karier.
+                            </small>
                         </div>
 
                         <div class="col-md-6">
@@ -252,13 +255,14 @@
         </div>
     </div>
 
+    {{-- TEMPLATE --}}
     @verbatim
         <template id="stage-template">
             <div class="stage-card">
                 <div class="stage-head d-flex align-items-center justify-content-between">
                     <div class="d-flex align-items-center gap-3">
                         <strong>Stage Tahun</strong>
-                        <!-- Tahun editable agar bisa koreksi riwayat -->
+                        <!-- Tahun editable di edit mode -->
                         <input type="number" min="2000" max="2100" pattern="\d{4}"
                             class="form-control form-control-sm stage-year" name="stages[__S__][year]" placeholder="YYYY"
                             style="width:110px" required>
@@ -285,8 +289,7 @@
 
                         <div class="col-md-4">
                             <label class="form-label fw-bold">Level</label>
-                            <select class="form-select form-select-sm stage-level" name="stages[__S__][level]" required
-                                disabled>
+                            <select class="form-select form-select-sm stage-level" name="stages[__S__][level]" required>
                                 <option value="">-- Select Level --</option>
                             </select>
                         </div>
@@ -350,447 +353,509 @@
             </div>
         </template>
     @endverbatim
+@endsection
 
-    <script>
-        /* ===== Data dari server ===== */
-        const DEPARTMENTS = @json($departments->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' — ' . $d->company])->values());
-        const DIVISIONS = @json($divisions->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' - ' . $d->company])->values());
-        const TECHS = @json($technicalCompetencies->pluck('competency'));
-        const COMPANY = @json($icp->employee->company_name);
-        const EXISTING_STAGES =
-        @json($stages); // [{year, job_function, job_source, position_code, level, details:[...]}]
+<script>
+    /* ===== Data dari server ===== */
+    const DEPARTMENTS = @json($departments->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' — ' . $d->company])->values());
+    const DIVISIONS = @json($divisions->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' - ' . $d->company])->values());
+    const TECHS = @json($technicalCompetencies->pluck('competency'));
+    const COMPANY = @json($icp->employee->company_name);
 
-        // rtcList urut terendah→tertinggi
-        const RTC_LIST = @json($rtcList); // [{code:'AL', position:'Act Leader'}, ...]
-        const RTC_RANK = Object.fromEntries(RTC_LIST.map((x, i) => [x.code.toUpperCase(), i]));
+    // grades untuk Level (aisin_grade)
+    const GRADES = @json($grades->pluck('aisin_grade'));
 
-        const IS_EVALUATE = @json(($mode ?? null) === 'evaluate');
-        const MAX_STAGE = 5;
+    // data stage existing
+    const EXISTING_STAGES = @json($stages);
 
-        /* ===== Select2 Tech with freetext + contains matcher (case-insensitive) ===== */
-        function initTechSelects(scope, techListOverride = null) {
-            const base = (techListOverride ?? TECHS ?? []).map(t => ({
-                id: String(t),
-                text: String(t)
-            }));
-            $(scope).find('.tech-select').each(function() {
-                const $el = $(this);
-                const prevVal = $el.val();
-                const preset = $el.attr('data-value');
-                if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
-                $el.select2({
-                    data: base,
-                    tags: true,
-                    placeholder: 'Select or type…',
-                    allowClear: true,
-                    width: '100%',
-                    matcher: function(params, data) {
-                        if ($.trim(params.term) === '') return data;
-                        if (typeof data.text === 'undefined') return null;
-                        const term = params.term.toLowerCase();
-                        const text = String(data.text).toLowerCase();
-                        const id = String(data.id || '').toLowerCase();
-                        return (text.includes(term) || id.includes(term)) ? data : null;
-                    },
-                    createTag: function(params) {
-                        const term = (params.term || '').trim();
-                        if (!term) return null;
-                        const exists = base.some(o => o.text.toLowerCase() === term.toLowerCase()) ||
-                            $el.find('option').toArray().some(o => o.text.toLowerCase() === term
-                                .toLowerCase());
-                        return exists ? null : {
-                            id: term,
-                            text: term,
-                            isNew: true
-                        };
-                    },
-                    templateResult: function(data) {
-                        return data.isNew ? $('<span>').text('Add: ' + data.text) : data.text;
-                    }
-                });
+    // daftar posisi RTC
+    const RTC_LIST = @json($rtcList);
+    const RTC_RANK = Object.fromEntries(RTC_LIST.map((x, i) => [x.code.toUpperCase(), i]));
 
-                if (preset && !$el.val()) {
-                    if (!base.some(x => x.id === preset) && !$el.find('option[value="' + preset.replaceAll('"',
-                            '\"') + '"]').length) {
-                        const opt = new Option(preset, preset, true, true);
-                        $el.append(opt).trigger('change');
-                    } else {
-                        $el.val(preset).trigger('change');
-                    }
-                } else if (prevVal) {
-                    $el.val(prevVal).trigger('change');
+    // posisi awal karyawan dalam kode RTC (WAJIB tidak null untuk range jalan)
+    const CURRENT_RTC_CODE = @json($currentRtcCode ?? null);
+
+    const IS_EVALUATE = @json(($mode ?? null) === 'evaluate');
+    const MAX_STAGE = 10;
+
+    /* ===== select2 utk teknikal ===== */
+    function initTechSelects(scope, techListOverride = null) {
+        const base = (techListOverride ?? TECHS ?? []).map(t => ({
+            id: String(t),
+            text: String(t)
+        }));
+
+        $(scope).find('.tech-select').each(function() {
+            const $el = $(this);
+            const prevVal = $el.val();
+            const preset = $el.attr('data-value');
+
+            if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+
+            $el.select2({
+                data: base,
+                tags: true,
+                placeholder: 'Select or type…',
+                allowClear: true,
+                width: '100%',
+                matcher: function(params, data) {
+                    if ($.trim(params.term) === '') return data;
+                    if (typeof data.text === 'undefined') return null;
+
+                    const term = params.term.toLowerCase();
+                    const text = String(data.text).toLowerCase();
+                    const id = String(data.id || '').toLowerCase();
+
+                    return (text.includes(term) || id.includes(term)) ? data : null;
+                },
+                createTag: function(params) {
+                    const term = (params.term || '').trim();
+                    if (!term) return null;
+
+                    const exists =
+                        base.some(o => o.text.toLowerCase() === term.toLowerCase()) ||
+                        $el.find('option').toArray().some(o => o.text.toLowerCase() === term
+                            .toLowerCase());
+
+                    return exists ? null : {
+                        id: term,
+                        text: term,
+                        isNew: true
+                    };
+                },
+                templateResult: function(data) {
+                    return data.isNew ? $('<span>').text('Add: ' + data.text) : data.text;
                 }
-
-                if (IS_EVALUATE) $el.addClass('ro');
             });
-        }
 
-        /* ===== Helpers ===== */
-        function fillOptions(selectEl, items, valueKey = 'v', textKey = 't') {
-            selectEl.innerHTML = '<option value="">Select</option>';
+            if (preset && !$el.val()) {
+                if (
+                    !base.some(x => x.id === preset) &&
+                    !$el.find('option[value="' + preset.replaceAll('"', '\"') + '"]').length
+                ) {
+                    const opt = new Option(preset, preset, true, true);
+                    $el.append(opt).trigger('change');
+                } else {
+                    $el.val(preset).trigger('change');
+                }
+            } else if (prevVal) {
+                $el.val(prevVal).trigger('change');
+            }
+
+            if (IS_EVALUATE) $el[0].classList.add('ro');
+        });
+    }
+
+    /* ===== Helpers ===== */
+    function fillJobs(selectEl) {
+        selectEl.innerHTML = '';
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = 'Select';
+        ph.disabled = true;
+        ph.selected = true;
+        selectEl.appendChild(ph);
+
+        const makeGroup = (label, items, src) => {
+            const og = document.createElement('optgroup');
+            og.label = label;
             items.forEach(it => {
                 const opt = document.createElement('option');
-                opt.value = valueKey ? it[valueKey] : it;
-                opt.textContent = textKey ? it[textKey] : it;
+                opt.value = it.v;
+                opt.textContent = it.t;
+                opt.dataset.source = src;
+                og.appendChild(opt);
+            });
+            selectEl.appendChild(og);
+        };
+
+        makeGroup('Departments', DEPARTMENTS, 'department');
+        makeGroup('Divisions', DIVISIONS, 'division');
+    }
+
+    // === posisi range = [CURRENT_RTC_CODE .. career_target]
+    function fillPositionsRanged(selectEl, minCode, maxCode) {
+        selectEl.innerHTML = '<option value="">Select Position</option>';
+
+        const validMin = !!minCode && (minCode.toUpperCase() in RTC_RANK);
+        const validMax = !!maxCode && (maxCode.toUpperCase() in RTC_RANK);
+
+        if (!validMin || !validMax) {
+            // JANGAN disable di sini. Kita mau tetap bisa nampilin value existing walau range invalid.
+            return;
+        }
+
+        const minRank = RTC_RANK[minCode.toUpperCase()];
+        const maxRank = RTC_RANK[maxCode.toUpperCase()];
+        const low = Math.min(minRank, maxRank);
+        const high = Math.max(minRank, maxRank);
+
+        RTC_LIST.forEach(rt => {
+            const r = RTC_RANK[rt.code.toUpperCase()];
+            if (r >= low && r <= high) {
+                const opt = document.createElement('option');
+                opt.value = rt.code;
+                opt.textContent = `${rt.position} (${rt.code})`;
                 selectEl.appendChild(opt);
-            });
-        }
-
-        function fillJobs(selectEl) {
-            selectEl.innerHTML = '';
-            const ph = document.createElement('option');
-            ph.value = '';
-            ph.textContent = 'Select';
-            ph.disabled = true;
-            ph.selected = true;
-            selectEl.appendChild(ph);
-            const makeGroup = (label, items, src) => {
-                const og = document.createElement('optgroup');
-                og.label = label;
-                items.forEach(it => {
-                    const opt = document.createElement('option');
-                    opt.value = it.v;
-                    opt.textContent = it.t;
-                    opt.dataset.source = src;
-                    og.appendChild(opt);
-                });
-                selectEl.appendChild(og);
-            };
-            makeGroup('Departments', DEPARTMENTS, 'department');
-            makeGroup('Divisions', DIVISIONS, 'division');
-        }
-
-        function fillPositionsLimited(selectEl, careerCode) {
-            selectEl.innerHTML = '<option value="">Select Position</option>';
-            if (!careerCode || !(careerCode.toUpperCase() in RTC_RANK)) {
-                selectEl.disabled = true;
-                return;
             }
-            const targetRank = RTC_RANK[careerCode.toUpperCase()];
-            RTC_LIST.forEach(rt => {
-                if (RTC_RANK[rt.code.toUpperCase()] <= targetRank) {
-                    const opt = document.createElement('option');
-                    opt.value = rt.code;
-                    opt.textContent = `${rt.position} (${rt.code})`;
-                    selectEl.appendChild(opt);
+        });
+    }
+
+    // LEVEL dari GRADES (aisin_grade)
+    function fillGrades(selectEl, selected = "") {
+        selectEl.innerHTML = '<option value="">-- Select Level --</option>';
+
+        GRADES.forEach(g => {
+            const opt = document.createElement('option');
+            opt.value = g;
+            opt.textContent = g;
+            if (g === selected) {
+                opt.selected = true;
+            }
+            selectEl.appendChild(opt);
+        });
+
+        selectEl.disabled = false;
+    }
+
+    const THEME_CLASSES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
+    const getStageCards = () => [...document.querySelectorAll('.stage-card')];
+
+    function applyTheme(stageEl, idx) {
+        THEME_CLASSES.forEach(c => stageEl.classList.remove(c));
+        stageEl.classList.add(THEME_CLASSES[idx % THEME_CLASSES.length]);
+    }
+
+    function updateAddBtn() {
+        const btn = document.getElementById('btn-add-stage');
+        if (!btn) return;
+        btn.disabled = getStageCards().length >= MAX_STAGE || IS_EVALUATE;
+    }
+
+    function reindexDetails(stage) {
+        const sIdx = Number(stage.dataset.sIndex);
+        stage.querySelectorAll('.details-container .detail-row').forEach((row, dIdx) => {
+            row.querySelectorAll('[name*="[details]"]').forEach(el => {
+                el.name = el.name.replace(
+                    /stages\[\d+]\[details]\[\d+]/,
+                    `stages[${sIdx}][details][${dIdx}]`
+                );
+            });
+        });
+    }
+
+    function reindexStages() {
+        getStageCards().forEach((stage, sIdx) => {
+            stage.dataset.sIndex = String(sIdx);
+            stage.querySelectorAll('[name^="stages["]').forEach(el => {
+                el.name = el.name.replace(/stages\[\d+]/, `stages[${sIdx}]`);
+            });
+            reindexDetails(stage);
+            applyTheme(stage, sIdx);
+        });
+        updateAddBtn();
+    }
+
+    async function refreshStageTechs(stageEl, source, jobName) {
+        initTechSelects(stageEl.querySelector('.details-container'), []);
+        try {
+            const qs = new URLSearchParams({
+                source,
+                name: jobName,
+                company: COMPANY
+            });
+            const res = await fetch(`{{ route('icp.techs') }}?` + qs.toString(), {
+                headers: {
+                    'Accept': 'application/json'
                 }
             });
-            selectEl.disabled = false;
-        }
-
-        async function loadLevels(levelSelect, positionCode, careerCode) {
-            levelSelect.innerHTML = '<option value="">Loading...</option>';
-            levelSelect.disabled = true;
-            try {
-                const qs = new URLSearchParams({
-                    position_code: positionCode,
-                    career_target_code: careerCode
-                });
-                const res = await fetch(`{{ route('icp.levels') }}?` + qs.toString(), {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                const js = await res.json();
-                if (!js.ok) {
-                    levelSelect.innerHTML = `<option value="">${js.message || 'Level unavailable'}</option>`;
-                    return;
-                }
-                levelSelect.innerHTML = '<option value="">-- Select Level --</option>';
-                (js.levels || []).forEach(lv => {
-                    const o = document.createElement('option');
-                    o.value = lv;
-                    o.textContent = lv;
-                    levelSelect.appendChild(o);
-                });
-                levelSelect.disabled = false;
-            } catch (e) {
-                levelSelect.innerHTML = '<option value="">Failed to load</option>';
-            }
-        }
-
-        async function refreshStageTechs(stageEl, source, jobName) {
+            const js = await res.json();
+            const items = (js.ok ? js.items : []) || [];
+            stageEl._techList = items;
+            initTechSelects(stageEl.querySelector('.details-container'), items);
+        } catch (e) {
+            stageEl._techList = [];
             initTechSelects(stageEl.querySelector('.details-container'), []);
-            try {
-                const qs = new URLSearchParams({
-                    source,
-                    name: jobName,
-                    company: COMPANY
-                });
-                const res = await fetch(`{{ route('icp.techs') }}?` + qs.toString(), {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                const js = await res.json();
-                const items = (js.ok ? js.items : []) || [];
-                stageEl._techList = items;
-                initTechSelects(stageEl.querySelector('.details-container'), items);
-            } catch (e) {
-                stageEl._techList = [];
-                initTechSelects(stageEl.querySelector('.details-container'), []);
+        }
+    }
+
+    function addDetail(stageEl, data = null) {
+        const sIndex = Number(stageEl.dataset.sIndex);
+        const detailsBox = stageEl.querySelector('.details-container');
+        const dIndex = detailsBox.querySelectorAll('.detail-row').length;
+
+        const tpl = document.getElementById('detail-template').innerHTML
+            .replaceAll('__S__', sIndex)
+            .replaceAll('__D__', dIndex);
+
+        const wrap = document.createElement('div');
+        wrap.innerHTML = tpl.trim();
+        const row = wrap.firstElementChild;
+
+        const removeBtn = row.querySelector('.btn-remove-detail');
+        removeBtn.addEventListener('click', () => {
+            row.remove();
+            reindexDetails(stageEl);
+        });
+        if (IS_EVALUATE) removeBtn.classList.add('d-none');
+
+        if (data) {
+            row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][current_technical]"]`)
+                .setAttribute('data-value', data.current_technical ?? '');
+            row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][required_technical]"]`)
+                .setAttribute('data-value', data.required_technical ?? '');
+            row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][development_technical]"]`)
+                .setAttribute('data-value', data.development_technical ?? '');
+            row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][current_nontechnical]"]`).value =
+                data.current_nontechnical ?? '';
+            row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][required_nontechnical]"]`).value =
+                data.required_nontechnical ?? '';
+            row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][development_nontechnical]"]`).value =
+                data.development_nontechnical ?? '';
+        }
+
+        detailsBox.appendChild(row);
+        initTechSelects(row, stageEl._techList ?? TECHS);
+
+        if (IS_EVALUATE) {
+            row.querySelectorAll('input,select,textarea').forEach(el => el.classList.add('ro'));
+        }
+    }
+
+    function addStage(data = null) {
+        const container = document.getElementById('stages-container');
+        const idx = container.querySelectorAll('.stage-card').length;
+        if (idx >= MAX_STAGE && !data) {
+            Swal.fire('Batas tercapai', `Maksimal ${MAX_STAGE} Stage Tahun.`, 'info');
+            return;
+        }
+
+        const tpl = document.getElementById('stage-template').innerHTML.replaceAll('__S__', idx);
+        const wrap = document.createElement('div');
+        wrap.innerHTML = tpl.trim();
+        const stage = wrap.firstElementChild;
+
+        stage.dataset.sIndex = String(idx);
+        container.appendChild(stage);
+        applyTheme(stage, idx);
+        stage.classList.add('added');
+        setTimeout(() => stage.classList.remove('added'), 300);
+
+        const jobSel = stage.querySelector('.stage-job');
+        const posSel = stage.querySelector('.stage-position');
+        const lvlSel = stage.querySelector('.stage-level');
+        const yearEl = stage.querySelector('.stage-year');
+        const rmBtn = stage.querySelector('.btn-remove-stage');
+        const addDet = stage.querySelector('.btn-add-detail');
+        const careerSelect = document.getElementById('career_target');
+
+        // hidden job_source
+        let jobSrc = stage.querySelector('.job-source');
+        if (!jobSrc) {
+            jobSrc = document.createElement('input');
+            jobSrc.type = 'hidden';
+            jobSrc.className = 'job-source';
+            jobSrc.name = `stages[${idx}][job_source]`;
+            stage.appendChild(jobSrc);
+        }
+
+        // 1. isi Job Function
+        fillJobs(jobSel);
+
+        // 2. isi Level global dari GRADES
+        fillGrades(lvlSel);
+
+        // 3. isi Position berdasarkan CURRENT_RTC_CODE dan career target header
+        const careerTargetVal = careerSelect.value || "{{ $icp->career_target_code }}";
+        fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerTargetVal);
+
+        // 4. pasang event handler:
+        // position change -> gak filter level lagi
+        posSel.addEventListener('change', () => {
+            if (!lvlSel.options.length) {
+                fillGrades(lvlSel);
             }
-        }
+        });
 
-        const THEME_CLASSES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
-        const getStageCards = () => [...document.querySelectorAll('.stage-card')];
+        // job function change -> refresh tech list
+        stage._techList = [];
+        jobSel.addEventListener('change', () => {
+            const opt = jobSel.options[jobSel.selectedIndex];
+            const source = opt?.dataset.source || '';
+            const jobName = jobSel.value || '';
+            jobSrc.value = source;
 
-        function applyTheme(stageEl, idx) {
-            THEME_CLASSES.forEach(c => stageEl.classList.remove(c));
-            stageEl.classList.add(THEME_CLASSES[idx % THEME_CLASSES.length]);
-        }
-
-        function updateAddBtn() {
-            const btn = document.getElementById('btn-add-stage');
-            if (!btn) return;
-            btn.disabled = getStageCards().length >= MAX_STAGE;
-        }
-
-        function reindexDetails(stage) {
-            const sIdx = Number(stage.dataset.sIndex);
-            stage.querySelectorAll('.details-container .detail-row').forEach((row, dIdx) => {
-                row.querySelectorAll('[name*="[details]"]').forEach(el => {
-                    el.name = el.name.replace(/stages\[\d+]\[details]\[\d+]/,
-                        `stages[${sIdx}][details][${dIdx}]`);
-                });
-            });
-        }
-
-        function reindexStages() {
-            getStageCards().forEach((stage, sIdx) => {
-                stage.dataset.sIndex = String(sIdx);
-                stage.querySelectorAll('[name^="stages["]').forEach(el => {
-                    el.name = el.name.replace(/stages\[\d+]/, `stages[${sIdx}]`);
-                });
-                reindexDetails(stage);
-                applyTheme(stage, sIdx);
-            });
-            updateAddBtn();
-        }
-
-        function addDetail(stageEl, data = null) {
-            const sIndex = Number(stageEl.dataset.sIndex);
-            const detailsBox = stageEl.querySelector('.details-container');
-            const dIndex = detailsBox.querySelectorAll('.detail-row').length;
-            const tpl = document.getElementById('detail-template').innerHTML.replaceAll('__S__', sIndex).replaceAll('__D__',
-                dIndex);
-            const wrap = document.createElement('div');
-            wrap.innerHTML = tpl.trim();
-            const row = wrap.firstElementChild;
-            const removeBtn = row.querySelector('.btn-remove-detail');
-            removeBtn.addEventListener('click', () => {
-                row.remove();
-                reindexDetails(stageEl);
-            });
-            if (IS_EVALUATE) removeBtn.classList.add('d-none');
-
-            if (data) {
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][current_technical]"]`).setAttribute(
-                    'data-value', data.current_technical ?? '');
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][required_technical]"]`).setAttribute(
-                    'data-value', data.required_technical ?? '');
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][development_technical]"]`).setAttribute(
-                    'data-value', data.development_technical ?? '');
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][current_nontechnical]"]`).value = data
-                    .current_nontechnical ?? '';
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][required_nontechnical]"]`).value = data
-                    .required_nontechnical ?? '';
-                row.querySelector(`[name="stages[${sIndex}][details][${dIndex}][development_nontechnical]"]`).value = data
-                    .development_nontechnical ?? '';
-            }
-
-            detailsBox.appendChild(row);
-            initTechSelects(row, stageEl._techList ?? TECHS);
-            if (IS_EVALUATE) row.querySelectorAll('input,select,textarea').forEach(el => el.classList.add('ro'));
-        }
-
-        function addStage(data = null) {
-            const container = document.getElementById('stages-container');
-            const idx = container.querySelectorAll('.stage-card').length;
-            if (idx >= MAX_STAGE) {
-                Swal.fire('Batas 5 tahun', 'Maksimal 5 Stage Tahun per ICP.', 'info');
+            if (!source || !jobName) {
+                stage._techList = [];
+                initTechSelects(stage.querySelector('.details-container'), []);
                 return;
             }
+            refreshStageTechs(stage, source, jobName);
+        });
 
-            const tpl = document.getElementById('stage-template').innerHTML.replaceAll('__S__', idx);
-            const wrap = document.createElement('div');
-            wrap.innerHTML = tpl.trim();
-            const stage = wrap.firstElementChild;
-            stage.dataset.sIndex = String(idx);
-            container.appendChild(stage);
-            applyTheme(stage, idx);
-            stage.classList.add('added');
-            setTimeout(() => stage.classList.remove('added'), 300);
+        // remove & add detail
+        rmBtn.addEventListener('click', () => {
+            stage.remove();
+            reindexStages();
+        });
+        addDet.addEventListener('click', () => addDetail(stage));
 
-            const jobSel = stage.querySelector('.stage-job');
-            fillJobs(jobSel);
-            const posSel = stage.querySelector('.stage-position');
-            const lvlSel = stage.querySelector('.stage-level');
-            const yearEl = stage.querySelector('.stage-year');
-            const rmBtn = stage.querySelector('.btn-remove-stage');
-            const addDet = stage.querySelector('.btn-add-detail');
+        // 5. PREFILL DATA EXISTING
+        if (data) {
+            // year
+            yearEl.value = data.year ?? data.plan_year ?? '';
 
-            // hidden job_source per stage
-            let jobSrc = stage.querySelector('.job-source');
-            if (!jobSrc) {
-                jobSrc = document.createElement('input');
-                jobSrc.type = 'hidden';
-                jobSrc.className = 'job-source';
-                jobSrc.name = `stages[${idx}][job_source]`;
-                stage.appendChild(jobSrc);
+            // job_function + job_source
+            if (data.job_function) {
+                const match = [...jobSel.options].find(o => o.value === data.job_function);
+                if (match) {
+                    jobSel.value = data.job_function;
+                }
+                // gunakan data.job_source kalau ada
+                jobSrc.value = data.job_source || match?.dataset.source || '';
+
+                if (jobSrc.value) {
+                    // preload tech list sesuai job function existing
+                    refreshStageTechs(stage, jobSrc.value, data.job_function);
+                }
             }
 
-            // career target → batas posisi
-            const careerSelect = document.getElementById('career_target');
-            const applyPosLimit = () => fillPositionsLimited(posSel, careerSelect.value);
-            applyPosLimit();
-
-            posSel.addEventListener('change', () => {
-                const pos = posSel.value;
-                const career = careerSelect.value;
-                if (!pos || !career) {
-                    lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
-                    lvlSel.disabled = true;
-                    return;
+            // position_code
+            if (data.position_code) {
+                // kalau optionnya belum ada (misal range gagal karena CURRENT_RTC_CODE null),
+                // kita injek manual supaya keliatan
+                if (![...posSel.options].some(o => o.value === data.position_code)) {
+                    const manualOpt = document.createElement('option');
+                    manualOpt.value = data.position_code;
+                    // cari label human readable dari RTC_LIST
+                    const foundRTC = RTC_LIST.find(r => r.code === data.position_code);
+                    manualOpt.textContent = foundRTC ?
+                        `${foundRTC.position} (${foundRTC.code})` :
+                        data.position_code;
+                    posSel.appendChild(manualOpt);
                 }
-                loadLevels(lvlSel, pos, career);
-            });
+                posSel.value = data.position_code;
+                posSel.disabled = IS_EVALUATE; // kalau evaluate, jangan ubah
+            } else {
+                posSel.disabled = IS_EVALUATE;
+            }
 
-            // Job Function change → refresh techs
-            stage._techList = [];
-            jobSel.addEventListener('change', () => {
-                const opt = jobSel.options[jobSel.selectedIndex];
-                const source = opt?.dataset.source || '';
-                const jobName = jobSel.value || '';
-                jobSrc.value = source;
-                if (!source || !jobName) {
-                    stage._techList = [];
-                    initTechSelects(stage.querySelector('.details-container'), []);
-                    return;
-                }
-                refreshStageTechs(stage, source, jobName);
-            });
+            // level (langsung set dari GRADES)
+            if (data.level) {
+                // pastikan optionnya ada
+                fillGrades(lvlSel, data.level);
+            }
+            lvlSel.disabled = IS_EVALUATE;
 
-            rmBtn.addEventListener('click', () => {
-                stage.remove();
-                reindexStages();
-            });
-            addDet.addEventListener('click', () => addDetail(stage));
-
-            if (data) {
-                yearEl.value = (data.year ?? data.plan_year ?? '');
-                // preset job function + source
-                if (data.job_function) {
-                    const match = [...jobSel.options].find(o => o.value === data.job_function);
-                    if (match) jobSel.value = data.job_function;
-                    jobSrc.value = data.job_source || match?.dataset.source || '';
-                    if (jobSrc.value) refreshStageTechs(stage, jobSrc.value, data.job_function);
-                }
-                // posisi/level (dengan pembatasan target)
-                applyPosLimit();
-                if (data.position_code) posSel.value = data.position_code;
-                if (data.level) {
-                    if (posSel.value && careerSelect.value) {
-                        loadLevels(lvlSel, posSel.value, careerSelect.value).then(() => {
-                            lvlSel.value = data.level;
-                        });
-                    } else {
-                        lvlSel.innerHTML = `<option value="${data.level}">${data.level}</option>`;
-                        lvlSel.disabled = false;
-                    }
-                }
-                (data.details || []).forEach(d => addDetail(stage, d));
-                if (!data.details || !data.details.length) addDetail(stage);
+            // details
+            if (Array.isArray(data.details) && data.details.length) {
+                data.details.forEach(d => addDetail(stage, d));
             } else {
                 addDetail(stage);
             }
 
-            if (IS_EVALUATE) {
-                yearEl.classList.add('ro');
-                jobSel.classList.add('ro');
-                posSel.classList.add('ro');
-                lvlSel.classList.add('ro');
-                rmBtn.classList.add('d-none');
-                addDet.classList.add('d-none');
-            }
-
-            updateAddBtn();
+        } else {
+            // stage baru yang ditambah manual saat edit
+            addDetail(stage);
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // render dari DB
-            if (Array.isArray(EXISTING_STAGES) && EXISTING_STAGES.length) {
-                EXISTING_STAGES.forEach(s => addStage(s));
-            } else {
-                addStage();
-            }
+        // 6. kalau evaluate mode → readonly visual
+        if (IS_EVALUATE) {
+            yearEl.classList.add('ro');
+            jobSel.classList.add('ro');
+            lvlSel.classList.add('ro');
+            rmBtn.classList.add('d-none');
+            addDet.classList.add('d-none');
+        }
 
-            // defaultkan tanggal bila kosong
-            const dateEl = document.getElementById('date');
-            if (dateEl && !dateEl.value) {
-                const d = new Date();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
-            }
+        updateAddBtn();
+    }
 
-            // tombol add stage (hidden saat evaluate)
-            const addBtn = document.getElementById('btn-add-stage');
-            if (addBtn) addBtn.addEventListener('click', addStage);
-            updateAddBtn();
+    document.addEventListener('DOMContentLoaded', () => {
+        // render stages dari DB
+        if (Array.isArray(EXISTING_STAGES) && EXISTING_STAGES.length) {
+            EXISTING_STAGES.forEach(s => addStage(s));
+        } else {
+            addStage();
+        }
 
-            // career target berubah → batasi ulang posisi & reset level
-            const careerSelect = document.getElementById('career_target');
-            careerSelect.addEventListener('change', () => {
-                const career = careerSelect.value;
-                getStageCards().forEach(stage => {
-                    const posSel = stage.querySelector('.stage-position');
-                    const lvlSel = stage.querySelector('.stage-level');
-                    fillPositionsLimited(posSel, career);
-                    posSel.value = '';
-                    lvlSel.innerHTML = '<option value="">-- Select Level --</option>';
-                    lvlSel.disabled = true;
-                });
-            });
+        // isi default date kalau kosong
+        const dateEl = document.getElementById('date');
+        if (dateEl && !dateEl.value) {
+            const d = new Date();
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const dd = String(d.getDate()).padStart(2, '0');
+            dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
+        }
 
-            // submit guard
-            const form = document.querySelector('form[action]');
-            form.addEventListener('submit', (e) => {
-                form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
-                    el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
-                });
-                const stages = getStageCards();
-                if (stages.length === 0) {
-                    e.preventDefault();
-                    Swal.fire('Oops', 'Minimal 1 tahun harus ditambahkan.', 'warning');
-                    return;
-                }
-                // year must be 4-digit and unique
-                const years = stages.map(s => s.querySelector('.stage-year')?.value?.trim()).filter(
-                Boolean);
-                if (years.length !== stages.length) {
-                    e.preventDefault();
-                    Swal.fire('Oops', 'Setiap Stage Tahun wajib diisi 4 digit.', 'warning');
-                    return;
-                }
-                if (new Set(years).size !== years.length) {
-                    e.preventDefault();
-                    Swal.fire('Oops', 'Plan year tidak boleh duplikat.', 'warning');
-                    return;
-                }
-                for (const stage of stages) {
-                    const cnt = stage.querySelectorAll('.details-container .detail-row').length;
-                    if (cnt === 0) {
-                        e.preventDefault();
-                        Swal.fire('Oops', 'Setiap tahun minimal punya 1 detail.', 'warning');
-                        stage.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'center'
-                        });
-                        return;
-                    }
-                }
+        // tombol add stage
+        const addBtn = document.getElementById('btn-add-stage');
+        if (addBtn) {
+            addBtn.addEventListener('click', () => addStage());
+        }
+        updateAddBtn();
+
+        // kalau career target di header berubah:
+        // -> regenerate posisi di semua stage
+        // -> reset position & keep level list
+        const careerSelect = document.getElementById('career_target');
+        careerSelect.addEventListener('change', () => {
+            const career = careerSelect.value;
+
+            getStageCards().forEach(stage => {
+                const posSel = stage.querySelector('.stage-position');
+                const lvlSel = stage.querySelector('.stage-level');
+
+                fillPositionsRanged(posSel, CURRENT_RTC_CODE, career);
+
+                // clear posisi lama, tapi jangan disable
+                posSel.value = '';
+
+                // level tetap full dari GRADES
+                fillGrades(lvlSel, "");
             });
         });
-    </script>
-@endsection
+
+        // sebelum submit: validasi basic
+        const form = document.querySelector('form[action]');
+        form.addEventListener('submit', (e) => {
+            // bersihin potensi html injection
+            form.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
+                el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
+            });
+
+            const stages = getStageCards();
+            if (stages.length === 0) {
+                e.preventDefault();
+                Swal.fire('Oops', 'Minimal 1 tahun harus ditambahkan.', 'warning');
+                return;
+            }
+
+            const years = stages.map(s => s.querySelector('.stage-year')?.value?.trim()).filter(
+            Boolean);
+            if (years.length !== stages.length) {
+                e.preventDefault();
+                Swal.fire('Oops', 'Setiap Stage Tahun wajib diisi 4 digit.', 'warning');
+                return;
+            }
+            if (new Set(years).size !== years.length) {
+                e.preventDefault();
+                Swal.fire('Oops', 'Plan year tidak boleh duplikat.', 'warning');
+                return;
+            }
+
+            for (const stage of stages) {
+                const cnt = stage.querySelectorAll('.details-container .detail-row').length;
+                if (cnt === 0) {
+                    e.preventDefault();
+                    Swal.fire('Oops', 'Setiap tahun minimal punya 1 detail.', 'warning');
+                    stage.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center'
+                    });
+                    return;
+                }
+            }
+        });
+    });
+</script>

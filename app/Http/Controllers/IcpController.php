@@ -363,9 +363,9 @@ class IcpController extends Controller
         )->findOrFail($employeeId);
 
         $departments = Department::where('company', $employee->company_name)->get();
-        $divisions = Division::where('company', $employee->company_name)->get();
-        $employees = Employee::where('company_name', $employee->company_name)->get();
-        $grades = GradeConversion::all();
+        $divisions   = Division::where('company', $employee->company_name)->get();
+        $employees   = Employee::where('company_name', $employee->company_name)->get();
+        $grades      = GradeConversion::all();
 
         $deptId = optional(optional($employee->subSection)->section)->department->id
             ?? optional($employee->leadingSection)->department->id
@@ -391,23 +391,30 @@ class IcpController extends Controller
             ->orderBy('competency')
             ->get();
 
-        // (Opsional) Pecah untuk tampilan: biar jelas mana yang dari Department vs Division
         $deptCompetencies = $technicalCompetencies->whereNotNull('dept_id')->values();
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
-
         $currentYear = now()->year;
-        // opsi posisi (semua), front-end akan batasi dinamis begitu career target dipilih
-        $rtcMap = RtcTarget::mapAll();
+        $rtcMap = RtcTarget::mapAll(); // full mapping
         $rtcList = collect(RtcTarget::order())
-            ->map(fn($code) => ['code' => $code, 'position' => $rtcMap[$code]['position'] ?? $code])
+            ->map(function ($code) use ($rtcMap) {
+                return [
+                    'code'     => $code,
+                    'position' => $rtcMap[$code]['position'] ?? $code,
+                    'levels'   => $rtcMap[$code]['levels']   ?? [],
+                ];
+            })
             ->values();
 
-        // default stage pertama
         $defaultStages = [
-            ['year' => $currentYear, 'position_code' => null, 'level' => null],
+            [
+                'year'           => $currentYear,
+                'position_code'  => null,
+                'level'          => null,
+            ],
         ];
 
+        $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
 
         return view('website.icp.create', compact(
             'title',
@@ -422,6 +429,7 @@ class IcpController extends Controller
             'deptId',
             'divId',
             'rtcList',
+            'currentRtcCode',
             'currentYear',
             'defaultStages'
         ));
@@ -429,7 +437,7 @@ class IcpController extends Controller
 
     public function store(StoreIcpRequest $request)
     {
-        $data = $request->validated(); // <-- array, JANGAN ditimpa jadi object
+        $data = $request->validated();
 
         DB::beginTransaction();
         try {
@@ -1041,26 +1049,9 @@ class IcpController extends Controller
     }
 
     /* =================== HELPERS =================== */
-    public function levelsForPosition(Request $request)
+    public function levelsForPosition()
     {
-        $pos = strtoupper($request->query('position_code', ''));
-        $career = strtoupper($request->query('career_target_code', ''));
-
-        // guard: posisi harus <= carrer target
-        if ($career && !RtcTarget::lte($pos, $career)) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Position melebihi career target.'
-            ], 422);
-        }
-
-        $map = RtcTarget::map($pos);
-        if (!$map) {
-            return response()->json([
-                'ok' => false,
-                'message' => 'Kode posisi tidak dikenal.'
-            ], 422);
-        }
+        $map = RtcTarget::map();
 
         return response()->json([
             'ok' => true,
