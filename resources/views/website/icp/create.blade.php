@@ -191,6 +191,7 @@
                             <small class="text-muted">
                                 Position tiap Stage hanya boleh antara posisi kamu sekarang sampai target karier.
                             </small>
+                            <div id="career-target-warn" class="text-danger small mt-1"></div>
                             @error('career_target_code')
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
@@ -361,6 +362,19 @@
 
         const HARD_MAX_STAGE = 10;
 
+        /* ===== helper warning career target ===== */
+        function showCareerTargetWarning(on) {
+            let warn = document.getElementById('career-target-warn');
+            if (!warn) {
+                warn = document.createElement('div');
+                warn.id = 'career-target-warn';
+                warn.className = 'text-danger small mt-1';
+                const careerWrapper = document.getElementById('career_target').closest('.col-md-6');
+                careerWrapper.appendChild(warn);
+            }
+            warn.textContent = on ? 'Please select Career Target first before choosing Date Target.' : '';
+        }
+
         /* ====== util select2 utk technical skills ====== */
         function initTechSelects(scope, techListOverride = null) {
             const base = (techListOverride ?? TECHS ?? []).map(t => ({
@@ -377,7 +391,6 @@
                     $el.select2('destroy');
                 }
 
-                const currentName = $el.attr('name');
                 $el.empty();
 
                 $el.append(new Option('', '', true, false));
@@ -606,6 +619,10 @@
 
             detailsBox.appendChild(row);
             initTechSelects(row, stageEl._techList ?? TECHS);
+
+            $(row).find('.tech-select').each(function() {
+                $(this).val(null).trigger('change');
+            });
         }
 
         function addStage() {
@@ -633,7 +650,6 @@
             const lvlSel = stage.querySelector('.stage-level');
             const careerSelect = document.getElementById('career_target');
 
-            // isi dropdown Job Function
             fillJobs(jobSel);
 
             // isi Level dropdown dari GRADES
@@ -658,6 +674,7 @@
             stage.querySelector('.btn-remove-stage').addEventListener('click', () => {
                 stage.remove();
                 reindexStages();
+                forceLastStagePositionToCareerTarget();
             });
 
             // add detail row
@@ -710,11 +727,56 @@
             return stage;
         }
 
+        /* ====== kunci stage terakhir agar Position = Career Target ====== */
+        function forceLastStagePositionToCareerTarget() {
+            const stages = getStageCards();
+            if (stages.length === 0) return;
+
+            const lastStage = stages[stages.length - 1];
+            const careerVal = document.getElementById('career_target').value;
+            if (!careerVal) return;
+
+            const posSel = lastStage.querySelector('.stage-position');
+            const lvlSel = lastStage.querySelector('.stage-level');
+
+            // refill posisi range normal
+            fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerVal);
+
+            // pastikan career target code ada sebagai option. kalau belum, inject
+            if (![...posSel.options].some(o => o.value === careerVal)) {
+                const opt = document.createElement('option');
+                opt.value = careerVal;
+                const rtMeta = RTC_LIST.find(x => x.code === careerVal);
+                opt.textContent = rtMeta ? `${rtMeta.position} (${rtMeta.code})` : careerVal;
+                posSel.appendChild(opt);
+            }
+
+            // set value dan lock
+            posSel.value = careerVal;
+            posSel.disabled = true;
+
+            // level tidak dikunci - user boleh pilih grade yg sesuai target stage terakhir
+            if (!lvlSel.options.length) {
+                fillGrades(lvlSel);
+            }
+        }
+
         function generateStagesFromTargetDate() {
             const container = document.getElementById('stages-container');
             const dateEl = document.getElementById('date');
-            const val = dateEl.value; // "YYYY-MM-DD"
+            const careerSelect = document.getElementById('career_target');
+            const careerVal = careerSelect.value;
 
+            // Career target wajib
+            if (!careerVal) {
+                container.innerHTML = '';
+                showCareerTargetWarning(true);
+                return;
+            } else {
+                showCareerTargetWarning(false);
+            }
+
+            const val = dateEl.value; // "YYYY-MM-DD"
             if (!val) {
                 container.innerHTML = '';
                 return;
@@ -724,8 +786,8 @@
             const targetYear = Number(val.split('-')[0]);
 
             // contoh:
-            // sekarang 2025, target 2029
-            // diff = 4 → stage utk 2026,27,28,29
+            // sekarang 2025, target 2028
+            // diff = 3 → stage utk 2026,27,28
             let diff = targetYear - currentYear;
 
             if (diff < 1) diff = 1;
@@ -738,6 +800,7 @@
             }
 
             reindexStages();
+            forceLastStagePositionToCareerTarget();
         }
 
         async function submitIcpAjax(e) {
@@ -746,15 +809,34 @@
             const formEl = document.getElementById('icp-form');
             const submitBtn = formEl.querySelector('.btn-submit-icp');
 
-            // ==== Client-side minimal validation ====
-            // 1. cek stages ada
             const stages = getStageCards();
             if (stages.length === 0) {
                 Swal.fire('Oops', 'Development Stage masih kosong. Pilih Date Target dulu.', 'warning');
                 return;
             }
 
-            // 2. cek tiap stage punya minimal 1 detail
+            // career target wajib
+            const careerVal = document.getElementById('career_target').value;
+            if (!careerVal) {
+                Swal.fire('Oops', 'Please select Career Target.', 'warning');
+                return;
+            }
+
+            // stage terakhir harus sama dengan career target
+            const lastStage = stages[stages.length - 1];
+            const lastPosSel = lastStage.querySelector('.stage-position');
+            const lastPosVal = lastPosSel ? lastPosSel.value : '';
+
+            if (lastPosVal !== careerVal) {
+                Swal.fire(
+                    'Oops',
+                    'The last stage position must match the selected Career Target.',
+                    'warning'
+                );
+                return;
+            }
+
+            // cek tiap stage punya minimal 1 detail
             for (const stage of stages) {
                 const cnt = stage.querySelectorAll('.details-container .detail-row').length;
                 if (cnt === 0) {
@@ -763,7 +845,6 @@
                 }
             }
 
-            // 3. sanitize text field dari HTML tag
             formEl.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
                 el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
             });
@@ -786,7 +867,6 @@
 
                 const data = await res.json().catch(() => ({}));
 
-                // Jika validasi Laravel gagal (422)
                 if (res.status === 422) {
                     const errs = data.errors || {};
                     const flatErr = Object.values(errs).flat();
@@ -799,7 +879,6 @@
                     return;
                 }
 
-                // Jika server kirim ok:false
                 if (!res.ok || data.ok === false) {
                     Swal.fire({
                         title: "Error",
@@ -809,17 +888,14 @@
                     return;
                 }
 
-                // Success
                 Swal.fire({
                     title: "Sukses!",
                     text: data.message || 'ICP berhasil disimpan.',
                     icon: "success"
                 }).then(() => {
-                    // redirect manual kalau mau
                     if (data.redirect) {
                         window.location.href = data.redirect;
                     } else {
-                        // default balik previous page
                         window.location.href = "{{ url()->previous() }}";
                     }
                 });
@@ -841,7 +917,6 @@
             const dateEl = document.getElementById('date');
             const formEl = document.getElementById('icp-form');
 
-            // (1) default date -> auto generate stages di load awal
             if (dateEl && !dateEl.value) {
                 const d = new Date();
                 const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -850,14 +925,14 @@
             }
             generateStagesFromTargetDate();
 
-            // (2) kalau user ubah target date → regenerate stage timeline
             dateEl.addEventListener('change', () => {
                 generateStagesFromTargetDate();
             });
 
-            // (3) kalau career target berubah → update dropdown Position tiap stage
             careerSelect.addEventListener('change', () => {
                 const career = careerSelect.value;
+
+                showCareerTargetWarning(!career);
 
                 getStageCards().forEach(stage => {
                     const posSel = stage.querySelector('.stage-position');
@@ -865,13 +940,14 @@
 
                     fillPositionsRanged(posSel, CURRENT_RTC_CODE, career);
 
-                    // reset posisi, tapi level tetap full list grades
                     posSel.value = '';
+                    posSel.disabled = false;
                     fillGrades(lvlSel, "");
                 });
+
+                forceLastStagePositionToCareerTarget();
             });
 
-            // (4) intercept submit -> AJAX
             formEl.addEventListener('submit', submitIcpAjax);
         });
     </script>
