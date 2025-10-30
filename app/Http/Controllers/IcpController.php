@@ -644,7 +644,102 @@ class IcpController extends Controller
             }
         }
 
-        // simpan & download
+        /* =====================================================
+       5) APPROVAL STAMP & TANGGAL (ROW 78 AREA)
+          - blok O..T  = APPROVE
+          - blok U..Z  = CHECK
+    ======================================================*/
+
+        // pastikan steps sudah ada di $icp (karena kita with('steps') di query)
+        $steps = $icp->steps ?? collect();
+
+        // ambil step done terakhir bertipe approve
+        $doneApprove = $steps
+            ->where('type', 'approve')
+            ->where('status', 'done')
+            ->sortByDesc('step_order')
+            ->first();
+
+        // ambil step done terakhir bertipe check
+        $doneCheck = $steps
+            ->where('type', 'check')
+            ->where('status', 'done')
+            ->sortByDesc('step_order')
+            ->first();
+
+        // mapping role -> file stamp
+        $stampMap = [
+            'director'          => public_path('assets/media/stamp/DIR.jpg'),
+            'gm'                => public_path('assets/media/stamp/GM.png'),
+            'mgr'               => public_path('assets/media/stamp/MGR.jpg'),
+        ];
+
+        // helper untuk pasang stamp
+        $placeStamp = function ($step, $cellDateTarget, $cellImageTarget, $cellNameTarget, $mergeNameRange) use ($sheet, $stampMap) {
+            if (!$step) return;
+
+            // tulis tanggal acted_at
+            if ($step->acted_at) {
+                $acted = Carbon::parse($step->acted_at)->format('d/m/Y');
+                // taruh tanggal di sel target (misal P78 atau V78)
+                $sheet->setCellValue($cellDateTarget, $acted);
+            }
+
+            // tulis name acted
+            if ($step->actor_id && $step->actor) {
+                [$t1, $b1] = Coordinate::rangeBoundaries($mergeNameRange);
+                foreach ($sheet->getMergeCells() as $m) {
+                    [$t2, $b2] = Coordinate::rangeBoundaries($m);
+                    $intersects = !(
+                        $b1[0] < $t2[0] ||
+                        $t1[0] > $b2[0] ||
+                        $b1[1] < $t2[1] ||
+                        $t1[1] > $b2[1]
+                    );
+                    if ($intersects) {
+                        $sheet->unmergeCells($m);
+                    }
+                }
+
+                $sheet->mergeCells($mergeNameRange);
+                $sheet->getStyle($mergeNameRange)->applyFromArray([
+                    'font' => ['bold' => true],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical' => Alignment::VERTICAL_CENTER,
+                        'wrapText' => true,
+                    ],
+                ]);
+                $sheet->setCellValue($cellNameTarget, $step->actor->name ?? '');
+            }
+
+            $roleKey = strtolower(trim($step->role ?? ''));
+            $imgPath = $stampMap[$roleKey] ?? null;
+
+            if ($imgPath && file_exists($imgPath)) {
+                $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
+                $drawing->setPath($imgPath);
+                $drawing->setCoordinates($cellImageTarget);
+                $drawing->setHeight(100);
+                $drawing->setWorksheet($sheet);
+            }
+        };
+
+
+        $placeStamp(
+            $doneApprove,
+            'P78',
+            'S80',
+            'O87',
+            'O87:T87'
+        );
+        $placeStamp(
+            $doneCheck,
+            'V78',
+            'W80',
+            'U87',
+            'U87:Z87'
+        );
         $filename = 'ICP_' . preg_replace('/[^\w\-]+/u', '_', $employee->name) . '.xlsx';
         $path = storage_path('app/' . $filename);
         (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($path);
