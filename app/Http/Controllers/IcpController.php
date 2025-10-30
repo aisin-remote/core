@@ -395,7 +395,7 @@ class IcpController extends Controller
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
         $currentYear = now()->year;
-        $rtcMap = RtcTarget::mapAll(); // full mapping
+        $rtcMap = RtcTarget::mapAll();
         $rtcList = collect(RtcTarget::order())
             ->map(function ($code) use ($rtcMap) {
                 return [
@@ -834,11 +834,13 @@ class IcpController extends Controller
 
         $employee = $icp->employee;
 
+        // referensi org
         $departments = Department::where('company', $employee->company_name)->get();
         $divisions   = Division::where('company', $employee->company_name)->get();
         $employees   = Employee::where('company_name', $employee->company_name)->get();
         $grades      = GradeConversion::all();
 
+        // cari dept/div karyawan (untuk filter kompetensi awal)
         $deptId = optional(optional($employee->subSection)->section)->department->id
             ?? optional($employee->leadingSection)->department->id
             ?? optional($employee->leadingDepartment)->id;
@@ -866,7 +868,8 @@ class IcpController extends Controller
         $deptCompetencies = $technicalCompetencies->whereNotNull('dept_id')->values();
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
-        $rtcMap  = RtcTarget::mapAll();
+        // Susun rtc list (butuh utk Career Target & Position dropdown)
+        $rtcMap  = RtcTarget::mapAll(); // sama kayak create
         $rtcList = collect(RtcTarget::order())
             ->map(fn($code) => [
                 'code'     => $code,
@@ -874,6 +877,33 @@ class IcpController extends Controller
             ])
             ->values();
 
+        // Ambil kode RTC posisi current karyawan sekarang, untuk batas bawah posisi stage
+        $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
+
+        /**
+         * Bentuk ulang stages dari detail ICP:
+         * [
+         *   {
+         *     year: 2026,
+         *     job_function: "Production Control — PT Aisin",
+         *     job_source: "department" | "division",
+         *     position_code: "AS",
+         *     level: "SO3",
+         *     details: [
+         *        {
+         *          current_technical: "...",
+         *          required_technical: "...",
+         *          development_technical: "...",
+         *          current_nontechnical: "...",
+         *          required_nontechnical: "...",
+         *          development_nontechnical: "..."
+         *        },
+         *        ...
+         *     ]
+         *   },
+         *   ...
+         * ]
+         */
         $stages = $icp->details
             ->groupBy('plan_year')
             ->map(function ($group) {
@@ -900,7 +930,7 @@ class IcpController extends Controller
             ->values()
             ->all();
 
-        $mode = request('mode');
+        $mode = request('mode'); // 'evaluate' klo atasan lagi menilai
 
         return view('website.icp.update', compact(
             'title',
@@ -917,7 +947,8 @@ class IcpController extends Controller
             'rtcList',
             'icp',
             'stages',
-            'mode' // dipakai blade buat $isEvaluate
+            'currentRtcCode', // <-- PENTING DI-ADD
+            'mode'
         ));
     }
 
