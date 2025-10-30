@@ -516,131 +516,188 @@ class IcpController extends Controller
             'icp' => $assessments
         ]);
     }
+
     public function export($employee_id)
     {
         $employee = Employee::with([
             'educations',
-            'promotionHistory',
-            'icp' => fn($q) => $q->latest()->with(['details' => fn($d) => $d->orderBy('plan_year')->orderBy('id')]),
+            'promotionHistory' => fn($q) => $q->orderByDesc('last_promotion_date'),
+            'icp' => fn($q) => $q->latest()->with([
+                'details' => fn($d) => $d->orderBy('plan_year')->orderBy('id'),
+                'steps',
+            ]),
         ])->findOrFail($employee_id);
 
         $icp = $employee->icp->first();
-        if (!$icp)
+        if (!$icp) {
             return back()->with('error', 'Data ICP tidak ditemukan untuk employee ini.');
+        }
 
-        $edu = $employee->educations->first();
+        $edu  = $employee->educations->first();
         $prom = $employee->promotionHistory->first();
-        $ais = $employee->aisin_entry_date ? \Carbon\Carbon::parse($employee->aisin_entry_date)->format('d/m/Y') : '';
+        $ais  = $employee->aisin_entry_date
+            ? \Carbon\Carbon::parse($employee->aisin_entry_date)->format('d/m/Y')
+            : '';
 
+        // Ambil appraisal terakhir per tahun (max 3 tahun)
         $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
             ->selectRaw('YEAR(date) as year, score')
             ->orderByDesc('date')->get()
-            ->groupBy('year')->map(fn($it) => $it->first()->score)
-            ->sortKeys()->take(3)->toArray();
+            ->groupBy('year')
+            ->map(fn($it) => $it->first()->score)
+            ->sortKeys()
+            ->take(3)
+            ->toArray();
 
+        // Load template
         $filePath = public_path('assets/file/Template_ICP.xlsx');
         $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
         $sheet = $spreadsheet->getActiveSheet();
 
-        // Header tahun dari rentang detail
+        /* =====================================================
+       1) HEADER TAHUN / RANGE PLAN YEAR
+    ======================================================*/
         $years = $icp->details->pluck('plan_year')->filter()->map(fn($y) => (int) $y);
         $minYear = $years->min();
         $maxYear = $years->max();
-        $sheet->setCellValue('G2', $minYear && $maxYear ? "Year  :  {$minYear} - {$maxYear}" : "Year  :  " . now()->year . " - " . (now()->year + 1));
+
+        $sheet->setCellValue(
+            'G2',
+            $minYear && $maxYear
+                ? "Year  :  {$minYear} - {$maxYear}"
+                : "Year  :  " . now()->year . " - " . (now()->year + 1)
+        );
         $sheet->getStyle('G2')->applyFromArray([
             'font' => ['bold' => true],
-            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
         ]);
 
-        // Appraisal ke R5/T5/V5
+        /* =====================================================
+       2) PERFORMANCE APPRAISAL (R5/T5/V5)
+    ======================================================*/
         $cols = ['R', 'T', 'V'];
         $i = 0;
         foreach ($performanceData as $yr => $score) {
-            if ($i >= 3)
-                break;
+            if ($i >= 3) break;
             $sheet->setCellValue($cols[$i] . '5', "{$yr} = {$score}");
             $i++;
         }
-        for (; $i < 3; $i++)
+        // filler "-" kalau kurang dari 3 data
+        for (; $i < 3; $i++) {
             $sheet->setCellValue($cols[$i] . '5', '-');
+        }
 
-        // Data karyawan & ICP header
+        /* =====================================================
+       3) DATA KARYAWAN / ICP HEADER
+    ======================================================*/
         $sheet->setCellValue('G5', $employee->name);
         $sheet->setCellValue('G6', $employee->company_name);
         $sheet->setCellValue('G7', $employee->position);
         $sheet->setCellValue('G8', $employee->grade);
-        $sheet->setCellValue('R8', $employee->birthday_date);
-        $sheet->setCellValue('R6', '3');
-        if ($edu)
+        $sheet->setCellValue('R8', $employee->birthday_date); // pastikan format di template sesuai yg kamu mau
+        $sheet->setCellValue('R6', '3'); // ini kayaknya fixed value di template kamu
+        if ($edu) {
             $sheet->setCellValue('R9', $edu->educational_level . '/' . $edu->major . '/' . $edu->institute);
-        $sheet->setCellValue('J8', $prom ? \Carbon\Carbon::parse($prom->last_promotion_date)->format('Y') : '-');
+        }
+        $sheet->setCellValue('J8', $prom ? Carbon::parse($prom->last_promotion_date)->format('Y') : '-');
         $sheet->setCellValue('G9', $ais);
         $sheet->setCellValue('C13', (string) $icp->aspiration);
         $sheet->setCellValue('D16', (string) $icp->career_target);
-        if ($minYear)
+        if ($minYear) {
             $sheet->setCellValue('L16', $minYear);
+        }
 
-        // ===== Development Stage (merge per tahun) =====
-        // start row block (sesuai template: 1st..5th)
+        /* =====================================================
+   4) DEVELOPMENT STAGE BLOK PER TAHUN
+        Tiap blok: 10 rows
+        1st year   -> row 26..35
+        2nd year   -> row 36..45
+        ...
+        5th year   -> row 66..75
+    ======================================================*/
         $YEAR_TOP = [26, 36, 46, 56, 66];
-        $BLOCK_SPAN = 10; // 26..35, 36..45, dst.
+        $BLOCK_SPAN = 10; // row tinggi 10
 
-        // Range kolom sesuai template (ubah kalau beda)
         $RANGES = [
-            'JP' => ['D', 'I'], // Job Function / Position / Level
-            'CUR_TECH' => ['J', 'M'],
-            'CUR_NON' => ['N', 'N'],
-            'REQ_TECH' => ['O', 'R'],
-            'REQ_NON' => ['T', 'T'],
-            'DEV_TECH' => ['U', 'W'],
-            'DEV_NON' => ['X', 'Z'],
+            'JP'        => ['D', 'I'], // job function / position / level
+            'CUR_TECH'  => ['J', 'M'],
+            'CUR_NON'   => ['N', 'N'],
+            'REQ_TECH'  => ['O', 'R'],
+            'REQ_NON'   => ['T', 'T'],
+            'DEV_TECH'  => ['U', 'W'],
+            'DEV_NON'   => ['X', 'Z'],
         ];
 
-        // helper: unmerge semua merge yang beririsan dengan $range
+        // helper untuk unmerge kalau range kita overlap sama merge existing
         $unmergeIntersections = function ($ws, string $range) {
-            [$t1, $b1] = Coordinate::rangeBoundaries($range); // [[col,row],[col,row]]
+            [$t1, $b1] = Coordinate::rangeBoundaries($range);
             foreach ($ws->getMergeCells() as $m) {
                 [$t2, $b2] = Coordinate::rangeBoundaries($m);
-                $intersects = !($b1[0] < $t2[0] || $t1[0] > $b2[0] || $b1[1] < $t2[1] || $t1[1] > $b2[1]);
-                if ($intersects)
+                $intersects = !(
+                    $b1[0] < $t2[0] ||
+                    $t1[0] > $b2[0] ||
+                    $b1[1] < $t2[1] ||
+                    $t1[1] > $b2[1]
+                );
+                if ($intersects) {
                     $ws->unmergeCells($m);
+                }
             }
         };
 
-        // group detail per tahun (maks 5)
-        $groups = $icp->details->groupBy('plan_year')->sortKeys()->take(5)->values();
+        // group detail per tahun (maksimal 5 tahun)
+        $groups = $icp->details
+            ->groupBy('plan_year')
+            ->sortKeys()
+            ->take(5)
+            ->values();
 
         foreach ($groups as $idx => $group) {
             $top = $YEAR_TOP[$idx];
             $bottom = $top + $BLOCK_SPAN - 1;
 
-            // siapkan teks gabungan
-            $bullet = fn($col) => $group->pluck($col)->filter()->map(fn($v) => '- ' . $v)->implode("\n");
+            // teks bullet per kolom
+            $bullet = fn($col) => $group->pluck($col)
+                ->filter()
+                ->map(fn($v) => '- ' . $v)
+                ->implode("\n");
 
-            $jpLines = $group->map(fn($d) => trim("{$d->job_function} / {$d->position} / {$d->level}"))
-                ->unique()->filter()->implode("\n");
+            // gabungan job_function / position / level
+            $jpLines = $group->map(function ($d) {
+                $txt = trim("{$d->job_function} / {$d->position} / {$d->level}");
+                return $txt;
+            })->unique()->filter()->implode("\n");
 
             $targets = [
-                'JP' => $jpLines,
-                'CUR_TECH' => $bullet('current_technical'),
-                'CUR_NON' => $bullet('current_nontechnical'),
-                'REQ_TECH' => $bullet('required_technical'),
-                'REQ_NON' => $bullet('required_nontechnical'),
-                'DEV_TECH' => $bullet('development_technical'),
-                'DEV_NON' => $bullet('development_nontechnical'),
+                'JP'        => $jpLines,
+                'CUR_TECH'  => $bullet('current_technical'),
+                'CUR_NON'   => $bullet('current_nontechnical'),
+                'REQ_TECH'  => $bullet('required_technical'),
+                'REQ_NON'   => $bullet('required_nontechnical'),
+                'DEV_TECH'  => $bullet('development_technical'),
+                'DEV_NON'   => $bullet('development_nontechnical'),
             ];
 
             foreach ($targets as $key => $text) {
                 [$c1, $c2] = $RANGES[$key];
                 $range = "{$c1}{$top}:{$c2}{$bottom}";
 
-                // pastikan tidak ada merge yang bertabrakan, lalu merge & isi di sel kiri-atas
+                // pastikan tidak ada merge conflict
                 $unmergeIntersections($sheet, $range);
+
+                // merge ulang dan isi value di sel kiri atas
                 $sheet->mergeCells($range);
                 $sheet->setCellValue("{$c1}{$top}", $text);
-                $sheet->getStyle($range)->getAlignment()
-                    ->setWrapText(true)
-                    ->setVertical(Alignment::VERTICAL_TOP);
+
+                // alignment per kolom
+                $alignment = $sheet->getStyle($range)->getAlignment();
+                $alignment->setWrapText(true);
+
+                if ($key === 'JP') {
+                    $alignment->setVertical(Alignment::VERTICAL_CENTER);
+                } else {
+                    $alignment->setVertical(Alignment::VERTICAL_TOP);
+                }
             }
         }
 
@@ -740,12 +797,18 @@ class IcpController extends Controller
             'U87',
             'U87:Z87'
         );
+
+        /* =====================================================
+       6) SAVE & DOWNLOAD
+    ======================================================*/
         $filename = 'ICP_' . preg_replace('/[^\w\-]+/u', '_', $employee->name) . '.xlsx';
         $path = storage_path('app/' . $filename);
+
         (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($path);
 
         return response()->download($path)->deleteFileAfterSend(true);
     }
+
 
     /* =================== APPROVAL LIST =================== */
     public function approval()
@@ -829,6 +892,7 @@ class IcpController extends Controller
 
         return response()->json(['message' => 'Approved.']);
     }
+
     public function revise(Request $request)
     {
         $icp = Icp::with('steps')->findOrFail($request->id);
