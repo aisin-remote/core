@@ -177,7 +177,6 @@
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
-
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Career Target</label>
                             <select name="career_target_code" id="career_target" class="form-select form-select-sm"
@@ -371,15 +370,24 @@
 
             $(scope).find('.tech-select').each(function() {
                 const $el = $(this);
-                const prevVal = $el.val();
-                const prevDataValue = $el.attr('data-value');
+
+                const oldVal = $el.val();
 
                 if ($el.hasClass('select2-hidden-accessible')) {
                     $el.select2('destroy');
                 }
 
+                const currentName = $el.attr('name');
+                $el.empty();
+
+                $el.append(new Option('', '', true, false));
+
+                base.forEach(optData => {
+                    const opt = new Option(optData.text, optData.id, false, false);
+                    $el.append(opt);
+                });
+
                 $el.select2({
-                    data: base,
                     tags: true,
                     placeholder: 'Select or type…',
                     allowClear: true,
@@ -399,12 +407,15 @@
                         const term = params.term?.trim();
                         if (!term) return null;
 
-                        const exists =
-                            base.some(opt => String(opt.text).toLowerCase() === term.toLowerCase()) ||
-                            $el.find('option').toArray().some(o => o.text.toLowerCase() === term
-                                .toLowerCase());
-
-                        if (exists) return null;
+                        const existsInBase = base.some(opt =>
+                            String(opt.text).toLowerCase() === term.toLowerCase()
+                        );
+                        const existsInDom = $el.find('option').toArray().some(o =>
+                            o.text.toLowerCase() === term.toLowerCase()
+                        );
+                        if (existsInBase || existsInDom) {
+                            return null;
+                        }
 
                         return {
                             id: term,
@@ -420,16 +431,14 @@
                     }
                 });
 
-                // restore value lama kalau ada
-                if (prevDataValue && !$el.val()) {
-                    if (!$el.find('option').toArray().some(o => o.value === prevDataValue)) {
-                        const opt = new Option(prevDataValue, prevDataValue, true, true);
-                        $el.append(opt).trigger('change');
-                    } else {
-                        $el.val(prevDataValue).trigger('change');
+                if (oldVal && oldVal !== '') {
+                    if (!$el.find('option[value="' + oldVal + '"]').length) {
+                        const opt = new Option(oldVal, oldVal, true, true);
+                        $el.append(opt);
                     }
-                } else if (prevVal) {
-                    $el.val(prevVal).trigger('change');
+                    $el.val(oldVal).trigger('change');
+                } else {
+                    $el.val(null).trigger('change');
                 }
             });
         }
