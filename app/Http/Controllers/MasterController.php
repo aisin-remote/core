@@ -424,11 +424,7 @@ class MasterController extends Controller
         })->get();
 
         $sections = Section::with(['department', 'supervisor'])
-            ->when($company, function ($q) use ($company) {
-                $q->whereHas('supervisor', function ($sub) use ($company) {
-                    $sub->where('company_name', $company);
-                });
-            })
+            ->where('company', $company)
             ->get();
 
         return view('website.master.section.index', compact('sections', 'departments', 'supervisors', 'company'));
@@ -723,9 +719,9 @@ class MasterController extends Controller
 
                 $label = 'Not Set';
                 $class = 'badge badge-danger';
-                $code  = 'not_set';
+                $code = 'not_set';
                 if ($complete3) {
-                    $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2], true));
+                    $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2, -1], true));
                     if ($vals->isEmpty()) {
                         $label = 'Complete';
                         $class = 'badge badge-secondary';
@@ -734,6 +730,7 @@ class MasterController extends Controller
                         $allApproved  = $vals->every(fn($v) => $v === 2);
                         $allChecked   = $vals->every(fn($v) => $v === 1);
                         $allSubmitted = $vals->every(fn($v) => $v === 0);
+                        $allRevised   = $vals->every(fn($v) => $v === -1);
                         if ($allApproved) {
                             $label = 'Approved';
                             $class = 'badge badge-success';
@@ -746,10 +743,14 @@ class MasterController extends Controller
                             $label = 'Submitted';
                             $class = 'badge badge-warning';
                             $code = 'submitted';
+                        } elseif ($allRevised) {
+                            $label = 'Revised';
+                            $class = 'badge badge-danger';
+                            $code = 'revised';
                         } else {
-                            $label = 'Partial';
-                            $class = 'badge badge-primary';
-                            $code = 'partial';
+                            $label = 'Not Set';
+                            $class = 'badge badge-danger';
+                            $code = 'not_set';
                         }
                     }
                 }

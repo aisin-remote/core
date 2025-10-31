@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\ActivityPlan;
+use App\Models\ActivityPlanItem;
 use App\Models\Department;
 use App\Models\Division;
 use App\Models\Employee;
@@ -10,7 +12,6 @@ use App\Models\IppComment;
 use App\Models\IppPoint;
 use App\Models\Section;
 use App\Models\SubSection;
-use App\Services\Excel\IppWorkbookExporter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -24,6 +25,8 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
+use App\Services\Excel\IppWorkbookExporter;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class IppController
 {
@@ -475,7 +478,6 @@ class IppController
             'approved'        => $approvedHeader,
         ]);
     }
-
 
     public function store(Request $request)
     {
@@ -982,19 +984,30 @@ class IppController
 
     public function revise(Request $request, int $id)
     {
-        try {
-            $data = $request->validate([
-                'note' => 'required|string|max:1000',
-            ]);
 
+        $data = $request->validate([
+            'note' => 'required|string|max:1000',
+        ]);
+
+        try {
             $empId = $request->user()->employee->id;
 
-            $ipp = Ipp::findOrFail($id);
+            $ipp = Ipp::with('activityPlan')->findOrFail($id);
             $from = strtolower((string) $ipp->status);
-            $to   = "revised";
+            $to   = 'revised';
 
-            $updatePoints = 0;
-            DB::transaction(function () use ($data, $empId, $ipp, $from, $to, &$updatePoints) {
+            $pointsUpdated     = 0;
+            $planItemsUpdated  = 0;
+
+            DB::transaction(function () use (
+                $data,
+                $empId,
+                $ipp,
+                $from,
+                $to,
+                &$pointsUpdated,
+                &$planItemsUpdated
+            ) {
                 IppComment::create([
                     'ipp_id'      => $ipp->id,
                     'employee_id' => $empId,
@@ -1004,24 +1017,38 @@ class IppController
                 ]);
 
                 $ipp->update(['status' => $to]);
-                $updatePoints = IppPoint::where('ipp_id', $ipp->id)
+
+                $pointsUpdated = IppPoint::where('ipp_id', $ipp->id)
                     ->update(['status' => $to]);
+
+                $activityPlan = $ipp->activityPlan;
+
+                if ($activityPlan) {
+                    $activityPlan->update(['status' => $to]);
+
+                    $planItemsUpdated = ActivityPlanItem::where('activity_plan_id', $activityPlan->id)
+                        ->update(['status' => $to]);
+                }
             });
 
+            $ipp->refresh();
+
             return response()->json([
-                'message'        => 'IPP revised and comment saved.',
-                'id'             => $ipp->id,
-                'from'           => $from,
-                'to'             => $to,
-                'points_updated' => $updatePoints,
-                'updated_at'     => optional($ipp->updated_at)->toDateTimeString(),
+                'message'            => 'IPP revised and comment saved.',
+                'id'                 => $ipp->id,
+                'from'               => $from,
+                'to'                 => $to,
+                'points_updated'     => $pointsUpdated,
+                'plan_items_updated' => $planItemsUpdated,
+                'updated_at'         => optional($ipp->updated_at)->toDateTimeString(),
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json([
                 'message' => 'IPP not found.',
             ], 404);
         } catch (\Throwable $e) {
             report($e);
+
             return response()->json([
                 'message' => 'Failed to revise IPP. Please try again.',
             ], 500);

@@ -29,6 +29,12 @@
             border-color: #a7f3d0
         }
 
+        .status-chip[data-status="revised"] {
+            background: #f51515;
+            color: #fffbeb;
+            border-color: #f51515
+        }
+
         .status-chip[data-status="checked"],
         .status-chip[data-status="waiting"] {
             background: #fffbeb;
@@ -277,7 +283,6 @@
             </div>
         </div>
     @endunless
-
 @endsection
 
 @push('scripts')
@@ -298,12 +303,10 @@
         window.EMPLOYEES = @json($employees ?? []);
         window.VISIBLE_TABS = @json(collect($tabs)->filter(fn($t) => $t['show'])->keys()->values());
 
-        // Tambahan routes untuk kandidat ICP & update
         window.ROUTE_RTC_CANDIDATES = @json(route('rtc.candidates'));
         window.ROUTE_RTC_UPDATE = @json(route('rtc.update'));
     </script>
 
-    {{-- ===== Table render + fetch + events (tetap, dengan minor penyesuaian selector tombol Add) ===== --}}
     <script>
         $(function() {
             function esc(s) {
@@ -330,6 +333,10 @@
                     },
                     complete_no_submit: {
                         ds: 'draft',
+                        icon: '<i class="far fa-pen-to-square"></i>'
+                    },
+                    revised: {
+                        ds: 'revised',
                         icon: '<i class="far fa-pen-to-square"></i>'
                     },
                     not_set: {

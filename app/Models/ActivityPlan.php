@@ -26,7 +26,7 @@ class ActivityPlan extends Model
 
     public function ipp()
     {
-        return $this->belongsTo(Ipp::class);
+        return $this->belongsTo(Ipp::class, 'ipp_id', 'id');
     }
     public function employee()
     {

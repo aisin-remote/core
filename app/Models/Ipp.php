@@ -63,4 +63,9 @@ class Ipp extends Model
     {
         return $this->hasMany(IppComment::class);
     }
+
+    public function activityPlan()
+    {
+        return $this->hasOne(ActivityPlan::class, 'ipp_id', 'id');
+    }
 }

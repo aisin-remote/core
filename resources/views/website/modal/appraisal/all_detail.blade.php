@@ -3,7 +3,9 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-light-info">
-                <h5 class="modal-title" id="detailAppraisalModalLabel">Performance Appraisal Details</h5>
+                <h5 class="modal-title" id="detailAppraisalModalLabel">
+                    Performance Appraisal Details
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
@@ -21,86 +23,147 @@
                                 </div>
                             @endif
                         </div>
+
                         <div class="d-flex gap-2">
                             @if ($mode === 'edit')
-                                <button class="btn btn-sm btn-light-warning edit-appraisal-btn"
-                                    data-appraisal-id={{ $appraisal->id }}
+                                <button type="button" class="btn btn-sm btn-light-warning edit-appraisal-btn"
+                                    data-appraisal-id="{{ $appraisal->id }}"
                                     data-edit-modal-id="editAppraisalModal{{ $appraisal->id }}">
                                     <i class="fas fa-edit"></i>
                                 </button>
-                                <button class="btn btn-sm btn-light-danger delete-appraisal-btn"
+
+                                <button type="button" class="btn btn-sm btn-light-danger delete-appraisal-btn"
                                     data-delete-modal-id="deleteAppraisalModal{{ $appraisal->id }}">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                             @endif
                         </div>
                     </div>
+
                     @unless ($loop->last)
                         <hr class="my-2">
                     @endunless
                 @empty
-                    <div class="text-center text-muted">No performance appraisal data available.</div>
+                    <div class="text-center text-muted">
+                        No performance appraisal data available.
+                    </div>
                 @endforelse
             </div>
 
-
             <div class="modal-footer">
-                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-sm btn-light" data-bs-dismiss="modal">
+                    Close
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    $(document).on("click", ".edit-appraisal-btn", function() {
-        const target = "#" + $(this).data("edit-modal-id");
+    (function() {
+        // helper DOM ready tanpa jQuery
+        function onReady(fn) {
+            if (document.readyState !== 'loading') fn();
+            else document.addEventListener('DOMContentLoaded', fn);
+        }
 
-        // Ambil instance modal detail yang sudah ada
-        const detailModalEl = document.getElementById("alldetailAppraisalModal");
-        const detailModalInstance = bootstrap.Modal.getInstance(detailModalEl);
-
-        // Sembunyikan modal detail dulu
-        detailModalInstance.hide();
-
-        // Buka modal edit setelah delay
-        setTimeout(() => {
-            const editModalEl = document.querySelector(target);
-
-            // Cek apakah modal edit sudah punya instance, kalau belum buat baru
-            let editModalInstance = bootstrap.Modal.getInstance(editModalEl);
-            if (!editModalInstance) {
-                editModalInstance = new bootstrap.Modal(editModalEl);
+        onReady(function() {
+            // guard biar ga error kalau skrip dievaluasi sebelum jQuery/Bootstrap siap
+            if (typeof bootstrap === 'undefined' || typeof window.$ === 'undefined') {
+                console.warn(
+                    '[alldetailAppraisalModal] bootstrap/jQuery belum siap. Pastikan script ini dirender SETELAH plugins.bundle.js'
+                    );
+                return;
             }
-            editModalInstance.show();
 
-            // Pasang event listener untuk buka kembali modal detail saat modal edit ditutup
-            editModalEl.addEventListener('hidden.bs.modal', function handler() {
-                detailModalInstance.show();
+            // simpan state parent modal dan backdrop supaya bisa dipulihkan setelah child modal ditutup
+            let parentBackdropEl = null;
+            let parentModalInstance = null;
 
-                // Hapus event listener supaya tidak double trigger
-                editModalEl.removeEventListener('hidden.bs.modal', handler);
-            });
-        }, 300);
-    });
-    $(document).on("click", ".delete-appraisal-btn", function() {
-        const target = "#" + $(this).data("delete-modal-id");
+            function openChildModal(childSelector) {
+                const parentModalEl = document.getElementById("alldetailAppraisalModal");
+                if (!parentModalEl) return;
 
-        const detailModalEl = document.getElementById("alldetailAppraisalModal");
-        const detailModalInstance = bootstrap.Modal.getInstance(detailModalEl);
-        detailModalInstance.hide();
+                // ambil / buat instance modal parent
+                parentModalInstance = bootstrap.Modal.getInstance(parentModalEl);
+                if (!parentModalInstance) {
+                    parentModalInstance = new bootstrap.Modal(parentModalEl);
+                }
 
-        setTimeout(() => {
-            const deleteModalEl = document.querySelector(target);
-            let deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
-            if (!deleteModalInstance) {
-                deleteModalInstance = new bootstrap.Modal(deleteModalEl);
+                // sebelum kita hide parent, ambil backdrop aktif sekarang
+                parentBackdropEl = document.querySelector('.modal-backdrop.show');
+
+                // hide modal parent
+                parentModalInstance.hide();
+
+                setTimeout(() => {
+                    const childEl = document.querySelector(childSelector);
+                    if (!childEl) {
+                        console.warn('[alldetailAppraisalModal] Target modal tidak ditemukan:',
+                            childSelector);
+                        return;
+                    }
+
+                    // ambil / buat instance modal child
+                    let childInstance = bootstrap.Modal.getInstance(childEl);
+                    if (!childInstance) {
+                        childInstance = new bootstrap.Modal(childEl, {
+                            backdrop: true,
+                            keyboard: true,
+                            focus: true
+                        });
+                    }
+
+                    // === Z-INDEX MANAGEMENT ===
+                    // 1. Turunin backdrop parent biar gak nutup child
+                    // 2. Naikin child modal
+                    if (parentBackdropEl) {
+                        parentBackdropEl.dataset._origZ = parentBackdropEl.style.zIndex || '';
+                        parentBackdropEl.style.zIndex = '1059';
+                    }
+
+                    childEl.style.zIndex = '1060';
+
+                    // Show modal child
+                    childInstance.show();
+
+                    // waktu child ditutup:
+                    function handleHidden() {
+                        // reset z-index child
+                        childEl.style.zIndex = '';
+
+                        // pulihin backdrop parent
+                        if (parentBackdropEl) {
+                            parentBackdropEl.style.zIndex = parentBackdropEl.dataset._origZ || '';
+                            delete parentBackdropEl.dataset._origZ;
+                        }
+
+                        // munculkan lagi parent TANPA bikin backdrop baru nempel di depan layar
+                        if (parentModalInstance) {
+                            parentModalInstance.show();
+                        }
+
+                        // cleanup listener supaya gak nambah banyak listener tiap klik
+                        childEl.removeEventListener('hidden.bs.modal', handleHidden);
+                    }
+
+                    childEl.addEventListener('hidden.bs.modal', handleHidden);
+                }, 100);
             }
-            deleteModalInstance.show();
 
-            deleteModalEl.addEventListener('hidden.bs.modal', function handler() {
-                detailModalInstance.show();
-                deleteModalEl.removeEventListener('hidden.bs.modal', handler);
+            // klik tombol EDIT appraisal
+            $(document).on("click", ".edit-appraisal-btn", function() {
+                const modalId = $(this).data("edit-modal-id"); // ex: "editAppraisalModal10"
+                if (!modalId) return;
+                openChildModal("#" + modalId);
             });
-        }, 300);
-    });
+
+            // klik tombol DELETE appraisal
+            $(document).on("click", ".delete-appraisal-btn", function() {
+                const modalId = $(this).data("delete-modal-id"); // ex: "deleteAppraisalModal10"
+                if (!modalId) return;
+                openChildModal("#" + modalId);
+            });
+        });
+    })();
 </script>

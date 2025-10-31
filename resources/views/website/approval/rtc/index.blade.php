@@ -3,6 +3,7 @@
 @section('title')
     {{ $title ?? 'Approval' }}
 @endsection
+
 @section('breadcrumbs')
     {{ $title ?? 'Approval' }}
 @endsection
@@ -15,7 +16,7 @@
                 <div class="d-flex align-items-center">
                     <form method="GET" class="d-flex align-items-center">
                         <input type="text" name="search" value="{{ request('search') }}" class="form-control me-2"
-                            placeholder="Search Employee..." style="width:200px;">
+                            placeholder="Search Area..." style="width:200px;">
                         <input type="hidden" name="filter">
                         <button type="submit" class="btn btn-primary me-3">
                             <i class="fas fa-search"></i> Search
@@ -25,7 +26,6 @@
             </div>
 
             <div class="card-body">
-                {{-- (opsional) Tab filter HRD tetap, kalau tidak dipakai boleh dihapus --}}
                 @if (auth()->user()->role == 'HRD')
                     {{-- ... tab yang lama ... --}}
                 @endif
@@ -39,80 +39,122 @@
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                     <thead>
                         <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Company</th>
-                            <th>Department</th>
-                            <th>Current Position</th>
+                            <th style="width:50px;">No</th>
                             <th>Area</th>
-                            <th>Term</th>
-                            <th>Status</th>
-                            <th class="text-center">Action</th>
+                            <th>Type</th>
+                            <th>Status Summary</th>
+                            <th class="text-center" style="width:140px;">Detail</th>
+                            <th class="text-center" style="width:160px;">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @forelse ($rtcs as $item)
+                            @php
+                                $statusSummary = collect($item['status_info'] ?? [])
+                                    ->map(fn($cnt, $lbl) => $lbl . ': ' . $cnt)
+                                    ->implode(' | ');
+                            @endphp
+
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
-                                <td>{{ $item->employee->npk }}</td>
-                                <td>{{ $item->employee->name }}</td>
-                                <td>{{ $item->employee->company_name }}</td>
-                                <td>{{ $item->employee->department?->name }}</td>
-                                <td>{{ $item->employee->position }}</td>
-                                <td>{{ ucfirst($item->area) }}</td>
-                                <td>{{ strtoupper($item->term) }}</td>
-                                <td>
-                                    @php
-                                        $lbl = match ((int) $item->status) {
-                                            0 => 'Submitted',
-                                            1 => 'Checked',
-                                            2 => 'Approved',
-                                            default => 'Unknown',
-                                        };
-                                        $cls = match ((int) $item->status) {
-                                            0 => 'bg-warning-subtle text-warning-emphasis',
-                                            1 => 'bg-info-subtle text-info-emphasis',
-                                            2 => 'bg-success-subtle text-success-emphasis',
-                                            default => 'bg-secondary',
-                                        };
-                                    @endphp
-                                    <span class="badge {{ $cls }}">{{ $lbl }}</span>
+                                <td>{{ $item['area_name'] ?? '-' }}</td>
+                                <td>{{ ucfirst($item['area'] ?? '-') }}</td>
+                                <td class="text-center">
+                                    @if ($statusSummary)
+                                        <span class="badge bg-light text-muted border">{{ $statusSummary }}</span>
+                                    @else
+                                        <span class="text-muted">-</span>
+                                    @endif
                                 </td>
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-success btn-approve"
-                                        onclick="confirmApprove({{ $item->id }})">
+                                    <button type="button" class="btn btn-sm btn-light btn-detail" data-bs-toggle="modal"
+                                        data-bs-target="#rtcDetailModal" data-area="{{ $item['area'] }}"
+                                        data-area_id="{{ $item['area_id'] }}" data-area_name="{{ $item['area_name'] }}">
+                                        <i class="fas fa-eye"></i> View Detail
+                                    </button>
+                                </td>
+
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-success btn-approve mb-1"
+                                        onclick="confirmApproveArea('{{ $item['area'] }}', '{{ $item['area_id'] }}')">
                                         <i class="fas fa-check-circle"></i>
                                         {{ $stage === 'check' ? 'Check' : 'Approve' }}
                                     </button>
 
-                                    {{-- Revise: kirim balik ke pengusul (status -> 0).
-                                 PD merevisi plant dari status=1; GM/Direktur merevisi dari status=0. --}}
                                     <button type="button" class="btn btn-sm btn-danger btn-revise"
-                                        onclick="confirmRevise({{ $item->id }})">
-                                        <i class="fas fa-rotate-left"></i> Revise
+                                        onclick="confirmReviseArea('{{ $item['area'] }}', '{{ $item['area_id'] }}')">
+                                        <i class="fas fa-rotate-left"></i>
+                                        Revise
                                     </button>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="10" class="text-center text-muted">No data available</td>
+                                <td colspan="8" class="text-center text-muted">No data available</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
+
             </div>
         </div>
     </div>
 
-    {{-- (opsional) modal import dibiarkan --}}
+    <div class="modal fade" id="rtcDetailModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        RTC Detail -
+                        <span id="rtcDetailAreaName">Area Name</span>
+                    </h5>
+
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div id="rtcDetailLoading" class="py-5 text-center text-muted d-none">
+                        <div class="spinner-border" role="status" style="width:2rem;height:2rem;"></div>
+                        <div class="mt-3">Loading...</div>
+                    </div>
+
+                    <div id="rtcDetailError" class="alert alert-danger d-none"></div>
+
+                    <div id="rtcDetailContent" class="table-responsive d-none">
+                        <table class="table table-sm table-striped align-middle">
+                            <thead class="text-muted">
+                                <tr>
+                                    <th style="width:40px;">No</th>
+                                    <th>NPK</th>
+                                    <th>Employee Name</th>
+                                    <th>Term</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rtcDetailTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
+                        Close
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
 @endsection
 
 @push('scripts')
     <script>
-        function confirmApprove(id) {
+        function confirmApproveArea(area, area_id) {
             Swal.fire({
-                title: '{{ $stage === 'check' ? 'Check Data?' : 'Approve Data?' }}',
+                title: '{{ $stage === 'check' ? 'Check Area?' : 'Approve Area?' }}',
                 input: 'textarea',
                 inputPlaceholder: 'Comment...',
                 showCancelButton: true,
@@ -120,25 +162,30 @@
                 cancelButtonText: 'Cancel',
                 preConfirm: (comment) => {
                     return $.ajax({
-                        url: "{{ route('rtc.approve', ['id' => 'ID_REPLACE']) }}".replace('ID_REPLACE',
-                            id),
-                        method: 'GET',
+                        url: "{{ route('rtc.approve.area') }}",
+                        method: 'POST',
                         data: {
+                            area: area,
+                            area_id: area_id,
                             comment: comment,
                             _token: '{{ csrf_token() }}'
                         }
                     }).then(() => {
                         Swal.fire('Success', 'Saved.', 'success').then(() => location.reload());
                     }).catch(xhr => {
-                        Swal.fire('Failed', xhr?.responseJSON?.message || 'Error.', 'error');
+                        Swal.fire(
+                            'Failed',
+                            xhr?.responseJSON?.message || 'Error.',
+                            'error'
+                        );
                     });
                 }
             });
         }
 
-        function confirmRevise(id) {
+        function confirmReviseArea(area, area_id) {
             Swal.fire({
-                title: 'Revise Data?',
+                title: 'Revise Area?',
                 input: 'textarea',
                 inputPlaceholder: 'Reason...',
                 showCancelButton: true,
@@ -146,20 +193,94 @@
                 cancelButtonText: 'Cancel',
                 preConfirm: (comment) => {
                     return $.ajax({
-                        url: "{{ route('rtc.revise', ['id' => 'ID_REPLACE']) }}".replace('ID_REPLACE',
-                            id),
-                        method: 'PATCH',
+                        url: "{{ route('rtc.revise.area') }}",
+                        method: 'POST',
                         data: {
+                            area: area,
+                            area_id: area_id,
                             comment: comment,
                             _token: '{{ csrf_token() }}'
                         }
                     }).then(() => {
                         Swal.fire('Success', 'Revised.', 'success').then(() => location.reload());
                     }).catch(xhr => {
-                        Swal.fire('Failed', xhr?.responseJSON?.message || 'Error.', 'error');
+                        Swal.fire(
+                            'Failed',
+                            xhr?.responseJSON?.message || 'Error.',
+                            'error'
+                        );
                     });
                 }
             });
         }
+
+        const detailModal = document.getElementById('rtcDetailModal');
+        detailModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const area = button.getAttribute('data-area');
+            const area_id = button.getAttribute('data-area_id');
+            const area_name = button.getAttribute('data-area_name');
+
+            document.getElementById('rtcDetailAreaName').textContent = area_name || '-';
+
+            document.getElementById('rtcDetailLoading').classList.remove('d-none');
+            document.getElementById('rtcDetailError').classList.add('d-none');
+            document.getElementById('rtcDetailContent').classList.add('d-none');
+            document.getElementById('rtcDetailTableBody').innerHTML = '';
+
+            $.ajax({
+                url: "{{ route('rtc.area.items') }}",
+                method: 'GET',
+                data: {
+                    area: area,
+                    area_id: area_id,
+                }
+            }).done(function(res) {
+                const tbody = document.getElementById('rtcDetailTableBody');
+
+                if (!Array.isArray(res) || res.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-5">No RTC found in this area.</td>
+                        </tr>`;
+                } else {
+                    res.forEach(function(rtc, index) {
+                        let lbl = 'Unknown',
+                            cls = 'bg-secondary text-white';
+                        switch (parseInt(rtc.status)) {
+                            case 0:
+                                lbl = 'Submitted';
+                                cls = 'bg-warning-subtle text-warning-emphasis';
+                                break;
+                            case 1:
+                                lbl = 'Checked';
+                                cls = 'bg-info-subtle text-info-emphasis';
+                                break;
+                            case 2:
+                                lbl = 'Approved';
+                                cls = 'bg-success-subtle text-success-emphasis';
+                                break;
+                        }
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td>${index + 1}</td>
+                                <td>${rtc.employee?.npk ?? '-'}</td>
+                                <td>${rtc.employee?.name ?? '-'}</td>
+                                <td>${(rtc.term ?? '').toUpperCase()}</td>
+                            </tr>
+                        `;
+                    });
+                }
+
+                document.getElementById('rtcDetailLoading').classList.add('d-none');
+                document.getElementById('rtcDetailContent').classList.remove('d-none');
+            }).fail(function(xhr) {
+                document.getElementById('rtcDetailLoading').classList.add('d-none');
+                document.getElementById('rtcDetailError').classList.remove('d-none');
+                document.getElementById('rtcDetailError').textContent =
+                    xhr?.responseJSON?.message || 'Failed to load area detail.';
+            });
+        });
     </script>
 @endpush

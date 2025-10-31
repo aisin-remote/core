@@ -130,6 +130,12 @@ class Employee extends Model
         return $this->belongsTo(SubSection::class);
     }
 
+    // Relasi ke department
+    public function department()
+    {
+        return $this->belongsTo(Department::class);
+    }
+
     // Relasi ke Section melalui SubSection
     public function section()
     {
@@ -572,5 +578,18 @@ class Employee extends Model
     public function ippComments()
     {
         return $this->hasMany(IppComment::class);
+    }
+
+    public function getFormattedDateAttribute()
+    {
+        return $this->aisin_entry_date
+            ? Carbon::parse($this->aisin_entry_date)->format('d M Y')
+            : null;
+    }
+    public function getFormattedBirthAttribute()
+    {
+        return $this->birthday_date
+            ? Carbon::parse($this->birthday_date)->format('d M Y')
+            : null;
     }
 }

@@ -67,13 +67,13 @@
         const main = @json($main);
         const managers = @json($managers);
         const hideMainPlans = @json($hideMainPlans ?? false);
-        const NO_ROOT = @json($noRoot ?? false);
-        const GROUP_TOP = @json($groupTop ?? false); // <-- penting: mode group untuk company
+        const NO_ROOT = @json($noRoot ?? false); // sekarang utk company = false
+        const GROUP_TOP = false; // kita matikan group model lama
     </script>
 
     <script>
         $(function() {
-            /* ================== TEMPLATES ================== */
+            /* ================== TEMPLATE ================== */
             const W = 360,
                 H = 430,
                 HDR = 76;
@@ -83,17 +83,9 @@
             const LEFTX = 26,
                 RIGHTX = W - 26;
 
-            if (OrgChart.isTrial()) {
-                console.log("Anda menggunakan versi trial.");
-            } else {
-                console.log("Anda menggunakan versi berlisensi.");
-            }
-
-            // base dari "ana"
             OrgChart.templates.factory = Object.assign({}, OrgChart.templates.ana);
             OrgChart.templates.factory.size = [W, H];
 
-            // defs
             OrgChart.templates.factory.defs =
                 '<filter id="dropShadow" x="-40%" y="-40%" width="180%" height="180%">' +
                 '<feGaussianBlur in="SourceAlpha" stdDeviation="3"></feGaussianBlur>' +
@@ -104,7 +96,7 @@
                 '<clipPath id="clipPhoto"><circle cx="' + CX + '" cy="' + CY + '" r="' + (AV / 2) +
                 '"/></clipPath>';
 
-            // node normal (dengan label S/T–M/T–L/T)
+            // default node (punya ST/MT/LT rows)
             OrgChart.templates.factory.node =
                 '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
                 '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
@@ -127,28 +119,41 @@
             OrgChart.templates.factory.img_0 =
                 '<image clip-path="url(#clipPhoto)" xlink:href="{val}" x="' + (CX - AV / 2) + '" y="' + (CY - AV /
                     2) + '" width="' + AV + '" height="' + AV + '" preserveAspectRatio="xMidYMid slice"></image>';
-            OrgChart.templates.factory.field_0 = '<text style="font-size:16px;font-weight:700;fill:#111827" x="' +
-                CX + '" y="105" text-anchor="middle">{val}</text>';
-            OrgChart.templates.factory.field_1 = '<text style="font-size:13px;fill:#6b7280" x="' + CX +
-                '" y="128" text-anchor="middle">{val}</text>';
-            OrgChart.templates.factory.field_2 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
-                RIGHTX + '" y="155" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_3 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
-                RIGHTX + '" y="175" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_4 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
-                RIGHTX + '" y="195" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_5 = '<text style="font-size:13px;font-weight:600;fill:#111827" x="' +
-                RIGHTX + '" y="215" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_6 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="245" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_7 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="265" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_8 = '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="285" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_9 = '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (
-                H - 14) + '" text-anchor="middle">(grade, age, HAV)</text>';
 
-            // template tanpa S/T–M/T–L/T (pakai untuk President, VPD, Plant)
+            OrgChart.templates.factory.field_0 =
+                '<text style="font-size:16px;font-weight:700;fill:#111827" x="' + CX +
+                '" y="105" text-anchor="middle">{val}</text>';
+
+            OrgChart.templates.factory.field_1 =
+                '<text style="font-size:13px;fill:#6b7280" x="' + CX +
+                '" y="128" text-anchor="middle">{val}</text>';
+
+            OrgChart.templates.factory.field_2 =
+                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
+                '" y="155" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_3 =
+                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
+                '" y="175" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_4 =
+                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
+                '" y="195" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_5 =
+                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
+                '" y="215" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_6 =
+                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="245" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_7 =
+                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="265" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_8 =
+                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
+                '" y="285" text-anchor="end">{val}</text>';
+            OrgChart.templates.factory.field_9 =
+                '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (H - 14) +
+                '" text-anchor="middle">(grade, age, HAV)</text>';
+
+            // template tanpa ST/MT/LT, dipakai PRESIDENT, VPD, PLANT, dll
             OrgChart.templates.factoryRoot = Object.assign({}, OrgChart.templates.factory);
             OrgChart.templates.factoryRoot.node =
                 '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
@@ -163,20 +168,16 @@
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="215" text-anchor="start">LCP</text>';
 
-            /* ===== Group template (kotak besar berisi President & VPD) ===== */
-            // (mengikuti contoh OrgChartJS, cukup definisi minimal + link path)
-            OrgChart.templates.group.link =
-                `<path stroke-linejoin="round" stroke="#aeaeae" stroke-width="1px" fill="none"
-                   d="M{xa},{ya} {xb},{yb} {xc},{yc} L{xd},{yd}" />`;
-            OrgChart.templates.group.nodeMenuButton = '';
-            OrgChart.templates.group.min = Object.assign({}, OrgChart.templates.group);
-            OrgChart.templates.group.min.imgs = `{val}`;
-            OrgChart.templates.group.min.img_0 = ``;
-            OrgChart.templates.group.min.description =
-                `<text data-width="230" data-text-overflow="multiline" style="font-size: 14px;" fill="#aeaeae"
-                   x="125" y="100" text-anchor="middle">{val}</text>`;
+            // template phantom: node parent tak terlihat (dipakai utk company root)
+            OrgChart.templates.phantom = Object.assign({}, OrgChart.templates.ana);
+            OrgChart.templates.phantom.size = [1, 1]; // super kecil
+            OrgChart.templates.phantom.node =
+                '<rect x="0" y="0" width="1" height="1" fill="transparent" stroke="transparent"></rect>';
+            OrgChart.templates.phantom.field_0 = '';
+            OrgChart.templates.phantom.field_1 = '';
+            OrgChart.templates.phantom.img_0 = '';
 
-            /* ================== WARNA ================== */
+            /* ================== warna ================== */
             const colorMap = {
                 'color-1': '#0ea5e9',
                 'color-2': '#22c55e',
@@ -194,115 +195,58 @@
                 'color-14': '#3b82f6'
             };
 
-            /* ================== BUILD DATA ================== */
             const clamp = (s, max = 42) => (s && s.length > max ? (s.slice(0, max - 1) + '…') : (s || '-'));
 
-            function buildChartData(main, managers) {
+            /* ================== buildChartData ================== */
+            function buildChartData(mainObj, managersArr) {
                 const nodes = [];
                 let ai = 0;
                 const nid = () => 'n' + (ai++);
 
-                // === MODE GROUP (company): buat kotak group berisi President & VPD
-                if (GROUP_TOP) {
-                    const groupId = 'top-group';
-                    nodes.push({
-                        id: groupId,
-                        name: 'Top Management',
-                        description: 'President & VPD',
-                        tags: ['group', 'top-pair'] // template group + 2 kolom
-                    });
-
-                    // 1) Masukkan Presiden & VPD ke dalam group (stpid)
-                    managers.slice(0, 2).forEach(m => {
-                        const id = nid();
-                        nodes.push({
-                            id,
-                            stpid: groupId, // <— masuk ke dalam group
-                            department: clamp(m.title, 64),
-                            name: clamp(m.person?.name, 48),
-                            grade: m.person?.grade ?? '-',
-                            age: m.person?.age ?? '-',
-                            los: m.person?.los ?? '-',
-                            lcp: m.person?.lcp ?? '-',
-                            cand_st: '',
-                            cand_mt: '',
-                            cand_lt: '', // kosong
-                            color: colorMap[m.colorClass] || '#22c55e',
-                            img: m.person?.photo || null,
-                            tags: ['no-plans'] // hilangkan S/T–M/T–L/T
-                        });
-                    });
-
-                    // 2) Ambil subtree PLANt dari manager pertama (Presiden) → taruh di bawah group
-                    const shared = (managers[0]?.supervisors || []);
-                    const emit = (node, parentId) => {
-                        const id = nid();
-                        const base = {
-                            id,
-                            pid: parentId,
-                            department: clamp(node.title, 64),
-                            name: clamp(node.person?.name, 48),
-                            grade: node.person?.grade ?? '-',
-                            age: node.person?.age ?? '-',
-                            los: node.person?.los ?? '-',
-                            lcp: node.person?.lcp ?? '-',
-                            cand_st: node.no_plans ? '' : clamp(
-                                `${node.shortTerm?.name ?? '-'} (${node.shortTerm?.grade ?? '-'}, ${node.shortTerm?.age ?? '-'})`,
-                                48),
-                            cand_mt: node.no_plans ? '' : clamp(
-                                `${node.midTerm?.name ?? '-'} (${node.midTerm?.grade ?? '-'}, ${node.midTerm?.age ?? '-'})`,
-                                48),
-                            cand_lt: node.no_plans ? '' : clamp(
-                                `${node.longTerm?.name ?? '-'} (${node.longTerm?.grade ?? '-'}, ${node.longTerm?.age ?? '-'})`,
-                                48),
-                            color: colorMap[node.colorClass] || '#22c55e',
-                            img: node.person?.photo || null
-                        };
-                        if (node.no_plans) base.tags = ['no-plans']; // Plant juga tanpa S/T–M/T–L/T
-                        nodes.push(base);
-                        (node.supervisors || []).forEach(ch => emit(ch, id));
-                    };
-
-                    shared.forEach(ch => emit(ch, groupId));
-                    return nodes;
-                }
-
-                // === MODE BUKAN GROUP (plant/division/department/section/sub_section)
                 const rootId = 'root';
-                if (!NO_ROOT) {
-                    const rootNode = {
-                        id: rootId,
-                        department: clamp(main.title, 64),
-                        name: clamp(main.person?.name, 48),
-                        grade: main.person?.grade ?? '-',
-                        age: main.person?.age ?? '-',
-                        los: main.person?.los ?? '-',
-                        lcp: main.person?.lcp ?? '-',
-                        cand_st: hideMainPlans ? '' : clamp(
-                            `${main.shortTerm?.name ?? '-'} (${main.shortTerm?.grade ?? '-'}, ${main.shortTerm?.age ?? '-'})`,
-                            48),
-                        cand_mt: hideMainPlans ? '' : clamp(
-                            `${main.midTerm?.name ?? '-'} (${main.midTerm?.grade ?? '-'}, ${main.midTerm?.age ?? '-'})`,
-                            48),
-                        cand_lt: hideMainPlans ? '' : clamp(
-                            `${main.longTerm?.name ?? '-'} (${main.longTerm?.grade ?? '-'}, ${main.longTerm?.age ?? '-'})`,
-                            48),
-                        color: colorMap[main.colorClass] || '#0ea5e9',
-                        img: main.person?.photo || null,
-                        ...(hideMainPlans ? {
-                            tags: ['no-plans']
-                        } : {})
-                    };
-                    nodes.push(rootNode);
+
+                // selalu render root (phantom / normal)
+                const rootTags = [];
+                if (mainObj.phantom) {
+                    rootTags.push('phantom'); // jadi invisible
+                }
+                if (hideMainPlans) {
+                    // hide ST/MT/LT
+                    rootTags.push('no-plans');
                 }
 
-                const emitStd = (node, parentId) => {
-                    const id = nid();
-                    const obj = {
-                        id,
-                        ...(parentId ? {
-                            pid: parentId
-                        } : {}),
+                // bikin root node
+                nodes.push({
+                    id: rootId,
+                    department: clamp(mainObj.title, 64),
+                    name: clamp(mainObj.person?.name, 48),
+                    grade: mainObj.person?.grade ?? '-',
+                    age: mainObj.person?.age ?? '-',
+                    los: mainObj.person?.los ?? '-',
+                    lcp: mainObj.person?.lcp ?? '-',
+                    cand_st: hideMainPlans ? '' : clamp(
+                        `${mainObj.shortTerm?.name ?? '-'} (${mainObj.shortTerm?.grade ?? '-'}, ${mainObj.shortTerm?.age ?? '-'})`,
+                        48),
+                    cand_mt: hideMainPlans ? '' : clamp(
+                        `${mainObj.midTerm?.name ?? '-'} (${mainObj.midTerm?.grade ?? '-'}, ${mainObj.midTerm?.age ?? '-'})`,
+                        48),
+                    cand_lt: hideMainPlans ? '' : clamp(
+                        `${mainObj.longTerm?.name ?? '-'} (${mainObj.longTerm?.grade ?? '-'}, ${mainObj.longTerm?.age ?? '-'})`,
+                        48),
+                    color: colorMap[mainObj.colorClass] || '#0ea5e9',
+                    img: mainObj.person?.photo || null,
+                    tags: rootTags.length ? rootTags : undefined
+                });
+
+                // helper rekursif utk subtree normal
+                function emitStd(node, parentId) {
+                    const thisId = nid();
+                    const baseTags = [];
+                    if (node.no_plans) baseTags.push('no-plans'); // render template factoryRoot
+
+                    nodes.push({
+                        id: thisId,
+                        pid: parentId,
                         department: clamp(node.title, 64),
                         name: clamp(node.person?.name, 48),
                         grade: node.person?.grade ?? '-',
@@ -319,22 +263,26 @@
                             `${node.longTerm?.name ?? '-'} (${node.longTerm?.grade ?? '-'}, ${node.longTerm?.age ?? '-'})`,
                             48),
                         color: colorMap[node.colorClass] || '#22c55e',
-                        img: node.person?.photo || null
-                    };
-                    if (node.no_plans) obj.tags = ['no-plans'];
-                    nodes.push(obj);
-                    (node.supervisors || []).forEach(ch => emitStd(ch, id));
-                };
+                        img: node.person?.photo || null,
+                        tags: baseTags.length ? baseTags : undefined
+                    });
 
-                const parentId = NO_ROOT ? null : rootId;
-                managers.forEach(m => {
-                    const id = emitStd(m, parentId);
+                    (node.supervisors || []).forEach(ch => emitStd(ch, thisId));
+                    return thisId;
+                }
+
+                // PRESIDENT dan VPD diletakkan sebagai anak langsung root
+                // lalu subtree plant turun dari PRESIDENT
+                managersArr.forEach(m => {
+                    const idManager = emitStd(m, rootId);
+                    // emitStd juga akan rekursif ke supervisors[], jadi subtree plant bakal otomatis jadi anak PRESIDENT.
+                    // VPD tidak punya supervisors, jadi akan cuma berdiri di bawah root sejajar PRESIDENT.
                 });
 
                 return nodes;
             }
 
-            /* ================== LOADING ================== */
+            /* ================== LOADING & IMAGE BASE64 ================== */
             const loadingOverlay = $('#loading-overlay');
             const loadingProgress = $('#loading-progress');
 
@@ -354,11 +302,13 @@
             function updateProgress(loaded, total) {
                 loadingProgress.text(`Mengunduh gambar ${loaded}/${total}`);
             }
+
             async function safeConvertToBase64(url) {
                 if (!url) return null;
                 try {
-                    const u = url.startsWith('//') ? (location.protocol + url) : (url.startsWith('/') ? (
-                        location.origin + url) : url);
+                    const u = url.startsWith('//') ? (location.protocol + url) :
+                        (url.startsWith('/') ? (location.origin + url) :
+                            url);
                     const res = await fetch(u + (u.includes('?') ? '&' : '?') + 't=' + Date.now(), {
                         credentials: 'same-origin'
                     });
@@ -373,14 +323,16 @@
                     return null;
                 }
             }
-            async function prepareChartData(main, managers) {
+
+            async function prepareChartData(mainObj, managersArr) {
                 const processedMain = {
-                    ...main
+                    ...mainObj
                 };
-                const deep = JSON.parse(JSON.stringify(managers));
+                const deepManagers = JSON.parse(JSON.stringify(managersArr));
+
                 let total = await countTotalImages({
-                    main,
-                    managers
+                    main: mainObj,
+                    managers: managersArr
                 });
                 let loaded = 0;
                 updateProgress(0, total);
@@ -389,6 +341,7 @@
                     processedMain.person.photo = await safeConvertToBase64(processedMain.person.photo);
                     updateProgress(++loaded, total);
                 }
+
                 async function walk(list) {
                     for (const n of (list || [])) {
                         if (n.person?.photo) {
@@ -398,10 +351,12 @@
                         if (n.supervisors) await walk(n.supervisors);
                     }
                 }
-                await walk(deep);
+
+                await walk(deepManagers);
+
                 return {
                     main: processedMain,
-                    managers: deep
+                    managers: deepManagers
                 };
             }
 
@@ -427,20 +382,20 @@
                     scaleMin: 0.2,
                     scaleMax: 2.2,
                     nodeMouseClick: OrgChart.action.none,
-                    // mapping tag → template / layout
+
+                    // mapping tag -> template
                     tags: {
                         'no-plans': {
                             template: 'factoryRoot'
-                        }, // sembunyikan S/T–M/T–L/T
-                        'group': {
-                            template: 'group'
-                        },
-                        'top-pair': {
+                        }, // hilangin S/T–M/T–L/T
+                        'phantom': {
+                            template: 'phantom',
                             subTreeConfig: {
                                 columns: 2
-                            }
-                        } // dua kolom di dalam group
+                            } // anak2 root (PRESIDENT & VPD) sejajar horizontal
+                        }
                     },
+
                     nodeBinding: {
                         node: "color",
                         img_0: "img",
@@ -489,7 +444,8 @@
                 console.error(err);
                 loadingOverlay.addClass('d-none').removeClass('d-flex');
 
-                const nodes = buildChartData(main, managers);
+                const fallbackNodes = buildChartData(main, managers);
+
                 new OrgChart(document.getElementById('orgchart-container'), {
                     template: "factory",
                     mode: "dark",
@@ -499,10 +455,8 @@
                         'no-plans': {
                             template: 'factoryRoot'
                         },
-                        'group': {
-                            template: 'group'
-                        },
-                        'top-pair': {
+                        'phantom': {
+                            template: 'phantom',
                             subTreeConfig: {
                                 columns: 2
                             }
@@ -522,7 +476,7 @@
                         field_8: "cand_lt",
                         field_9: "field_9"
                     },
-                    nodes
+                    nodes: fallbackNodes
                 });
             });
         });

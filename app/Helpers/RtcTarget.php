@@ -33,7 +33,7 @@ class RtcTarget
         return [
             'AL'  => ['position' => 'Act Leader',      'levels' => ['4A', '4B']],
             'L'   => ['position' => 'Leader',          'levels' => ['5A', '5B']],
-            'SL'  => ['position' => 'Act Supervisor',  'levels' => ['6A', '6B']],
+            'SL'  => ['position' => 'Act Section Head',  'levels' => ['6A', '6B']],
             'AS'  => ['position' => 'Supervisor',      'levels' => ['7A', '7B']],
             'S'   => ['position' => 'Section Head',    'levels' => ['8A', '8B']],
             'SS'  => ['position' => 'Coordinator',     'levels' => ['9A', '9B']],
@@ -46,11 +46,11 @@ class RtcTarget
         ];
     }
 
-    public static function map(string $kode): ?array
+    public static function map(string $kode = ""): ?array
     {
         $kode = strtoupper(trim($kode));
         $all  = self::mapAll();
-        return $all[$kode] ?? null;
+        return $all[$kode] ?? $all;
     }
 
     public static function allCodes(): array
@@ -79,5 +79,16 @@ class RtcTarget
         $idx = array_search(strtoupper($careerTargetCode), $ord, true);
         if ($idx === false) return [];
         return array_slice($ord, 0, $idx + 1);
+    }
+
+    public static function codeFromPositionName(string $positionName): ?string
+    {
+        $positionName = trim(strtoupper($positionName));
+        foreach (self::mapAll() as $code => $info) {
+            if (strtoupper($info['position']) === $positionName) {
+                return $code;
+            }
+        }
+        return null;
     }
 }
