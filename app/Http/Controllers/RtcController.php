@@ -394,11 +394,9 @@ class RtcController extends Controller
 
     public function detail(Request $request)
     {
-        // Ambil filter dan id dari query string
-        $filter = $request->query('filter'); // department / section / sub_section
-        $id = (int) $request->query('id'); // id karyawan
+        $filter = $request->query('filter');
+        $id = (int) $request->query('id');
 
-        // Tentukan model yang akan dipanggil berdasarkan nilai filter
         switch ($filter) {
             case 'department':
                 $relation = 'manager';
@@ -422,7 +420,6 @@ class RtcController extends Controller
                 return redirect()->route('rtc.index')->with('error', 'Invalid filter');
         }
 
-        // Jika data tidak ditemukan
         if (!$data) {
             return redirect()->route('rtc.index')->with('error', ucfirst($filter) . ' not found');
         }
@@ -440,7 +437,6 @@ class RtcController extends Controller
             return view('website.modal.rtc.index', compact('data', 'filter', 'subordinates'));
         }
 
-        // Return view dengan data yang sesuai
         return view('website.rtc.detail', compact('data', 'filter'));
     }
 
@@ -484,33 +480,46 @@ class RtcController extends Controller
         switch ($filter) {
             /* ======================== COMPANY: PRESIDENT & VPD GROUP + FULL SUBTREE ======================== */
             case 'company': {
+                    // mapping id -> nama company tampilan
+                    $companyDisplay = match ((string)$rawId) {
+                        '1' => 'AII',
+                        '2' => 'AIIA',
+                        default => strtoupper((string)$rawId),
+                    };
+
                     $company   = strtoupper((string) $rawId);
-                    $title     = $company . ' — Summary';
+                    $title     = $companyDisplay . ' — Summary';
 
-                    $noRoot        = true;   // tidak ada node “company”
-                    $groupTop      = true;   // tampilkan group (President & VPD)
-                    $hideMainPlans = true;   // root tidak dipakai
+                    // layout flags
+                    // kita MAU punya parent phantom utk sejajarkan PRESIDENT & VPD
+                    $noRoot        = false;      // <- sekarang root ADA lagi (phantom)
+                    $groupTop      = false;      // group layout lama dimatikan total
+                    $hideMainPlans = true;       // root tidak punya ST/MT/LT
 
-                    // helper format person (lengkapi age/LOS kalau kosong)
+                    // helper format person
                     $fmtPerson = function ($emp) {
                         if (!$emp) return null;
+
                         $p = RtcHelper::formatPerson($emp) ?? [];
+
                         $age = $p['age'] ?? null;
                         if ($age === null && !empty($emp->birthday_date)) {
                             try {
-                                $age = \Carbon\Carbon::parse($emp->birthday_date)->age;
+                                $age = Carbon::parse($emp->birthday_date)->age;
                             } catch (\Throwable $e) {
                             }
                         }
+
                         $los = $p['los'] ?? null;
                         foreach (['join_date', 'start_date', 'hire_date', 'first_join_date'] as $col) {
                             if ($los === null && !empty($emp->{$col})) {
                                 try {
-                                    $los = \Carbon\Carbon::parse($emp->{$col})->diffInYears(now());
+                                    $los = Carbon::parse($emp->{$col})->diffInYears(now());
                                 } catch (\Throwable $e) {
                                 }
                             }
                         }
+
                         return [
                             'name'  => $p['name']  ?? $emp->name,
                             'grade' => $p['grade'] ?? ($emp->grade ?? '-'),
@@ -521,7 +530,7 @@ class RtcController extends Controller
                         ];
                     };
 
-                    // ambil Presiden & VPD (usahakan yang company-nya cocok dulu)
+                    // ambil presiden & vpd
                     $lcCompany = strtolower($company);
                     $prioritizeCompany = fn($q) => $q->orderByRaw(
                         "CASE WHEN LOWER(company_name)=? THEN 0 ELSE 1 END, id DESC",
@@ -550,13 +559,14 @@ class RtcController extends Controller
                         ?? Employee::whereIn(DB::raw('LOWER(position)'), ['vpd', 'vice president director', 'wakil presdir'])
                         ->latest('id')->first();
 
-                    // === FULL SUBTREE: PLANT → DIVISION → DEPARTMENT → SECTION → SUB SECTION (untuk company)
+                    // build full subtree per plant
                     $plants = Plant::with('director')
-                        ->where('company', $company)->orderBy('name')->get();
+                        ->where('company', $company)
+                        ->orderBy('name')
+                        ->get();
 
                     $plantTrees = [];
                     foreach ($plants as $p) {
-                        // PLANT (tanpa ST/MT/LT)
                         $plantNode = [
                             'title'           => $p->name,
                             'person'          => $fmtPerson($p->director ?? null),
@@ -569,9 +579,10 @@ class RtcController extends Controller
                             'no_plans'        => true,
                         ];
 
-                        // DIVISION
                         $divs = Division::with(['gm', 'short', 'mid', 'long'])
-                            ->where('plant_id', $p->id)->orderBy('name')->get();
+                            ->where('plant_id', $p->id)
+                            ->orderBy('name')
+                            ->get();
 
                         foreach ($divs as $d) {
                             RtcHelper::setAreaContext('division', $d->id);
@@ -586,9 +597,10 @@ class RtcController extends Controller
                                 'skipManagerNode' => false,
                             ];
 
-                            // DEPARTMENT
                             $depts = Department::with(['manager', 'short', 'mid', 'long'])
-                                ->where('division_id', $d->id)->orderBy('name')->get();
+                                ->where('division_id', $d->id)
+                                ->orderBy('name')
+                                ->get();
 
                             foreach ($depts as $dept) {
                                 RtcHelper::setAreaContext('department', $dept->id);
@@ -603,9 +615,10 @@ class RtcController extends Controller
                                     'skipManagerNode' => false,
                                 ];
 
-                                // SECTION
                                 $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
-                                    ->where('department_id', $dept->id)->orderBy('name')->get();
+                                    ->where('department_id', $dept->id)
+                                    ->orderBy('name')
+                                    ->get();
 
                                 foreach ($secs as $s) {
                                     RtcHelper::setAreaContext('section', $s->id);
@@ -620,9 +633,10 @@ class RtcController extends Controller
                                         'skipManagerNode' => false,
                                     ];
 
-                                    // SUB SECTION
                                     $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
-                                        ->where('section_id', $s->id)->orderBy('name')->get();
+                                        ->where('section_id', $s->id)
+                                        ->orderBy('name')
+                                        ->get();
 
                                     foreach ($subs as $sub) {
                                         RtcHelper::setAreaContext('sub_section', $sub->id);
@@ -650,42 +664,50 @@ class RtcController extends Controller
                         $plantTrees[] = $plantNode;
                     }
 
-                    // dua kepala (tanpa kandidat)
-                    $managers = [
-                        [
-                            'title'           => 'PRESIDENT',
-                            'person'          => $fmtPerson($president),
-                            'shortTerm'       => null,
-                            'midTerm'         => null,
-                            'longTerm'        => null,
-                            'colorClass'      => 'color-2',
-                            'supervisors'     => $plantTrees,   // subtree bersama dimulai dari PLANT
-                            'skipManagerNode' => false,
-                            'no_plans'        => true,          // hilangkan S/T M/T L/T
-                        ],
-                        [
-                            'title'           => 'VPD',
-                            'person'          => $fmtPerson($vpd),
-                            'shortTerm'       => null,
-                            'midTerm'         => null,
-                            'longTerm'        => null,
-                            'colorClass'      => 'color-3',
-                            'supervisors'     => [],            // anaknya di-link/di-share oleh group di blade
-                            'skipManagerNode' => false,
-                            'no_plans'        => true,
-                        ],
+                    // PRESIDENT node (punya subtree plants)
+                    $presidentNode = [
+                        'title'           => 'PRESIDENT',
+                        'person'          => $fmtPerson($president),
+                        'shortTerm'       => null,
+                        'midTerm'         => null,
+                        'longTerm'        => null,
+                        'colorClass'      => 'color-2',
+                        'supervisors'     => $plantTrees, // turunannya
+                        'skipManagerNode' => false,
+                        'no_plans'        => true,
                     ];
 
+                    // VPD node (tidak punya subtree, cuma tampil samping presiden)
+                    $vpdNode = [
+                        'title'           => 'VPD',
+                        'person'          => $fmtPerson($vpd),
+                        'shortTerm'       => null,
+                        'midTerm'         => null,
+                        'longTerm'        => null,
+                        'colorClass'      => 'color-3',
+                        'supervisors'     => [],
+                        'skipManagerNode' => false,
+                        'no_plans'        => true,
+                    ];
+
+                    // ini phantom parent = perusahaan
                     $main = [
-                        'title'      => '',
-                        'person'     => null,
-                        'shortTerm'  => null,
-                        'midTerm'    => null,
-                        'longTerm'   => null,
-                        'colorClass' => 'color-1',
+                        'title'           => $companyDisplay, // "AII", "AIIA"
+                        'person'          => null,
+                        'shortTerm'       => null,
+                        'midTerm'         => null,
+                        'longTerm'        => null,
+                        'colorClass'      => 'color-1', // boleh apa aja, nanti kita override template phantom
+                        'phantom'         => true,      // FLAG penting utk blade
                     ];
 
-                    return view('website.rtc.detail', compact('main', 'managers', 'title', 'hideMainPlans', 'noRoot', 'groupTop'));
+                    // anak langsung dari phantom parent
+                    $managers = [
+                        $presidentNode,
+                        $vpdNode,
+                    ];
+
+                    break;
                 }
 
                 /* ============================= PLANT (FULL SUBTREE) ============================= */
@@ -694,7 +716,7 @@ class RtcController extends Controller
 
                     $p = Plant::with('director')->findOrFail($id);
                     $title = $p->name ?? 'Plant';
-                    $hideMainPlans = true; // root plant tanpa S/T M/T L/T
+                    $hideMainPlans = true;
 
                     $main = [
                         'title'      => $p->name ?? '-',
@@ -863,17 +885,6 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    $container = [
-                        'title'           => $d->name,
-                        'person'          => RtcHelper::formatPerson($d->manager),
-                        'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
-                        'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
-                        'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
-                        'colorClass'      => $mainColor,
-                        'supervisors'     => [],
-                        'skipManagerNode' => true,
-                    ];
-
                     $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
                         ->where('department_id', $d->id)->orderBy('name')->get();
 
@@ -889,7 +900,63 @@ class RtcController extends Controller
                         ];
                     }
 
-                    $managers[] = $container;
+                    $managers = [];
+
+                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                        ->where('department_id', $d->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    foreach ($secs as $s) {
+                        RtcHelper::setAreaContext('section', $s->id);
+
+                        $managers[] = [
+                            'title'           => $s->name,
+                            'person'          => RtcHelper::formatPerson($s->supervisor),
+                            'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                            'colorClass'      => $mainColor,
+                            'supervisors'     => [],
+                            'skipManagerNode' => false,
+                        ];
+                    }
+
+                    foreach ($secs as $s) {
+                        RtcHelper::setAreaContext('section', $s->id);
+
+                        $subNodes = [];
+                        $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                            ->where('section_id', $s->id)
+                            ->orderBy('name')
+                            ->get();
+
+                        foreach ($subs as $sub) {
+                            RtcHelper::setAreaContext('sub_section', $sub->id);
+                            $subNodes[] = [
+                                'title'           => $sub->name,
+                                'person'          => RtcHelper::formatPerson($sub->leader),
+                                'shortTerm'       => RtcHelper::formatCandidate($sub->short, 'short'),
+                                'midTerm'         => RtcHelper::formatCandidate($sub->mid,   'mid'),
+                                'longTerm'        => RtcHelper::formatCandidate($sub->long,  'long'),
+                                'colorClass'      => $mainColor,
+                                'supervisors'     => [],
+                                'skipManagerNode' => false,
+                            ];
+                        }
+
+                        $managers[] = [
+                            'title'           => $s->name,
+                            'person'          => RtcHelper::formatPerson($s->supervisor),
+                            'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                            'colorClass'      => $mainColor,
+                            'supervisors'     => $subNodes, // <-- anak-anak di bawah Section
+                            'skipManagerNode' => false,
+                        ];
+                    }
+
                     break;
                 }
 
