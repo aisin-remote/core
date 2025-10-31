@@ -116,6 +116,12 @@
         .select2-selection__rendered {
             font-size: .875rem
         }
+
+        .locked-pos {
+            pointer-events: none;
+            background-color: #f9fafb !important;
+            color: #6b7280 !important;
+        }
     </style>
 @endpush
 
@@ -167,7 +173,7 @@
                                 disabled>
                             <input type="hidden" name="employee_id" value="{{ $employee->id }}">
 
-                            <input type="hidden" name="employee_current_code" value="{{ $currentRtcCode }}">
+                            <input type="hidden" name="employee_current_position" value="{{ $employee->position }}">
                         </div>
 
                         <div class="col-12">
@@ -177,19 +183,20 @@
                                 <div class="text-danger small">{{ $message }}</div>
                             @enderror
                         </div>
+
                         <div class="col-md-6">
                             <label class="form-label fw-bold">Career Target</label>
                             <select name="career_target_code" id="career_target" class="form-select form-select-sm"
                                 required>
                                 <option value="">Select Position</option>
                                 @foreach ($rtcList as $rt)
-                                    <option value="{{ $rt['code'] }}" @selected(old('career_target_code') === $rt['code'])>
-                                        {{ $rt['position'] }} ({{ $rt['code'] }})
+                                    <option value="{{ $rt['position'] }}" @selected(old('career_target_code') === $rt['position'])>
+                                        {{ $rt['position'] }}
                                     </option>
                                 @endforeach
                             </select>
                             <small class="text-muted">
-                                Position tiap Stage hanya boleh antara posisi kamu sekarang sampai target karier.
+                                Stage terakhir harus sama dengan Career Target.
                             </small>
                             <div id="career-target-warn" class="text-danger small mt-1"></div>
                             @error('career_target_code')
@@ -232,7 +239,6 @@
         </div>
     </div>
 
-    {{-- TEMPLATE HTML UNTUK STAGE & DETAIL --}}
     @verbatim
         <template id="stage-template">
             <div class="stage-card">
@@ -257,7 +263,7 @@
                         <div class="col-md-4">
                             <label class="form-label fw-bold">Position</label>
                             <select class="form-select form-select-sm stage-position" name="stages[__S__][position_code]"
-                                required disabled>
+                                required>
                                 <option value="">Select Position</option>
                             </select>
                         </div>
@@ -344,16 +350,14 @@
         const DEPARTMENTS = @json($departments->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' — ' . $d->company])->values());
         const DIVISIONS = @json($divisions->map(fn($d) => ['v' => $d->name, 't' => $d->name . ' - ' . $d->company])->values());
         const TECHS = @json($technicalCompetencies->pluck('competency'));
-        const COMPANY = @json($employee->company_name);
         const GRADES = @json($grades->pluck('aisin_grade'));
+        const COMPANY = @json($employee->company_name);
 
-        // rtcList dari controller (urutan bawah -> atas)
         const RTC_LIST = @json($rtcList);
-        // buat ranking numerik
-        const RTC_RANK = Object.fromEntries(RTC_LIST.map((x, i) => [x.code.toUpperCase(), i]));
-
-        // posisi awal karyawan dalam kode RTC, contoh "AS", "AM", dll
-        const CURRENT_RTC_CODE = @json($currentRtcCode ?? null);
+        const RTC_RANK = Object.fromEntries(
+            RTC_LIST.map((x, i) => [String(x.position || '').toUpperCase(), i])
+        );
+        const CURRENT_POS_NAME = @json($currentPositionName ?? null);
 
         const DEFAULTS = {
             plan_year: (new Date()).getFullYear(),
@@ -362,20 +366,14 @@
 
         const HARD_MAX_STAGE = 10;
 
-        /* ===== helper warning career target ===== */
         function showCareerTargetWarning(on) {
-            let warn = document.getElementById('career-target-warn');
-            if (!warn) {
-                warn = document.createElement('div');
-                warn.id = 'career-target-warn';
-                warn.className = 'text-danger small mt-1';
-                const careerWrapper = document.getElementById('career_target').closest('.col-md-6');
-                careerWrapper.appendChild(warn);
-            }
-            warn.textContent = on ? 'Please select Career Target first before choosing Date Target.' : '';
+            const warn = document.getElementById('career-target-warn');
+            if (!warn) return;
+            warn.textContent = on ?
+                'Please select Career Target first before choosing Date Target.' :
+                '';
         }
 
-        /* ====== util select2 utk technical skills ====== */
         function initTechSelects(scope, techListOverride = null) {
             const base = (techListOverride ?? TECHS ?? []).map(t => ({
                 id: String(t),
@@ -384,7 +382,6 @@
 
             $(scope).find('.tech-select').each(function() {
                 const $el = $(this);
-
                 const oldVal = $el.val();
 
                 if ($el.hasClass('select2-hidden-accessible')) {
@@ -392,7 +389,6 @@
                 }
 
                 $el.empty();
-
                 $el.append(new Option('', '', true, false));
 
                 base.forEach(optData => {
@@ -426,9 +422,7 @@
                         const existsInDom = $el.find('option').toArray().some(o =>
                             o.text.toLowerCase() === term.toLowerCase()
                         );
-                        if (existsInBase || existsInDom) {
-                            return null;
-                        }
+                        if (existsInBase || existsInDom) return null;
 
                         return {
                             id: term,
@@ -437,9 +431,7 @@
                         };
                     },
                     templateResult: function(data) {
-                        if (data.isNew) {
-                            return $('<span>').text('Add: ' + data.text);
-                        }
+                        if (data.isNew) return $('<span>').text('Add: ' + data.text);
                         return data.text;
                     }
                 });
@@ -456,7 +448,6 @@
             });
         }
 
-        /* ====== isi dropdown Job Function (gabungan dept/division) ====== */
         function fillJobs(selectEl) {
             selectEl.innerHTML = '';
             const ph = document.createElement('option');
@@ -483,55 +474,41 @@
             makeGroup('Divisions', DIVISIONS, 'division');
         }
 
-        /**
-         * Batasi posisi sesuai range [posisi sekarang .. career target]
-         * RTC_RANK makin besar = makin tinggi
-         */
-        function fillPositionsRanged(selectEl, minCode, maxCode) {
+        function fillPositionsRanged(selectEl, minPosName, maxPosName) {
             selectEl.innerHTML = '<option value="">Select Position</option>';
 
             if (
-                !minCode || !maxCode ||
-                !(minCode.toUpperCase() in RTC_RANK) ||
-                !(maxCode.toUpperCase() in RTC_RANK)
+                !minPosName || !maxPosName ||
+                !(minPosName.toUpperCase() in RTC_RANK) ||
+                !(maxPosName.toUpperCase() in RTC_RANK)
             ) {
-                selectEl.disabled = true;
                 return;
             }
 
-            const minRank = RTC_RANK[minCode.toUpperCase()];
-            const maxRank = RTC_RANK[maxCode.toUpperCase()];
-            const low = Math.min(minRank, maxRank);
-            const high = Math.max(minRank, maxRank);
+            const lowRank = RTC_RANK[minPosName.toUpperCase()];
+            const highRank = RTC_RANK[maxPosName.toUpperCase()];
+            const start = Math.min(lowRank, highRank);
+            const end = Math.max(lowRank, highRank);
 
-            RTC_LIST.forEach(rt => {
-                const r = RTC_RANK[rt.code.toUpperCase()];
-                if (r >= low && r <= high) {
+            RTC_LIST.forEach((rt, idx) => {
+                if (idx >= start && idx <= end) {
                     const opt = document.createElement('option');
-                    opt.value = rt.code;
-                    opt.textContent = `${rt.position} (${rt.code})`;
+                    opt.value = rt.position;
+                    opt.textContent = rt.position;
                     selectEl.appendChild(opt);
                 }
             });
-
-            selectEl.disabled = false;
         }
 
-        /* ====== isi Level dari GRADES (aisin_grade) ====== */
         function fillGrades(selectEl, selected = "") {
             selectEl.innerHTML = '<option value="">-- Select Level --</option>';
-
             GRADES.forEach(g => {
                 const opt = document.createElement('option');
                 opt.value = g;
                 opt.textContent = g;
-                if (g === selected) {
-                    opt.selected = true;
-                }
+                if (g === selected) opt.selected = true;
                 selectEl.appendChild(opt);
             });
-
-            selectEl.disabled = false;
         }
 
         const getStageCards = () => [...document.querySelectorAll('.stage-card')];
@@ -567,8 +544,6 @@
                 applyTheme(stage, sIdx);
             });
 
-            // tahun stage otomatis:
-            // stage-0 = tahun sekarang + 1
             const startYear = DEFAULTS.plan_year + 1;
             getStageCards().forEach((stage, i) => {
                 const yearInput = stage.querySelector('.stage-year');
@@ -648,14 +623,12 @@
             const jobSel = stage.querySelector('.stage-job');
             const posSel = stage.querySelector('.stage-position');
             const lvlSel = stage.querySelector('.stage-level');
+            const yearInput = stage.querySelector('.stage-year');
             const careerSelect = document.getElementById('career_target');
 
             fillJobs(jobSel);
-
-            // isi Level dropdown dari GRADES
             fillGrades(lvlSel);
 
-            // hidden job_source
             let jobSrc = stage.querySelector('.job-source');
             if (!jobSrc) {
                 jobSrc = document.createElement('input');
@@ -665,8 +638,6 @@
                 stage.appendChild(jobSrc);
             }
 
-            // set year otomatis
-            const yearInput = stage.querySelector('.stage-year');
             yearInput.readOnly = true;
             yearInput.value = (DEFAULTS.plan_year + 1) + idx;
 
@@ -677,17 +648,14 @@
                 forceLastStagePositionToCareerTarget();
             });
 
-            // add detail row
             stage.querySelector('.btn-add-detail').addEventListener('click', () => addDetail(stage));
-
-            // ketika Position diubah -> sekarang level TIDAK difilter lagi.
+            addDetail(stage);
             posSel.addEventListener('change', () => {
                 if (!lvlSel.options.length) {
                     fillGrades(lvlSel);
                 }
             });
 
-            // saat Job Function berubah → load competency via AJAX
             stage._techList = [];
             jobSel.addEventListener('change', () => {
                 const opt = jobSel.options[jobSel.selectedIndex];
@@ -703,16 +671,11 @@
                 refreshStageTechs(stage, source, jobName);
             });
 
-            // tambahin 1 detail default
-            addDetail(stage);
-
-            // batasi Position sesuai target career yang sudah dipilih
             const careerVal = careerSelect.value;
             if (careerVal) {
-                fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerVal);
+                fillPositionsRanged(posSel, CURRENT_POS_NAME, careerVal);
             }
 
-            // auto-select job function karyawan saat ini kalau ada
             if (DEFAULTS.job_function) {
                 const match = [...jobSel.options].find(o => o.value === DEFAULTS.job_function);
                 if (match) {
@@ -727,7 +690,6 @@
             return stage;
         }
 
-        /* ====== kunci stage terakhir agar Position = Career Target ====== */
         function forceLastStagePositionToCareerTarget() {
             const stages = getStageCards();
             if (stages.length === 0) return;
@@ -739,23 +701,19 @@
             const posSel = lastStage.querySelector('.stage-position');
             const lvlSel = lastStage.querySelector('.stage-level');
 
-            // refill posisi range normal
-            fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerVal);
-
-            // pastikan career target code ada sebagai option. kalau belum, inject
+            fillPositionsRanged(posSel, CURRENT_POS_NAME, careerVal);
             if (![...posSel.options].some(o => o.value === careerVal)) {
                 const opt = document.createElement('option');
                 opt.value = careerVal;
-                const rtMeta = RTC_LIST.find(x => x.code === careerVal);
-                opt.textContent = rtMeta ? `${rtMeta.position} (${rtMeta.code})` : careerVal;
+                opt.textContent = careerVal;
                 posSel.appendChild(opt);
             }
 
-            // set value dan lock
             posSel.value = careerVal;
-            posSel.disabled = true;
+            posSel.classList.add('locked-pos');
+            posSel.setAttribute('data-locked', '1');
+            posSel.style.pointerEvents = 'none';
 
-            // level tidak dikunci - user boleh pilih grade yg sesuai target stage terakhir
             if (!lvlSel.options.length) {
                 fillGrades(lvlSel);
             }
@@ -767,7 +725,6 @@
             const careerSelect = document.getElementById('career_target');
             const careerVal = careerSelect.value;
 
-            // Career target wajib
             if (!careerVal) {
                 container.innerHTML = '';
                 showCareerTargetWarning(true);
@@ -785,11 +742,7 @@
             const currentYear = DEFAULTS.plan_year;
             const targetYear = Number(val.split('-')[0]);
 
-            // contoh:
-            // sekarang 2025, target 2028
-            // diff = 3 → stage utk 2026,27,28
             let diff = targetYear - currentYear;
-
             if (diff < 1) diff = 1;
             if (diff > HARD_MAX_STAGE) diff = HARD_MAX_STAGE;
 
@@ -815,14 +768,12 @@
                 return;
             }
 
-            // career target wajib
             const careerVal = document.getElementById('career_target').value;
             if (!careerVal) {
                 Swal.fire('Oops', 'Please select Career Target.', 'warning');
                 return;
             }
 
-            // stage terakhir harus sama dengan career target
             const lastStage = stages[stages.length - 1];
             const lastPosSel = lastStage.querySelector('.stage-position');
             const lastPosVal = lastPosSel ? lastPosSel.value : '';
@@ -836,7 +787,6 @@
                 return;
             }
 
-            // cek tiap stage punya minimal 1 detail
             for (const stage of stages) {
                 const cnt = stage.querySelectorAll('.details-container .detail-row').length;
                 if (cnt === 0) {
@@ -849,7 +799,7 @@
                 el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
             });
 
-            // ==== Kirim AJAX ====
+
             const fd = new FormData(formEl);
 
             submitBtn.disabled = true;
@@ -931,17 +881,17 @@
 
             careerSelect.addEventListener('change', () => {
                 const career = careerSelect.value;
-
                 showCareerTargetWarning(!career);
-
                 getStageCards().forEach(stage => {
                     const posSel = stage.querySelector('.stage-position');
                     const lvlSel = stage.querySelector('.stage-level');
 
-                    fillPositionsRanged(posSel, CURRENT_RTC_CODE, career);
+                    posSel.classList.remove('locked-pos');
+                    posSel.style.pointerEvents = '';
+
+                    fillPositionsRanged(posSel, CURRENT_POS_NAME, career);
 
                     posSel.value = '';
-                    posSel.disabled = false;
                     fillGrades(lvlSel, "");
                 });
 

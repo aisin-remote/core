@@ -378,12 +378,14 @@ class IcpController extends Controller
                 $q->where(function ($qq) use ($deptId, $divId) {
                     if ($deptId) {
                         $qq->orWhere(function ($x) use ($deptId) {
-                            $x->whereNotNull('dept_id')->where('dept_id', $deptId);
+                            $x->whereNotNull('dept_id')
+                                ->where('dept_id', $deptId);
                         });
                     }
                     if ($divId) {
                         $qq->orWhere(function ($x) use ($divId) {
-                            $x->whereNotNull('divs_id')->where('divs_id', $divId);
+                            $x->whereNotNull('divs_id')
+                                ->where('divs_id', $divId);
                         });
                     }
                 });
@@ -395,26 +397,31 @@ class IcpController extends Controller
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
         $currentYear = now()->year;
-        $rtcMap = RtcTarget::mapAll();
+        $rtcMap  = RtcTarget::mapAll();
         $rtcList = collect(RtcTarget::order())
             ->map(function ($code) use ($rtcMap) {
                 return [
                     'code'     => $code,
                     'position' => $rtcMap[$code]['position'] ?? $code,
-                    'levels'   => $rtcMap[$code]['levels']   ?? [],
                 ];
             })
+            ->unique('position')
             ->values();
+
+        $currentCodeGuess = RtcTarget::codeFromPositionName($employee->position);
+        if ($currentCodeGuess) {
+            $map = RtcTarget::map($currentCodeGuess);
+            $currentPositionName = $map['position'] ?? $employee->position;
+        } else {
+            $currentPositionName = $employee->position;
+        }
 
         $defaultStages = [
             [
-                'year'           => $currentYear,
-                'position_code'  => null,
-                'level'          => null,
+                'year'          => $currentYear,
+                'position_code' => null,
             ],
         ];
-
-        $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
 
         return view('website.icp.create', compact(
             'title',
@@ -429,7 +436,7 @@ class IcpController extends Controller
             'deptId',
             'divId',
             'rtcList',
-            'currentRtcCode',
+            'currentPositionName',
             'currentYear',
             'defaultStages'
         ));
@@ -441,53 +448,64 @@ class IcpController extends Controller
 
         DB::beginTransaction();
         try {
-            // Simpan HEADER ICP
             $icp = Icp::create([
-                'employee_id' => $data['employee_id'],
-                'aspiration' => $data['aspiration'],
-                'career_target' => $data['career_target_code'],
-                'date' => $data['date'],
-                'status' => Icp::STATUS_DRAFT, // 4
+                'employee_id'    => $data['employee_id'],
+                'aspiration'     => $data['aspiration'],
+                'career_target'  => $data['career_target_code'],
+                'date'           => $data['date'],
+                'status'         => Icp::STATUS_DRAFT,
             ]);
 
             if (method_exists($this, 'seedStepsForIcp')) {
                 $this->seedStepsForIcp($icp);
             }
 
-            foreach ($data['stages'] as $stage) {
-                $year = (int) $stage['year'];
-                $job = $stage['job_function'];
-                $jobSource = $stage['job_source'] ?? null;
-                $pos = $stage['position_code'];
-                $level = $stage['level'];
+            foreach ($data['stages'] as $idx => $stage) {
+                $year       = (int) ($stage['year'] ?? null);
+                $job        = $stage['job_function'] ?? null;
+                $jobSource  = $stage['job_source'] ?? null;
+                $level      = $stage['level'] ?? null;
+
+                $effectivePos = $stage['_effective_position'] ?? ($stage['position_code'] ?? null);
 
                 $rows = [];
                 foreach ($stage['details'] as $d) {
                     $rows[] = [
-                        'icp_id' => $icp->id,
-                        'plan_year' => $year,
-                        'job_function' => $job,
-                        'job_source' => $jobSource,
-                        'position' => $pos,
-                        'level' => $level,
-                        'current_technical' => $d['current_technical'],
-                        'current_nontechnical' => $d['current_nontechnical'],
-                        'required_technical' => $d['required_technical'],
-                        'required_nontechnical' => $d['required_nontechnical'],
-                        'development_technical' => $d['development_technical'],
-                        'development_nontechnical' => $d['development_nontechnical'],
+                        'icp_id'                    => $icp->id,
+                        'plan_year'                 => $year,
+                        'job_function'              => $job,
+                        'job_source'                => $jobSource,
+
+                        'position'                  => $effectivePos,
+                        'level'                     => $level,
+
+                        'current_technical'         => $d['current_technical']        ?? null,
+                        'current_nontechnical'      => $d['current_nontechnical']     ?? null,
+
+                        'required_technical'        => $d['required_technical']       ?? null,
+                        'required_nontechnical'     => $d['required_nontechnical']    ?? null,
+
+                        'development_technical'     => $d['development_technical']    ?? null,
+                        'development_nontechnical'  => $d['development_nontechnical'] ?? null,
                     ];
                 }
 
-                $icp->details()->createMany($rows);
+                if (count($rows)) {
+                    $icp->details()->createMany($rows);
+                }
             }
 
             DB::commit();
 
-            return redirect()->route('icp.assign')->with('success', 'Data ICP berhasil disimpan.');
+            return redirect()
+                ->route('icp.assign')
+                ->with('success', 'Data ICP berhasil disimpan.');
         } catch (\Throwable $e) {
             DB::rollBack();
-            return redirect()->back()->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
+
+            return redirect()
+                ->back()
+                ->with('error', 'Gagal menambahkan data ICP: ' . $e->getMessage());
         }
     }
 
