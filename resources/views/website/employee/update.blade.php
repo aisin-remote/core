@@ -8,7 +8,7 @@
     {{ $title ?? 'Employee' }}
 @endsection
 
-@push('styles')
+@push('custom-css')
     <style>
         /* Kartu kiri nempel saat scroll */
         .sticky-card {
@@ -32,6 +32,15 @@
 
         .section-actions .btn {
             padding: .25rem .5rem
+        }
+
+        /* checkerboard utk gambar transparan signature */
+        .signature-wrap {
+            background:
+                conic-gradient(#0000 90deg, #f1f5f9 0 180deg, #0000 0) 0 0 / 12px 12px,
+                conic-gradient(#0000 90deg, #e2e8f0 0 180deg, #0000 0) 6px 6px / 12px 12px;
+            border-radius: .5rem;
+            padding: .5rem;
         }
     </style>
 @endpush
@@ -74,19 +83,30 @@
                                 <h3 class="fw-bold m-0">Profile Details</h3>
                             </div>
                         </div>
+
                         <form id="kt_account_profile_details_form" class="form fv-plugins-bootstrap5 fv-plugins-framework"
                             action="{{ route('employee.update', $employee->id) }}" method="POST"
                             enctype="multipart/form-data" novalidate="novalidate">
                             @csrf
                             @method('PUT')
+
                             <div id="kt_account_settings_profile_details" class="collapse show">
                                 <div class="card border-top rounded-4 p-9">
+
+                                    {{-- Avatar --}}
                                     <div class="col-lg-12 text-center mb-8">
+                                        @php
+                                            $photoUrl = $employee->photo
+                                                ? asset('storage/' . $employee->photo)
+                                                : asset('/metronic8/demo1/assets/media/svg/avatars/blank.svg');
+                                        @endphp
+
                                         <div class="image-input image-input-outline" data-kt-image-input="true"
-                                            style="background-image: url('/metronic8/demo1/assets/media/svg/avatars/blank.svg')">
+                                            style="background-image: url('{{ asset('/metronic8/demo1/assets/media/svg/avatars/blank.svg') }}')">
                                             <div class="image-input-wrapper"
-                                                style="background-image: url('{{ $employee->photo ? asset('storage/' . $employee->photo) : '/metronic8/demo1/assets/media/svg/avatars/blank.svg' }}'); height: 150px">
+                                                style="background-image: url('{{ $photoUrl }}'); height: 150px">
                                             </div>
+
                                             <label
                                                 class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                                 data-kt-image-input-action="change" data-bs-toggle="tooltip"
@@ -96,6 +116,7 @@
                                                     id="photoInput">
                                                 <input type="hidden" name="photo_remove">
                                             </label>
+
                                             <span
                                                 class="btn btn-icon btn-circle btn-active-color-primary w-25px h-25px bg-body shadow"
                                                 data-kt-image-input-action="remove" data-bs-toggle="tooltip"
@@ -103,6 +124,7 @@
                                                 <i class="fa fa-times fs-2"></i>
                                             </span>
                                         </div>
+
                                         <div class="form-text text-warning">
                                             <i class="bi bi-info-circle"></i> Format yang diizinkan: PNG, JPG, JPEG.
                                         </div>
@@ -115,7 +137,7 @@
                                         @enderror
                                     </div>
 
-                                    <!-- Details Section -->
+                                    {{-- Profile fields --}}
                                     <div class="mt-4">
                                         <div class="mt-2">
                                             <div class="row">
@@ -128,6 +150,7 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">NPK</label>
                                                     <input type="text" name="npk"
@@ -137,6 +160,7 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Gender</label>
                                                     <input type="text" name="gender"
@@ -147,16 +171,17 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Birthday Date</label>
                                                     <input type="date" name="birthday_date"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Birthday Date"
                                                         value="{{ old('birthday_date', $employee->birthday_date) }}">
                                                     @error('birthday_date')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 @php
                                                     $age = $employee->birthday_date
                                                         ? Carbon\Carbon::parse($employee->birthday_date)->age
@@ -168,34 +193,40 @@
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Age" value="{{ $age }}">
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Email</label>
                                                     <input type="text" name="email"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Email" value="{{ $employee->user->email ?? '-' }}">
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Phone Number</label>
                                                     <input type="number" id="phone_number" name="phone_number"
                                                         class="form-control form-control-sm form-control-solid"
                                                         placeholder="Phone Number" value="{{ $employee->phone_number }}">
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Name</label>
-                                                    <select name="company_name" class="form-select form-select-sm"
-                                                        data-control="select2">
+                                                    <select name="company_name"
+                                                        class="form-select form-select-sm select2-basic">
                                                         <option value="">-- Pilih Perusahaan --</option>
                                                         <option value="AII"
                                                             {{ old('company_name', $employee->company_name) == 'AII' ? 'selected' : '' }}>
-                                                            Aisin Indonesia</option>
+                                                            Aisin Indonesia
+                                                        </option>
                                                         <option value="AIIA"
                                                             {{ old('company_name', $employee->company_name) == 'AIIA' ? 'selected' : '' }}>
-                                                            Aisin Indonesia Automotive</option>
+                                                            Aisin Indonesia Automotive
+                                                        </option>
                                                     </select>
                                                     @error('company_name')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Company Group</label>
                                                     <input type="text" name="company_group"
@@ -206,31 +237,32 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Join Date</label>
                                                     <input type="date" name="aisin_entry_date"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Join Date"
                                                         value="{{ old('aisin_entry_date', $employee->aisin_entry_date) }}">
                                                     @error('aisin_entry_date')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Working Period</label>
                                                     <input type="text" name="working_period"
                                                         class="form-control form-control-sm form-control-solid"
-                                                        placeholder="Wokring Period"
+                                                        placeholder="Working Period"
                                                         value="{{ old('working_period', $employee->working_period) }}">
                                                     @error('working_period')
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
+
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Position</label>
                                                     <select name="position" id="position-select"
-                                                        class="form-select form-select-sm fw-semibold"
-                                                        data-control="select2">
+                                                        class="form-select form-select-sm fw-semibold select2-basic">
                                                         <option value="">Select Position</option>
                                                         @php
                                                             $positions = [
@@ -271,14 +303,14 @@
                                                 <div id="subsection-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Sub Section</label>
                                                     <select name="sub_section_id"
-                                                        class="form-select form-select-sm fw-semibold"
-                                                        data-control="select2">
+                                                        class="form-select form-select-sm fw-semibold select2-org-scope"
+                                                        data-placeholder="Cari Sub Section">
                                                         <option value="">Pilih Sub Section</option>
                                                         @foreach ($subSections as $subSection)
                                                             <option value="{{ $subSection->id }}"
                                                                 {{ old('sub_section_id', $employee->subSection->id ?? '') == $subSection->id ? 'selected' : '' }}>
-                                                                {{ $subSection->name }} -
-                                                                {{ $subSection->section->company }}
+                                                                [{{ $subSection->section->company }}]
+                                                                {{ $subSection->name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -291,13 +323,13 @@
                                                 <div id="section-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Section</label>
                                                     <select name="section_id"
-                                                        class="form-select form-select-sm fw-semibold"
-                                                        data-control="select2">
+                                                        class="form-select form-select-sm fw-semibold select2-org-scope"
+                                                        data-placeholder="Cari Section">
                                                         <option value="">Pilih Section</option>
                                                         @foreach ($sections as $section)
                                                             <option value="{{ $section->id }}"
                                                                 {{ old('section_id', (int) $employee->leadingSection?->id ?? '') == (int) $section->id ? 'selected' : '' }}>
-                                                                {{ $section->name }} - {{ $section->company }}
+                                                                [{{ $section->company }}] {{ $section->name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -310,13 +342,13 @@
                                                 <div id="department-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Department</label>
                                                     <select name="department_id"
-                                                        class="form-select form-select-sm fw-semibold"
-                                                        data-control="select2">
+                                                        class="form-select form-select-sm fw-semibold select2-org-scope"
+                                                        data-placeholder="Cari Department">
                                                         <option value="">Pilih Department</option>
                                                         @foreach ($departments as $department)
                                                             <option value="{{ $department->id }}"
                                                                 {{ old('department_id', (int) $employee->leadingDepartment?->id ?? '') == (int) $department->id ? 'selected' : '' }}>
-                                                                {{ $department->name }} - {{ $department->company }}
+                                                                [{{ $department->company }}] {{ $department->name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -329,13 +361,13 @@
                                                 <div id="division-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Division</label>
                                                     <select name="division_id"
-                                                        class="form-select form-select-sm fw-semibold"
-                                                        data-control="select2">
+                                                        class="form-select form-select-sm fw-semibold select2-org-scope"
+                                                        data-placeholder="Cari Division">
                                                         <option value="">Pilih Division</option>
                                                         @foreach ($divisions as $division)
                                                             <option value="{{ $division->id }}"
                                                                 {{ old('division_id', $employee->leadingDivision?->id ?? '') == $division->id ? 'selected' : '' }}>
-                                                                {{ $division->name }} - {{ $division->company }}
+                                                                [{{ $division->company }}] {{ $division->name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -347,13 +379,14 @@
                                                 {{-- Plant --}}
                                                 <div id="plant-group" class="col-12 mb-8 d-none">
                                                     <label class="form-label fw-bold fs-6">Plant</label>
-                                                    <select name="plant_id" class="form-select form-select-sm fw-semibold"
-                                                        data-control="select2">
+                                                    <select name="plant_id"
+                                                        class="form-select form-select-sm fw-semibold select2-org-scope"
+                                                        data-placeholder="Cari Plant">
                                                         <option value="">Pilih Plant</option>
                                                         @foreach ($plants as $plant)
                                                             <option value="{{ $plant->id }}"
                                                                 {{ old('plant_id', $employee->plant->id ?? '') == $plant->id ? 'selected' : '' }}>
-                                                                {{ $plant->name }} - {{ $plant->company }}
+                                                                [{{ $plant->company }}] {{ $plant->name }}
                                                             </option>
                                                         @endforeach
                                                     </select>
@@ -365,7 +398,8 @@
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Aisin Grade</label>
                                                     <select name="grade"
-                                                        class="form-control form-control-sm form-control-solid" required>
+                                                        class="form-control form-control-sm form-control-solid select2-basic"
+                                                        required>
                                                         <option value="">-- Select Grade --</option>
                                                         @foreach ($grade as $g)
                                                             <option value="{{ $g->aisin_grade }}"
@@ -386,19 +420,23 @@
                                                         placeholder="Grade" value="{{ $employee->astra_grade }}">
                                                 </div>
 
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <button type="submit" class="btn btn-primary mt-2"><i class="bi bi-save"></i> Save
-                                        Changes</button>
+                                            </div> {{-- row --}}
+                                        </div> {{-- mt-2 --}}
+                                    </div> {{-- mt-4 --}}
+
+                                    <button type="submit" class="btn btn-primary mt-2">
+                                        <i class="bi bi-save"></i> Save Changes
+                                    </button>
                                 </div>
                             </div>
                         </form>
                     </div>
                 </div>
-                <!-- Card 1: Educational Background -->
-                <div class="col-8">
+
+                <!-- Right side col -->
+                <div class="col-12 col-lg-8">
                     <div class="row">
+                        {{-- Educational Background --}}
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
                                 <div
@@ -419,9 +457,8 @@
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        @php
-                                            $totalEducation = $educations->count();
-                                        @endphp
+
+                                        @php $totalEducation = $educations->count(); @endphp
 
                                         @if ($totalEducation > 0)
                                             @foreach ($educations->take(3) as $education)
@@ -434,17 +471,20 @@
                                                             class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
                                                             <span>{{ $education->institute }}</span>
                                                             <span class="text-muted fs-7">
-                                                                [{{ $education->start_date ? \Carbon\Carbon::parse($education->start_date)->format('Y') . ' - ' : '' }}{{ $education->end_date ? \Carbon\Carbon::parse($education->end_date)->format('Y') : 'Present' }}]
+                                                                [
+                                                                {{ $education->start_date ? \Carbon\Carbon::parse($education->start_date)->format('Y') . ' - ' : '' }}
+                                                                {{ $education->end_date ? \Carbon\Carbon::parse($education->end_date)->format('Y') : 'Present' }}
+                                                                ]
                                                             </span>
                                                         </div>
                                                     </div>
+
                                                     <div class="d-flex gap-2">
                                                         <button class="btn btn-sm btn-light-warning edit-education-btn"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#editEducationModal{{ $education->id }}"
                                                             data-education-id="{{ $education->id }}">
                                                             <i class="fas fa-edit"></i>
-                                                        </button>
                                                         </button>
                                                         <button class="btn btn-sm btn-light-danger delete-education-btn"
                                                             data-bs-toggle="modal"
@@ -453,7 +493,6 @@
                                                         </button>
                                                     </div>
                                                 </div>
-
 
                                                 @if (!$loop->last)
                                                     <div class="separator separator-dashed my-3"></div>
@@ -464,28 +503,24 @@
                                                 No education data available.
                                             </div>
                                         @endif
+
                                     </div>
                                 </div>
                             </div>
 
+                            {{-- Modals for education --}}
+                            @include('website.modal.education.detail')
+                            @include('website.modal.education.create', ['employee_id' => $employee->id])
+
+                            @foreach ($educations as $education)
+                                @include('website.modal.education.update', ['education' => $education])
+                                @include('website.modal.education.delete', ['education' => $education])
+                            @endforeach
                         </div>
-
-                        {{-- === Modal Detail Education (hanya 1 modal statis, bukan per-id) === --}}
-                        @include('website.modal.education.detail')
-
-                        {{-- === Modal Create Education === --}}
-                        @include('website.modal.education.create', ['employee_id' => $employee->id])
-
-                        {{-- === Loop untuk modal update dan delete agar tidak ikut terbatas 3 data === --}}
-                        @foreach ($educations as $education)
-                            @include('website.modal.education.update', ['education' => $education])
-                            @include('website.modal.education.delete', ['education' => $education])
-                        @endforeach
-
-                        {{-- end of modal education --}}
                     </div>
+
                     <div class="row">
-                        <!-- Working Experience -->
+                        {{-- Working Experience --}}
                         <div class="col-md-12">
                             <div class="card mb-5 mb-xl-10">
                                 <div
@@ -497,6 +532,7 @@
                                             data-bs-target="#addExperienceModal">
                                             <i class="fas fa-plus"></i> Add
                                         </button>
+
                                         <button class="btn btn-sm btn-info" data-bs-toggle="modal"
                                             data-bs-target="#allExperienceDetailModal">
                                             <i class="fas fa-info"></i> Detail
@@ -506,9 +542,8 @@
 
                                 <div id="kt_activity_year" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        @php
-                                            $experienceCount = $workExperiences->count();
-                                        @endphp
+
+                                        @php $experienceCount = $workExperiences->count(); @endphp
 
                                         @if ($experienceCount > 0)
                                             @foreach ($workExperiences->take(3) as $experience)
@@ -517,37 +552,37 @@
                                                         <div class="fs-6 fw-bold mb-2">{{ $experience->department }}</div>
                                                         <div
                                                             class="fw-semibold text-gray-600 d-flex flex-wrap align-items-center gap-2">
-                                                            {{-- <span>{{ $experience->position }}</span> --}}
                                                             <span class="text-muted fs-7">
-                                                                [{{ \Carbon\Carbon::parse($experience->start_date)->format('Y') }}
+                                                                [
+                                                                {{ \Carbon\Carbon::parse($experience->start_date)->format('Y') }}
                                                                 -
-                                                                {{ $experience->end_date ? \Carbon\Carbon::parse($experience->end_date)->format('Y') : 'Present' }}]
+                                                                {{ $experience->end_date ? \Carbon\Carbon::parse($experience->end_date)->format('Y') : 'Present' }}
+                                                                ]
                                                             </span>
                                                         </div>
                                                     </div>
+
                                                     <div class="d-flex gap-2">
                                                         <button class="btn btn-sm btn-light-primary"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#experienceModal{{ $experience->id }}">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
+
                                                         <button class="btn btn-sm btn-light-warning edit-experience-btn"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#editExperienceModal{{ $experience->id }}"
                                                             data-experience-id="{{ $experience->id }}">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
+
                                                         <button class="btn btn-sm btn-light-danger delete-experience-btn"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#deleteExperienceModal{{ $experience->id }}">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </button>
-
                                                     </div>
                                                 </div>
-
-
-
 
                                                 @if (!$loop->last)
                                                     <div class="separator separator-dashed my-3"></div>
@@ -558,27 +593,25 @@
                                                 No work experience data available.
                                             </div>
                                         @endif
+
                                     </div>
                                 </div>
                             </div>
+
+                            {{-- Work Experience Modals --}}
+                            @include('website.modal.work.create', ['employee_id' => $employee->id])
+                            @include('website.modal.work.all_detail')
+
+                            @foreach ($workExperiences as $experience)
+                                @include('website.modal.work.detail', ['experience' => $experience])
+                                @include('website.modal.work.update', ['experience' => $experience])
+                                @include('website.modal.work.delete', ['experience' => $experience])
+                            @endforeach
                         </div>
-
-                        {{-- work experience modal input --}}
-                        @include('website.modal.work.create', [
-                            'employee_id' => $employee->id,
-                        ])
-                        @include('website.modal.work.all_detail')
-                        {{-- Modal update, delete, dan detail untuk setiap experience --}}
-                        @foreach ($workExperiences as $experience)
-                            @include('website.modal.work.detail', ['experience' => $experience])
-                            @include('website.modal.work.update', ['experience' => $experience])
-                            @include('website.modal.work.delete', ['experience' => $experience])
-                        @endforeach
-
-                        {{-- end of work experience modal input --}}
                     </div>
+
                     <div class="row">
-                        <!-- Historical Performance Appraisal -->
+                        {{-- Historical Performance Appraisal --}}
                         <div class="col-md-12">
                             <div class="card mb-5">
                                 <div
@@ -590,6 +623,7 @@
                                             data-bs-target="#addAppraisalModal">
                                             <i class="fas fa-plus"></i> Add
                                         </button>
+
                                         <button class="btn btn-sm btn-info" data-bs-toggle="modal"
                                             data-bs-target="#alldetailAppraisalModal">
                                             <i class="fas fa-info"></i> Detail
@@ -599,9 +633,8 @@
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-                                        @php
-                                            $appraisalCount = $performanceAppraisals->count();
-                                        @endphp
+
+                                        @php $appraisalCount = $performanceAppraisals->count(); @endphp
 
                                         @if ($appraisalCount > 0)
                                             @foreach ($performanceAppraisals->take(3) as $appraisal)
@@ -612,24 +645,26 @@
                                                             {{ \Illuminate\Support\Carbon::parse($appraisal->date)->format('d M Y') }}
                                                         </div>
                                                     </div>
+
                                                     <div class="d-flex gap-2">
                                                         <button class="btn btn-sm btn-light-primary"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#detailModal{{ $appraisal->id }}">
                                                             <i class="fas fa-eye"></i>
                                                         </button>
+
                                                         <button class="btn btn-sm btn-light-warning"
                                                             data-bs-toggle="modal"
                                                             data-bs-target="#editAppraisalModal{{ $appraisal->id }}">
                                                             <i class="fas fa-edit"></i>
                                                         </button>
+
                                                         <button class="btn btn-sm btn-light-danger" data-bs-toggle="modal"
                                                             data-bs-target="#deleteAppraisalModal{{ $appraisal->id }}">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </button>
                                                     </div>
                                                 </div>
-
 
                                                 @if (!$loop->last)
                                                     <div class="separator separator-dashed my-3"></div>
@@ -640,27 +675,25 @@
                                                 No appraisal data available.
                                             </div>
                                         @endif
+
                                     </div>
                                 </div>
                             </div>
+
+                            {{-- Appraisal Modals --}}
+                            @include('website.modal.appraisal.create', ['employee_id' => $employee->id])
+                            @include('website.modal.appraisal.all_detail')
+
+                            @foreach ($performanceAppraisals as $appraisal)
+                                @include('website.modal.appraisal.detail', ['appraisal' => $appraisal])
+                                @include('website.modal.appraisal.update', ['appraisal' => $appraisal])
+                                @include('website.modal.appraisal.delete', ['appraisal' => $appraisal])
+                            @endforeach
                         </div>
-
-                        {{-- appraisal modal --}}
-                        @include('website.modal.appraisal.create', [
-                            'employee_id' => $employee->id,
-                        ])
-                        @include('website.modal.appraisal.all_detail')
-
-                        @foreach ($performanceAppraisals as $appraisal)
-                            @include('website.modal.appraisal.detail', ['appraisal' => $appraisal])
-                            @include('website.modal.appraisal.update', ['appraisal' => $appraisal])
-                            @include('website.modal.appraisal.delete', ['appraisal' => $appraisal])
-                        @endforeach
-                        {{-- end of appraisal modal --}}
                     </div>
 
                     <div class="row">
-                        <!-- Signature -->
+                        {{-- Signature --}}
                         <div class="col-md-12">
                             <div class="card mb-5">
                                 <div
@@ -675,54 +708,38 @@
 
                                 <div id="kt_account_settings_signin_method" class="collapse show">
                                     <div class="card-body border-top p-10">
-
-                                        @push('styles')
-                                            <style>
-                                                /* checkerboard utk gambar transparan */
-                                                .signature-wrap {
-                                                    background:
-                                                        conic-gradient(#0000 90deg, #f1f5f9 0 180deg, #0000 0) 0 0 / 12px 12px,
-                                                        conic-gradient(#0000 90deg, #e2e8f0 0 180deg, #0000 0) 6px 6px / 12px 12px;
-                                                    border-radius: .5rem;
-                                                    padding: .5rem;
-                                                }
-                                            </style>
-                                        @endpush
-
                                         @php
                                             $signatureUrl = $employee->signature_path
                                                 ? asset('storage/' . $employee->signature_path)
-                                                : '';
+                                                : null;
                                         @endphp
 
                                         <div id="signature-view" class="signature-wrap">
-                                            <img id="employee-signature-preview" src="{{ $signatureUrl ?: '' }}"
-                                                alt="Signature" class="img-thumbnail {{ $signatureUrl ? '' : 'd-none' }}"
-                                                style="max-height: 180px" />
-
-                                            <span id="signature-empty-state"
-                                                class="badge badge-lg badge-warning {{ $signatureUrl ? 'd-none' : '' }}">
-                                                Please add employee signature here immediately.
-                                            </span>
+                                            @if ($signatureUrl)
+                                                <img id="employee-signature-preview" src="{{ $signatureUrl }}"
+                                                    alt="Signature" class="img-thumbnail" style="max-height: 180px" />
+                                            @else
+                                                <span id="signature-empty-state" class="badge badge-lg badge-warning">
+                                                    Please add employee signature here immediately.
+                                                </span>
+                                            @endif
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        {{-- Modal untuk kelola tanda tangan --}}
+                        {{-- Signature Modals --}}
                         @include('website.modal.signature.index', [
                             'employee_id' => $employee->id,
                             'has_signature' => (bool) $employee->signature_path,
-                        ]);
-                        {{-- Modal untuk melihat tanda tangan --}}
+                        ])
                         @include('website.modal.signature.preview')
-                        {{-- end of Signature --}}
                     </div>
 
                     @if (auth()->user()->role == 'HRD')
                         <div class="row">
-                            <!-- Card 2: Historical Human Assets Value -->
+                            {{-- Historical Human Assets Value --}}
                             <div class="col-md-12">
                                 <div class="card mb-5 mb-xl-10">
                                     <div
@@ -730,6 +747,7 @@
                                         <div class="card-title m-0">
                                             <h3 class="fw-bolder m-0">Historical Human Assets Value</h3>
                                         </div>
+
                                         <div class="d-flex gap-3">
                                             <a class="btn btn-sm btn-info"
                                                 onclick="window.location.href='{{ route('hav.list', ['company' => $employee->company_name, 'npk' => $employee->npk]) }}'">
@@ -737,7 +755,6 @@
                                             </a>
                                         </div>
                                     </div>
-
 
                                     <div id="kt_account_human_assets" class="collapse show">
                                         <div class="card-body border-top p-10">
@@ -763,7 +780,6 @@
                                                 ];
                                             @endphp
 
-
                                             @if ($humanAssetsCount > 0)
                                                 @foreach ($humanAssets->take(3) as $asset)
                                                     <div class="d-flex flex-wrap align-items-center">
@@ -774,7 +790,6 @@
                                                                     {{ $asset['year'] }}
                                                                 </div>
                                                             </div>
-
                                                         </div>
                                                     </div>
 
@@ -794,17 +809,16 @@
                             </div>
                         </div>
                     @endif
-                </div>
-            </div>
+
+                </div> {{-- /col-lg-8 --}}
+            </div> {{-- /row g-5 --}}
 
             <div class="row">
-                <!-- Historical Astra  -->
+                {{-- Astra Training History --}}
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
-                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
-
+                            role="button">
                             <h3 class="fw-bolder m-0">Astra Training History</h3>
 
                             <div class="d-flex gap-2">
@@ -821,33 +835,25 @@
                         </div>
 
                         <div id="kt_account_settings_signin_method" class="collapse show">
-                            <div class="card-body border-top p-5    ">
-                                <!--begin::Table wrapper-->
+                            <div class="card-body border-top p-5">
                                 <div class="table-responsive">
-                                    <!--begin::Table-->
                                     <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
-                                        <!--begin::Thead-->
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
-
                                                 <th class="text-center">Year</th>
                                                 <th class="text-center">Program</th>
                                                 <th class="text-center">ICT/Project/Total</th>
                                                 <th class="text-center">Action</th>
                                             </tr>
                                         </thead>
-                                        <!--end::Thead-->
 
-                                        <!--begin::Tbody-->
                                         <tbody class="fw-6 fw-semibold text-gray-600">
                                             @forelse ($astraTrainings->take(3) as $astraTraining)
                                                 <tr>
-
                                                     <td class="text-center">
                                                         {{ \Illuminate\Support\Carbon::parse($astraTraining->date_end)->format('Y') }}
                                                     </td>
-                                                    <td class="text-center">{{ $astraTraining->program }}
-                                                    </td>
+                                                    <td class="text-center">{{ $astraTraining->program }}</td>
                                                     <td class="text-center">
                                                         {{ $astraTraining->ict_score }}/{{ $astraTraining->project_score }}/{{ $astraTraining->total_score }}
                                                     </td>
@@ -871,7 +877,6 @@
                                                 @include('website.modal.astra_training.update', [
                                                     'astraTraining' => $astraTraining,
                                                 ])
-
                                                 @include('website.modal.astra_training.delete', [
                                                     'astraTraining' => $astraTraining,
                                                 ])
@@ -883,34 +888,30 @@
                                         </tbody>
 
                                     </table>
-                                    <!--end::Table-->
                                 </div>
-                                <!--end::Table wrapper-->
                             </div>
                         </div>
                     </div>
+
+                    {{-- Astra Training Modals (global) --}}
+                    @include('website.modal.astra_training.detail')
+                    @include('website.modal.astra_training.create', ['employee_id' => $employee->id])
+
+                    @foreach ($astraTrainings as $astraTraining)
+                        @include('website.modal.astra_training.update', [
+                            'astraTraining' => $astraTraining,
+                        ])
+                        @include('website.modal.astra_training.delete', [
+                            'astraTraining' => $astraTraining,
+                        ])
+                    @endforeach
                 </div>
 
-                {{-- astra_training modal --}}
-                @include('website.modal.astra_training.detail')
-
-                @include('website.modal.astra_training.create', [
-                    'employee_id' => $employee->id,
-                ])
-                {{-- Include Modals Update & Delete (outside of foreach) --}}
-                @foreach ($astraTrainings as $astraTraining)
-                    @include('website.modal.astra_training.update', ['astraTraining' => $astraTraining])
-                    @include('website.modal.astra_training.delete', ['astraTraining' => $astraTraining])
-                @endforeach
-
-                {{-- end of astra_training modal --}}
-
+                {{-- External Training History --}}
                 <div class="col-md-6">
                     <div class="card mb-5">
                         <div class="card-header bg-light-primary border-0 cursor-pointer d-flex justify-content-between align-items-center"
-                            role="button" data-bs-toggle="collapse" data-bs-target="#kt_account_connected_accounts"
-                            aria-expanded="true" aria-controls="kt_account_connected_accounts">
-
+                            role="button">
                             <h3 class="fw-bolder m-0">External Training History</h3>
 
                             <div class="d-flex gap-2">
@@ -928,23 +929,17 @@
 
                         <div id="kt_account_settings_signin_method" class="collapse show">
                             <div class="card-body border-top p-5">
-                                <!--begin::Table wrapper-->
                                 <div class="table-responsive">
-                                    <!--begin::Table-->
                                     <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
-                                        <!--begin::Thead-->
                                         <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                             <tr>
                                                 <th>Training</th>
-
                                                 <th class="text-center">Year</th>
                                                 <th class="text-center">Vendor</th>
                                                 <th class="text-center">Action</th>
                                             </tr>
                                         </thead>
-                                        <!--end::Thead-->
 
-                                        <!--begin::Tbody-->
                                         <tbody class="fw-6 fw-semibold text-gray-600">
                                             @forelse ($externalTrainings->take(3) as $externalTraining)
                                                 <tr>
@@ -953,7 +948,9 @@
                                                     <td class="text-center">
                                                         {{ \Illuminate\Support\Carbon::parse($externalTraining->date_end)->format('Y') }}
                                                     </td>
+
                                                     <td class="text-center">{{ $externalTraining->vendor }}</td>
+
                                                     <td class="text-center">
                                                         <div class="d-flex justify-content-center gap-2">
                                                             <button class="btn btn-sm btn-light-warning"
@@ -970,8 +967,6 @@
                                                         </div>
                                                     </td>
                                                 </tr>
-
-
                                             @empty
                                                 <tr>
                                                     <td colspan="7" class="text-center">No data available</td>
@@ -980,33 +975,28 @@
                                         </tbody>
 
                                     </table>
-                                    <!--end::Table-->
                                 </div>
-                                <!--end::Table wrapper-->
                             </div>
                         </div>
                     </div>
+
+                    {{-- External Training Modals --}}
+                    @foreach ($externalTrainings as $externalTraining)
+                        @include('website.modal.external_training.update', [
+                            'externalTraining' => $externalTraining,
+                        ])
+                        @include('website.modal.external_training.delete', [
+                            'externalTraining' => $externalTraining,
+                        ])
+                    @endforeach
+
+                    @include('website.modal.external_training.detail')
+                    @include('website.modal.external_training.create', ['employee_id' => $employee->id])
                 </div>
             </div>
 
-
-            {{-- external_training modal --}}
-            @foreach ($externalTrainings as $externalTraining)
-                @include('website.modal.external_training.update', [
-                    'externalTraining' => $externalTraining,
-                ])
-                @include('website.modal.external_training.delete', [
-                    'externalTraining' => $externalTraining,
-                ])
-            @endforeach
-
-            @include('website.modal.external_training.detail')
-            @include('website.modal.external_training.create', ['employee_id' => $employee->id])
-            {{-- end of external_training modal --}}
-
-
+            {{-- Promotion History --}}
             <div class="card mb-5 mb-xl-10">
-                <!--begin::Card header-->
                 <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                     <div class="card-title">
                         <h3>Promotion History</h3>
@@ -1024,15 +1014,10 @@
                         </button>
                     </div>
                 </div>
-                <!--end::Card header-->
 
-                <!--begin::Card body-->
                 <div class="card-body p-0">
-                    <!--begin::Table wrapper-->
                     <div class="table-responsive">
-                        <!--begin::Table-->
                         <table class="table align-middle table-row-bordered table-row-solid gy-4 gs-9">
-                            <!--begin::Thead-->
                             <thead class="border-gray-200 fs-5 fw-semibold bg-lighten">
                                 <tr>
                                     <th class="text-center">No.</th>
@@ -1044,9 +1029,7 @@
                                     <th class="text-center">Action</th>
                                 </tr>
                             </thead>
-                            <!--end::Thead-->
 
-                            <!--begin::Tbody-->
                             <tbody class="fw-6 fw-semibold text-gray-600">
                                 @forelse ($promotionHistories->take(3) as $promotionHistory)
                                     <tr>
@@ -1056,13 +1039,14 @@
                                         <td class="text-center">{{ $promotionHistory->current_grade }}</td>
                                         <td class="text-center">{{ $promotionHistory->current_position }}</td>
                                         <td class="text-center">
-                                            {{ Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y') }}
+                                            {{ \Carbon\Carbon::parse($promotionHistory->last_promotion_date)->format('j F Y') }}
                                         </td>
                                         <td class="text-center">
                                             <button class="btn btn-sm btn-light-warning me-1" data-bs-toggle="modal"
                                                 data-bs-target="#editPromotionModal{{ $promotionHistory->id }}">
                                                 <i class="fas fa-edit"></i>
                                             </button>
+
                                             <button class="btn btn-sm btn-light-danger delete-experience-btn"
                                                 data-bs-toggle="modal"
                                                 data-bs-target="#deletePromotionModal{{ $promotionHistory->id }}">
@@ -1070,7 +1054,6 @@
                                             </button>
                                         </td>
                                     </tr>
-                                    {{-- end of modal --}}
                                 @empty
                                     <tr>
                                         <td colspan="7" class="text-center">No data available</td>
@@ -1078,36 +1061,29 @@
                                 @endforelse
                             </tbody>
                         </table>
-                        <!--end::Table-->
                     </div>
-                    <!--end::Table wrapper-->
                 </div>
-                <!--end::Card body-->
             </div>
 
-            @include('website.modal.promotion_history.create', [
-                'employee_id' => $employee->id,
-            ])
-
-            @include('website.modal.promotion_history.detail')
             {{-- Promotion History Modals --}}
+            @include('website.modal.promotion_history.create', ['employee_id' => $employee->id])
+            @include('website.modal.promotion_history.detail')
+
             @foreach ($promotionHistories as $promotionHistory)
                 @include('website.modal.promotion_history.update', [
-                    'experience' => $promotionHistory, // Pastikan file update expect key ini
+                    'experience' => $promotionHistory,
                 ])
                 @include('website.modal.promotion_history.delete', [
                     'promotionHistory' => $promotionHistory,
                 ])
             @endforeach
 
-
+            {{-- Strength & Development Areas --}}
             <div class="row">
-                <!-- Strength -->
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center cursor-pointer"
-                            role="button">
-
+                        <div
+                            class="card-header bg-light-primary border-0 d-flex justify-content-between align-items-center cursor-pointer">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Strength</h3>
                             </div>
@@ -1123,8 +1099,10 @@
                                 </button>
                             @endif
                         </div>
+
                         <div id="strength_section" class="collapse show">
                             <div class="card-body border-top p-10">
+
                                 @if (!$assessment)
                                     <p class="text-center text-muted">No data available</p>
                                 @elseif ($assessment->details->isEmpty() || !$assessment->details->where('strength', '!=', null)->count())
@@ -1137,7 +1115,8 @@
                                                     <div class="fs-6 fw-bold mb-1">
                                                         {{ $detail->alc->name ?? 'Unknown' }}
                                                     </div>
-                                                    <div class="fw-semibold text-gray-600">
+
+                                                    <div class="fw-semibold text-gray-600 text-container">
                                                         <span class="text-content"
                                                             data-fulltext="{!! htmlentities($detail->strength) !!}">
                                                             {!! Str::limit($detail->strength, 200) !!}
@@ -1152,27 +1131,29 @@
                                                     </div>
                                                 </div>
                                             </div>
+
                                             <div class="separator separator-dashed my-4"></div>
                                         @endif
                                     @endforeach
                                 @endif
-                            </div>
 
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Areas for Development -->
+                {{-- Areas for Development --}}
                 <div class="col-md-6">
                     <div class="card mb-5">
-                        <div class="card-header bg-light-primary border-0 cursor-pointer" role="button"
-                            data-bs-toggle="collapse" data-bs-target="#weakness_section">
+                        <div class="card-header bg-light-primary border-0 cursor-pointer">
                             <div class="card-title m-0">
                                 <h3 class="fw-bold m-0">Areas for Development</h3>
                             </div>
                         </div>
+
                         <div id="weakness_section" class="collapse show">
                             <div class="card-body border-top p-10">
+
                                 @if (!$assessment)
                                     <p class="text-center text-muted">No data available</p>
                                 @elseif ($assessment->details->isEmpty() || !$assessment->details->where('weakness', '!=', null)->count())
@@ -1185,7 +1166,8 @@
                                                     <div class="fs-6 fw-bold mb-1">
                                                         {{ $detail->alc->name ?? 'Unknown' }}
                                                     </div>
-                                                    <div class="fw-semibold text-gray-600">
+
+                                                    <div class="fw-semibold text-gray-600 text-container">
                                                         <span class="text-content"
                                                             data-fulltext="{!! htmlentities($detail->weakness) !!}">
                                                             {!! Str::limit($detail->weakness, 200) !!}
@@ -1200,18 +1182,19 @@
                                                     </div>
                                                 </div>
                                             </div>
+
                                             <div class="separator separator-dashed my-4"></div>
                                         @endif
                                     @endforeach
                                 @endif
-                            </div>
 
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Table 2: Individual Development Plan -->
+            {{-- IDP --}}
             <div class="card mb-5 mb-xl-10">
                 <div class="card-header bg-light-primary d-flex justify-content-between align-items-center">
                     <div class="card-title m-0">
@@ -1224,7 +1207,6 @@
                         </a>
                     </div>
                 </div>
-
 
                 <div class="card-body">
                     <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable">
@@ -1242,7 +1224,7 @@
                                     <td>{{ $idp->alc->name }}</td>
                                     <td>{{ $idp->development_program }}</td>
                                     <td class="text-center">{{ $idp->development_target }}</td>
-                                    <td class="text-center">{{ Carbon\Carbon::parse($idp->date)->format('j F Y') }}</td>
+                                    <td class="text-center">{{ \Carbon\Carbon::parse($idp->date)->format('j F Y') }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -1251,146 +1233,159 @@
 
             </div>
 
-            <!-- Tombol Back di bagian bawah card -->
+            {{-- Back button --}}
             <div class="card-footer text-end mt-4">
                 <a href="{{ url()->previous() }}" class="btn btn-secondary">
                     <i class="bi bi-arrow-left-circle"></i> Back
                 </a>
             </div>
         </div>
-
     </div>
 @endsection
 
 @push('scripts')
-    <!-- SweetAlert (kalau belum dimuat di layout) -->
+    {{-- SweetAlert (kalau belum dimuat di layout; kalau sudah, ini bisa dihapus) --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
-        (function() {
-                if (typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
-                    console.warn(
-                        'jQuery/Select2 belum ter-load. Cek urutan di layout: jQuery -> Select2';
-                        return;
-                    }
-
-                    function formatLabeledOption(state) {
-                        if (!state.id) return state.text;
-                        const m = /^\[(.*?)\]\s*(.*)$/.exec(state.text);
-                        return m ? $('<span><strong>[' + m[1] + ']</strong> ' + m[2] + '</span>') : state.text;
-                    }
-
-                    function customMatcher(params, data) {
-                        const term = (params.term || '').toLowerCase().trim();
-
-                        // 1) kalau tidak ada kata kunci -> tampilkan apa adanya
-                        if (term === '') return data;
-
-                        // 2) kalau item ini adalah GROUP (punya children), filter anak-anaknya
-                        if (data.children && data.children.length) {
-                            const filteredChildren = [];
-                            for (const child of data.children) {
-                                const match = customMatcher(params, child);
-                                if (match) filteredChildren.push(match);
-                            }
-                            if (filteredChildren.length) {
-                                // kembalikan GROUP dengan anak-anak yang lolos
-                                const modified = $.extend({}, data, true);
-                                modified.children = filteredChildren;
-                                return modified;
-                            }
-                            return null; // tidak ada anak yang match -> buang group
-                        }
-
-                        // 3) item biasa (OPTION)
-                        if (typeof data.text === 'undefined') return null;
-
-                        const text = (data.text || '').toLowerCase();
-                        // juga sediakan versi tanpa prefix [Department]/[Section]/dst
-                        const textNoPrefix = text.replace(/^\[[^\]]+\]\s*/, '');
-
-                        return (text.indexOf(term) > -1 || textNoPrefix.indexOf(term) > -1) ? data : null;
-                    }
-
-                    // === init Select2 ===
-                    function initSelect2In(modalEl) {
-                        const $modal = $(modalEl);
-
-                        // Destroy existing select2 instances first to prevent duplicates
-                        $modal.find('select.select2-basic, select.select2-org-scope').each(function() {
-                            if ($(this).hasClass('select2-hidden-accessible')) {
-                                $(this).select2('destroy');
-                            }
-                        });
-
-                        $modal.find('select.select2-basic').each(function() {
-                            $(this).select2({
-                                theme: 'bootstrap-5',
-                                width: '100%',
-                                dropdownParent: $modal,
-                                minimumResultsForSearch: 0
-                            });
-                        });
-
-                        $modal.find('select.select2-org-scope').each(function() {
-                            $(this).select2({
-                                theme: 'bootstrap-5',
-                                width: '100%',
-                                allowClear: true,
-                                placeholder: $(this).data('placeholder') ||
-                                    'Cari Plant/Division/Department/Section/Sub Section',
-                                dropdownParent: $modal,
-                                templateResult: formatLabeledOption,
-                                templateSelection: formatLabeledOption,
-                                matcher: customMatcher,
-                                minimumResultsForSearch: 0
-                            });
-                        });
-                    }
-
-                    // Init select2 on page load for non-modal selects
-                    $(document).ready(function() {
-                        // Init select2 for elements outside modal
-                        $('select.select2-basic').not('.modal select.select2-basic').each(function() {
-                            if ($(this).hasClass('select2-hidden-accessible')) return;
-                            $(this).select2({
-                                theme: 'bootstrap-5',
-                                width: '100%',
-                                minimumResultsForSearch: 0
-                            });
-                        });
-
-                        $('select.select2-org-scope').not('.modal select.select2-org-scope').each(function() {
-                            if ($(this).hasClass('select2-hidden-accessible')) return;
-                            $(this).select2({
-                                theme: 'bootstrap-5',
-                                width: '100%',
-                                allowClear: true,
-                                placeholder: $(this).data('placeholder') ||
-                                    'Cari Plant/Division/Department/Section/Sub Section',
-                                templateResult: formatLabeledOption,
-                                templateSelection: formatLabeledOption,
-                                matcher: customMatcher,
-                                minimumResultsForSearch: 0
-                            });
-                        });
-                    });
-
-                    // Init saat modal tampil
-                    $(document).on('shown.bs.modal', '.modal', function() {
-                        initSelect2In(this);
-                    });
-
-                    // Init untuk modal yang sudah show
-                    $('.modal.show').each(function() {
-                        initSelect2In(this);
-                    });
-                })();
+        // dipanggil kalau assessment kosong
+        function showAssessmentAlert() {
+            Swal.fire({
+                title: 'No Assessment Data',
+                text: 'There is no assessment record to show.',
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
     </script>
 
     <script>
         (function() {
-            // Helper: jalankan saat DOM siap
+            // SAFETY GATE: jangan lanjut kalau jQuery atau Select2 belum ada
+            if (typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
+                console.warn(
+                    'jQuery/Select2 belum ter-load. Cek urutan di layout: plugins.bundle.js -> select2.min.js -> this script'
+                    );
+                return;
+            }
+
+            function formatLabeledOption(state) {
+                if (!state.id) return state.text;
+                const m = /^\[(.*?)\]\s*(.*)$/.exec(state.text);
+                return m ?
+                    $('<span><strong>[' + m[1] + ']</strong> ' + m[2] + '</span>') :
+                    state.text;
+            }
+
+            function customMatcher(params, data) {
+                const term = (params.term || '').toLowerCase().trim();
+
+                // tidak cari apa-apa -> lolos semua
+                if (term === '') return data;
+
+                // group option (optgroup)
+                if (data.children && data.children.length) {
+                    const filteredChildren = [];
+                    for (const child of data.children) {
+                        const match = customMatcher(params, child);
+                        if (match) filteredChildren.push(match);
+                    }
+                    if (filteredChildren.length) {
+                        const modified = $.extend({}, data, true);
+                        modified.children = filteredChildren;
+                        return modified;
+                    }
+                    return null;
+                }
+
+                // normal option
+                if (typeof data.text === 'undefined') return null;
+
+                const text = (data.text || '').toLowerCase();
+                const textNoPrefix = text.replace(/^\[[^\]]+\]\s*/, '');
+
+                return (text.indexOf(term) > -1 || textNoPrefix.indexOf(term) > -1) ? data : null;
+            }
+
+            function initSelect2In(modalEl) {
+                const $modal = $(modalEl);
+
+                // bersihin instance lama biar gak double-dropdown
+                $modal.find('select.select2-basic, select.select2-org-scope').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2('destroy');
+                    }
+                });
+
+                $modal.find('select.select2-basic').each(function() {
+                    $(this).select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        dropdownParent: $modal,
+                        minimumResultsForSearch: 0
+                    });
+                });
+
+                $modal.find('select.select2-org-scope').each(function() {
+                    $(this).select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        allowClear: true,
+                        placeholder: $(this).data('placeholder') ||
+                            'Cari Plant/Division/Department/Section/Sub Section',
+                        dropdownParent: $modal,
+                        templateResult: formatLabeledOption,
+                        templateSelection: formatLabeledOption,
+                        matcher: customMatcher,
+                        minimumResultsForSearch: 0
+                    });
+                });
+            }
+
+            // init select2 di halaman utama
+            $(document).ready(function() {
+                $('select.select2-basic').not('.modal select.select2-basic').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) return;
+                    $(this).select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        minimumResultsForSearch: 0
+                    });
+                });
+
+                $('select.select2-org-scope').not('.modal select.select2-org-scope').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) return;
+                    $(this).select2({
+                        theme: 'bootstrap-5',
+                        width: '100%',
+                        allowClear: true,
+                        placeholder: $(this).data('placeholder') ||
+                            'Cari Plant/Division/Department/Section/Sub Section',
+                        templateResult: formatLabeledOption,
+                        templateSelection: formatLabeledOption,
+                        matcher: customMatcher,
+                        minimumResultsForSearch: 0
+                    });
+                });
+            });
+
+            // init select2 setiap kali modal dibuka
+            $(document).on('shown.bs.modal', '.modal', function() {
+                initSelect2In(this);
+            });
+
+            // kalau ada modal yang udah kebuka pas render
+            $('.modal.show').each(function() {
+                initSelect2In(this);
+            });
+
+        })();
+    </script>
+
+    <script>
+        (function() {
+
+            // helper DOM ready tanpa jQuery
             function onReady(fn) {
                 if (document.readyState !== 'loading') fn();
                 else document.addEventListener('DOMContentLoaded', fn);
@@ -1413,9 +1408,11 @@
 
                         if (!isNaN(joinDate.getTime())) {
                             let years = now.getFullYear() - joinDate.getFullYear();
+
                             const nowMD = (now.getMonth() * 100) + now.getDate();
                             const joinMD = (joinDate.getMonth() * 100) + joinDate.getDate();
                             if (nowMD < joinMD) years--;
+
                             periodInput.value = Math.max(years, 0);
                         } else {
                             periodInput.value = 0;
@@ -1454,25 +1451,32 @@
                     });
                 });
 
-                // === Toggle select hirarki berdasarkan Position ===
+                // === Tampilkan group organisasi sesuai Position ===
                 function toggleHierarchySelects(position) {
-                    // Hide all hierarchy groups first
-                    ['subsection-group', 'section-group', 'department-group', 'division-group',
+                    // Hide all first
+                    [
+                        'subsection-group',
+                        'section-group',
+                        'department-group',
+                        'division-group',
                         'plant-group'
                     ].forEach(id => {
                         const el = document.getElementById(id);
                         if (el) el.classList.add('d-none');
                     });
 
-                    // Show relevant group based on position
+                    // Tentukan mana yang tampil
                     let groupToShow = null;
+
                     if (['Operator', 'Act JP', 'Act Leader', 'Leader'].includes(position)) {
                         groupToShow = 'subsection-group';
-                    } else if (['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head']
-                        .includes(position)) {
+                    } else if (
+                        ['Supervisor', 'Section Head', 'Act Supervisor', 'Act Section Head'].includes(position)
+                    ) {
                         groupToShow = 'section-group';
-                    } else if (['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'].includes(
-                            position)) {
+                    } else if (
+                        ['Manager', 'Coordinator', 'Act Manager', 'Act Coordinator'].includes(position)
+                    ) {
                         groupToShow = 'department-group';
                     } else if (['GM', 'Act GM'].includes(position)) {
                         groupToShow = 'division-group';
@@ -1488,19 +1492,21 @@
 
                 const posSelect = document.getElementById('position-select');
                 if (posSelect) {
-                    // Trigger on load
+                    // initial
                     toggleHierarchySelects(posSelect.value || '');
+                    // on change
                     posSelect.addEventListener('change', function() {
                         toggleHierarchySelects(this.value);
                     });
                 }
 
-                // === Stacking multiple Bootstrap 5 modals ===
+                // === Multi-modal stacking z-index ===
                 let modalLevel = 0;
                 document.addEventListener('show.bs.modal', function(ev) {
                     const modal = ev.target;
                     const z = 1050 + (10 * modalLevel);
                     modal.style.zIndex = z;
+
                     setTimeout(() => {
                         document.querySelectorAll('.modal-backdrop:not(.modal-stack)').forEach(
                             el => {
@@ -1508,6 +1514,7 @@
                                 el.classList.add('modal-stack');
                             });
                     }, 0);
+
                     modalLevel++;
                 });
 
@@ -1518,7 +1525,7 @@
                     }
                 });
 
-                // === Batasan input nomor telp ===
+                // === Batasan panjang input nomor telp ===
                 const phoneInput = document.getElementById('phone_number');
                 if (phoneInput) {
                     phoneInput.addEventListener('input', function() {

@@ -3,7 +3,9 @@
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content">
             <div class="modal-header bg-light-info">
-                <h5 class="modal-title fw-bold" id="detailPromotionHistoryModalLabel">Promotion History Details</h5>
+                <h5 class="modal-title fw-bold" id="detailPromotionHistoryModalLabel">
+                    Promotion History Details
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
@@ -35,12 +37,14 @@
                                         </td>
                                         <td class="text-center">
                                             @if ($mode === 'edit')
-                                                <button class="btn btn-sm btn-light-warning me-1 edit-promotion-btn"
-                                                    data-promotion-id={{ $promotion->id }}
+                                                <button type="button"
+                                                    class="btn btn-sm btn-light-warning me-1 edit-promotion-btn"
                                                     data-edit-modal-id="editPromotionModal{{ $promotion->id }}">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
-                                                <button class="btn btn-sm btn-light-danger delete-promotion-btn"
+
+                                                <button type="button"
+                                                    class="btn btn-sm btn-light-danger delete-promotion-btn"
                                                     data-delete-modal-id="deletePromotionModal{{ $promotion->id }}">
                                                     <i class="fas fa-trash-alt"></i>
                                                 </button>
@@ -56,63 +60,125 @@
                 @endif
             </div>
 
-
             <div class="modal-footer">
                 <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
 </div>
+
+{{-- SCRIPT KHUSUS UNTUK MODAL INI --}}
 <script>
-    $(document).on("click", ".edit-promotion-btn", function() {
-        const target = "#" + $(this).data("edit-modal-id");
+    (function() {
+        // DOM ready helper
+        function onReady(fn) {
+            if (document.readyState !== 'loading') fn();
+            else document.addEventListener('DOMContentLoaded', fn);
+        }
 
-        // Ambil instance modal detail yang sudah ada
-        const detailModalEl = document.getElementById("detailPromotionHistoryModal");
-        const detailModalInstance = bootstrap.Modal.getInstance(detailModalEl);
-
-        // Sembunyikan modal detail dulu
-        detailModalInstance.hide();
-
-        // Buka modal edit setelah delay
-        setTimeout(() => {
-            const editModalEl = document.querySelector(target);
-
-            // Cek apakah modal edit sudah punya instance, kalau belum buat baru
-            let editModalInstance = bootstrap.Modal.getInstance(editModalEl);
-            if (!editModalInstance) {
-                editModalInstance = new bootstrap.Modal(editModalEl);
+        onReady(function() {
+            // pastikan dependensi
+            if (typeof bootstrap === 'undefined' || typeof window.$ === 'undefined') {
+                console.warn(
+                    '[detailPromotionHistoryModal] bootstrap/jQuery belum siap. Pastikan file ini dirender SETELAH plugins.bundle.js'
+                    );
+                return;
             }
-            editModalInstance.show();
 
-            // Pasang event listener untuk buka kembali modal detail saat modal edit ditutup
-            editModalEl.addEventListener('hidden.bs.modal', function handler() {
-                detailModalInstance.show();
+            // --- state lokal untuk nested modal ---
+            // kita simpan backdrop parent biar bisa kita balikin
+            let parentBackdropEl = null;
+            let parentModalInstance = null;
 
-                // Hapus event listener supaya tidak double trigger
-                editModalEl.removeEventListener('hidden.bs.modal', handler);
-            });
-        }, 300);
-    });
-    $(document).on("click", ".delete-promotion-btn", function() {
-        const target = "#" + $(this).data("delete-modal-id");
+            function openChildModal(childSelector) {
+                const parentModalEl = document.getElementById("detailPromotionHistoryModal");
+                if (!parentModalEl) return;
 
-        const detailModalEl = document.getElementById("detailPromotionHistoryModal");
-        const detailModalInstance = bootstrap.Modal.getInstance(detailModalEl);
-        detailModalInstance.hide();
+                // ambil (atau buat) instance parent
+                parentModalInstance = bootstrap.Modal.getInstance(parentModalEl);
+                if (!parentModalInstance) {
+                    parentModalInstance = new bootstrap.Modal(parentModalEl);
+                }
 
-        setTimeout(() => {
-            const deleteModalEl = document.querySelector(target);
-            let deleteModalInstance = bootstrap.Modal.getInstance(deleteModalEl);
-            if (!deleteModalInstance) {
-                deleteModalInstance = new bootstrap.Modal(deleteModalEl);
+                // step 1: kita HARUS tau backdrop yg lagi dipakai parent SEKARANG,
+                // sebelum parent di-hide dan sebelum child dibuka
+                parentBackdropEl = document.querySelector('.modal-backdrop.show');
+
+                // hide modal parent
+                parentModalInstance.hide();
+
+                // setelah parent di-hide, buka child
+                setTimeout(() => {
+                    const childEl = document.querySelector(childSelector);
+                    if (!childEl) {
+                        console.warn('[detailPromotionHistoryModal] Target modal tidak ditemukan:',
+                            childSelector);
+                        return;
+                    }
+
+                    // ambil/buat instance child
+                    let childInstance = bootstrap.Modal.getInstance(childEl);
+                    if (!childInstance) {
+                        childInstance = new bootstrap.Modal(childEl, {
+                            backdrop: true,
+                            keyboard: true,
+                            focus: true
+                        });
+                    }
+
+                    // *** Z-INDEX MANAGEMENT ***
+                    // - Modal parent tadi sempat punya backdrop (parentBackdropEl).
+                    //   Kita turunkan z-index backdrop parent supaya gak nutup child.
+                    // - Kita juga naikin z-index modal child biar pasti di depan.
+
+                    if (parentBackdropEl) {
+                        parentBackdropEl.dataset._origZ = parentBackdropEl.style.zIndex || '';
+                        parentBackdropEl.style.zIndex = '1059';
+                    }
+
+                    // naikin modal child
+                    childEl.style.zIndex = '1060';
+
+                    // show child
+                    childInstance.show();
+
+                    // ketika child ditutup:
+                    function handleHidden() {
+                        // balikkan styling child
+                        childEl.style.zIndex = '';
+
+                        // pulihkan backdrop parent ke kondisi awal
+                        if (parentBackdropEl) {
+                            parentBackdropEl.style.zIndex = parentBackdropEl.dataset._origZ || '';
+                            delete parentBackdropEl.dataset._origZ;
+                        }
+
+                        // show lagi modal parent (tanpa bikin backdrop baru)
+                        if (parentModalInstance) {
+                            parentModalInstance.show();
+                        }
+
+                        // cleanup listener supaya tidak leak
+                        childEl.removeEventListener('hidden.bs.modal', handleHidden);
+                    }
+
+                    childEl.addEventListener('hidden.bs.modal', handleHidden);
+                }, 100);
             }
-            deleteModalInstance.show();
 
-            deleteModalEl.addEventListener('hidden.bs.modal', function handler() {
-                detailModalInstance.show();
-                deleteModalEl.removeEventListener('hidden.bs.modal', handler);
+            // CLICK: Edit
+            $(document).on("click", ".edit-promotion-btn", function() {
+                const modalId = $(this).data("edit-modal-id"); // "editPromotionModal12"
+                if (!modalId) return;
+                openChildModal("#" + modalId);
             });
-        }, 300);
-    });
+
+            // CLICK: Delete
+            $(document).on("click", ".delete-promotion-btn", function() {
+                const modalId = $(this).data("delete-modal-id"); // "deletePromotionModal12"
+                if (!modalId) return;
+                openChildModal("#" + modalId);
+            });
+        });
+    })();
 </script>
