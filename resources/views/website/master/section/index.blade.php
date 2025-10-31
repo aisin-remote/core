@@ -68,7 +68,7 @@
                                 <td>{{ $section->name }}</td>
                                 <td>{{ $section->department->name }}</td>
                                 <td>{{ $section->company }}</td>
-                                <td>{{ $section->supervisor->name }}</td>
+                                <td>{{ $section->supervisor?->name }}</td>
                                 <td>
                                     <div class="d-flex justify-content-center gap-2">
                                         <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal"

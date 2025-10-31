@@ -424,11 +424,7 @@ class MasterController extends Controller
         })->get();
 
         $sections = Section::with(['department', 'supervisor'])
-            ->when($company, function ($q) use ($company) {
-                $q->whereHas('supervisor', function ($sub) use ($company) {
-                    $sub->where('company_name', $company);
-                });
-            })
+            ->where('company', $company)
             ->get();
 
         return view('website.master.section.index', compact('sections', 'departments', 'supervisors', 'company'));
