@@ -579,4 +579,17 @@ class Employee extends Model
     {
         return $this->hasMany(IppComment::class);
     }
+
+    public function getFormattedDateAttribute()
+    {
+        return $this->aisin_entry_date
+            ? Carbon::parse($this->aisin_entry_date)->format('d M Y')
+            : null;
+    }
+    public function getFormattedBirthAttribute()
+    {
+        return $this->birthday_date
+            ? Carbon::parse($this->birthday_date)->format('d M Y')
+            : null;
+    }
 }

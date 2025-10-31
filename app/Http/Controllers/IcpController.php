@@ -423,6 +423,18 @@ class IcpController extends Controller
             ],
         ];
 
+        // Ambil appraisal terakhir per tahun (max 3 tahun)
+        $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
+            ->selectRaw('YEAR(date) as year, score')
+            ->orderByDesc('date')->get()
+            ->groupBy('year')
+            ->map(fn($it) => $it->first()->score)
+            ->sortKeys()
+            ->take(3)
+            ->toArray();
+
+        $edu  = $employee->educations->first();
+
         return view('website.icp.create', compact(
             'title',
             'employee',
@@ -438,7 +450,9 @@ class IcpController extends Controller
             'rtcList',
             'currentPositionName',
             'currentYear',
-            'defaultStages'
+            'defaultStages',
+            'performanceData',
+            'edu'
         ));
     }
 
@@ -937,67 +951,6 @@ class IcpController extends Controller
         return response()->json(['message' => 'ICP has been revised.']);
     }
 
-    public function update(StoreIcpRequest $request, $id)
-    {
-        $data = $request->validated();
-
-        DB::beginTransaction();
-        try {
-            $icp = Icp::findOrFail($id);
-
-            $icp->update([
-                'employee_id'    => $data['employee_id'],
-                'aspiration'     => $data['aspiration'],
-                'career_target'  => $data['career_target_code'],
-                'date'           => $data['date'],
-                'status'         => Icp::STATUS_DRAFT,
-            ]);
-
-            $icp->details()->delete();
-
-            $rowsToInsert = [];
-            foreach ($data['stages'] as $stage) {
-                $year      = (int) $stage['year'];
-                $job       = $stage['job_function'];
-                $jobSource = $stage['job_source'] ?? null;
-                $pos       = $stage['position_code'];
-                $level     = $stage['level'];
-
-                foreach ($stage['details'] as $d) {
-                    $rowsToInsert[] = [
-                        'icp_id'                    => $icp->id,
-                        'plan_year'                 => $year,
-                        'job_function'              => $job,
-                        'job_source'                => $jobSource,
-                        'position'                  => $pos,
-                        'level'                     => $level,
-                        'current_technical'         => $d['current_technical'],
-                        'current_nontechnical'      => $d['current_nontechnical'],
-                        'required_technical'        => $d['required_technical'],
-                        'required_nontechnical'     => $d['required_nontechnical'],
-                        'development_technical'     => $d['development_technical'],
-                        'development_nontechnical'  => $d['development_nontechnical'],
-                    ];
-                }
-            }
-
-            if (!empty($rowsToInsert)) {
-                $icp->details()->createMany($rowsToInsert);
-            }
-
-            DB::commit();
-
-            return redirect()
-                ->route('icp.assign')
-                ->with('success', 'Data ICP berhasil diperbarui.');
-        } catch (\Throwable $e) {
-            DB::rollBack();
-            return redirect()
-                ->back()
-                ->with('error', 'Gagal memperbarui ICP: ' . $e->getMessage());
-        }
-    }
-
     public function edit($id)
     {
         $title = 'Update ICP';
@@ -1007,11 +960,12 @@ class IcpController extends Controller
             'employee.subSection.section.department',
             'employee.leadingSection.department',
             'employee.leadingDepartment.division',
+            'employee.educations',
         ])->findOrFail($id);
 
         $employee = $icp->employee;
 
-        // referensi org
+        // referensi organisasi / dropdown
         $departments = Department::where('company', $employee->company_name)->get();
         $divisions   = Division::where('company', $employee->company_name)->get();
         $employees   = Employee::where('company_name', $employee->company_name)->get();
@@ -1029,12 +983,14 @@ class IcpController extends Controller
                 $q->where(function ($qq) use ($deptId, $divId) {
                     if ($deptId) {
                         $qq->orWhere(function ($x) use ($deptId) {
-                            $x->whereNotNull('dept_id')->where('dept_id', $deptId);
+                            $x->whereNotNull('dept_id')
+                                ->where('dept_id', $deptId);
                         });
                     }
                     if ($divId) {
                         $qq->orWhere(function ($x) use ($divId) {
-                            $x->whereNotNull('divs_id')->where('divs_id', $divId);
+                            $x->whereNotNull('divs_id')
+                                ->where('divs_id', $divId);
                         });
                     }
                 });
@@ -1045,52 +1001,46 @@ class IcpController extends Controller
         $deptCompetencies = $technicalCompetencies->whereNotNull('dept_id')->values();
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
-        // Susun rtc list (butuh utk Career Target & Position dropdown)
-        $rtcMap  = RtcTarget::mapAll(); // sama kayak create
+        // Career target dropdown (harus sama formatnya dengan create)
+        $rtcMap  = RtcTarget::mapAll();
         $rtcList = collect(RtcTarget::order())
-            ->map(fn($code) => [
-                'code'     => $code,
-                'position' => $rtcMap[$code]['position'] ?? $code,
-            ])
+            ->map(function ($code) use ($rtcMap) {
+                return [
+                    'code'     => $code,
+                    'position' => $rtcMap[$code]['position'] ?? $code,
+                ];
+            })
+            ->unique('position')
             ->values();
 
-        // Ambil kode RTC posisi current karyawan sekarang, untuk batas bawah posisi stage
+        // kode RTC posisi current karyawan sekarang (batas bawah untuk posisi stage)
         $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
 
-        /**
-         * Bentuk ulang stages dari detail ICP:
-         * [
-         *   {
-         *     year: 2026,
-         *     job_function: "Production Control — PT Aisin",
-         *     job_source: "department" | "division",
-         *     position_code: "AS",
-         *     level: "SO3",
-         *     details: [
-         *        {
-         *          current_technical: "...",
-         *          required_technical: "...",
-         *          development_technical: "...",
-         *          current_nontechnical: "...",
-         *          required_nontechnical: "...",
-         *          development_nontechnical: "..."
-         *        },
-         *        ...
-         *     ]
-         *   },
-         *   ...
-         * ]
-         */
+        // Performance appraisal terakhir per tahun (max 3 tahun) -> sama kayak create()
+        $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
+            ->selectRaw('YEAR(date) as year, score')
+            ->orderByDesc('date')
+            ->get()
+            ->groupBy('year')
+            ->map(fn($it) => $it->first()->score)
+            ->sortKeys()
+            ->take(3)
+            ->toArray();
+
+        // Last education (buat header card)
+        $edu = $employee->educations->first();
+
+        // Bentuk ulang stages dari detail ICP supaya sesuai ekspektasi JS
         $stages = $icp->details
+            ->sortBy('plan_year')
             ->groupBy('plan_year')
             ->map(function ($group) {
                 $first = $group->first();
-
                 return [
                     'year'           => (int) $first->plan_year,
                     'job_function'   => (string) ($first->job_function ?? ''),
                     'job_source'     => (string) ($first->job_source ?? ''),
-                    'position_code'  => (string) ($first->position ?? ''),
+                    'position_code'  => (string) ($first->position ?? ''), // kolom 'position' di DB = kode RTC
                     'level'          => (string) ($first->level ?? ''),
                     'details'        => $group->map(function ($d) {
                         return [
@@ -1107,26 +1057,134 @@ class IcpController extends Controller
             ->values()
             ->all();
 
-        $mode = request('mode'); // 'evaluate' klo atasan lagi menilai
+        // mode evaluate (readonly mode)
+        $mode = request('mode'); // ex: ?mode=evaluate
+
+        // buat konsistensi aja, kadang kepake
+        $currentYear = now()->year;
 
         return view('website.icp.update', compact(
             'title',
+            'icp',
             'employee',
+            'stages',
+            'mode',
+
+            // dropdown/reference
             'grades',
             'departments',
             'divisions',
             'employees',
+
+            // teknis/kompetensi
             'technicalCompetencies',
             'deptCompetencies',
             'divsCompetencies',
             'deptId',
             'divId',
+
+            // career target data dan batas posisi
             'rtcList',
-            'icp',
-            'stages',
-            'currentRtcCode', // <-- PENTING DI-ADD
-            'mode'
+            'currentRtcCode',
+
+            // header info
+            'performanceData',
+            'edu',
+            'currentYear'
         ));
+    }
+
+    public function update(StoreIcpRequest $request, $id)
+    {
+        $data = $request->validated();
+
+        DB::beginTransaction();
+        try {
+            $icp = Icp::findOrFail($id);
+
+            // --- Basic update ICP row ---
+            $icp->update([
+                'employee_id'    => $data['employee_id'],
+                'aspiration'     => $data['aspiration'],
+                'career_target'  => $data['career_target_code'], // tetap simpan kode target
+                'date'           => $data['date'],
+                'status'         => Icp::STATUS_DRAFT,
+            ]);
+
+            // --- Safety check backend:
+            // pastikan last stage position == career_target_code
+            // (front-end JS enforce ini tapi jangan 100% percaya UI)
+            if (!empty($data['stages']) && is_array($data['stages'])) {
+                $lastStage      = end($data['stages']);
+                $careerTarget   = $data['career_target_code'];
+                $lastPosition   = $lastStage['position_code'] ?? ($lastStage['_effective_position'] ?? null);
+
+                if ($careerTarget && $lastPosition && $careerTarget !== $lastPosition) {
+                    // kita anggap ini fatal - bisa juga fallback force override kalau kamu mau
+                    DB::rollBack();
+                    return back()
+                        ->with('error', 'Posisi di stage terakhir harus sama dengan Career Target.')
+                        ->withInput();
+                }
+            }
+
+            // --- Replace seluruh detail ICP ---
+            $icp->details()->delete();
+
+            $rowsToInsert = [];
+
+            // Loop semua stage yg dikirim form
+            foreach (($data['stages'] ?? []) as $stage) {
+
+                $year      = isset($stage['year']) ? (int) $stage['year'] : null;
+                $job       = $stage['job_function']    ?? null;
+                $jobSource = $stage['job_source']      ?? null;
+                $level     = $stage['level']           ?? null;
+
+                // position_code di form adalah kode RTC posisi stage tsb
+                // _effective_position dipakai di create() untuk safety,
+                // kita mirror di update kalau suatu saat dipakai front-end.
+                $effectivePos = $stage['_effective_position'] ?? ($stage['position_code'] ?? null);
+
+                // setiap "detail" = 1 row di tabel icp_details
+                foreach (($stage['details'] ?? []) as $d) {
+                    $rowsToInsert[] = [
+                        'icp_id'                    => $icp->id,
+                        'plan_year'                 => $year,
+                        'job_function'              => $job,
+                        'job_source'                => $jobSource,
+                        'position'                  => $effectivePos,
+                        'level'                     => $level,
+
+                        'current_technical'         => $d['current_technical']        ?? null,
+                        'current_nontechnical'      => $d['current_nontechnical']     ?? null,
+
+                        'required_technical'        => $d['required_technical']       ?? null,
+                        'required_nontechnical'     => $d['required_nontechnical']    ?? null,
+
+                        'development_technical'     => $d['development_technical']    ?? null,
+                        'development_nontechnical'  => $d['development_nontechnical'] ?? null,
+                    ];
+                }
+            }
+
+            if (!empty($rowsToInsert)) {
+                $icp->details()->createMany($rowsToInsert);
+            }
+
+            DB::commit();
+
+            return redirect()
+                ->route('icp.assign')
+                ->with('success', 'Data ICP berhasil diperbarui.');
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return redirect()
+                ->back()
+                ->with('error', 'Gagal memperbarui ICP: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     public function destroy($id)

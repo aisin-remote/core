@@ -164,57 +164,151 @@
                 @csrf
 
                 {{-- HEADER --}}
-                <div class="card p-4 shadow-sm rounded-3 mb-4">
-                    <h3 class="text-center fw-bold mb-4">Individual Career Plan</h3>
-                    <div class="row g-3">
-                        <div class="col-md-12">
-                            <label class="form-label fw-bold">Employee</label>
-                            <input type="text" class="form-control form-select-sm" value="{{ $employee->name }}"
-                                disabled>
-                            <input type="hidden" name="employee_id" value="{{ $employee->id }}">
+                <div class="card shadow-sm rounded-3 mb-4">
+                    <div class="card-body p-4">
 
-                            <input type="hidden" name="employee_current_position" value="{{ $employee->position }}">
+                        {{-- Header --}}
+                        <h3 class="text-center fw-bold mb-4">Individual Career Plan</h3>
+
+                        <div class="row g-4">
+                            {{-- Kolom Kiri --}}
+                            <div class="col-md-6">
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Employee</label>
+                                    <input type="text" class="form-control form-select-sm" value="{{ $employee->name }}"
+                                        disabled>
+                                    <input type="hidden" name="employee_id" value="{{ $employee->id }}">
+                                    <input type="hidden" name="employee_current_position"
+                                        value="{{ $employee->position }}">
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Company</label>
+                                    <input type="text" class="form-control form-select-sm"
+                                        value="{{ $employee->company_name }}" disabled>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Job Title</label>
+                                    <input type="text" class="form-control form-select-sm"
+                                        value="{{ $employee->position }}" disabled>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Level / Sub-Level</label>
+                                    <input type="text" class="form-control form-select-sm" value="{{ $employee->grade }}"
+                                        disabled>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Date of entry in Aisin Ind.</label>
+                                    <input type="text" class="form-control form-select-sm"
+                                        value="{{ $employee->formatted_date }}" disabled>
+                                </div>
+
+                            </div>
+
+                            {{-- Kolom Kanan --}}
+                            <div class="col-md-6">
+
+                                @php
+                                    $formatted = collect($performanceData)
+                                        ->map(function ($score, $year) {
+                                            return $year . ' = ' . $score;
+                                        })
+                                        ->implode(' | ');
+                                @endphp
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Perf. Appraisal Grade</label>
+                                    <input type="text" class="form-control form-select-sm" value="{{ $formatted }}"
+                                        disabled>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Ass. Centre Grade</label>
+                                    <input type="text" class="form-control form-select-sm" value="3" disabled>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Readiness</label>
+                                    <input type="text" class="form-control form-select-sm" value="" disabled>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Date of Birth</label>
+                                    <input type="text" class="form-control form-select-sm"
+                                        value="{{ $employee->formatted_birth }}" disabled>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Last Education</label>
+                                    <input type="text" class="form-control form-select-sm"
+                                        value="{{ implode(' / ', array_filter([$edu->educational_level ?? '', $edu->major ?? '', $edu->institute ?? ''])) }}"
+                                        disabled>
+                                </div>
+
+                            </div>
                         </div>
 
-                        <div class="col-12">
-                            <label class="form-label fw-bold">Aspiration</label>
-                            <textarea name="aspiration" class="form-control form-select-sm" rows="3" required>{{ old('aspiration') }}</textarea>
-                            @error('aspiration')
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
+                        <hr class="my-4">
+
+                        {{-- Aspiration + Career Target + Date Target --}}
+                        <div class="row g-4">
+                            <div class="col-12">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Aspiration</label>
+                                    <textarea name="aspiration" class="form-control form-select-sm" rows="3" required>{{ old('aspiration') }}</textarea>
+
+                                    @error('aspiration')
+                                        <div class="text-danger small">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold">Career Target</label>
+                                    <select name="career_target_code" id="career_target" class="form-select form-select-sm"
+                                        required>
+                                        <option value="">Select Position</option>
+                                        @foreach ($rtcList as $rt)
+                                            <option value="{{ $rt['position'] }}" @selected(old('career_target_code') === $rt['position'])>
+                                                {{ $rt['position'] }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+
+                                    <div class="form-text">
+                                        Stage terakhir harus sama dengan Career Target.
+                                    </div>
+
+                                    <div id="career-target-warn" class="text-danger small mt-1"></div>
+
+                                    @error('career_target_code')
+                                        <div class="text-danger small">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="mb-2">
+                                    <label class="form-label fw-bold">Date Target</label>
+                                    <input type="date" name="date" id="date" class="form-control form-select-sm"
+                                        value="{{ old('date') }}">
+
+                                    <div class="form-text">
+                                        Development Stage akan dibuat otomatis setelah memilih tanggal ini.
+                                    </div>
+
+                                    @error('date')
+                                        <div class="text-danger small">{{ $message }}</div>
+                                    @enderror
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Career Target</label>
-                            <select name="career_target_code" id="career_target" class="form-select form-select-sm"
-                                required>
-                                <option value="">Select Position</option>
-                                @foreach ($rtcList as $rt)
-                                    <option value="{{ $rt['position'] }}" @selected(old('career_target_code') === $rt['position'])>
-                                        {{ $rt['position'] }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            <small class="text-muted">
-                                Stage terakhir harus sama dengan Career Target.
-                            </small>
-                            <div id="career-target-warn" class="text-danger small mt-1"></div>
-                            @error('career_target_code')
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
-                        </div>
-
-                        <div class="col-md-6">
-                            <label class="form-label fw-bold">Date Target</label>
-                            <input type="date" name="date" id="date" class="form-control form-select-sm"
-                                value="{{ old('date') }}">
-                            <small class="text-muted">
-                                Development Stage akan dibuat otomatis setelah memilih tanggal ini.
-                            </small>
-                            @error('date')
-                                <div class="text-danger small">{{ $message }}</div>
-                            @enderror
-                        </div>
                     </div>
                 </div>
 
