@@ -101,6 +101,32 @@
                 max-width: 210px
             }
         }
+
+        /* ===== Candidate Info Badge colors ===== */
+        .term-badge {
+            font-weight: 700;
+            padding: .35rem .6rem
+        }
+
+        .term-short {
+            background: #e7f8ef;
+            color: #065f46;
+        }
+
+        .term-mid {
+            background: #fff7e5;
+            color: #92400e;
+        }
+
+        .term-long {
+            background: #eef2ff;
+            color: #3730a3;
+        }
+
+        .term-past {
+            background: #fee2e2;
+            color: #991b1b;
+        }
     </style>
 @endpush
 
@@ -157,7 +183,6 @@
                             <tbody>
                                 @forelse ($divisions as $division)
                                     @php
-                                        // Guard variabel status/plan hanya saat kolomnya tampil
                                         $shortName = $showPlanColumns
                                             ? $division->short->name ?? ($division->st_name ?? null)
                                             : null;
@@ -200,41 +225,26 @@
                                         @endif
 
                                         <td class="text-center">
-                                            {{-- Detail untuk level Company → ke list plant --}}
                                             @if ($table === 'Company')
                                                 <a href="{{ route('rtc.list', ['id' => $division->id, 'filter' => $table]) }}"
-                                                    class="btn btn-sm btn-info" title="View" target="_blank">
-                                                    Preview
-                                                </a>
+                                                    class="btn btn-sm btn-info" title="View" target="_blank">Preview</a>
                                                 <a href="{{ route('rtc.list', ['level' => 'company', 'id' => $division->id]) }}"
-                                                    class="btn btn-sm btn-primary" title="Detail">
-                                                    Detail
-                                                </a>
+                                                    class="btn btn-sm btn-primary" title="Detail">Detail</a>
                                             @elseif ($table === 'Plant')
                                                 <a class="btn btn-sm btn-info"
                                                     href="{{ route('rtc.list', ['id' => $division->id]) }}?filter=plant"
-                                                    title="RTC Summary" target="_blank">
-                                                    Preview
-                                                </a>
+                                                    title="RTC Summary" target="_blank">Preview</a>
                                                 <a href="{{ route('rtc.list', ['level' => 'plant', 'id' => $division->id]) }}"
-                                                    class="btn btn-sm btn-primary" title="Detail">
-                                                    Detail
-                                                </a>
+                                                    class="btn btn-sm btn-primary" title="Detail">Detail</a>
                                             @else
                                                 <a href="{{ route('rtc.list', ['id' => $division->id, 'filter' => $table]) }}"
-                                                    class="btn btn-sm btn-info" title="View" target="_blank">
-                                                    Preview
-                                                </a>
+                                                    class="btn btn-sm btn-info" title="View" target="_blank">Preview</a>
                                                 <a href="{{ route('rtc.list', ['id' => $division->id]) }}"
-                                                    class="btn btn-sm btn-primary" title="Detail">
-                                                    Detail
-                                                </a>
+                                                    class="btn btn-sm btn-primary" title="Detail">Detail</a>
                                                 @if ($showPlanColumns)
                                                     <a href="#" class="btn btn-sm btn-success open-add-plan-modal"
                                                         data-id="{{ $division->id }}" data-bs-toggle="modal"
-                                                        data-bs-target="#addPlanModal" title="Add">
-                                                        Detail
-                                                    </a>
+                                                        data-bs-target="#addPlanModal" title="Add">Add</a>
                                                 @endif
                                             @endif
                                         </td>
@@ -254,7 +264,7 @@
         </div>
     </div>
 
-    {{-- Modal Add ditampilkan hanya jika kolom plan aktif --}}
+    {{-- Modal Add hanya saat kolom plan aktif --}}
     @if ($showPlanColumns)
         <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
             <div class="modal-dialog">
@@ -266,22 +276,19 @@
                         </div>
 
                         <div class="modal-body">
-                            {{-- area level yang sedang diisi --}}
                             <input type="hidden" name="filter" value="{{ strtolower($table) }}">
-                            {{-- term hasil kalkulasi dari kandidat terpilih (short|mid|long) --}}
                             <input type="hidden" id="selected_term" name="term" value="">
 
                             <div class="mb-3">
                                 <label for="kode_rtc" class="form-label">Kode RTC</label>
                                 <select id="kode_rtc" class="form-select select2-in-modal">
                                     <option value="">-- Pilih Kode --</option>
-                                    @foreach (['AS', 'S', 'SS', 'AM', 'M', 'SM', 'AGM', 'GM', 'SGM'] as $kode)
+                                    @foreach (['AL', 'L', 'SL', 'AS', 'S', 'SS', 'AM', 'DGM', 'M', 'SM', 'AGM', 'GM', 'SGM'] as $kode)
                                         <option value="{{ $kode }}">{{ $kode }}</option>
                                     @endforeach
                                 </select>
-                                <small class="text-muted d-block mt-1">
-                                    Pilih target posisi (AS/S/SS/AM/M/SM/AGM/GM/SGM) untuk menarik kandidat dari ICP.
-                                </small>
+                                <small class="text-muted d-block mt-1">Pilih target posisi (AS/S/SS/AM/M/SM/AGM/GM/SGM)
+                                    untuk menarik kandidat dari ICP.</small>
                             </div>
 
                             <div class="mb-3">
@@ -289,19 +296,17 @@
                                 <select id="candidate_select" class="form-select select2-in-modal">
                                     <option value="">-- Pilih kandidat --</option>
                                 </select>
-                                <small class="text-muted d-block mt-1">
-                                    Daftar sudah difilter berdasar ICP: posisi, level, dan plan_year (≥ tahun ini).
-                                </small>
+                                <small class="text-muted d-block mt-1">Daftar sudah difilter berdasar ICP: posisi, level,
+                                    dan plan_year (≥ tahun ini).</small>
                             </div>
 
-                            {{-- Panel info kandidat terpilih --}}
                             <div id="candidate_info" class="border rounded p-3 d-none">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
                                         <div class="fw-semibold" id="ci_name">-</div>
                                         <div class="text-muted small" id="ci_company">-</div>
                                     </div>
-                                    <span id="ci_term_badge" class="badge rounded-pill text-uppercase"></span>
+                                    <span id="ci_term_badge" class="badge rounded-pill text-uppercase term-badge"></span>
                                 </div>
                                 <hr class="my-2">
                                 <div class="row g-2 small">
@@ -324,7 +329,6 @@
         </div>
     @endif
 @endsection
-@dd($showPlanColumns)
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -361,13 +365,14 @@
                 });
             });
 
-            // helper: render badge term
+            // helper: render badge term (short|mid|long|past)
             function renderTermBadge(term) {
                 const $b = $('#ci_term_badge');
-                $b.removeClass('bg-success bg-warning bg-secondary');
-                if (term === 'short') $b.addClass('bg-success');
-                else if (term === 'mid') $b.addClass('bg-warning');
-                else $b.addClass('bg-secondary');
+                $b.removeClass('term-short term-mid term-long term-past');
+                if (term === 'short') $b.addClass('term-short');
+                else if (term === 'mid') $b.addClass('term-mid');
+                else if (term === 'long') $b.addClass('term-long');
+                else if (term === 'past') $b.addClass('term-past');
                 $b.text((term || '-').toUpperCase());
             }
 
@@ -384,26 +389,24 @@
                     return;
                 }
 
+                // Anda bisa menambahkan parameter lain sesuai endpoint (mis. include_past=false, horizon=5)
                 $.getJSON('{{ route('rtc.candidates') }}', {
                     kode: kode
                 }, function(resp) {
                     $cand.empty().append('<option value="">-- Pilih kandidat --</option>');
                     if (resp.status === 'ok') {
                         resp.data.forEach(row => {
-                            console.log(row);
-
-                            // simpan payload ringkas di data-attributes
+                            const txt =
+                                `${row.name} • ${row.job_function} • ${row.level} • ${row.plan_year} (${(row.term||'-').toUpperCase()})`;
                             const opt = $('<option>')
                                 .val(row.employee_id)
-                                .text(
-                                    `${row.name} • ${row.job_function} • ${row.level} • ${row.plan_year} (${row.term.toUpperCase()})`
-                                )
-                                .attr('data-term', row.term)
-                                .attr('data-name', row.name)
-                                .attr('data-company', row.company_name)
-                                .attr('data-job_function', row.job_function)
-                                .attr('data-level', row.level)
-                                .attr('data-year', row.plan_year);
+                                .text(txt)
+                                .attr('data-term', row.term || '')
+                                .attr('data-name', row.name || '')
+                                .attr('data-company', row.company_name || '')
+                                .attr('data-job_function', row.job_function || '')
+                                .attr('data-level', row.level || '')
+                                .attr('data-year', row.plan_year || '');
                             $cand.append(opt);
                         });
                     }
@@ -437,7 +440,7 @@
                 $('#candidate_info').removeClass('d-none');
             });
 
-            // submit: petakan employee ke field ST/MT/LT sesuai term (backend tetap sama)
+            // submit: petakan employee ke field ST/MT/LT sesuai term
             $('#submitPlanBtn').on('click', function() {
                 const kode = $('#kode_rtc').val();
                 const employeeId = $('#candidate_select').val();
@@ -446,6 +449,8 @@
                 if (!kode) return Swal.fire('Validasi', 'Pilih Kode RTC terlebih dahulu.', 'warning');
                 if (!employeeId) return Swal.fire('Validasi', 'Pilih kandidat terlebih dahulu.', 'warning');
                 if (!term) return Swal.fire('Validasi', 'Term kandidat tidak terbaca.', 'warning');
+                if (term === 'past') return Swal.fire('Validasi', 'Kandidat dengan term PAST tidak bisa disimpan.',
+                    'warning');
 
                 const formData = {
                     filter: @json($table), // area (Division/Department/...)
@@ -460,7 +465,7 @@
 
                 $.ajax({
                     url: '{{ route('rtc.update') }}',
-                    type: 'GET', // (idealnya POST/PUT, mengikuti kode kamu sekarang)
+                    type: 'GET', // NOTE: pertahankan sesuai backend Anda; sebaiknya POST/PUT untuk produksi
                     data: formData,
                     headers: {
                         'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -478,19 +483,27 @@
         </script>
     @endif
 
-
     <script>
-        // Simple search di client
+        // Simple search di client (input dan tombol)
         document.addEventListener('DOMContentLoaded', function() {
             const input = document.getElementById('searchInput');
+            const button = document.getElementById('searchButton');
             const tbody = document.querySelector('#kt_table_users tbody');
-            input.addEventListener('keyup', function() {
-                const q = this.value.toLowerCase();
+
+            const applyFilter = () => {
+                const q = (input.value || '').toLowerCase();
                 [...tbody.querySelectorAll('tr')].forEach(tr => {
                     const text = tr.innerText.toLowerCase();
                     tr.style.display = text.includes(q) ? '' : 'none';
                 });
+            };
+
+            input.addEventListener('keyup', function() {
+                // debounce ringan
+                clearTimeout(window.__rtcSearchTimer);
+                window.__rtcSearchTimer = setTimeout(applyFilter, 150);
             });
+            button.addEventListener('click', applyFilter);
         });
     </script>
 @endpush

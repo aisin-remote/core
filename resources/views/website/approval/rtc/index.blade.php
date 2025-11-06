@@ -42,7 +42,8 @@
                             <th style="width:50px;">No</th>
                             <th>Area</th>
                             <th>Type</th>
-                            <th>Status Summary</th>
+                            <th>Current PIC</th>
+                            <th class="text-center">Status</th>
                             <th class="text-center" style="width:140px;">Detail</th>
                             <th class="text-center" style="width:160px;">Action</th>
                         </tr>
@@ -50,15 +51,24 @@
                     <tbody>
                         @forelse ($rtcs as $item)
                             @php
+                                // ringkasan status untuk kolom Status
                                 $statusSummary = collect($item['status_info'] ?? [])
                                     ->map(fn($cnt, $lbl) => $lbl . ': ' . $cnt)
                                     ->implode(' | ');
+
+                                // optional: current pic (kalau controller kirim), kalau tidak ada tampilkan '-'
+                                $currentPic = $item['current_pic'] ?? '-';
                             @endphp
 
                             <tr>
                                 <td>{{ $loop->iteration }}</td>
                                 <td>{{ $item['area_name'] ?? '-' }}</td>
                                 <td>{{ ucfirst($item['area'] ?? '-') }}</td>
+
+                                {{-- Current PIC (fallback '-') --}}
+                                <td>{{ $currentPic }}</td>
+
+                                {{-- Status Summary dipindah ke kolom Status (sesuai header) --}}
                                 <td class="text-center">
                                     @if ($statusSummary)
                                         <span class="badge bg-light text-muted border">{{ $statusSummary }}</span>
@@ -66,6 +76,8 @@
                                         <span class="text-muted">-</span>
                                     @endif
                                 </td>
+
+                                {{-- Detail --}}
                                 <td class="text-center">
                                     <button type="button" class="btn btn-sm btn-light btn-detail" data-bs-toggle="modal"
                                         data-bs-target="#rtcDetailModal" data-area="{{ $item['area'] }}"
@@ -74,6 +86,7 @@
                                     </button>
                                 </td>
 
+                                {{-- Action --}}
                                 <td class="text-center">
                                     <button type="button" class="btn btn-sm btn-success btn-approve mb-1"
                                         onclick="confirmApproveArea('{{ $item['area'] }}', '{{ $item['area_id'] }}')">
@@ -90,7 +103,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center text-muted">No data available</td>
+                                <td colspan="7" class="text-center text-muted">No data available</td>
                             </tr>
                         @endforelse
                     </tbody>
@@ -100,21 +113,19 @@
         </div>
     </div>
 
+    {{-- Modal Detail --}}
     <div class="modal fade" id="rtcDetailModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
 
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        RTC Detail -
-                        <span id="rtcDetailAreaName">Area Name</span>
+                        RTC Detail - <span id="rtcDetailAreaName">Area Name</span>
                     </h5>
-
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
                 <div class="modal-body">
-
                     <div id="rtcDetailLoading" class="py-5 text-center text-muted d-none">
                         <div class="spinner-border" role="status" style="width:2rem;height:2rem;"></div>
                         <div class="mt-3">Loading...</div>
@@ -132,17 +143,13 @@
                                     <th>Term</th>
                                 </tr>
                             </thead>
-                            <tbody id="rtcDetailTableBody">
-                            </tbody>
+                            <tbody id="rtcDetailTableBody"></tbody>
                         </table>
                     </div>
-
                 </div>
 
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">
-                        Close
-                    </button>
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
                 </div>
 
             </div>
@@ -165,19 +172,15 @@
                         url: "{{ route('rtc.approve.area') }}",
                         method: 'POST',
                         data: {
-                            area: area,
-                            area_id: area_id,
-                            comment: comment,
+                            area,
+                            area_id,
+                            comment,
                             _token: '{{ csrf_token() }}'
                         }
                     }).then(() => {
                         Swal.fire('Success', 'Saved.', 'success').then(() => location.reload());
                     }).catch(xhr => {
-                        Swal.fire(
-                            'Failed',
-                            xhr?.responseJSON?.message || 'Error.',
-                            'error'
-                        );
+                        Swal.fire('Failed', xhr?.responseJSON?.message || 'Error.', 'error');
                     });
                 }
             });
@@ -196,19 +199,15 @@
                         url: "{{ route('rtc.revise.area') }}",
                         method: 'POST',
                         data: {
-                            area: area,
-                            area_id: area_id,
-                            comment: comment,
+                            area,
+                            area_id,
+                            comment,
                             _token: '{{ csrf_token() }}'
                         }
                     }).then(() => {
                         Swal.fire('Success', 'Revised.', 'success').then(() => location.reload());
                     }).catch(xhr => {
-                        Swal.fire(
-                            'Failed',
-                            xhr?.responseJSON?.message || 'Error.',
-                            'error'
-                        );
+                        Swal.fire('Failed', xhr?.responseJSON?.message || 'Error.', 'error');
                     });
                 }
             });
@@ -232,44 +231,27 @@
                 url: "{{ route('rtc.area.items') }}",
                 method: 'GET',
                 data: {
-                    area: area,
-                    area_id: area_id,
+                    area,
+                    area_id
                 }
             }).done(function(res) {
                 const tbody = document.getElementById('rtcDetailTableBody');
 
                 if (!Array.isArray(res) || res.length === 0) {
                     tbody.innerHTML = `
-                        <tr>
-                            <td colspan="8" class="text-center text-muted py-5">No RTC found in this area.</td>
-                        </tr>`;
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-5">No RTC found in this area.</td>
+                    </tr>`;
                 } else {
                     res.forEach(function(rtc, index) {
-                        let lbl = 'Unknown',
-                            cls = 'bg-secondary text-white';
-                        switch (parseInt(rtc.status)) {
-                            case 0:
-                                lbl = 'Submitted';
-                                cls = 'bg-warning-subtle text-warning-emphasis';
-                                break;
-                            case 1:
-                                lbl = 'Checked';
-                                cls = 'bg-info-subtle text-info-emphasis';
-                                break;
-                            case 2:
-                                lbl = 'Approved';
-                                cls = 'bg-success-subtle text-success-emphasis';
-                                break;
-                        }
-
                         tbody.innerHTML += `
-                            <tr>
-                                <td>${index + 1}</td>
-                                <td>${rtc.employee?.npk ?? '-'}</td>
-                                <td>${rtc.employee?.name ?? '-'}</td>
-                                <td>${(rtc.term ?? '').toUpperCase()}</td>
-                            </tr>
-                        `;
+                        <tr>
+                            <td>${index + 1}</td>
+                            <td>${rtc.employee?.npk ?? '-'}</td>
+                            <td>${rtc.employee?.name ?? '-'}</td>
+                            <td>${(rtc.term ?? '').toUpperCase()}</td>
+                        </tr>
+                    `;
                     });
                 }
 

@@ -5,47 +5,60 @@ namespace App\Helpers;
 class RtcTarget
 {
     /**
-     * Urutan dari terendah ke tertinggi (pakai kode)
+     * Ranking jabatan dari terendah -> tertinggi.
+     * Ini dipakai buat validasi range posisi stage (current .. career target).
+     *
+     * NOTE:
+     * Pastikan urutan ini sesuai jalur karier perusahaanmu.
+     * Saya pakai urutan dari kode lama kamu, tapi dirapikan namingnya.
      */
     public static function order(): array
     {
         return [
-            'AL',
-            'L',
-            'SL',
-            'AS',
-            'S',
-            'SS',
-            'AM',
-            'M',
-            'SM',
-            'AGM',
-            'GM',
-            'SGM'
+            'AL',   // Act Leader
+            'L',    // Leader
+            'SL',   // Act Section Head
+            'AS',   // Supervisor
+            'S',    // Section Head
+            'SS',   // Coordinator
+            'AM',   // Manager
+            'DGM',  // DGM
+            'M',    // Act GM
+            'SM',   // GM
+            'AGM',  // Act Direktur
+            'GM',   // Direktur
+            'SGM',  // Direktur (Senior?)
         ];
     }
 
     /**
-     * Mapping kode -> posisi + levels
+     * Mapping kode -> nama posisi.
+     * levels dibuang karena sekarang level/gradenya diambil dari GradeConversion,
+     * bukan hardcoded per posisi lagi.
      */
     public static function mapAll(): array
     {
         return [
-            'AL'  => ['position' => 'Act Leader',      'levels' => ['4A', '4B']],
-            'L'   => ['position' => 'Leader',          'levels' => ['5A', '5B']],
-            'SL'  => ['position' => 'Act Section Head',  'levels' => ['6A', '6B']],
-            'AS'  => ['position' => 'Supervisor',      'levels' => ['7A', '7B']],
-            'S'   => ['position' => 'Section Head',    'levels' => ['8A', '8B']],
-            'SS'  => ['position' => 'Coordinator',     'levels' => ['9A', '9B']],
-            'AM'  => ['position' => 'Manager',         'levels' => ['10A', '10B']],
-            'M'   => ['position' => 'Act GM',          'levels' => ['11A', '11B']],
-            'SM'  => ['position' => 'GM',              'levels' => ['12A', '12B']],
-            'AGM' => ['position' => 'Act Direktur',    'levels' => ['13A', '13B']],
-            'GM'  => ['position' => 'Direktur',        'levels' => ['14A', '14B', '15A', '15B']],
-            'SGM' => ['position' => 'Direktur',        'levels' => ['14A', '14B', '15A', '15B']],
+            'AL'  => ['position' => 'Act Leader'],
+            'L'   => ['position' => 'Leader'],
+            'SL'  => ['position' => 'Act Section Head'],
+            'AS'  => ['position' => 'Supervisor'],
+            'S'   => ['position' => 'Section Head'],
+            'SS'  => ['position' => 'Coordinator'],
+            'AM'  => ['position' => 'Manager'],
+            'DGM' => ['position' => 'DGM'],
+            'M'   => ['position' => 'Act GM'],
+            'SM'  => ['position' => 'GM'],
+            'AGM' => ['position' => 'Act Direktur'],
+            'GM'  => ['position' => 'Direktur'],
+            'SGM' => ['position' => 'Direktur'],
         ];
     }
 
+    /**
+     * Kalau dipanggil tanpa argumen, sebelumnya function ini ngembaliin seluruh map.
+     * Behavior itu masih aku pertahankan supaya nggak ngerusak tempat lain.
+     */
     public static function map(string $kode = ""): ?array
     {
         $kode = strtoupper(trim($kode));
@@ -59,19 +72,22 @@ class RtcTarget
     }
 
     /**
-     * Apakah $kodeA ≤ $kodeB menurut ranking?
+     * Bandingkan dua kode posisi berdasarkan ranking order()
+     * Contoh: lte('L','AM') => true, lte('GM','AM') => false
      */
     public static function lte(string $kodeA, string $kodeB): bool
     {
         $ord = self::order();
         $ia = array_search(strtoupper($kodeA), $ord, true);
         $ib = array_search(strtoupper($kodeB), $ord, true);
+
         if ($ia === false || $ib === false) return false;
         return $ia <= $ib;
     }
 
     /**
-     * Ambil daftar kode yang ≤ career target
+     * Ambil semua kode dari level terbawah sampai target.
+     * Ini dipakai buat dropdown posisi stage (range current -> career target).
      */
     public static function codesUpTo(string $careerTargetCode): array
     {
@@ -81,6 +97,10 @@ class RtcTarget
         return array_slice($ord, 0, $idx + 1);
     }
 
+    /**
+     * Cari kode berdasarkan nama posisi.
+     * Dipakai waktu nentuin posisi CURRENT employee di create().
+     */
     public static function codeFromPositionName(string $positionName): ?string
     {
         $positionName = trim(strtoupper($positionName));
@@ -90,5 +110,12 @@ class RtcTarget
             }
         }
         return null;
+    }
+
+    public static function positionFromCode(string $code): ?string
+    {
+        $code = strtoupper(trim($code));
+        $all = self::mapAll();
+        return $all[$code]['position'] ?? null;
     }
 }

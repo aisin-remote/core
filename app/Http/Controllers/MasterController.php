@@ -756,7 +756,6 @@ class MasterController extends Controller
                 }
 
                 $picEmp = $this->currentPicFor($areaKey, $item);
-
                 $canAddByRole =
                     !($isGM && in_array($areaKey, ['department', 'section', 'sub_section'], true))
                     && !($isDir && in_array($areaKey, ['division', 'department', 'section', 'sub_section'], true));

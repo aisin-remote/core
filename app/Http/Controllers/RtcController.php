@@ -1350,8 +1350,8 @@ class RtcController extends Controller
             ], 403);
         }
 
-        // Kembalikan semua rtc di area tsb ke status 0 (Submitted)
-        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)])
+        // Ambil semua RTC target (case-insensitive match untuk area)
+        $rtcs = Rtc::whereRaw('LOWER(area) = ?', [$area])
             ->where('area_id', $areaId)
             ->get();
 
@@ -1361,16 +1361,25 @@ class RtcController extends Controller
             ], 404);
         }
 
+        $updatedCount = 0;
 
-        DB::transaction(function () use ($rtcs) {
+        DB::transaction(function () use ($rtcs, &$updatedCount) {
             foreach ($rtcs as $rtc) {
-                $rtc->status = -1;
-                $rtc->save();
+                // hanya update kalau memang bukan 0 biar keliatan efeknya
+                if ($rtc->status != 0) {
+                    $rtc->status = 0;
+                    $rtc->save();
+                    $updatedCount++;
+                } else {
+                    // kalau sudah 0, tetap hitung supaya kita tau rownya actually ada
+                    $updatedCount++;
+                }
             }
         });
 
         return response()->json([
-            'message' => 'Revised back to submitter.'
+            'message' => 'Revised back to submitter.',
+            'updated' => $updatedCount,
         ]);
     }
 
@@ -1463,45 +1472,47 @@ class RtcController extends Controller
             $stage = 'approve';
         }
 
-        // === NEW PART: group per area ===
         $grouped = $queue
             ->groupBy(function ($rtc) {
-                // key unik per area
                 return strtolower($rtc->area) . '#' . $rtc->area_id;
             })
             ->map(function ($items) {
-                $first = $items->first();
+                $first   = $items->first();
+                $areaKey = strtolower($first->area);
 
-                // bikin label status ringkas
-                $statusMap = [
-                    0  => 'Submitted',
-                    1  => 'Checked',
-                    2  => 'Approved',
-                    -1 => 'Revised',
-                ];
-
-                $statusCounts = $items
-                    ->groupBy('status')
+                $statusMap = [0 => 'Submitted', 1 => 'Checked', 2 => 'Approved', -1 => 'Revised'];
+                $statusCounts = $items->groupBy('status')
                     ->map(fn($col) => $col->count())
-                    ->mapWithKeys(function ($count, $statusCode) use ($statusMap) {
-                        $label = $statusMap[$statusCode] ?? 'Unknown';
-                        return [$label => $count];
-                    });
+                    ->mapWithKeys(fn($count, $code) => [($statusMap[$code] ?? 'Unknown') => $count]);
+
+                $areaModel = match ($areaKey) {
+                    'division'    => $first->division    ?? Division::find($first->area_id),
+                    'department'  => $first->department  ?? Department::find($first->area_id),
+                    'section'     => $first->section     ?? Section::find($first->area_id),
+                    'sub_section' => $first->subsection  ?? SubSection::find($first->area_id),
+                    'plant'       => $first->plant       ?? Plant::find($first->area_id),
+                    default       => null, // 'direksi' or others -> nggak ada model spesifik
+                };
+
+                $picEmp = $areaModel ? $this->currentPicFor($areaKey, $areaModel) : null;
+                $currentPic = $picEmp
+                    ? trim($picEmp->name . ($picEmp->position ? ' (' . $picEmp->position . ')' : ''))
+                    : '-';
 
                 return [
-                    'area'        => strtolower($first->area),        // e.g "department"
-                    'area_id'     => $first->area_id,                 // e.g 12
-                    'area_name'   => $first->area_name,               // accessor dari model Rtc
-                    'total_rtc'   => $items->count(),                 // berapa RTC di area ini
+                    'area'        => $areaKey,
+                    'area_id'     => $first->area_id,
+                    'area_name'   => $first->area_name,
+                    'current_pic' => $currentPic,
+                    'total_rtc'   => $items->count(),
                     'terms'       => $items->pluck('term')->unique()->values()->all(),
-                    'status_info' => $statusCounts,                   // contoh: ['Submitted' => 3, 'Checked' => 1]
-                    'sample_ids'  => $items->pluck('id')->take(3)->values()->all(), // optional, buat action detail nanti
+                    'status_info' => $statusCounts,
+                    'sample_ids'  => $items->pluck('id')->take(3)->values()->all(),
                 ];
             })
             ->values();
 
         return view('website.approval.rtc.index', [
-            // ganti rtcs => grouped data per area, bukan per employee
             'rtcs'  => $grouped,
             'stage' => $stage,
             'title' => 'Approval'
@@ -1518,10 +1529,12 @@ class RtcController extends Controller
         $area   = strtolower($request->input('area'));
         $areaId = (int) $request->input('area_id');
 
+        // Ambil daftar RTC untuk area & area_id tsb (case-insensitive untuk kolom area)
         $rtcs = Rtc::with([
-            'employee'
+            'employee',
+            'employee.department',
         ])
-            ->whereIn('area', [$area, ucfirst($area)])
+            ->whereRaw('LOWER(area) = ?', [$area])
             ->where('area_id', $areaId)
             ->get([
                 'id',
@@ -1534,18 +1547,24 @@ class RtcController extends Controller
 
         $payload = $rtcs->map(function ($rtc) {
             return [
-                'id'       => $rtc->id,
-                'term'     => $rtc->term,
-                'status'   => $rtc->status,
+                'id'     => $rtc->id,
+                'term'   => $rtc->term,
+                'status' => $rtc->status,
                 'employee' => [
                     'npk'          => $rtc->employee->npk ?? null,
-                    'name'         => $rtc->employee->name ?? null
+                    'name'         => $rtc->employee->name ?? null,
+                    'company_name' => $rtc->employee->company_name ?? null,
+                    'position'     => $rtc->employee->position ?? null,
+                    'department'   => [
+                        'name' => optional($rtc->employee->department)->name,
+                    ],
                 ],
             ];
         })->values();
 
         return response()->json($payload);
     }
+
 
     public function approve($id)
     {
@@ -1663,5 +1682,19 @@ class RtcController extends Controller
         // (opsional) simpan comment revisi ke table audit/log terpisah
 
         return response()->json(['message' => 'Revised back to submitter.']);
+    }
+
+    private function currentPicFor(string $area, $model)
+    {
+        $empId = match ($area) {
+            'plant'       => $model->director_id ?? null,
+            'division'    => $model->gm_id ?? null,
+            'department'  => $model->manager_id ?? null,
+            'section'     => $model->supervisor_id ?? null,
+            'sub_section' => $model->leader_id ?? null,
+            default       => null,
+        };
+
+        return $empId ? Employee::select('id', 'name', 'position')->find($empId) : null;
     }
 }
