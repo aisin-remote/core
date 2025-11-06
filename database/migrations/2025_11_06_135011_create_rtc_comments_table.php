@@ -15,7 +15,13 @@ return new class extends Migration
     {
         Schema::create('rtc_comments', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('rtc_id')->constrained('rtc')->cascadeOnDelete();
+            $table->foreignId('employee_id')->constrained('employees')->cascadeOnDelete();
+            $table->string('status_from', 30)->nullable();
+            $table->string('status_to', 30)->nullable();
+            $table->text('comment');
             $table->timestamps();
+            $table->index(['rtc_id', 'created_at']);
         });
     }
 

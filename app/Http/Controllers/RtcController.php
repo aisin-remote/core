@@ -9,6 +9,7 @@ use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Plant;
+use App\Models\RtcComment;
 use App\Models\SubSection;
 use App\Services\RtcService;
 use Carbon\Carbon;
@@ -1319,8 +1320,9 @@ class RtcController extends Controller
         $employee  = $user->employee;
         $norm      = strtolower($employee->getNormalizedPosition());
 
-        $area      = strtolower($request->input('area'));
-        $areaId    = (int) $request->input('area_id');
+        $area    = strtolower($request->input('area'));
+        $areaId  = (int) $request->input('area_id');
+        $comment = $request->comment;
 
         $allowed = false;
 
@@ -1361,25 +1363,25 @@ class RtcController extends Controller
             ], 404);
         }
 
-        $updatedCount = 0;
 
-        DB::transaction(function () use ($rtcs, &$updatedCount) {
+        DB::transaction(function () use ($rtcs, $comment, $employee) {
             foreach ($rtcs as $rtc) {
-                // hanya update kalau memang bukan 0 biar keliatan efeknya
-                if ($rtc->status != 0) {
-                    $rtc->status = 0;
-                    $rtc->save();
-                    $updatedCount++;
-                } else {
-                    // kalau sudah 0, tetap hitung supaya kita tau rownya actually ada
-                    $updatedCount++;
-                }
+                $oldStatus = $rtc->status;
+                $rtc->status = -1;
+                $rtc->save();
+
+                RtcComment::create([
+                    'rtc_id'      => $rtc->id,
+                    'employee_id' => $employee->id,
+                    'status_from' => $oldStatus,
+                    'status_to'   => -1,
+                    'comment'     => $comment
+                ]);
             }
         });
 
         return response()->json([
-            'message' => 'Revised back to submitter.',
-            'updated' => $updatedCount,
+            'message' => 'Revised back to submitter.'
         ]);
     }
 
