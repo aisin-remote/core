@@ -342,13 +342,13 @@ class RtcController extends Controller
             }
 
             Log::debug('[RTC][list] view computed', [
-                'trace' => $trace,
-                'activeTab' => $activeTab,
-                'tableFilter' => $tableFilter,
-                'containerId' => $containerId,
-                'cardTitle'   => $cardTitle,
-                'hideKpiCols' => $hideKpiCols,
-                'forceHideAdd' => $forceHideAdd,
+                'trace'          => $trace,
+                'activeTab'      => $activeTab,
+                'tableFilter'    => $tableFilter,
+                'containerId'    => $containerId,
+                'cardTitle'      => $cardTitle,
+                'hideKpiCols'    => $hideKpiCols,
+                'forceHideAdd'   => $forceHideAdd,
                 'not_set_counts' => $counts,
             ]);
 
@@ -1185,7 +1185,6 @@ class RtcController extends Controller
         $request->validate([
             'area'    => 'required|string',
             'area_id' => 'required|integer',
-            'comment' => 'nullable|string',
         ]);
 
         $user      = auth()->user();
@@ -1195,14 +1194,11 @@ class RtcController extends Controller
         $area      = strtolower($request->input('area'));
         $areaId    = (int) $request->input('area_id');
 
-        // 1. Tentukan apakah user boleh approve/check area ini
-        //    dan tentukan nextStatus yg valid
         $allowed = false;
         $fromStatus = null;
         $toStatus   = null;
 
         if ($norm === 'gm') {
-            // GM boleh untuk dept/section/sub_section di bawah divisinya
             $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
             $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
             $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
@@ -1213,13 +1209,11 @@ class RtcController extends Controller
                 ($area === 'section'     && $sectionIds->contains($areaId)) ||
                 ($area === 'sub_section' && $subIds->contains($areaId));
 
-            // GM langsung final approve: 0 -> 2
             if ($allowed) {
                 $fromStatus = 0;
                 $toStatus   = 2;
             }
         } elseif ($norm === 'direktur') {
-            // Direktur approve division di plant dia: 0 -> 2
             $plantId = optional($employee->plant)->id;
             $divIds  = Division::where('plant_id', $plantId)->pluck('id');
 
@@ -1230,7 +1224,6 @@ class RtcController extends Controller
                 $toStatus   = 2;
             }
         } elseif ($norm === 'vpd') {
-            // VPD melakukan CHECK: plant/direksi 0 -> 1
             $plantIds = Plant::pluck('id');
 
             $allowed = in_array($area, ['direksi', 'plant'], true)
@@ -1241,7 +1234,6 @@ class RtcController extends Controller
                 $toStatus   = 1;
             }
         } elseif ($norm === 'president') {
-            // President melakukan APPROVE FINAL: plant/direksi 1 -> 2
             $plantIds = Plant::pluck('id');
 
             $allowed = in_array($area, ['direksi', 'plant'], true)
@@ -1259,8 +1251,7 @@ class RtcController extends Controller
             ], 403);
         }
 
-        // 2. Ambil semua RTC yg match area+area_id dan status yg sesuai transition
-        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)]) // toleransi kapitalisasi
+        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)])
             ->where('area_id', $areaId)
             ->where('status', $fromStatus)
             ->get();
@@ -1271,13 +1262,11 @@ class RtcController extends Controller
             ], 404);
         }
 
-        // 3. Update semuanya dalam transaksi
         DB::transaction(function () use ($rtcs, $toStatus, $area, $areaId) {
             foreach ($rtcs as $rtc) {
                 $rtc->status = $toStatus;
                 $rtc->save();
 
-                // kalau status final = 2 dan areanya organisasi (bukan plant/direksi)
                 if (
                     $rtc->status === 2 &&
                     in_array($area, ['division', 'department', 'section', 'sub_section'], true)
@@ -1293,7 +1282,6 @@ class RtcController extends Controller
                     if ($modelClass) {
                         $record = $modelClass::find($areaId);
                         if ($record) {
-                            // contoh: short_term / mid_term / long_term update
                             $record->update([
                                 $rtc->term . '_term' => $rtc->employee_id
                             ]);

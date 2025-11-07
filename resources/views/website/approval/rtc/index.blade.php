@@ -162,19 +162,16 @@
         function confirmApproveArea(area, area_id) {
             Swal.fire({
                 title: '{{ $stage === 'check' ? 'Check Area?' : 'Approve Area?' }}',
-                input: 'textarea',
-                inputPlaceholder: 'Comment...',
                 showCancelButton: true,
                 confirmButtonText: '{{ $stage === 'check' ? 'Yes, Check' : 'Yes, Approve' }}',
                 cancelButtonText: 'Cancel',
-                preConfirm: (comment) => {
+                preConfirm: () => {
                     return $.ajax({
                         url: "{{ route('rtc.approve.area') }}",
                         method: 'POST',
                         data: {
                             area,
                             area_id,
-                            comment,
                             _token: '{{ csrf_token() }}'
                         }
                     }).then(() => {

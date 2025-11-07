@@ -381,7 +381,7 @@
                     }
 
                     let reviseBtn = '';
-                    if (!window.READ_ONLY) {
+                    if (row.can_revise) {
                         reviseBtn = `<a href="#" class="btn btn-sm btn-warning btn-revise"
                             data-id="${row.id}"
                             data-filter="${filter}"

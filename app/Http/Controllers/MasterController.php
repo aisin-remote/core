@@ -700,23 +700,22 @@ class MasterController extends Controller
                 $m = optional($rtcMid)->status;
                 $l = optional($rtcLong)->status;
 
+                $statusVals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2, -1], true));
+                $allApproved = $complete3 && $statusVals->every(fn($v) => $v === 2);
+
                 $label = 'Not Set';
                 $class = 'badge badge-danger';
                 $code  = 'not_set';
 
                 if ($complete3) {
-                    $vals = collect([$s, $m, $l])
-                        ->filter(fn($v) => in_array($v, [0, 1, 2, -1], true));
-
-                    if ($vals->isEmpty()) {
+                    if ($statusVals->isEmpty()) {
                         $label = 'Complete';
                         $class = 'badge badge-secondary';
                         $code  = 'complete_no_submit';
                     } else {
-                        $hasRevised   = $vals->contains(-1);
-                        $allApproved  = $vals->every(fn($v) => $v === 2);
-                        $allChecked   = $vals->every(fn($v) => $v === 1);
-                        $hasSubmitted = $vals->contains(0);
+                        $hasRevised   = $statusVals->contains(-1);
+                        $allChecked   = $statusVals->every(fn($v) => $v === 1);
+                        $hasSubmitted = $statusVals->contains(0);
 
                         if ($hasRevised) {
                             // ❗️asal ada satu term revised, overall = Revised
@@ -745,21 +744,21 @@ class MasterController extends Controller
                     }
                 }
 
-
                 $picEmp = $this->currentPicFor($areaKey, $item);
                 $canAddByRole =
                     !($isGM && in_array($areaKey, ['department', 'section', 'sub_section'], true))
                     && !($isDir && in_array($areaKey, ['division', 'department', 'section', 'sub_section'], true));
-
+                $canRevised = $canAddByRole && $complete3 && !$allApproved;
                 return [
-                    'id'   => $item->id,
-                    'name' => $item->name,
-                    'pic'  => $picEmp ? ['id' => $picEmp->id, 'name' => $picEmp->name, 'position' => $picEmp->position] : null,
-                    'short' => ['name' => $shortEmp?->name, 'status' => $s],
-                    'mid'   => ['name' => $midEmp?->name,  'status' => $m],
-                    'long'  => ['name' => $longEmp?->name, 'status' => $l],
-                    'overall' => ['label' => $label, 'class' => $class, 'code' => $code],
-                    'can_add' => $canAddByRole && !$complete3, // 🔒
+                    'id'         => $item->id,
+                    'name'       => $item->name,
+                    'pic'        => $picEmp ? ['id' => $picEmp->id, 'name' => $picEmp->name, 'position' => $picEmp->position] : null,
+                    'short'      => ['name' => $shortEmp?->name, 'status' => $s],
+                    'mid'        => ['name' => $midEmp?->name,  'status' => $m],
+                    'long'       => ['name' => $longEmp?->name, 'status' => $l],
+                    'overall'    => ['label' => $label, 'class' => $class, 'code' => $code],
+                    'can_add'    => $canAddByRole && !$complete3,                                                                       // 🔒
+                    'can_revise' => $canRevised
                 ];
             });
 
