@@ -886,42 +886,11 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
-                        ->where('department_id', $d->id)->orderBy('name')->get();
-
-                    foreach ($secs as $s) {
-                        RtcHelper::setAreaContext('section', $s->id);
-                        $container['supervisors'][] = [
-                            'title'      => $s->name,
-                            'person'     => RtcHelper::formatPerson($s->supervisor),
-                            'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
-                            'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
-                            'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
-                            'colorClass' => $mainColor,
-                        ];
-                    }
-
                     $managers = [];
-
                     $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
                         ->where('department_id', $d->id)
                         ->orderBy('name')
                         ->get();
-
-                    foreach ($secs as $s) {
-                        RtcHelper::setAreaContext('section', $s->id);
-
-                        $managers[] = [
-                            'title'           => $s->name,
-                            'person'          => RtcHelper::formatPerson($s->supervisor),
-                            'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
-                            'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
-                            'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
-                            'colorClass'      => $mainColor,
-                            'supervisors'     => [],
-                            'skipManagerNode' => false,
-                        ];
-                    }
 
                     foreach ($secs as $s) {
                         RtcHelper::setAreaContext('section', $s->id);
@@ -953,7 +922,7 @@ class RtcController extends Controller
                             'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
                             'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
                             'colorClass'      => $mainColor,
-                            'supervisors'     => $subNodes, // <-- anak-anak di bawah Section
+                            'supervisors'     => $subNodes,
                             'skipManagerNode' => false,
                         ];
                     }
