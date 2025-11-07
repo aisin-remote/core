@@ -488,7 +488,7 @@ class RtcController extends Controller
                         default => strtoupper((string)$rawId),
                     };
 
-                    $company   = strtoupper((string) $rawId);
+                    $company   = strtoupper((string) $companyDisplay);
                     $title     = $companyDisplay . ' — Summary';
 
                     // layout flags
