@@ -501,9 +501,7 @@ class MasterController extends Controller
                 'ip'      => $request->ip(),
             ]);
 
-            // filter: company | direksi | division | department | section | sub_section
             $filter      = strtolower($request->input('filter', 'department'));
-            // Catatan: filter=division → containerId = plant_id; lainnya (dept/section/sub) → division_id
             $containerId = (int) $request->input('division_id');
             $companyCode = strtoupper((string) $request->input('company', ''));
 
@@ -520,7 +518,7 @@ class MasterController extends Controller
             $isHRD  = ($user->role === 'HRD');
             $isTop2 = in_array($pos, ['president', 'vpd', 'vice president director', 'wakil presdir'], true)
                 || in_array(strtolower((string) ($employee->getNormalizedPosition() ?? '')), ['president', 'vpd'], true);
-            $isMg   = in_array($pos, ['manager', 'coordinator'], true); // ✅ tambahkan flag Manager
+            $isMg   = in_array($pos, ['manager', 'coordinator'], true);
 
             Log::debug('[RTC][filter] role flags', [
                 'trace' => $trace,
@@ -535,7 +533,6 @@ class MasterController extends Controller
                 'isMg' => $isMg,
             ]);
 
-            /* Guards (khusus GM untuk validasi division yang dia miliki) */
             if ($isGM && !in_array($filter, ['division', 'direksi', 'company'], true)) {
                 if ($containerId > 0) {
                     $owns = Division::where('gm_id', $employee->id)
@@ -551,7 +548,6 @@ class MasterController extends Controller
                 if ($containerId === 0) $containerId = (int) optional($employee->plant)->id;
             }
 
-            /* Data per filter */
             $data = collect();
             $areaKey = 'department';
 
@@ -579,10 +575,8 @@ class MasterController extends Controller
 
                 case 'division':
                     if ($isGM) {
-                        // GM: semua division yang dia pegang
                         $data = Division::where('gm_id', $employee->id)->orderBy('name')->get();
                     } else {
-                        // Non-GM: by plant (untuk Direktur: plant yang dia pegang; untuk HRD/Top2: berdasarkan pilihan)
                         if ($containerId === 0) $containerId = (int) optional($employee->plant)->id;
                         $data = Division::where('plant_id', $containerId)->orderBy('name')->get();
                     }
@@ -593,15 +587,12 @@ class MasterController extends Controller
                         $q = Department::query()
                             ->when($containerId > 0, fn($qq) => $qq->where('division_id', $containerId));
 
-                        // ✅ Manager: hanya department yang dia pimpin
                         if ($isMg) {
                             $q->where('manager_id', $employee->id);
                         }
-                        // Scope GM (opsional—agar GM hanya lihat division yang dia pegang)
                         if ($isGM) {
                             $q->whereHas('division', fn($dv) => $dv->where('gm_id', $employee->id));
                         }
-                        // Scope Direktur: hanya division dalam plant yang dia pegang
                         if ($isDir && $employee->plant) {
                             $q->whereHas('division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
                         }
@@ -613,19 +604,15 @@ class MasterController extends Controller
 
                 case 'section': {
                         $q = Section::query()
-                            // filter by selected division via parent department
                             ->when($containerId > 0, fn($qq) =>
                             $qq->whereHas('department', fn($d) => $d->where('division_id', $containerId)));
 
-                        // ✅ Manager: hanya section di department yang dia pimpin
                         if ($isMg) {
                             $q->whereHas('department', fn($d) => $d->where('manager_id', $employee->id));
                         }
-                        // Scope GM
                         if ($isGM) {
                             $q->whereHas('department.division', fn($dv) => $dv->where('gm_id', $employee->id));
                         }
-                        // Scope Direktur
                         if ($isDir && $employee->plant) {
                             $q->whereHas('department.division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
                         }
@@ -640,15 +627,12 @@ class MasterController extends Controller
                             ->when($containerId > 0, fn($qq) =>
                             $qq->whereHas('section.department', fn($d) => $d->where('division_id', $containerId)));
 
-                        // ✅ Manager: hanya sub section di department yang dia pimpin
                         if ($isMg) {
                             $q->whereHas('section.department', fn($d) => $d->where('manager_id', $employee->id));
                         }
-                        // Scope GM
                         if ($isGM) {
                             $q->whereHas('section.department.division', fn($dv) => $dv->where('gm_id', $employee->id));
                         }
-                        // Scope Direktur
                         if ($isDir && $employee->plant) {
                             $q->whereHas('section.department.division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
                         }
@@ -668,7 +652,6 @@ class MasterController extends Controller
                 'areaKey' => $areaKey,
             ]);
 
-            /* Aliases & status */
             $termAliases = function (string $term): array {
                 $t = strtolower(trim($term));
                 return match ($t) {
@@ -687,7 +670,7 @@ class MasterController extends Controller
                     $variants[] = 'Direksi';
                     $variants[] = 'plant';
                     $variants[] = 'Plant';
-                } // tetap match data lama
+                }
                 if ($a === 'company')     $variants[] = 'Company';
                 return array_values(array_unique($variants));
             };
@@ -719,41 +702,49 @@ class MasterController extends Controller
 
                 $label = 'Not Set';
                 $class = 'badge badge-danger';
-                $code = 'not_set';
+                $code  = 'not_set';
+
                 if ($complete3) {
-                    $vals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2, -1], true));
+                    $vals = collect([$s, $m, $l])
+                        ->filter(fn($v) => in_array($v, [0, 1, 2, -1], true));
+
                     if ($vals->isEmpty()) {
                         $label = 'Complete';
                         $class = 'badge badge-secondary';
-                        $code = 'complete_no_submit';
+                        $code  = 'complete_no_submit';
                     } else {
+                        $hasRevised   = $vals->contains(-1);
                         $allApproved  = $vals->every(fn($v) => $v === 2);
                         $allChecked   = $vals->every(fn($v) => $v === 1);
-                        $allSubmitted = $vals->every(fn($v) => $v === 0);
-                        $allRevised   = $vals->every(fn($v) => $v === -1);
-                        if ($allApproved) {
+                        $hasSubmitted = $vals->contains(0);
+
+                        if ($hasRevised) {
+                            // ❗️asal ada satu term revised, overall = Revised
+                            $label = 'Revised';
+                            $class = 'badge badge-danger';
+                            $code  = 'revised';
+                        } elseif ($allApproved) {
                             $label = 'Approved';
                             $class = 'badge badge-success';
-                            $code = 'approved';
+                            $code  = 'approved';
                         } elseif ($allChecked) {
                             $label = 'Checked';
                             $class = 'badge badge-info';
-                            $code = 'checked';
-                        } elseif ($allSubmitted) {
+                            $code  = 'checked';
+                        } elseif ($hasSubmitted) {
+                            // campuran yg mengandung submitted (0)
                             $label = 'Submitted';
                             $class = 'badge badge-warning';
-                            $code = 'submitted';
-                        } elseif ($allRevised) {
-                            $label = 'Revised';
-                            $class = 'badge badge-danger';
-                            $code = 'revised';
+                            $code  = 'submitted';
                         } else {
-                            $label = 'Not Set';
-                            $class = 'badge badge-danger';
-                            $code = 'not_set';
+                            // campuran lain (mis. 1 & 2) anggap draft/partial
+                            $label = 'Draft';
+                            $class = 'badge badge-secondary';
+                            $code  = 'complete_no_submit';
                         }
                     }
                 }
+
 
                 $picEmp = $this->currentPicFor($areaKey, $item);
                 $canAddByRole =

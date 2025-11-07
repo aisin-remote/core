@@ -363,18 +363,34 @@
                     const mt = row.mid?.name ? esc(row.mid.name) : '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) : '<span class="text-not-set">-</span>';
                     const statusHtml = statusChip(row.overall);
-                    const previewBtn =
-                        `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
-                    let addBtn = '';
-                    if (!window.READ_ONLY && !window.HIDE_ADD && row.can_add) {
-                        // gunakan class .btn-show-modal untuk membuka modal
-                        addBtn =
-                            `<a href="#" class="btn btn-sm btn-success btn-show-modal" data-id="${row.id}" data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>`;
-                    }
                     const fullName = row.pic?.name || '-';
                     const showName = (fullName || '').trim().split(/\s+/).slice(0, 2).join(' ');
                     const pic = row.pic ? `<span title="${esc(fullName)}">${esc(showName)}</span>` :
                         `<span>-</span>`;
+
+                    const previewBtn =
+                        `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
+
+                    let addBtn = '';
+                    if (!window.READ_ONLY && !window.HIDE_ADD && row.can_add) {
+                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal"
+                            data-id="${row.id}"
+                            data-filter="${filter}"
+                            data-mode="add"
+                            data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>`;
+                    }
+
+                    let reviseBtn = '';
+                    if (!window.READ_ONLY) {
+                        reviseBtn = `<a href="#" class="btn btn-sm btn-warning btn-revise"
+                            data-id="${row.id}"
+                            data-filter="${filter}"
+                            data-mode="revise"
+                            data-bs-toggle="modal" data-bs-target="#addPlanModal">Revise</a>`;
+                    }
+
+                    const actions = `<div class="action-stack">${previewBtn}${addBtn}${reviseBtn}</div>`;
+
                     let kpiCells = '';
                     if (window.SHOW_KPI_COLS) {
                         kpiCells = `
@@ -389,7 +405,7 @@
                         <td>${i+1}</td>
                         <td class="text-start">${esc(row.name)}</td>
                         ${kpiCells}
-                        <td class="text-center"><div class="action-stack">${previewBtn}${addBtn}</div></td>
+                        <td class="text-center">${actions}</td>
                     </tr>`;
                 }).join('');
                 $('#kt_table_users tbody').html(rows);
@@ -544,19 +560,87 @@
 @push('scripts')
     <script>
         $(function() {
-            // Area ID yang sedang di-add dari tombol "Add"
             window.CURRENT_AREA_ID = null;
+            window.EDIT_MODE = false;
 
-            // Mapping tab → daftar kode target (tanpa input user)
-            const TAB_TO_KODES = {
-                direksi: ['GM', 'SGM', 'AGM'], // Direktur / Act Direktur
-                division: ['SM', 'M'], // GM / Act GM
-                department: ['AM', 'SS'], // Manager / Coordinator
-                section: ['S', 'AS'], // Section Head / Supervisor
-                sub_section: []
-            };
+            function loadCandidatesForActiveTab() {
+                return new Promise((resolve, reject) => {
+                    const TAB_TO_KODES = {
+                        direksi: ['GM', 'SGM', 'AGM'],
+                        division: ['SM', 'M'],
+                        department: ['AM', 'SS'],
+                        section: ['S', 'AS'],
+                        sub_section: []
+                    };
 
-            // ---------- Helpers ----------
+                    const filter = (window.ACTIVE_FILTER || '').toLowerCase();
+                    const kodes = TAB_TO_KODES[filter] || [];
+
+                    resetRtcModal();
+                    if (!kodes.length) {
+                        resolve();
+                        return;
+                    }
+
+                    const paramsBase = {};
+                    const comp = ($('#companySelect').val() || '').toUpperCase();
+                    if (comp) paramsBase.company = comp;
+
+                    ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                        $(sel).html('<option value="">Loading...</option>').trigger('change');
+                    });
+
+                    const reqs = kodes.map(k =>
+                        $.getJSON(window.ROUTE_RTC_CANDIDATES, {
+                            ...paramsBase,
+                            kode: k
+                        })
+                        .then(r => (r && r.data) ? r.data : [])
+                        .catch(() => [])
+                    );
+
+                    Promise.all(reqs).then(chunks => {
+                        const data = chunks.flat();
+                        const uniq = {};
+                        data.forEach(r => uniq[`${r.employee_id}|${r.term}`] = r);
+                        const rows = Object.values(uniq);
+
+                        const st = [],
+                            mt = [],
+                            lt = [];
+                        rows.forEach(r => {
+                            const opt = `
+            <option value="${r.employee_id}">
+              ${$('<div>').text(r.name).html()}
+              • ${$('<div>').text(r.job_function || '-').html()}
+              • ${$('<div>').text(r.level || '-').html()}
+              • ${$('<div>').text(r.plan_year || '-').html()}
+            </option>`;
+                            if (r.term === 'short') st.push(opt);
+                            else if (r.term === 'mid') mt.push(opt);
+                            else lt.push(opt);
+                        });
+
+                        $('#short_term').html('<option value="">-- Select --</option>' + st.join(
+                            '')).trigger('change');
+                        $('#mid_term').html('<option value="">-- Select --</option>' + mt.join(''))
+                            .trigger('change');
+                        $('#long_term').html('<option value="">-- Select --</option>' + lt.join(''))
+                            .trigger('change');
+
+                        $('#cnt_st').text(st.length);
+                        $('#cnt_mt').text(mt.length);
+                        $('#cnt_lt').text(lt.length);
+                        $('#rtc_counts').toggleClass('d-none', rows.length === 0);
+
+                        resolve();
+                    }).catch(err => {
+                        resetRtcModal();
+                        reject(err);
+                    });
+                });
+            }
+
             function initSelect2InModal() {
                 $('#addPlanModal .rtc-s2').each(function() {
                     const $el = $(this);
@@ -580,94 +664,59 @@
                 $('#rtc_counts').addClass('d-none');
             }
 
-            // Ambil kandidat dari beberapa kode (sesuai tab) lalu gabungkan
-            function loadCandidatesForActiveTab() {
-                const filter = (window.ACTIVE_FILTER || '').toLowerCase();
-                const kodes = TAB_TO_KODES[filter] || [];
-                resetRtcModal();
-                if (!kodes.length) return;
-
-                const paramsBase = {};
-                const comp = ($('#companySelect').val() || '').toUpperCase();
-                if (comp) paramsBase.company = comp; // HRD/Top2 bisa lintas company
-
-                // Loading state
-                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
-                    $(sel).html('<option value="">Loading...</option>').trigger('change');
-                });
-
-                const reqs = kodes.map(k =>
-                    $.getJSON(window.ROUTE_RTC_CANDIDATES, {
-                        ...paramsBase,
-                        kode: k
-                    })
-                    .then(r => (r && r.data) ? r.data : [])
-                    .catch(() => [])
-                );
-                Promise.all(reqs).then(chunks => {
-                    const data = chunks.flat();
-
-                    // Dedup per (employee_id + term)
-                    const uniq = {};
-                    data.forEach(r => uniq[`${r.employee_id}|${r.term}`] = r);
-                    const rows = Object.values(uniq);
-
-                    const st = [],
-                        mt = [],
-                        lt = [];
-                    rows.forEach(r => {
-                        const opt = `
-          <option value="${r.employee_id}">
-            ${$('<div>').text(r.name).html()}
-            • ${$('<div>').text(r.job_function || '-').html()}
-            • ${$('<div>').text(r.level || '-').html()}
-            • ${$('<div>').text(r.plan_year || '-').html()}
-          </option>`;
-                        if (r.term === 'short') st.push(opt);
-                        else if (r.term === 'mid') mt.push(opt);
-                        else lt.push(opt);
-                    });
-
-                    $('#short_term').html('<option value="">-- Select --</option>' + st.join('')).trigger(
-                        'change');
-                    $('#mid_term').html('<option value="">-- Select --</option>' + mt.join('')).trigger(
-                        'change');
-                    $('#long_term').html('<option value="">-- Select --</option>' + lt.join('')).trigger(
-                        'change');
-
-                    $('#cnt_st').text(st.length);
-                    $('#cnt_mt').text(mt.length);
-                    $('#cnt_lt').text(lt.length);
-                    $('#rtc_counts').toggleClass('d-none', rows.length === 0);
-                }).catch(() => {
-                    Swal.fire('Error', 'Gagal memuat kandidat', 'error');
-                    resetRtcModal();
-                });
-            }
-
-            // ---------- Events ----------
-            // Klik tombol Add → buka modal + load kandidat sesuai tab
-            $(document).on('click', '.btn-show-modal', function() {
+            $(document).on('click', '.btn-show-modal', function(e) {
+                e.preventDefault();
                 window.CURRENT_AREA_ID = $(this).data('id') || null;
+                window.EDIT_MODE = false;
+                $('#addPlanLabel').text('Add Plan');
                 $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
-                loadCandidatesForActiveTab();
+                loadCandidatesForActiveTab().catch(() => {});
             });
 
-            // Jika HRD/Top2 ganti company saat modal terbuka → refresh kandidat
-            $('#companySelect').on('change', function() {
-                if ($('#addPlanModal').is(':visible')) loadCandidatesForActiveTab();
+            $(document).on('click', '.btn-revise', function(e) {
+                e.preventDefault();
+                window.CURRENT_AREA_ID = $(this).data('id') || null;
+                window.EDIT_MODE = true;
+                $('#addPlanLabel').text('Revise Plan');
+                const area = (window.ACTIVE_FILTER || '').toLowerCase();
+                const area_id = window.CURRENT_AREA_ID;
+
+                $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
+
+                loadCandidatesForActiveTab()
+                    .then(() => $.ajax({
+                        url: "{{ route('rtc.area.items') }}",
+                        method: 'GET',
+                        data: {
+                            area,
+                            area_id
+                        }
+                    }))
+                    .then((res) => {
+                        const byTerm = {};
+                        (res || []).forEach(r => {
+                            byTerm[(r.term || '').toLowerCase()] = r.employee_id || '';
+                        });
+
+                        if (byTerm.short) $('#short_term').val(String(byTerm.short)).trigger('change');
+                        if (byTerm.mid) $('#mid_term').val(String(byTerm.mid)).trigger('change');
+                        if (byTerm.long) $('#long_term').val(String(byTerm.long)).trigger('change');
+                    })
+                    .catch(() => {});
+
+                $('#addPlanModal').modal('show');
             });
 
-            // Tutup modal → bersihkan select2 & state
             $('#addPlanModal').on('hidden.bs.modal', function() {
                 $(this).find('.rtc-s2').each(function() {
                     if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
                 });
                 window.CURRENT_AREA_ID = null;
+                window.EDIT_MODE = false;
                 resetRtcModal();
             });
 
-            // Submit RTC (pakai GET sesuai controller yang ada)
+            // SUBMIT
             $('#addPlanForm').on('submit', function(e) {
                 e.preventDefault();
 
@@ -692,7 +741,9 @@
                     data: payload
                 }).done(function() {
                     $('#addPlanModal').modal('hide');
-                    Swal.fire('Berhasil', 'RTC berhasil disimpan.', 'success');
+                    const msg = window.EDIT_MODE ? 'Perubahan RTC disimpan.' :
+                        'RTC berhasil disimpan.';
+                    Swal.fire('Berhasil', msg, 'success');
                     const cid = window.CONTAINER_ID || null;
                     if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
                     else location.reload();

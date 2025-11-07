@@ -1531,42 +1531,30 @@ class RtcController extends Controller
         $area   = strtolower($request->input('area'));
         $areaId = (int) $request->input('area_id');
 
-        // Ambil daftar RTC untuk area & area_id tsb (case-insensitive untuk kolom area)
-        $rtcs = Rtc::with([
-            'employee',
-            'employee.department',
-        ])
+        $rtcs = Rtc::with(['employee', 'employee.department'])
             ->whereRaw('LOWER(area) = ?', [$area])
             ->where('area_id', $areaId)
-            ->get([
-                'id',
-                'employee_id',
-                'area',
-                'area_id',
-                'term',
-                'status',
-            ]);
+            ->get(['id', 'employee_id', 'area', 'area_id', 'term', 'status']);
 
         $payload = $rtcs->map(function ($rtc) {
             return [
-                'id'     => $rtc->id,
-                'term'   => $rtc->term,
-                'status' => $rtc->status,
-                'employee' => [
-                    'npk'          => $rtc->employee->npk ?? null,
-                    'name'         => $rtc->employee->name ?? null,
-                    'company_name' => $rtc->employee->company_name ?? null,
-                    'position'     => $rtc->employee->position ?? null,
-                    'department'   => [
-                        'name' => optional($rtc->employee->department)->name,
-                    ],
+                'id'           => $rtc->id,
+                'term'         => $rtc->term,
+                'status'       => $rtc->status,
+                'employee_id'  => $rtc->employee_id,    // ⬅️ penting buat prefill
+                'employee'     => [
+                    'id'            => $rtc->employee->id ?? null,
+                    'npk'           => $rtc->employee->npk ?? null,
+                    'name'          => $rtc->employee->name ?? null,
+                    'company_name'  => $rtc->employee->company_name ?? null,
+                    'position'      => $rtc->employee->position ?? null,
+                    'department'    => ['name' => optional($rtc->employee->department)->name],
                 ],
             ];
         })->values();
 
         return response()->json($payload);
     }
-
 
     public function approve($id)
     {
@@ -1618,11 +1606,9 @@ class RtcController extends Controller
             return response()->json(['message' => 'Not allowed or invalid status transition.'], 403);
         }
 
-        // persist
         $rtc->status = $nextStatus;
         $rtc->save();
 
-        // only when final approved (2), copy to planning owner table
         if ($rtc->status === 2 && in_array($area, ['division', 'department', 'section', 'sub_section'], true)) {
             $modelClass = match ($area) {
                 'division'    => Division::class,
@@ -1641,6 +1627,7 @@ class RtcController extends Controller
 
         return response()->json(['message' => $nextStatus === 1 ? 'Checked.' : 'Approved.']);
     }
+
     public function revise($id, Request $request)
     {
         $rtc = Rtc::findOrFail($id);
