@@ -28,11 +28,12 @@ class StoreIcpRequest extends FormRequest
         ));
 
         return [
-            'employee_id'                => ['required', 'exists:employees,id'],
-            'employee_current_position'  => ['required', 'string'],
-            'aspiration'                 => ['required', 'string'],
-            "career_target_code"         => ["required", "string", "in:$validPositionsCsv"],
-            'date'                       => ['required', 'date'],
+            'employee_id'               => ['required', 'exists:employees,id'],
+            'employee_current_position' => ['required', 'string'],
+            'aspiration'                => ['required', 'string'],
+            'readiness'                 => ['required', 'integer'],
+            "career_target_code"        => ["required", "string", "in:$validPositionsCsv"],
+            'date'                      => ['required', 'date'],
 
             // ===== STAGES =====
             'stages'                        => ['required', 'array', 'min:1'],

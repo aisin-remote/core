@@ -233,7 +233,8 @@
 
                                 <div class="mb-3">
                                     <label class="form-label fw-bold">Readiness</label>
-                                    <input type="text" class="form-control form-select-sm" value="" disabled>
+                                    <input type="text" id="readiness" name="readiness"
+                                        class="form-control form-select-sm" value="" readonly>
                                 </div>
 
                                 <div class="mb-3">
@@ -848,6 +849,25 @@
 
             reindexStages();
             forceLastStagePositionToCareerTarget();
+            setReadinessFromTargetDate();
+        }
+
+        function setReadinessFromTargetDate() {
+            const dateEl = document.getElementById('date');
+            const readinessEl = document.getElementById('readiness');
+            if (!dateEl || !readinessEl) return;
+
+            const val = dateEl.value; // "YYYY-MM-DD"
+            if (!val) {
+                readinessEl.value = '';
+                return;
+            }
+
+            const currentYear = DEFAULTS.plan_year;
+            const targetYear = Number(val.split('-')[0]);
+
+            const readinessYears = Math.max(0, targetYear - currentYear);
+            readinessEl.value = String(readinessYears);
         }
 
         async function submitIcpAjax(e) {
@@ -867,6 +887,13 @@
                 Swal.fire('Oops', 'Please select Career Target.', 'warning');
                 return;
             }
+
+            const readinessVal = document.getElementById('readiness').value;
+            if (!readinessVal) {
+                Swal.fire('Oops', 'Readines not set', 'warning');
+                return;
+            }
+
 
             const lastStage = stages[stages.length - 1];
             const lastPosSel = lastStage.querySelector('.stage-position');
@@ -892,7 +919,6 @@
             formEl.querySelectorAll('input[name^="stages["], textarea[name^="stages["]').forEach(el => {
                 el.value = (el.value || '').replace(/<[^>]*>/g, '').trim();
             });
-
 
             const fd = new FormData(formEl);
 
@@ -968,9 +994,11 @@
                 dateEl.value = `${d.getFullYear()}-${mm}-${dd}`;
             }
             generateStagesFromTargetDate();
+            setReadinessFromTargetDate();
 
             dateEl.addEventListener('change', () => {
                 generateStagesFromTargetDate();
+                setReadinessFromTargetDate();
             });
 
             careerSelect.addEventListener('change', () => {
