@@ -393,22 +393,7 @@ class HavController extends Controller
             $statusRaw = optional($latestHav)->status;
             $isAssessmentOne = $latestHav && $latestHav->details->contains('is_assessment', 1);
 
-            $baseText = match ($statusRaw) {
-                0 => 'Submitted',
-                1 => 'Revised',
-                2 => 'Approved',
-                3 => 'Not Created',
-                default => '-',
-            };
-
-            if ($statusRaw === 0 & $isAssessmentOne) {
-                $statusText = 'Not Created';
-            } elseif ($statusRaw === 2 && Carbon::parse($latestHav->crated_at)->addYear()->isPast()) {
-                $statusText = '-';
-            } else {
-                $statusText = $baseText;
-            }
-
+            $statusText = $this->setBadgeStatus($statusRaw, $latestHav, $isAssessmentOne);
 
             // Set tombol action blade
             // “+ Add” tampil kalau:
@@ -1002,17 +987,6 @@ class HavController extends Controller
     }
 
     /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function edit($id)
-    {
-        //
-    }
-
-    /**
      * Remove the specified resource from storage.
      *
      * @param  int  $id
@@ -1056,5 +1030,30 @@ class HavController extends Controller
             'lastUpload' => $lastUpload,
             'hav' => ['id' => $hav_id],
         ]);
+    }
+
+    /**
+     * PRIVATE FUNCTION
+     */
+
+    private function setBadgeStatus($statusRaw, $latestHav, $isAssessmentOne)
+    {
+        $baseText = match ($statusRaw) {
+            0 => 'Submitted',
+            1 => 'Revised',
+            2 => 'Approved',
+            3 => 'Not Created',
+            default => '-',
+        };
+
+        if ($statusRaw === 0 & $isAssessmentOne) {
+            $statusText = 'Not Created';
+        } elseif ($statusRaw === 2 && Carbon::parse($latestHav->crated_at)->addYear()->isPast()) {
+            $statusText = '-';
+        } else {
+            $statusText = $baseText;
+        }
+
+        return $statusText;
     }
 }
