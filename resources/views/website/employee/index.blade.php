@@ -72,6 +72,8 @@
                                         default => $employee->department?->name,
                                     };
                                     $userId = (string) $employee->user_id;
+
+                                    $tok = App\Support\OpaqueId::encode((int) $employee->user_id);
                                 @endphp
                                 <tr class="fs-7" data-position="{{ $employee->position }}">
                                     <td>{{ $index + 1 }}</td>
@@ -88,7 +90,7 @@
                                     <td>{{ $employee->grade }}</td>
                                     <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                     <td class="text-center">
-                                        <a href="{{ route('employee.show', $userId) }}" class="btn btn-info btn-sm">
+                                        <a href="{{ route('employee.show', $tok) }}" class="btn btn-info btn-sm">
                                             <i class="fa fa-eye"></i>
                                         </a>
                                     </td>
@@ -102,7 +104,6 @@
                     <small class="text-muted fw-bold">
                         Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
                     </small>
-                    {{-- Tidak ada Laravel links() karena client-side --}}
                 </div>
             </div>
         </div>

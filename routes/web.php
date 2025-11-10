@@ -202,13 +202,13 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('employee')->group(function () {
-        Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
+        Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create');
         Route::get('employee/check-email', [EmployeeController::class, 'checkEmail'])->name('employee.checkEmail');
-        Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
-        Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
-        Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
-        Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
-        Route::get('/detail/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
+        Route::post('/', [EmployeeController::class, 'store'])->name('employee.store');
+        Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit');
+        Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update');
+        Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy');
+        Route::get('/detail/{tok}', [EmployeeController::class, 'show'])->name('employee.show');
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
         Route::post('/status/{id}', [EmployeeController::class, 'status'])->name('employee.status');

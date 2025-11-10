@@ -10,6 +10,7 @@ use App\Models\Plant;
 use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
+use App\Support\OpaqueId;
 use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
@@ -490,9 +491,13 @@ class EmployeeController extends Controller
     /**
      * Tampilkan detail karyawan
      */
-    public function show($id)
+    public function show($tok)
     {
         try {
+
+            $id = OpaqueId::decode($tok);
+            abort_if(!$id, 404);
+
             // 1) Ambil user & employee berdasarkan user_id
             $user = User::findOrFail($id);
 
