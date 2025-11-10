@@ -33,14 +33,17 @@
                 <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
                     style="cursor:pointer">
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link fs-7 {{ $filter === 'all' ? 'active' : '' }} filter-tab" data-filter="all">
+                        <a class="nav-link fs-7 {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
+
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter === $position ? 'active' : '' }} filter-tab"
-                                data-filter="{{ $position }}">
+                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
                                 <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
