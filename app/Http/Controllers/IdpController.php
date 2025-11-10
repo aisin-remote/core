@@ -123,7 +123,6 @@ class IdpController extends Controller
 
         // Process assessments data
         $processedData = $this->processAssessments($assessments, $alcs);
-
         // Get job positions for tabs
         $jobPositions = $this->getJobPositions($assessments);
 

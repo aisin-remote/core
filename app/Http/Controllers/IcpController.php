@@ -463,11 +463,12 @@ class IcpController extends Controller
         DB::beginTransaction();
         try {
             $icp = Icp::create([
-                'employee_id'    => $data['employee_id'],
-                'aspiration'     => $data['aspiration'],
-                'career_target'  => $data['career_target_code'],
-                'date'           => $data['date'],
-                'status'         => Icp::STATUS_DRAFT,
+                'employee_id'   => $data['employee_id'],
+                'aspiration'    => $data['aspiration'],
+                'readiness'     => $data['readiness'],
+                'career_target' => $data['career_target_code'],
+                'date'          => $data['date'],
+                'status'        => Icp::STATUS_DRAFT,
             ]);
 
             if (method_exists($this, 'seedStepsForIcp')) {
@@ -626,8 +627,9 @@ class IcpController extends Controller
         $sheet->setCellValue('G6', $employee->company_name);
         $sheet->setCellValue('G7', $employee->position);
         $sheet->setCellValue('G8', $employee->grade);
-        $sheet->setCellValue('R8', $employee->birthday_date); // pastikan format di template sesuai yg kamu mau
-        $sheet->setCellValue('R6', '3'); // ini kayaknya fixed value di template kamu
+        $sheet->setCellValue('R8', $employee->birthday_date);
+        $sheet->setCellValue('R7', $icp->readiness);
+        $sheet->setCellValue('R6', '3');
         if ($edu) {
             $sheet->setCellValue('R9', $edu->educational_level . '/' . $edu->major . '/' . $edu->institute);
         }

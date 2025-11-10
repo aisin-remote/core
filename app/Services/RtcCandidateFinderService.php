@@ -24,23 +24,20 @@ class RtcCandidateFinderService
 
         $year = $yearNow ?: now()->year;
         $position = $target['position'];
-        $levels = (array) $target['levels'];
 
         $employees = Employee::query()
             ->when($company, fn($q) => $q->where('company_name', $company))
             ->whereHas('icp', fn($q) => $q->where('status', Icp::STATUS_APPROVED))
-            ->whereHas('icp.details', function ($q) use ($position, $levels, $year) {
+            ->whereHas('icp.details', function ($q) use ($position, $year) {
                 $q->where('position', $position)
-                    ->whereIn('level', $levels)
                     ->where('plan_year', '>=', $year);
             })
             ->with([
                 'icp' => function ($q) {
                     $q->where('status', Icp::STATUS_APPROVED);
                 },
-                'icp.details' => function ($q) use ($position, $levels, $year) {
+                'icp.details' => function ($q) use ($position, $year) {
                     $q->where('position', $position)
-                        ->whereIn('level', $levels)
                         ->where('plan_year', '>=', $year)
                         ->orderBy('plan_year', 'asc');
                 }

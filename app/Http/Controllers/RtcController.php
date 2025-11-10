@@ -9,6 +9,7 @@ use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Plant;
+use App\Models\RtcComment;
 use App\Models\SubSection;
 use App\Services\RtcService;
 use Carbon\Carbon;
@@ -341,13 +342,13 @@ class RtcController extends Controller
             }
 
             Log::debug('[RTC][list] view computed', [
-                'trace' => $trace,
-                'activeTab' => $activeTab,
-                'tableFilter' => $tableFilter,
-                'containerId' => $containerId,
-                'cardTitle'   => $cardTitle,
-                'hideKpiCols' => $hideKpiCols,
-                'forceHideAdd' => $forceHideAdd,
+                'trace'          => $trace,
+                'activeTab'      => $activeTab,
+                'tableFilter'    => $tableFilter,
+                'containerId'    => $containerId,
+                'cardTitle'      => $cardTitle,
+                'hideKpiCols'    => $hideKpiCols,
+                'forceHideAdd'   => $forceHideAdd,
                 'not_set_counts' => $counts,
             ]);
 
@@ -487,7 +488,7 @@ class RtcController extends Controller
                         default => strtoupper((string)$rawId),
                     };
 
-                    $company   = strtoupper((string) $rawId);
+                    $company   = strtoupper((string) $companyDisplay);
                     $title     = $companyDisplay . ' — Summary';
 
                     // layout flags
@@ -885,42 +886,11 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
-                        ->where('department_id', $d->id)->orderBy('name')->get();
-
-                    foreach ($secs as $s) {
-                        RtcHelper::setAreaContext('section', $s->id);
-                        $container['supervisors'][] = [
-                            'title'      => $s->name,
-                            'person'     => RtcHelper::formatPerson($s->supervisor),
-                            'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
-                            'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
-                            'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
-                            'colorClass' => $mainColor,
-                        ];
-                    }
-
                     $managers = [];
-
                     $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
                         ->where('department_id', $d->id)
                         ->orderBy('name')
                         ->get();
-
-                    foreach ($secs as $s) {
-                        RtcHelper::setAreaContext('section', $s->id);
-
-                        $managers[] = [
-                            'title'           => $s->name,
-                            'person'          => RtcHelper::formatPerson($s->supervisor),
-                            'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
-                            'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
-                            'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
-                            'colorClass'      => $mainColor,
-                            'supervisors'     => [],
-                            'skipManagerNode' => false,
-                        ];
-                    }
 
                     foreach ($secs as $s) {
                         RtcHelper::setAreaContext('section', $s->id);
@@ -952,7 +922,7 @@ class RtcController extends Controller
                             'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
                             'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
                             'colorClass'      => $mainColor,
-                            'supervisors'     => $subNodes, // <-- anak-anak di bawah Section
+                            'supervisors'     => $subNodes,
                             'skipManagerNode' => false,
                         ];
                     }
@@ -1184,7 +1154,6 @@ class RtcController extends Controller
         $request->validate([
             'area'    => 'required|string',
             'area_id' => 'required|integer',
-            'comment' => 'nullable|string',
         ]);
 
         $user      = auth()->user();
@@ -1194,14 +1163,11 @@ class RtcController extends Controller
         $area      = strtolower($request->input('area'));
         $areaId    = (int) $request->input('area_id');
 
-        // 1. Tentukan apakah user boleh approve/check area ini
-        //    dan tentukan nextStatus yg valid
         $allowed = false;
         $fromStatus = null;
         $toStatus   = null;
 
         if ($norm === 'gm') {
-            // GM boleh untuk dept/section/sub_section di bawah divisinya
             $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
             $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
             $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
@@ -1212,13 +1178,11 @@ class RtcController extends Controller
                 ($area === 'section'     && $sectionIds->contains($areaId)) ||
                 ($area === 'sub_section' && $subIds->contains($areaId));
 
-            // GM langsung final approve: 0 -> 2
             if ($allowed) {
                 $fromStatus = 0;
                 $toStatus   = 2;
             }
         } elseif ($norm === 'direktur') {
-            // Direktur approve division di plant dia: 0 -> 2
             $plantId = optional($employee->plant)->id;
             $divIds  = Division::where('plant_id', $plantId)->pluck('id');
 
@@ -1229,7 +1193,6 @@ class RtcController extends Controller
                 $toStatus   = 2;
             }
         } elseif ($norm === 'vpd') {
-            // VPD melakukan CHECK: plant/direksi 0 -> 1
             $plantIds = Plant::pluck('id');
 
             $allowed = in_array($area, ['direksi', 'plant'], true)
@@ -1240,7 +1203,6 @@ class RtcController extends Controller
                 $toStatus   = 1;
             }
         } elseif ($norm === 'president') {
-            // President melakukan APPROVE FINAL: plant/direksi 1 -> 2
             $plantIds = Plant::pluck('id');
 
             $allowed = in_array($area, ['direksi', 'plant'], true)
@@ -1258,8 +1220,7 @@ class RtcController extends Controller
             ], 403);
         }
 
-        // 2. Ambil semua RTC yg match area+area_id dan status yg sesuai transition
-        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)]) // toleransi kapitalisasi
+        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)])
             ->where('area_id', $areaId)
             ->where('status', $fromStatus)
             ->get();
@@ -1270,13 +1231,11 @@ class RtcController extends Controller
             ], 404);
         }
 
-        // 3. Update semuanya dalam transaksi
         DB::transaction(function () use ($rtcs, $toStatus, $area, $areaId) {
             foreach ($rtcs as $rtc) {
                 $rtc->status = $toStatus;
                 $rtc->save();
 
-                // kalau status final = 2 dan areanya organisasi (bukan plant/direksi)
                 if (
                     $rtc->status === 2 &&
                     in_array($area, ['division', 'department', 'section', 'sub_section'], true)
@@ -1292,7 +1251,6 @@ class RtcController extends Controller
                     if ($modelClass) {
                         $record = $modelClass::find($areaId);
                         if ($record) {
-                            // contoh: short_term / mid_term / long_term update
                             $record->update([
                                 $rtc->term . '_term' => $rtc->employee_id
                             ]);
@@ -1319,8 +1277,9 @@ class RtcController extends Controller
         $employee  = $user->employee;
         $norm      = strtolower($employee->getNormalizedPosition());
 
-        $area      = strtolower($request->input('area'));
-        $areaId    = (int) $request->input('area_id');
+        $area    = strtolower($request->input('area'));
+        $areaId  = (int) $request->input('area_id');
+        $comment = $request->comment;
 
         $allowed = false;
 
@@ -1350,8 +1309,8 @@ class RtcController extends Controller
             ], 403);
         }
 
-        // Kembalikan semua rtc di area tsb ke status 0 (Submitted)
-        $rtcs = Rtc::whereIn('area', [$area, ucfirst($area)])
+        // Ambil semua RTC target (case-insensitive match untuk area)
+        $rtcs = Rtc::whereRaw('LOWER(area) = ?', [$area])
             ->where('area_id', $areaId)
             ->get();
 
@@ -1362,10 +1321,19 @@ class RtcController extends Controller
         }
 
 
-        DB::transaction(function () use ($rtcs) {
+        DB::transaction(function () use ($rtcs, $comment, $employee) {
             foreach ($rtcs as $rtc) {
+                $oldStatus = $rtc->status;
                 $rtc->status = -1;
                 $rtc->save();
+
+                RtcComment::create([
+                    'rtc_id'      => $rtc->id,
+                    'employee_id' => $employee->id,
+                    'status_from' => $oldStatus,
+                    'status_to'   => -1,
+                    'comment'     => $comment
+                ]);
             }
         });
 
@@ -1463,45 +1431,47 @@ class RtcController extends Controller
             $stage = 'approve';
         }
 
-        // === NEW PART: group per area ===
         $grouped = $queue
             ->groupBy(function ($rtc) {
-                // key unik per area
                 return strtolower($rtc->area) . '#' . $rtc->area_id;
             })
             ->map(function ($items) {
-                $first = $items->first();
+                $first   = $items->first();
+                $areaKey = strtolower($first->area);
 
-                // bikin label status ringkas
-                $statusMap = [
-                    0  => 'Submitted',
-                    1  => 'Checked',
-                    2  => 'Approved',
-                    -1 => 'Revised',
-                ];
-
-                $statusCounts = $items
-                    ->groupBy('status')
+                $statusMap = [0 => 'Submitted', 1 => 'Checked', 2 => 'Approved', -1 => 'Revised'];
+                $statusCounts = $items->groupBy('status')
                     ->map(fn($col) => $col->count())
-                    ->mapWithKeys(function ($count, $statusCode) use ($statusMap) {
-                        $label = $statusMap[$statusCode] ?? 'Unknown';
-                        return [$label => $count];
-                    });
+                    ->mapWithKeys(fn($count, $code) => [($statusMap[$code] ?? 'Unknown') => $count]);
+
+                $areaModel = match ($areaKey) {
+                    'division'    => $first->division    ?? Division::find($first->area_id),
+                    'department'  => $first->department  ?? Department::find($first->area_id),
+                    'section'     => $first->section     ?? Section::find($first->area_id),
+                    'sub_section' => $first->subsection  ?? SubSection::find($first->area_id),
+                    'plant'       => $first->plant       ?? Plant::find($first->area_id),
+                    default       => null, // 'direksi' or others -> nggak ada model spesifik
+                };
+
+                $picEmp = $areaModel ? $this->currentPicFor($areaKey, $areaModel) : null;
+                $currentPic = $picEmp
+                    ? trim($picEmp->name . ($picEmp->position ? ' (' . $picEmp->position . ')' : ''))
+                    : '-';
 
                 return [
-                    'area'        => strtolower($first->area),        // e.g "department"
-                    'area_id'     => $first->area_id,                 // e.g 12
-                    'area_name'   => $first->area_name,               // accessor dari model Rtc
-                    'total_rtc'   => $items->count(),                 // berapa RTC di area ini
+                    'area'        => $areaKey,
+                    'area_id'     => $first->area_id,
+                    'area_name'   => $first->area_name,
+                    'current_pic' => $currentPic,
+                    'total_rtc'   => $items->count(),
                     'terms'       => $items->pluck('term')->unique()->values()->all(),
-                    'status_info' => $statusCounts,                   // contoh: ['Submitted' => 3, 'Checked' => 1]
-                    'sample_ids'  => $items->pluck('id')->take(3)->values()->all(), // optional, buat action detail nanti
+                    'status_info' => $statusCounts,
+                    'sample_ids'  => $items->pluck('id')->take(3)->values()->all(),
                 ];
             })
             ->values();
 
         return view('website.approval.rtc.index', [
-            // ganti rtcs => grouped data per area, bukan per employee
             'rtcs'  => $grouped,
             'stage' => $stage,
             'title' => 'Approval'
@@ -1518,28 +1488,24 @@ class RtcController extends Controller
         $area   = strtolower($request->input('area'));
         $areaId = (int) $request->input('area_id');
 
-        $rtcs = Rtc::with([
-            'employee'
-        ])
-            ->whereIn('area', [$area, ucfirst($area)])
+        $rtcs = Rtc::with(['employee', 'employee.department'])
+            ->whereRaw('LOWER(area) = ?', [$area])
             ->where('area_id', $areaId)
-            ->get([
-                'id',
-                'employee_id',
-                'area',
-                'area_id',
-                'term',
-                'status',
-            ]);
+            ->get(['id', 'employee_id', 'area', 'area_id', 'term', 'status']);
 
         $payload = $rtcs->map(function ($rtc) {
             return [
-                'id'       => $rtc->id,
-                'term'     => $rtc->term,
-                'status'   => $rtc->status,
-                'employee' => [
-                    'npk'          => $rtc->employee->npk ?? null,
-                    'name'         => $rtc->employee->name ?? null
+                'id'           => $rtc->id,
+                'term'         => $rtc->term,
+                'status'       => $rtc->status,
+                'employee_id'  => $rtc->employee_id,    // ⬅️ penting buat prefill
+                'employee'     => [
+                    'id'            => $rtc->employee->id ?? null,
+                    'npk'           => $rtc->employee->npk ?? null,
+                    'name'          => $rtc->employee->name ?? null,
+                    'company_name'  => $rtc->employee->company_name ?? null,
+                    'position'      => $rtc->employee->position ?? null,
+                    'department'    => ['name' => optional($rtc->employee->department)->name],
                 ],
             ];
         })->values();
@@ -1597,11 +1563,9 @@ class RtcController extends Controller
             return response()->json(['message' => 'Not allowed or invalid status transition.'], 403);
         }
 
-        // persist
         $rtc->status = $nextStatus;
         $rtc->save();
 
-        // only when final approved (2), copy to planning owner table
         if ($rtc->status === 2 && in_array($area, ['division', 'department', 'section', 'sub_section'], true)) {
             $modelClass = match ($area) {
                 'division'    => Division::class,
@@ -1620,6 +1584,7 @@ class RtcController extends Controller
 
         return response()->json(['message' => $nextStatus === 1 ? 'Checked.' : 'Approved.']);
     }
+
     public function revise($id, Request $request)
     {
         $rtc = Rtc::findOrFail($id);
@@ -1663,5 +1628,19 @@ class RtcController extends Controller
         // (opsional) simpan comment revisi ke table audit/log terpisah
 
         return response()->json(['message' => 'Revised back to submitter.']);
+    }
+
+    private function currentPicFor(string $area, $model)
+    {
+        $empId = match ($area) {
+            'plant'       => $model->director_id ?? null,
+            'division'    => $model->gm_id ?? null,
+            'department'  => $model->manager_id ?? null,
+            'section'     => $model->supervisor_id ?? null,
+            'sub_section' => $model->leader_id ?? null,
+            default       => null,
+        };
+
+        return $empId ? Employee::select('id', 'name', 'position')->find($empId) : null;
     }
 }
