@@ -317,19 +317,20 @@
                 return $('<div>').text(s ?? '').html();
             }
 
-            // 3 status: 0 draft, 1 submitted, 2 approved
+            // ===== 3-status chip (0=draft,1=submitted,2=approved) =====
             function statusChip(overall) {
                 let statusNum = null,
                     label = '';
-
                 const codeToNum = {
                     draft: 0,
                     submitted: 1,
                     approved: 2,
                     waiting: 1
                 };
-                if (typeof overall === 'number') statusNum = overall;
-                else if (overall && typeof overall === 'object') {
+
+                if (typeof overall === 'number') {
+                    statusNum = overall;
+                } else if (overall && typeof overall === 'object') {
                     if (typeof overall.status === 'number') statusNum = overall.status;
                     else if (overall.code && (overall.code in codeToNum)) statusNum = codeToNum[overall.code];
                     if (overall.label) label = overall.label;
@@ -377,13 +378,20 @@
             function renderRows(items, filter) {
                 if (!items || !items.length) return renderEmpty('No data');
 
+                const codeToNum = {
+                    draft: 0,
+                    submitted: 1,
+                    approved: 2,
+                    waiting: 1
+                };
+
                 const rows = items.map((row, i) => {
                     const st = row.short?.name ? esc(row.short.name) :
                     '<span class="text-not-set">-</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) : '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) : '<span class="text-not-set">-</span>';
 
-                    // anyFilled -> sudah ada RTC (draft/submitted/approved)
+                    // Fallback draft jika ada isian tapi overall not_set
                     const anyFilled = !!(row.short?.name || row.mid?.name || row.long?.name);
                     const overallNotSet = !(row.overall && (row.overall.status !== null && row.overall
                             .status !== undefined)) &&
@@ -393,6 +401,16 @@
                         label: 'Draft',
                         code: 'draft'
                     } : row.overall;
+
+                    // Ambil angka status untuk kontrol tombol
+                    let overallNum = null;
+                    if (overallForChip && typeof overallForChip === 'object') {
+                        if (typeof overallForChip.status === 'number') overallNum = overallForChip.status;
+                        else if (overallForChip.code && (overallForChip.code in codeToNum)) overallNum =
+                            codeToNum[overallForChip.code];
+                    } else if (typeof overallForChip === 'string' && (overallForChip in codeToNum)) {
+                        overallNum = codeToNum[overallForChip];
+                    }
 
                     const statusHtml = statusChip(overallForChip);
 
@@ -407,29 +425,39 @@
 
                     let actions = '';
                     if (anyFilled) {
-                        // Sudah ada minimal 1 term -> selalu tampil Update (modal) + Submit + Preview
+                        // Default: tampil Update + Submit saat masih Draft.
+                        let showUpdate = true,
+                            showSubmit = true;
+
+                        // Sembunyikan Update & Submit jika sudah Submitted (1) atau Approved (2)
+                        if (overallNum === 1 || overallNum === 2) {
+                            showUpdate = false;
+                            showSubmit = false;
+                        }
+
                         const updateBtn = `<a href="#" class="btn btn-sm btn-warning btn-edit"
                                 data-id="${row.id}"
                                 data-filter="${filter}"
                                 data-mode="edit"
-                                data-bs-toggle="modal" data-bs-target="#addPlanModal">
-                                Update
-                              </a>`;
+                                data-bs-toggle="modal" data-bs-target="#addPlanModal">Update</a>`;
+
                         const submitBtn = `<a href="#" class="btn btn-sm btn-primary btn-submit"
                                 data-id="${row.id}"
-                                data-filter="${filter}">
-                                Submit
-                              </a>`;
-                        actions = `<div class="action-stack">${previewBtn}${updateBtn}${submitBtn}</div>`;
+                                data-filter="${filter}">Submit</a>`;
+
+                        actions = `<div class="action-stack">
+                        ${previewBtn}
+                        ${showUpdate ? updateBtn : ''}
+                        ${showSubmit ? submitBtn : ''}
+                     </div>`;
                     } else {
-                        // Belum ada satupun term -> tampil Add + Preview (preview tetap ada tetapi akan kosong)
+                        // Tidak ada data sama sekali → Add (jika diizinkan) + Preview
                         const addBtn = (!window.READ_ONLY && !window.HIDE_ADD) ? `
-              <a href="#" class="btn btn-sm btn-success btn-show-modal"
-                 data-id="${row.id}"
-                 data-filter="${filter}"
-                 data-mode="add"
-                 data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>
-          ` : '';
+            <a href="#" class="btn btn-sm btn-success btn-show-modal"
+               data-id="${row.id}"
+               data-filter="${filter}"
+               data-mode="add"
+               data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>` : '';
                         actions = `<div class="action-stack">${previewBtn}${addBtn}</div>`;
                     }
 
@@ -475,7 +503,6 @@
                     filter,
                     division_id: containerId ?? null
                 };
-
                 if (filter === 'direksi' && window.IS_COMPANY_SCOPE) {
                     const comp = ($('#companySelect').val() || '').toUpperCase();
                     if (!comp) {
@@ -523,19 +550,13 @@
             // ===== Initial load =====
             (function init() {
                 if (window.IS_COMPANY_SCOPE) {
-                    if (window.ACTIVE_FILTER === 'company') {
-                        fetchItems('company', null);
-                    } else if (window.ACTIVE_FILTER === 'plant') {
-                        renderEmpty('Select company first');
-                    } else if (window.ACTIVE_FILTER === 'division') {
-                        renderEmpty('Select company & direksi first');
-                    } else {
-                        renderEmpty('Select company first');
-                    }
+                    if (window.ACTIVE_FILTER === 'company') fetchItems('company', null);
+                    else if (window.ACTIVE_FILTER === 'plant') renderEmpty('Select company first');
+                    else if (window.ACTIVE_FILTER === 'division') renderEmpty('Select company & direksi first');
+                    else renderEmpty('Select company first');
                 } else {
-                    if (window.ACTIVE_FILTER === 'plant') {
-                        fetchItems('plant', null);
-                    } else if (window.ACTIVE_FILTER === 'division') {
+                    if (window.ACTIVE_FILTER === 'plant') fetchItems('plant', null);
+                    else if (window.ACTIVE_FILTER === 'division') {
                         if (window.IS_GM) fetchItems('division', null);
                         else if (window.CONTAINER_ID) fetchItems('division', window.CONTAINER_ID);
                         else renderEmpty('Select direksi first');
@@ -597,6 +618,253 @@
                 const q = ($('#searchInput').val() || '').toLowerCase();
                 $('#kt_table_users tbody tr').each(function() {
                     $(this).toggle($(this).text().toLowerCase().includes(q));
+                });
+            });
+        });
+    </script>
+@endpush
+
+@push('scripts')
+    <script>
+        $(function() {
+            window.CURRENT_AREA_ID = null;
+            window.EDIT_MODE = false; // false: Add, true: Edit
+
+            function loadCandidatesForActiveTab() {
+                return new Promise((resolve, reject) => {
+                    const TAB_TO_KODES = {
+                        direksi: ['GM', 'SGM', 'AGM'],
+                        division: ['SM', 'M'],
+                        department: ['AM', 'SS'],
+                        section: ['S', 'AS'],
+                        sub_section: []
+                    };
+
+                    const filter = (window.ACTIVE_FILTER || '').toLowerCase();
+                    const kodes = TAB_TO_KODES[filter] || [];
+
+                    resetRtcModal();
+                    if (!kodes.length) {
+                        resolve();
+                        return;
+                    }
+
+                    const paramsBase = {};
+                    const comp = ($('#companySelect').val() || '').toUpperCase();
+                    if (comp) paramsBase.company = comp;
+
+                    ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                        $(sel).html('<option value="">Loading...</option>').trigger('change');
+                    });
+
+                    const reqs = kodes.map(k =>
+                        $.getJSON(window.ROUTE_RTC_CANDIDATES, {
+                            ...paramsBase,
+                            kode: k
+                        })
+                        .then(r => (r && r.data) ? r.data : [])
+                        .catch(() => [])
+                    );
+
+                    Promise.all(reqs).then(chunks => {
+                        const data = chunks.flat();
+                        const uniq = {};
+                        data.forEach(r => uniq[`${r.employee_id}|${r.term}`] = r);
+                        const rows = Object.values(uniq);
+
+                        const st = [],
+                            mt = [],
+                            lt = [];
+                        rows.forEach(r => {
+                            const opt = `
+              <option value="${r.employee_id}">
+                ${$('<div>').text(r.name).html()}
+                • ${$('<div>').text(r.job_function || '-').html()}
+                • ${$('<div>').text(r.level || '-').html()}
+                • ${$('<div>').text(r.plan_year || '-').html()}
+              </option>`;
+                            if (r.term === 'short') st.push(opt);
+                            else if (r.term === 'mid') mt.push(opt);
+                            else lt.push(opt);
+                        });
+
+                        $('#short_term').html('<option value="">-- Select --</option>' + st.join(
+                            '')).trigger('change');
+                        $('#mid_term').html('<option value="">-- Select --</option>' + mt.join(''))
+                            .trigger('change');
+                        $('#long_term').html('<option value="">-- Select --</option>' + lt.join(''))
+                            .trigger('change');
+
+                        $('#cnt_st').text(st.length);
+                        $('#cnt_mt').text(mt.length);
+                        $('#cnt_lt').text(lt.length);
+                        $('#rtc_counts').toggleClass('d-none', rows.length === 0);
+
+                        resolve();
+                    }).catch(err => {
+                        resetRtcModal();
+                        reject(err);
+                    });
+                });
+            }
+
+            function initSelect2InModal() {
+                $('#addPlanModal .rtc-s2').each(function() {
+                    const $el = $(this);
+                    if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+                    $el.select2({
+                        dropdownParent: $('#addPlanModal'),
+                        width: '100%',
+                        placeholder: $el.data('placeholder') || '-- Select --',
+                        allowClear: true
+                    });
+                });
+            }
+
+            function resetRtcModal() {
+                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                    $(sel).empty().append('<option value="">-- Select --</option>').trigger('change');
+                });
+                $('#cnt_st').text(0);
+                $('#cnt_mt').text(0);
+                $('#cnt_lt').text(0);
+                $('#rtc_counts').addClass('d-none');
+            }
+
+            // ===== Add (baru)
+            $(document).on('click', '.btn-show-modal', function(e) {
+                e.preventDefault();
+                window.CURRENT_AREA_ID = $(this).data('id') || null;
+                window.EDIT_MODE = false;
+                $('#addPlanLabel').text('Add RTC');
+                $('#btnSave').text('Save');
+                $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
+                loadCandidatesForActiveTab().catch(() => {});
+            });
+
+            // ===== Edit (update)
+            $(document).on('click', '.btn-edit', function(e) {
+                e.preventDefault();
+                window.CURRENT_AREA_ID = $(this).data('id') || null;
+                window.EDIT_MODE = true;
+                $('#addPlanLabel').text('Edit RTC');
+                $('#btnSave').text('Save');
+
+                const area = (window.ACTIVE_FILTER || '').toLowerCase();
+                const area_id = window.CURRENT_AREA_ID;
+
+                $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
+
+                loadCandidatesForActiveTab()
+                    .then(() => $.ajax({
+                        url: "{{ route('rtc.area.items') }}",
+                        method: 'GET',
+                        data: {
+                            area,
+                            area_id
+                        }
+                    }))
+                    .then((res) => {
+                        const byTerm = {};
+                        (res || []).forEach(r => {
+                            byTerm[(r.term || '').toLowerCase()] = r.employee_id || '';
+                        });
+
+                        if (byTerm.short) $('#short_term').val(String(byTerm.short)).trigger('change');
+                        if (byTerm.mid) $('#mid_term').val(String(byTerm.mid)).trigger('change');
+                        if (byTerm.long) $('#long_term').val(String(byTerm.long)).trigger('change');
+                    })
+                    .catch(() => {});
+
+                $('#addPlanModal').modal('show');
+            });
+
+            // ===== Submit
+            $(document).on('click', '.btn-submit', function(e) {
+                e.preventDefault();
+                const areaId = $(this).data('id') || null;
+                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+
+                const payload = {
+                    filter: (window.ACTIVE_FILTER || '').toLowerCase(),
+                    id: areaId
+                };
+
+                Swal.fire({
+                    title: 'Submit RTC?',
+                    text: 'Setelah submit, RTC akan diajukan untuk approval.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Submit',
+                    cancelButtonText: 'Batal'
+                }).then((res) => {
+                    if (!res.isConfirmed) return;
+
+                    $.ajax({
+                        url: window.ROUTE_RTC_SUBMIT,
+                        type: 'POST',
+                        data: payload
+                    }).done(function() {
+                        Swal.fire('Berhasil', 'RTC berhasil di-submit.', 'success');
+                        const cid = window.CONTAINER_ID || null;
+                        if (typeof fetchItems === 'function') fetchItems(window
+                            .ACTIVE_FILTER, cid);
+                        else location.reload();
+                    }).fail(function(xhr) {
+                        const msg = xhr?.responseJSON?.message || xhr?.statusText ||
+                            'Gagal submit RTC';
+                        Swal.fire('Gagal', msg, 'error');
+                    });
+                });
+            });
+
+            // ===== Modal lifecycle
+            $('#addPlanModal').on('hidden.bs.modal', function() {
+                $(this).find('.rtc-s2').each(function() {
+                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
+                });
+                window.CURRENT_AREA_ID = null;
+                window.EDIT_MODE = false;
+                resetRtcModal();
+            });
+
+            // ===== SAVE (Add & Update)
+            $('#addPlanForm').on('submit', function(e) {
+                e.preventDefault();
+
+                const areaId = window.CURRENT_AREA_ID || null;
+                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+
+                const payload = {
+                    filter: (window.ACTIVE_FILTER || '').toLowerCase(),
+                    id: areaId,
+                    short_term: $('#short_term').val() || '',
+                    mid_term: $('#mid_term').val() || '',
+                    long_term: $('#long_term').val() || ''
+                };
+
+                if (!payload.short_term && !payload.mid_term && !payload.long_term) {
+                    return Swal.fire('Validasi', 'Pilih minimal satu kandidat (ST/MT/LT).', 'warning');
+                }
+
+                const url = window.EDIT_MODE ? window.ROUTE_RTC_UPDATE : window.ROUTE_RTC_SAVE;
+
+                $.ajax({
+                    url: url,
+                    type: 'POST',
+                    data: payload
+                }).done(function() {
+                    $('#addPlanModal').modal('hide');
+                    const msg = window.EDIT_MODE ? 'Perubahan RTC disimpan (draft).' :
+                        'RTC berhasil disimpan (draft).';
+                    Swal.fire('Berhasil', msg, 'success');
+                    const cid = window.CONTAINER_ID || null;
+                    if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
+                    else location.reload();
+                }).fail(function(xhr) {
+                    const msg = xhr?.responseJSON?.message || xhr?.statusText ||
+                        'Gagal menyimpan RTC';
+                    Swal.fire('Gagal', msg, 'error');
                 });
             });
         });
