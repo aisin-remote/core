@@ -75,8 +75,7 @@
                                         default => $employee->department?->name,
                                     };
                                     $userId = (string) $employee->user_id;
-
-                                    $tok = App\Support\OpaqueId::encode((int) $employee->user_id);
+                                    $tok = App\Support\OpaqueId::encode((int) $userId);
                                 @endphp
                                 <tr class="fs-7" data-position="{{ $employee->position }}">
                                     <td>{{ $index + 1 }}</td>

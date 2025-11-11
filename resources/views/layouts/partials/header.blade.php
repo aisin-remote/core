@@ -179,8 +179,7 @@
                     <div class="cursor-pointer symbol symbol-35px"
                         data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
                         data-kt-menu-placement="bottom-end">
-                        <img src="{{ asset('storage/' . auth()->user()->employee->photo) }}" class="rounded-3"
-                            alt="user">
+                        <img src="{{ Storage::url(auth()->user()->employee->photo) }}" class="rounded-3" alt="user">
                     </div>
 
                     <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-300px"

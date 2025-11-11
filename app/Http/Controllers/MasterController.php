@@ -70,28 +70,18 @@ class MasterController extends Controller
 
         $allPositions = [
             'President',
-            'VPD',
             'Direktur',
-            'Act Direktur',
-            'Act GM',
             'GM',
-            'Act Manager',
             'Manager',
             'Coordinator',
             'Section Head',
-            'Act Section Head',
-            'Act Supervisor',
             'Supervisor',
-            'Act Leader',
             'Leader',
-            'Staff',
-            'Act JP',
             'JP',
-            'Operator'
+            'Operator',
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-
         $visiblePositions = [];
 
         if ($user->isHRDorDireksi()) {
