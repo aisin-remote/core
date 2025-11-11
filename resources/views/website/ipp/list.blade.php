@@ -192,6 +192,8 @@
         </div>
     </div>
 
+    @include('layouts.partials.export-overlay')
+
     {{-- Modal: daftar IPP si karyawan (width ngikutin konten) --}}
     <div class="modal fade" id="ippShowModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width: fit-content; margin: auto;">
@@ -440,10 +442,10 @@
                             const pdfHref = `{{ route('ipp.export.pdf', ['id' => '___ID___']) }}`
                                 .replace('___ID___', item.id);
                             actions = `
-                                <a class="btn btn-sm btn-success me-2" href="${excelHref}">
+                                <a class="btn btn-sm btn-success btn-export me-2" href="${excelHref}" data-kind="PDF">
                                     <i class="bi bi-file-earmark-spreadsheet"></i> Excel
                                 </a>
-                                <a class="btn btn-sm btn-danger" href="${pdfHref}" rel="noopener">
+                                <a class="btn btn-sm btn-danger btn-export" href="${pdfHref}" data-kind="Excel" rel="noopener">
                                     <i class="bi bi-file-earmark-pdf"></i> PDF
                                 </a>`;
                         } else {
