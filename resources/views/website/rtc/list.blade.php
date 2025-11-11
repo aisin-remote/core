@@ -29,13 +29,6 @@
             border-color: #a7f3d0
         }
 
-        .status-chip[data-status="revised"] {
-            background: #f51515;
-            color: #fffbeb;
-            border-color: #f51515
-        }
-
-        .status-chip[data-status="checked"],
         .status-chip[data-status="waiting"] {
             background: #fffbeb;
             color: #92400e;
@@ -124,7 +117,6 @@
                         @endforeach
                     </ul>
                 @endif
-
 
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -229,14 +221,14 @@
         </div>
     </div>
 
-    {{-- Modal Add Plan --}}
+    {{-- Modal Add/Edit RTC --}}
     @unless ($readOnly)
         <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <form id="addPlanForm">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="addPlanLabel">Add Plan</h5>
+                            <h5 class="modal-title" id="addPlanLabel">Add RTC</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
 
@@ -275,7 +267,8 @@
                         </div>
 
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary">Save</button>
+                            {{-- Save digunakan untuk Add & Update (edit) --}}
+                            <button type="submit" class="btn btn-primary" id="btnSave">Save</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
@@ -304,7 +297,18 @@
         window.VISIBLE_TABS = @json(collect($tabs)->filter(fn($t) => $t['show'])->keys()->values());
 
         window.ROUTE_RTC_CANDIDATES = @json(route('rtc.candidates'));
+        window.ROUTE_RTC_SAVE = @json(route('rtc.save'));
         window.ROUTE_RTC_UPDATE = @json(route('rtc.update'));
+        window.ROUTE_RTC_SUBMIT = @json(route('rtc.submit'));
+    </script>
+
+    <script>
+        // CSRF untuk semua POST
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        });
     </script>
 
     <script>
@@ -313,40 +317,55 @@
                 return $('<div>').text(s ?? '').html();
             }
 
+            // 3 status: 0 draft, 1 submitted, 2 approved
             function statusChip(overall) {
-                const map = {
-                    approved: {
-                        ds: 'approved',
-                        icon: '<i class="fas fa-circle-check"></i>'
-                    },
-                    checked: {
-                        ds: 'checked',
-                        icon: '<i class="fas fa-clipboard-check"></i>'
-                    },
-                    submitted: {
-                        ds: 'waiting',
-                        icon: '<i class="fas fa-paper-plane"></i>'
-                    },
-                    partial: {
-                        ds: 'draft',
-                        icon: '<i class="far fa-pen-to-square"></i>'
-                    },
-                    complete_no_submit: {
-                        ds: 'draft',
-                        icon: '<i class="far fa-pen-to-square"></i>'
-                    },
-                    revised: {
-                        ds: 'revised',
-                        icon: '<i class="far fa-pen-to-square"></i>'
-                    },
-                    not_set: {
-                        ds: 'not_created',
-                        icon: '<i class="far fa-circle"></i>'
-                    }
+                let statusNum = null,
+                    label = '';
+
+                const codeToNum = {
+                    draft: 0,
+                    submitted: 1,
+                    approved: 2,
+                    waiting: 1
                 };
-                const conf = map[overall?.code] ?? map['not_set'];
-                const label = overall?.label || 'Not Set';
-                return `<span class="status-chip" data-status="${conf.ds}" title="${esc(label)}">${conf.icon}<span>${esc(label)}</span></span>`;
+                if (typeof overall === 'number') statusNum = overall;
+                else if (overall && typeof overall === 'object') {
+                    if (typeof overall.status === 'number') statusNum = overall.status;
+                    else if (overall.code && (overall.code in codeToNum)) statusNum = codeToNum[overall.code];
+                    if (overall.label) label = overall.label;
+                } else if (typeof overall === 'string' && overall in codeToNum) {
+                    statusNum = codeToNum[overall];
+                }
+
+                if (statusNum === null || isNaN(statusNum)) {
+                    const lab = label || (overall && overall.label) || 'Not Set';
+                    return `<span class="status-chip" data-status="not_created" title="${esc(lab)}"><i class="far fa-circle"></i><span>${esc(lab)}</span></span>`;
+                }
+
+                const map = {
+                    0: {
+                        ds: 'draft',
+                        icon: '<i class="far fa-pen-to-square"></i>',
+                        label: 'Draft'
+                    },
+                    1: {
+                        ds: 'waiting',
+                        icon: '<i class="fas fa-paper-plane"></i>',
+                        label: 'Submitted'
+                    },
+                    2: {
+                        ds: 'approved',
+                        icon: '<i class="fas fa-circle-check"></i>',
+                        label: 'Approved'
+                    },
+                };
+                const conf = map[statusNum] ?? {
+                    ds: 'not_created',
+                    icon: '<i class="far fa-circle"></i>',
+                    label: 'Not Set'
+                };
+                const finalLabel = label || conf.label;
+                return `<span class="status-chip" data-status="${conf.ds}" title="${esc(finalLabel)}">${conf.icon}<span>${esc(finalLabel)}</span></span>`;
             }
 
             function renderEmpty(msg) {
@@ -357,57 +376,82 @@
 
             function renderRows(items, filter) {
                 if (!items || !items.length) return renderEmpty('No data');
+
                 const rows = items.map((row, i) => {
                     const st = row.short?.name ? esc(row.short.name) :
-                        '<span class="text-not-set">-</span>';
+                    '<span class="text-not-set">-</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) : '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) : '<span class="text-not-set">-</span>';
-                    const statusHtml = statusChip(row.overall);
+
+                    // anyFilled -> sudah ada RTC (draft/submitted/approved)
+                    const anyFilled = !!(row.short?.name || row.mid?.name || row.long?.name);
+                    const overallNotSet = !(row.overall && (row.overall.status !== null && row.overall
+                            .status !== undefined)) &&
+                        !(row.overall && row.overall.code && row.overall.code !== 'not_set');
+                    const overallForChip = (anyFilled && overallNotSet) ? {
+                        status: 0,
+                        label: 'Draft',
+                        code: 'draft'
+                    } : row.overall;
+
+                    const statusHtml = statusChip(overallForChip);
+
                     const fullName = row.pic?.name || '-';
                     const showName = (fullName || '').trim().split(/\s+/).slice(0, 2).join(' ');
                     const pic = row.pic ? `<span title="${esc(fullName)}">${esc(showName)}</span>` :
                         `<span>-</span>`;
 
+                    // === Actions ===
                     const previewBtn =
                         `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
 
-                    let addBtn = '';
-                    if (!window.READ_ONLY && !window.HIDE_ADD && row.can_add) {
-                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal"
-                            data-id="${row.id}"
-                            data-filter="${filter}"
-                            data-mode="add"
-                            data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>`;
+                    let actions = '';
+                    if (anyFilled) {
+                        // Sudah ada minimal 1 term -> selalu tampil Update (modal) + Submit + Preview
+                        const updateBtn = `<a href="#" class="btn btn-sm btn-warning btn-edit"
+                                data-id="${row.id}"
+                                data-filter="${filter}"
+                                data-mode="edit"
+                                data-bs-toggle="modal" data-bs-target="#addPlanModal">
+                                Update
+                              </a>`;
+                        const submitBtn = `<a href="#" class="btn btn-sm btn-primary btn-submit"
+                                data-id="${row.id}"
+                                data-filter="${filter}">
+                                Submit
+                              </a>`;
+                        actions = `<div class="action-stack">${previewBtn}${updateBtn}${submitBtn}</div>`;
+                    } else {
+                        // Belum ada satupun term -> tampil Add + Preview (preview tetap ada tetapi akan kosong)
+                        const addBtn = (!window.READ_ONLY && !window.HIDE_ADD) ? `
+              <a href="#" class="btn btn-sm btn-success btn-show-modal"
+                 data-id="${row.id}"
+                 data-filter="${filter}"
+                 data-mode="add"
+                 data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>
+          ` : '';
+                        actions = `<div class="action-stack">${previewBtn}${addBtn}</div>`;
                     }
-
-                    let reviseBtn = '';
-                    if (row.can_revise) {
-                        reviseBtn = `<a href="#" class="btn btn-sm btn-warning btn-revise"
-                            data-id="${row.id}"
-                            data-filter="${filter}"
-                            data-mode="revise"
-                            data-bs-toggle="modal" data-bs-target="#addPlanModal">Revise</a>`;
-                    }
-
-                    const actions = `<div class="action-stack">${previewBtn}${addBtn}${reviseBtn}</div>`;
 
                     let kpiCells = '';
                     if (window.SHOW_KPI_COLS) {
                         kpiCells = `
-                            <td class="text-start">${pic}</td>
-                            <td class="text-start term-cell">${st}</td>
-                            <td class="text-start term-cell">${mt}</td>
-                            <td class="text-start term-cell">${lt}</td>
-                            <td class="text-center">${statusHtml}</td>
-                        `;
+            <td class="text-start">${pic}</td>
+            <td class="text-start term-cell">${st}</td>
+            <td class="text-start term-cell">${mt}</td>
+            <td class="text-start term-cell">${lt}</td>
+            <td class="text-center">${statusHtml}</td>
+          `;
                     }
+
                     return `<tr class="fs-7">
-                        <td>${i+1}</td>
-                        <td class="text-start">${esc(row.name)}</td>
-                        ${kpiCells}
-                        <td class="text-center">${actions}</td>
-                    </tr>`;
+          <td>${i+1}</td>
+          <td class="text-start">${esc(row.name)}</td>
+          ${kpiCells}
+          <td class="text-center">${actions}</td>
+        </tr>`;
                 }).join('');
+
                 $('#kt_table_users tbody').html(rows);
             }
 
@@ -431,6 +475,7 @@
                     filter,
                     division_id: containerId ?? null
                 };
+
                 if (filter === 'direksi' && window.IS_COMPANY_SCOPE) {
                     const comp = ($('#companySelect').val() || '').toUpperCase();
                     if (!comp) {
@@ -557,11 +602,12 @@
         });
     </script>
 @endpush
+
 @push('scripts')
     <script>
         $(function() {
             window.CURRENT_AREA_ID = null;
-            window.EDIT_MODE = false;
+            window.EDIT_MODE = false; // false: Add, true: Edit
 
             function loadCandidatesForActiveTab() {
                 return new Promise((resolve, reject) => {
@@ -610,12 +656,12 @@
                             lt = [];
                         rows.forEach(r => {
                             const opt = `
-            <option value="${r.employee_id}">
-              ${$('<div>').text(r.name).html()}
-              • ${$('<div>').text(r.job_function || '-').html()}
-              • ${$('<div>').text(r.level || '-').html()}
-              • ${$('<div>').text(r.plan_year || '-').html()}
-            </option>`;
+              <option value="${r.employee_id}">
+                ${$('<div>').text(r.name).html()}
+                • ${$('<div>').text(r.job_function || '-').html()}
+                • ${$('<div>').text(r.level || '-').html()}
+                • ${$('<div>').text(r.plan_year || '-').html()}
+              </option>`;
                             if (r.term === 'short') st.push(opt);
                             else if (r.term === 'mid') mt.push(opt);
                             else lt.push(opt);
@@ -664,20 +710,25 @@
                 $('#rtc_counts').addClass('d-none');
             }
 
+            // ===== Add (baru)
             $(document).on('click', '.btn-show-modal', function(e) {
                 e.preventDefault();
                 window.CURRENT_AREA_ID = $(this).data('id') || null;
                 window.EDIT_MODE = false;
-                $('#addPlanLabel').text('Add Plan');
+                $('#addPlanLabel').text('Add RTC');
+                $('#btnSave').text('Save');
                 $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
                 loadCandidatesForActiveTab().catch(() => {});
             });
 
-            $(document).on('click', '.btn-revise', function(e) {
+            // ===== Edit (update)
+            $(document).on('click', '.btn-edit', function(e) {
                 e.preventDefault();
                 window.CURRENT_AREA_ID = $(this).data('id') || null;
                 window.EDIT_MODE = true;
-                $('#addPlanLabel').text('Revise Plan');
+                $('#addPlanLabel').text('Edit RTC');
+                $('#btnSave').text('Save');
+
                 const area = (window.ACTIVE_FILTER || '').toLowerCase();
                 const area_id = window.CURRENT_AREA_ID;
 
@@ -707,6 +758,46 @@
                 $('#addPlanModal').modal('show');
             });
 
+            // ===== Submit
+            $(document).on('click', '.btn-submit', function(e) {
+                e.preventDefault();
+                const areaId = $(this).data('id') || null;
+                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+
+                const payload = {
+                    filter: (window.ACTIVE_FILTER || '').toLowerCase(),
+                    id: areaId
+                };
+
+                Swal.fire({
+                    title: 'Submit RTC?',
+                    text: 'Setelah submit, RTC akan diajukan untuk approval.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Submit',
+                    cancelButtonText: 'Batal'
+                }).then((res) => {
+                    if (!res.isConfirmed) return;
+
+                    $.ajax({
+                        url: window.ROUTE_RTC_SUBMIT,
+                        type: 'POST',
+                        data: payload
+                    }).done(function() {
+                        Swal.fire('Berhasil', 'RTC berhasil di-submit.', 'success');
+                        const cid = window.CONTAINER_ID || null;
+                        if (typeof fetchItems === 'function') fetchItems(window
+                            .ACTIVE_FILTER, cid);
+                        else location.reload();
+                    }).fail(function(xhr) {
+                        const msg = xhr?.responseJSON?.message || xhr?.statusText ||
+                            'Gagal submit RTC';
+                        Swal.fire('Gagal', msg, 'error');
+                    });
+                });
+            });
+
+            // ===== Modal lifecycle
             $('#addPlanModal').on('hidden.bs.modal', function() {
                 $(this).find('.rtc-s2').each(function() {
                     if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
@@ -716,7 +807,7 @@
                 resetRtcModal();
             });
 
-            // SUBMIT
+            // ===== SAVE (Add & Update)
             $('#addPlanForm').on('submit', function(e) {
                 e.preventDefault();
 
@@ -735,14 +826,16 @@
                     return Swal.fire('Validasi', 'Pilih minimal satu kandidat (ST/MT/LT).', 'warning');
                 }
 
+                const url = window.EDIT_MODE ? window.ROUTE_RTC_UPDATE : window.ROUTE_RTC_SAVE;
+
                 $.ajax({
-                    url: window.ROUTE_RTC_UPDATE,
-                    type: 'GET',
+                    url: url,
+                    type: 'POST',
                     data: payload
                 }).done(function() {
                     $('#addPlanModal').modal('hide');
-                    const msg = window.EDIT_MODE ? 'Perubahan RTC disimpan.' :
-                        'RTC berhasil disimpan.';
+                    const msg = window.EDIT_MODE ? 'Perubahan RTC disimpan (draft).' :
+                        'RTC berhasil disimpan (draft).';
                     Swal.fire('Berhasil', msg, 'success');
                     const cid = window.CONTAINER_ID || null;
                     if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
