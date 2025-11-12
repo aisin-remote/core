@@ -1,5 +1,4 @@
 @extends('layouts.root.main')
-
 @section('title')
     {{ $title ?? 'Employee Details' }}
 @endsection
@@ -7,7 +6,6 @@
 @section('breadcrumbs')
     {{ $title ?? 'Employee' }}
 @endsection
-
 @section('main')
     @if (session()->has('success'))
         <script>
@@ -673,8 +671,11 @@
                             </div>
 
                             @if ($assessment && $assessment->date)
+                                @php
+                                    $tok = \App\Support\OpaqueId::encode((int) $assessment->id);
+                                @endphp
                                 <a class="btn btn-sm btn-info"
-                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    href="{{ route('assessments.showByDate', ['tok' => $tok, 'date' => $assessment->date]) }}">
                                     <i class="fas fa-info"></i> Detail
                                 </a>
                             @else
@@ -736,8 +737,11 @@
                             </div>
 
                             @if ($assessment && $assessment->date)
+                                @php
+                                    $tok = \App\Support\OpaqueId::encode((int) $assessment->id);
+                                @endphp
                                 <a class="btn btn-sm btn-info"
-                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    href="{{ route('assessments.showByDate', ['tok' => $tok, 'date' => $assessment->date]) }}">
                                     <i class="fas fa-info"></i> Detail
                                 </a>
                             @else

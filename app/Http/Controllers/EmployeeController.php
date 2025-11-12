@@ -477,37 +477,18 @@ class EmployeeController extends Controller
         }
     }
 
-    private function findSupervisor($position, $departmentId)
-    {
-        $hierarchy = [
-            'GM'           => null,
-            'Manager'      => 'GM',
-            'Coordinator'  => 'Manager',
-            'Section Head' => 'Coordinator',
-            'Supervisor'   => 'Section Head'
-        ];
-
-        $supervisorPosition = $hierarchy[$position] ?? null;
-
-        if (!$supervisorPosition) {
-            return null;
-        }
-
-        return Employee::where('position', $supervisorPosition)
-            ->whereHas('departments', function ($query) use ($departmentId) {
-                $query->where('department_id', $departmentId);
-            })
-            ->first();
-    }
     /**
      * Tampilkan detail karyawan
      */
     public function show($tok)
     {
         try {
+            $title = "Employee Detail";
 
             $id = OpaqueId::decode($tok);
-            abort_if(!$id, 404);
+            if (!$id) {
+                redirect()->back()->with('warning', 'Dilarang melakukan hal ini ya.');
+            }
 
             // 1) Ambil user & employee berdasarkan user_id
             $user = User::findOrFail($id);
@@ -599,7 +580,8 @@ class EmployeeController extends Controller
                 'assessment',
                 'idps',
                 'divisions',
-                'plants'
+                'plants',
+                'title'
             ))->with('mode', 'view');
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return redirect()->back()->with('error', 'Data tidak ditemukan untuk user tersebut.');

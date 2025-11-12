@@ -118,17 +118,17 @@ class HavController extends Controller
 
         $titles = [
             13 => 'Maximal Contributor',
-            7 => 'Top Performer',
-            3 => 'Future Star',
-            1 => 'Star',
+            7  => 'Top Performer',
+            3  => 'Future Star',
+            1  => 'Star',
             14 => 'Contributor',
-            8 => 'Strong Performer',
-            4 => 'Potential Candidate',
-            2 => 'Future Star',
+            8  => 'Strong Performer',
+            4  => 'Potential Candidate',
+            2  => 'Future Star',
             15 => 'Minimal Contributor',
-            9 => 'Career Person',
-            6 => 'Candidate',
-            5 => 'Raw Diamond',
+            9  => 'Career Person',
+            6  => 'Candidate',
+            5  => 'Raw Diamond',
             16 => 'Dead Wood',
             12 => 'Problem Employee',
             11 => 'Unfit Employee',
@@ -206,7 +206,7 @@ class HavController extends Controller
      */
     public function list(Request $request, $company = null)
     {
-        $title = 'Add Employee';
+        $title = 'HAV List';
         $user = auth()->user();
         $filter = $request->input('filter', 'all');
         $search = $request->input('search'); // ambil input search dari request

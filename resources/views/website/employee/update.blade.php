@@ -1089,8 +1089,11 @@
                             </div>
 
                             @if ($assessment && $assessment->date)
+                                @php
+                                    $tok = \App\Support\OpaqueId::encode((int) $assessment->id);
+                                @endphp
                                 <a class="btn btn-sm btn-info"
-                                    href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
+                                    href="{{ route('assessments.showByDate', ['tok' => $tok, 'date' => $assessment->date]) }}">
                                     <i class="fas fa-info"></i> Detail
                                 </a>
                             @else
@@ -1265,7 +1268,7 @@
             if (typeof window.$ === 'undefined' || typeof $.fn.select2 === 'undefined') {
                 console.warn(
                     'jQuery/Select2 belum ter-load. Cek urutan di layout: plugins.bundle.js -> select2.min.js -> this script'
-                    );
+                );
                 return;
             }
 

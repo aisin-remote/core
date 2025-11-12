@@ -273,9 +273,14 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/update', [AssessmentController::class, 'update'])->name('assessments.update');
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
         Route::get('/history/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ubah ke 'history/{employee_id}'
-        Route::get('/{assessment_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate'); // Pindahkan ke bawah
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
+        Route::get('/{tok}/{date}', [AssessmentController::class, 'showByDate'])
+            ->where([
+                'tok'  => '[A-Za-z0-9_-]+',   // base64-url safe
+                'date' => '\d{4}-\d{2}-\d{2}',
+            ])
+            ->name('assessments.showByDate');
     });
 
     Route::prefix('rtc')->group(function () {

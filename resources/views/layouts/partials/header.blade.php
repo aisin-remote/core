@@ -155,13 +155,15 @@
                         class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
                         <span class="menu-link">
                             @php
-                                $title = match (ucfirst(request()->path())) {
-                                    'Hav' => 'Human Assets Value',
-                                    'Idp' => 'Individual Development Plan',
-                                    default => ucfirst(request()->path()),
-                                };
+                                $computedTitle =
+                                    $title ??
+                                    match (ucfirst(request()->path())) {
+                                        'Hav' => 'Human Assets Value',
+                                        'Idp' => 'Individual Development Plan',
+                                        default => ucfirst(request()->path()),
+                                    };
                             @endphp
-                            <span class="menu-title">{{ $title }}</span>
+                            <span class="menu-title">{{ $computedTitle }}</span>
                             <span class="menu-arrow d-lg-none"></span>
                         </span>
                     </div>
