@@ -205,7 +205,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create');
         Route::get('employee/check-email', [EmployeeController::class, 'checkEmail'])->name('employee.checkEmail');
         Route::post('/', [EmployeeController::class, 'store'])->name('employee.store');
-        Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit');
+        Route::get('/{tok}/edit', [EmployeeController::class, 'edit'])->name('employee.edit');
         Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update');
         Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy');
         Route::get('/detail/{tok}', [EmployeeController::class, 'show'])->name('employee.show');

@@ -590,8 +590,14 @@ class EmployeeController extends Controller
         }
     }
 
-    public function edit($userId)
+    public function edit($tok)
     {
+
+        $userId = OpaqueId::decode($tok);
+        if (!$userId) {
+            redirect()->back()->with('warning', 'Dilarang melakukan hal ini ya.');
+        }
+
         // 1) Ambil employee berdasarkan user_id (unik per jabatan)
         $employee = Employee::with([
             'subSection.section.department',
