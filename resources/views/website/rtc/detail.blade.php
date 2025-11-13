@@ -17,11 +17,28 @@
     </div>
 
     <div style="position: relative;">
-        <div style="position: absolute; top: 20px; right: 20px; z-index: 10000; display: flex; gap: 8px;">
-            <button id="btn-pdf" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PDF</button>
-            <button id="btn-png" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">PNG</button>
-            <button id="btn-svg" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">SVG</button>
-            <button id="btn-csv" class="bg-gray-800 text-white px-3 py-1 rounded hover:bg-gray-700">CSV</button>
+        <!-- Floating export toolbar -->
+        <div class="position-absolute top-0 end-0 p-3" style="z-index: 10000;">
+            <div
+                class="d-flex flex-wrap gap-2 align-items-center justify-content-end shadow-sm rounded-pill px-3 py-2 bg-dark bg-opacity-75">
+                <span class="text-light small me-2 d-none d-md-inline">Export</span>
+                <button id="btn-pdf"
+                    class="btn btn-sm btn-outline-light border-0 px-3 py-1 d-flex align-items-center gap-1">
+                    <i class="bi bi-file-earmark-pdf"></i><span class="d-none d-md-inline">PDF</span>
+                </button>
+                <button id="btn-png"
+                    class="btn btn-sm btn-outline-light border-0 px-3 py-1 d-flex align-items-center gap-1">
+                    <i class="bi bi-file-earmark-image"></i><span class="d-none d-md-inline">PNG</span>
+                </button>
+                <button id="btn-svg"
+                    class="btn btn-sm btn-outline-light border-0 px-3 py-1 d-flex align-items-center gap-1">
+                    <i class="bi bi-filetype-svg"></i><span class="d-none d-md-inline">SVG</span>
+                </button>
+                <button id="btn-csv"
+                    class="btn btn-sm btn-outline-light border-0 px-3 py-1 d-flex align-items-center gap-1">
+                    <i class="bi bi-table"></i><span class="d-none d-md-inline">CSV</span>
+                </button>
+            </div>
         </div>
 
         <div id="orgchart-container" style="width: 100%; height: 100vh;"></div>
@@ -30,6 +47,9 @@
 
 @push('custom-css')
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+    {{-- Kalau pakai Bootstrap Icons --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
     <style>
         * {
             box-sizing: border-box;
@@ -38,7 +58,7 @@
         html,
         body {
             height: 100%;
-            background: #101114;
+            background: radial-gradient(circle at top, #1f2933 0, #020617 45%, #020617 100%);
             font-family: 'Inter', system-ui, -apple-system, Segoe UI, Arial, sans-serif;
         }
 
@@ -51,13 +71,33 @@
         .export-btn {
             background: #1f2937;
             color: #fff;
-            padding: .4rem .7rem;
-            border-radius: .5rem;
+            padding: .35rem .75rem;
+            border-radius: 999px;
             border: 1px solid #374151;
+            font-size: .8rem;
         }
 
         .export-btn:hover {
             background: #111827;
+        }
+
+        /* Smooth scrollbars (optional) */
+        #orgchart-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        #orgchart-container::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+
+        #orgchart-container::-webkit-scrollbar-thumb {
+            background: #4b5563;
+            border-radius: 999px;
+        }
+
+        #orgchart-container::-webkit-scrollbar-thumb:hover {
+            background: #6b7280;
         }
     </style>
 @endpush
@@ -66,6 +106,7 @@
     <script>
         const main = @json($main);
         const managers = @json($managers);
+
         const hideMainPlans = @json($hideMainPlans ?? false);
         const NO_ROOT = @json($noRoot ?? false); // sekarang utk company = false
         const GROUP_TOP = false; // kita matikan group model lama
@@ -88,19 +129,21 @@
 
             OrgChart.templates.factory.defs =
                 '<filter id="dropShadow" x="-40%" y="-40%" width="180%" height="180%">' +
-                '<feGaussianBlur in="SourceAlpha" stdDeviation="3"></feGaussianBlur>' +
-                '<feOffset dx="0" dy="2" result="offsetblur"></feOffset>' +
+                '<feGaussianBlur in="SourceAlpha" stdDeviation="4"></feGaussianBlur>' +
+                '<feOffset dx="0" dy="3" result="offsetblur"></feOffset>' +
                 '<feComponentTransfer><feFuncA type="linear" slope=".35"/></feComponentTransfer>' +
                 '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>' +
                 '</filter>' +
                 '<clipPath id="clipPhoto"><circle cx="' + CX + '" cy="' + CY + '" r="' + (AV / 2) +
                 '"/></clipPath>';
 
-            // default node (punya ST/MT/LT rows)
+            // ================= NODE DENGAN S/T M/T L/T =================
             OrgChart.templates.factory.node =
-                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
-                '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
-                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + HDR + '" fill="{val}"></rect>' +
+                '<rect x="0" y="0" rx="18" ry="18" width="' + W + '" height="' + H +
+                '" fill="#ffffff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
+                '<rect x="0" y="0" rx="18" ry="18" width="' + W + '" height="' + HDR +
+                '" fill="{val}"></rect>' +
+                // label kiri
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="155" text-anchor="start">Grade</text>' +
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
@@ -109,11 +152,11 @@
                 '" y="195" text-anchor="start">LOS</text>' +
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="215" text-anchor="start">LCP</text>' +
-                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + LEFTX +
                 '" y="245" text-anchor="start">S/T</text>' +
-                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + LEFTX +
                 '" y="265" text-anchor="start">M/T</text>' +
-                '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
+                '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + LEFTX +
                 '" y="285" text-anchor="start">L/T</text>';
 
             OrgChart.templates.factory.img_0 =
@@ -128,6 +171,7 @@
                 '<text style="font-size:13px;fill:#6b7280" x="' + CX +
                 '" y="128" text-anchor="middle">{val}</text>';
 
+            // value kolom kanan (Grade / Age / LOS / LCP)
             OrgChart.templates.factory.field_2 =
                 '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
                 '" y="155" text-anchor="end">{val}</text>';
@@ -140,25 +184,31 @@
             OrgChart.templates.factory.field_5 =
                 '<text style="font-size:13px;font-weight:600;fill:#111827" x="' + RIGHTX +
                 '" y="215" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_6 =
-                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="245" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_7 =
-                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="265" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_8 =
-                '<text style="font-size:13px;fill:#111827" x="' + RIGHTX +
-                '" y="285" text-anchor="end">{val}</text>';
-            OrgChart.templates.factory.field_9 =
-                '<text style="font-size:11px;fill:#9ca3af" x="' + CX + '" y="' + (H - 14) +
-                '" text-anchor="middle">(grade, age, HAV)</text>';
 
-            // template tanpa ST/MT/LT, dipakai PRESIDENT, VPD, PLANT, dll
+            // kandidat: geser sedikit ke kanan dari label, anchor start
+            const CAND_X = LEFTX + 40;
+
+            OrgChart.templates.factory.field_6 =
+                '<text style="font-size:12px;fill:#374151" x="' + CAND_X +
+                '" y="245" text-anchor="start">{val}</text>';
+            OrgChart.templates.factory.field_7 =
+                '<text style="font-size:12px;fill:#374151" x="' + CAND_X +
+                '" y="265" text-anchor="start">{val}</text>';
+            OrgChart.templates.factory.field_8 =
+                '<text style="font-size:12px;fill:#374151" x="' + CAND_X +
+                '" y="285" text-anchor="start">{val}</text>';
+
+            OrgChart.templates.factory.field_9 =
+                '<text style="font-size:10px;fill:#9ca3af" x="' + CX + '" y="' + (H - 14) +
+                '" text-anchor="middle">S/T • M/T • L/T • HAV</text>';
+
+            // ================= NODE ROOT TANPA S/T M/T L/T =================
             OrgChart.templates.factoryRoot = Object.assign({}, OrgChart.templates.factory);
             OrgChart.templates.factoryRoot.node =
-                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + H +
-                '" fill="#fff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
-                '<rect x="0" y="0" rx="16" ry="16" width="' + W + '" height="' + HDR + '" fill="{val}"></rect>' +
+                '<rect x="0" y="0" rx="18" ry="18" width="' + W + '" height="' + H +
+                '" fill="#ffffff" stroke="#e5e7eb" filter="url(#dropShadow)"></rect>' +
+                '<rect x="0" y="0" rx="18" ry="18" width="' + W + '" height="' + HDR +
+                '" fill="{val}"></rect>' +
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
                 '" y="155" text-anchor="start">Grade</text>' +
                 '<text style="font-size:13px;fill:#111827" x="' + LEFTX +
@@ -195,7 +245,50 @@
                 'color-14': '#3b82f6'
             };
 
-            const clamp = (s, max = 42) => (s && s.length > max ? (s.slice(0, max - 1) + '…') : (s || '-'));
+            // mapping quadrant -> title (HAV)
+            const quadrantTitles = {
+                1: 'Star',
+                2: 'Future Star',
+                3: 'Future Star',
+                4: 'Potential Candidate',
+                5: 'Raw Diamond',
+                6: 'Candidate',
+                7: 'Top Performer',
+                8: 'Strong Performer',
+                9: 'Career Person',
+                10: 'Most Unfit Employee',
+                11: 'Unfit Employee',
+                12: 'Problem Employee',
+                13: 'Maximal Contributor',
+                14: 'Contributor',
+                15: 'Minimal Contributor',
+                16: 'Dead Wood'
+            };
+
+            const clamp = (s, max = 72) =>
+                (s && s.length > max ? (s.slice(0, max - 1) + '…') : (s || '-'));
+
+            // format label kandidat + HAV
+            function buildCandidateLabel(candidate) {
+                if (!candidate || !candidate.name || candidate.name === '-') {
+                    return '-';
+                }
+
+                const base = `${candidate.name} (${candidate.grade ?? '-'}, ${candidate.age ?? '-'})`;
+
+                const assets = Array.isArray(candidate.human_assets) ? candidate.human_assets : [];
+                if (!assets.length) {
+                    return base;
+                }
+
+                // asumsi backend sudah orderByDesc(year), ambil yang terbaru
+                const asset = assets[0] || {};
+                const q = parseInt(asset.quadrant ?? asset.quadrant_id ?? 0, 10);
+                const year = asset.year ?? '';
+                const title = quadrantTitles[q] || 'Unknown';
+
+                return `${base} • ${title}${year ? ' ' + year : ''}`;
+            }
 
             /* ================== buildChartData ================== */
             function buildChartData(mainObj, managersArr) {
@@ -205,17 +298,14 @@
 
                 const rootId = 'root';
 
-                // selalu render root (phantom / normal)
                 const rootTags = [];
                 if (mainObj.phantom) {
                     rootTags.push('phantom'); // jadi invisible
                 }
                 if (hideMainPlans) {
-                    // hide ST/MT/LT
                     rootTags.push('no-plans');
                 }
 
-                // bikin root node
                 nodes.push({
                     id: rootId,
                     department: clamp(mainObj.title, 64),
@@ -224,25 +314,19 @@
                     age: mainObj.person?.age ?? '-',
                     los: mainObj.person?.los ?? '-',
                     lcp: mainObj.person?.lcp ?? '-',
-                    cand_st: hideMainPlans ? '' : clamp(
-                        `${mainObj.shortTerm?.name ?? '-'} (${mainObj.shortTerm?.grade ?? '-'}, ${mainObj.shortTerm?.age ?? '-'})`,
-                        48),
-                    cand_mt: hideMainPlans ? '' : clamp(
-                        `${mainObj.midTerm?.name ?? '-'} (${mainObj.midTerm?.grade ?? '-'}, ${mainObj.midTerm?.age ?? '-'})`,
-                        48),
-                    cand_lt: hideMainPlans ? '' : clamp(
-                        `${mainObj.longTerm?.name ?? '-'} (${mainObj.longTerm?.grade ?? '-'}, ${mainObj.longTerm?.age ?? '-'})`,
-                        48),
+                    cand_st: hideMainPlans ? '' : clamp(buildCandidateLabel(mainObj.shortTerm), 90),
+                    cand_mt: hideMainPlans ? '' : clamp(buildCandidateLabel(mainObj.midTerm), 90),
+                    cand_lt: hideMainPlans ? '' : clamp(buildCandidateLabel(mainObj.longTerm), 90),
                     color: colorMap[mainObj.colorClass] || '#0ea5e9',
                     img: mainObj.person?.photo || null,
+                    field_9: 'S/T • M/T • L/T • HAV',
                     tags: rootTags.length ? rootTags : undefined
                 });
 
-                // helper rekursif utk subtree normal
                 function emitStd(node, parentId) {
                     const thisId = nid();
                     const baseTags = [];
-                    if (node.no_plans) baseTags.push('no-plans'); // render template factoryRoot
+                    if (node.no_plans) baseTags.push('no-plans');
 
                     nodes.push({
                         id: thisId,
@@ -253,17 +337,12 @@
                         age: node.person?.age ?? '-',
                         los: node.person?.los ?? '-',
                         lcp: node.person?.lcp ?? '-',
-                        cand_st: node.no_plans ? '' : clamp(
-                            `${node.shortTerm?.name ?? '-'} (${node.shortTerm?.grade ?? '-'}, ${node.shortTerm?.age ?? '-'})`,
-                            48),
-                        cand_mt: node.no_plans ? '' : clamp(
-                            `${node.midTerm?.name ?? '-'} (${node.midTerm?.grade ?? '-'}, ${node.midTerm?.age ?? '-'})`,
-                            48),
-                        cand_lt: node.no_plans ? '' : clamp(
-                            `${node.longTerm?.name ?? '-'} (${node.longTerm?.grade ?? '-'}, ${node.longTerm?.age ?? '-'})`,
-                            48),
+                        cand_st: node.no_plans ? '' : clamp(buildCandidateLabel(node.shortTerm), 90),
+                        cand_mt: node.no_plans ? '' : clamp(buildCandidateLabel(node.midTerm), 90),
+                        cand_lt: node.no_plans ? '' : clamp(buildCandidateLabel(node.longTerm), 90),
                         color: colorMap[node.colorClass] || '#22c55e',
                         img: node.person?.photo || null,
+                        field_9: node.no_plans ? '' : 'S/T • M/T • L/T • HAV',
                         tags: baseTags.length ? baseTags : undefined
                     });
 
@@ -271,12 +350,8 @@
                     return thisId;
                 }
 
-                // PRESIDENT dan VPD diletakkan sebagai anak langsung root
-                // lalu subtree plant turun dari PRESIDENT
                 managersArr.forEach(m => {
-                    const idManager = emitStd(m, rootId);
-                    // emitStd juga akan rekursif ke supervisors[], jadi subtree plant bakal otomatis jadi anak PRESIDENT.
-                    // VPD tidak punya supervisors, jadi akan cuma berdiri di bawah root sejajar PRESIDENT.
+                    emitStd(m, rootId);
                 });
 
                 return nodes;
@@ -374,25 +449,24 @@
                 const chart = new OrgChart(document.getElementById('orgchart-container'), {
                     template: "factory",
                     mode: "dark",
-                    enableSearch: false,
+                    enableSearch: true,
                     enableDragDrop: false,
                     enableZoom: true,
                     enablePan: true,
                     scaleInitial: OrgChart.match.boundary,
-                    scaleMin: 0.2,
+                    scaleMin: 0.3,
                     scaleMax: 2.2,
                     nodeMouseClick: OrgChart.action.none,
 
-                    // mapping tag -> template
                     tags: {
                         'no-plans': {
                             template: 'factoryRoot'
-                        }, // hilangin S/T–M/T–L/T
+                        },
                         'phantom': {
                             template: 'phantom',
                             subTreeConfig: {
                                 columns: 2
-                            } // anak2 root (PRESIDENT & VPD) sejajar horizontal
+                            }
                         }
                     },
 
@@ -418,25 +492,25 @@
                     chart.fit();
                     setTimeout(() => chart.exportPDF({
                         filename: 'chart.pdf'
-                    }), 800);
+                    }), 600);
                 });
                 $('#btn-png').addClass('export-btn').on('click', () => {
                     chart.fit();
                     setTimeout(() => chart.exportPNG({
                         filename: 'chart.png'
-                    }), 800);
+                    }), 600);
                 });
                 $('#btn-svg').addClass('export-btn').on('click', () => {
                     chart.fit();
                     setTimeout(() => chart.exportSVG({
                         filename: 'chart.svg'
-                    }), 800);
+                    }), 600);
                 });
                 $('#btn-csv').addClass('export-btn').on('click', () => {
                     chart.fit();
                     setTimeout(() => chart.exportCSV({
                         filename: 'chart.csv'
-                    }), 800);
+                    }), 600);
                 });
 
                 chart.fit();
@@ -449,7 +523,7 @@
                 new OrgChart(document.getElementById('orgchart-container'), {
                     template: "factory",
                     mode: "dark",
-                    enableSearch: false,
+                    enableSearch: true,
                     nodeMouseClick: OrgChart.action.none,
                     tags: {
                         'no-plans': {

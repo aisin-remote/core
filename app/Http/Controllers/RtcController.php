@@ -563,13 +563,10 @@ class RtcController extends Controller
                     $company   = strtoupper((string) $companyDisplay);
                     $title     = $companyDisplay . ' — Summary';
 
-                    // layout flags
-                    // kita MAU punya parent phantom utk sejajarkan PRESIDENT & VPD
-                    $noRoot        = false;      // <- sekarang root ADA lagi (phantom)
-                    $groupTop      = false;      // group layout lama dimatikan total
-                    $hideMainPlans = true;       // root tidak punya ST/MT/LT
+                    $noRoot        = false;
+                    $groupTop      = false;
+                    $hideMainPlans = true;
 
-                    // helper format person
                     $fmtPerson = function ($emp) {
                         if (!$emp) return null;
 
@@ -603,7 +600,6 @@ class RtcController extends Controller
                         ];
                     };
 
-                    // ambil presiden & vpd
                     $lcCompany = strtolower($company);
                     $prioritizeCompany = fn($q) => $q->orderByRaw(
                         "CASE WHEN LOWER(company_name)=? THEN 0 ELSE 1 END, id DESC",
@@ -801,7 +797,7 @@ class RtcController extends Controller
                     ];
 
                     // FULL SUBTREE: division → department → section → sub section
-                    $divs = Division::with(['gm', 'short', 'mid', 'long'])
+                    $divs = Division::with(['gm'])
                         ->where('plant_id', $p->id)->orderBy('name')->get();
 
                     foreach ($divs as $d) {
@@ -809,16 +805,16 @@ class RtcController extends Controller
                         $divNode = [
                             'title'           => $d->name,
                             'person'          => RtcHelper::formatPerson($d->gm),
-                            'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
-                            'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
-                            'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
+                            'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                             'colorClass'      => 'color-4',
                             'supervisors'     => [],
                             'skipManagerNode' => false,
                         ];
 
                         // departments
-                        $depts = Department::with(['manager', 'short', 'mid', 'long'])
+                        $depts = Department::with(['manager'])
                             ->where('division_id', $d->id)->orderBy('name')->get();
 
                         foreach ($depts as $dept) {
@@ -826,16 +822,16 @@ class RtcController extends Controller
                             $deptNode = [
                                 'title'           => $dept->name,
                                 'person'          => RtcHelper::formatPerson($dept->manager),
-                                'shortTerm'       => RtcHelper::formatCandidate($dept->short, 'short'),
-                                'midTerm'         => RtcHelper::formatCandidate($dept->mid,   'mid'),
-                                'longTerm'        => RtcHelper::formatCandidate($dept->long,  'long'),
+                                'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                                'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                                'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                                 'colorClass'      => 'color-10',
                                 'supervisors'     => [],
                                 'skipManagerNode' => false,
                             ];
 
                             // sections
-                            $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                            $secs = Section::with(['supervisor'])
                                 ->where('department_id', $dept->id)->orderBy('name')->get();
 
                             foreach ($secs as $s) {
@@ -843,16 +839,16 @@ class RtcController extends Controller
                                 $secNode = [
                                     'title'           => $s->name,
                                     'person'          => RtcHelper::formatPerson($s->supervisor),
-                                    'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
-                                    'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
-                                    'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                                    'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                                    'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                                    'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                                     'colorClass'      => 'color-8',
                                     'supervisors'     => [],
                                     'skipManagerNode' => false,
                                 ];
 
                                 // sub sections
-                                $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                                $subs = SubSection::with(['leader'])
                                     ->where('section_id', $s->id)->orderBy('name')->get();
 
                                 foreach ($subs as $sub) {
@@ -860,9 +856,9 @@ class RtcController extends Controller
                                     $secNode['supervisors'][] = [
                                         'title'           => $sub->name,
                                         'person'          => RtcHelper::formatPerson($sub->leader),
-                                        'shortTerm'       => RtcHelper::formatCandidate($sub->short, 'short'),
-                                        'midTerm'         => RtcHelper::formatCandidate($sub->mid,   'mid'),
-                                        'longTerm'        => RtcHelper::formatCandidate($sub->long,  'long'),
+                                        'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                                        'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                                        'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                                         'colorClass'      => 'color-12',
                                         'supervisors'     => [],
                                         'skipManagerNode' => false,
@@ -886,7 +882,7 @@ class RtcController extends Controller
 
                     $hideMainPlans = $isGM;
 
-                    $div   = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
+                    $div   = Division::with(['gm'])->findOrFail($id);
                     $title = $div->name ?? 'Division';
                     $mainColor = $pickColor("division-root-{$div->id}");
 
@@ -894,13 +890,13 @@ class RtcController extends Controller
                     $main = [
                         'title'      => $div->name ?? '-',
                         'person'     => RtcHelper::formatPerson($div->gm),
-                        'shortTerm'  => RtcHelper::formatCandidate($div->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($div->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($div->long,  'long'),
+                        'shortTerm'  => RtcHelper::formatCandidate(null, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate(null,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate(null,  'long'),
                         'colorClass' => $mainColor,
                     ];
 
-                    $depts = Department::with(['manager', 'short', 'mid', 'long'])
+                    $depts = Department::with(['manager'])
                         ->where('division_id', $div->id)->orderBy('name')->get();
 
                     $deptPalette = array_values(array_filter($palette, fn($c) => $c !== $mainColor));
@@ -913,15 +909,15 @@ class RtcController extends Controller
                         $node = [
                             'title'           => $d->name,
                             'person'          => RtcHelper::formatPerson($d->manager),
-                            'shortTerm'       => RtcHelper::formatCandidate($d->short, 'short'),
-                            'midTerm'         => RtcHelper::formatCandidate($d->mid,   'mid'),
-                            'longTerm'        => RtcHelper::formatCandidate($d->long,  'long'),
+                            'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                             'colorClass'      => $deptColor,
                             'supervisors'     => [],
                             'skipManagerNode' => false,
                         ];
 
-                        $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                        $secs = Section::with(['supervisor'])
                             ->where('department_id', $d->id)->orderBy('name')->get();
 
                         foreach ($secs as $s) {
@@ -929,9 +925,9 @@ class RtcController extends Controller
                             $node['supervisors'][] = [
                                 'title'      => $s->name,
                                 'person'     => RtcHelper::formatPerson($s->supervisor),
-                                'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
-                                'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
-                                'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                                'shortTerm'  => RtcHelper::formatCandidate(null, 'short'),
+                                'midTerm'    => RtcHelper::formatCandidate(null,   'mid'),
+                                'longTerm'   => RtcHelper::formatCandidate(null,  'long'),
                                 'colorClass' => $deptColor,
                             ];
                         }
@@ -944,7 +940,7 @@ class RtcController extends Controller
             case 'department': {
                     $id = (int) $rawId;
 
-                    $d = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
+                    $d = Department::with(['manager'])->findOrFail($id);
                     $title = $d->name ?? 'Department';
                     $mainColor = $pickColor("department-root-{$d->id}");
 
@@ -952,14 +948,14 @@ class RtcController extends Controller
                     $main = [
                         'title'      => $d->name ?? '-',
                         'person'     => RtcHelper::formatPerson($d->manager),
-                        'shortTerm'  => RtcHelper::formatCandidate($d->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($d->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($d->long,  'long'),
+                        'shortTerm'  => RtcHelper::formatCandidate(null, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate(null,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate(null,  'long'),
                         'colorClass' => $mainColor,
                     ];
 
                     $managers = [];
-                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                    $secs = Section::with(['supervisor'])
                         ->where('department_id', $d->id)
                         ->orderBy('name')
                         ->get();
@@ -968,7 +964,7 @@ class RtcController extends Controller
                         RtcHelper::setAreaContext('section', $s->id);
 
                         $subNodes = [];
-                        $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                        $subs = SubSection::with(['leader'])
                             ->where('section_id', $s->id)
                             ->orderBy('name')
                             ->get();
@@ -978,9 +974,9 @@ class RtcController extends Controller
                             $subNodes[] = [
                                 'title'           => $sub->name,
                                 'person'          => RtcHelper::formatPerson($sub->leader),
-                                'shortTerm'       => RtcHelper::formatCandidate($sub->short, 'short'),
-                                'midTerm'         => RtcHelper::formatCandidate($sub->mid,   'mid'),
-                                'longTerm'        => RtcHelper::formatCandidate($sub->long,  'long'),
+                                'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                                'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                                'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                                 'colorClass'      => $mainColor,
                                 'supervisors'     => [],
                                 'skipManagerNode' => false,
@@ -989,11 +985,11 @@ class RtcController extends Controller
 
                         $managers[] = [
                             'title'           => $s->name,
-                            'person'          => RtcHelper::formatPerson($s->supervisor),
-                            'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
-                            'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
-                            'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                            'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                             'colorClass'      => $mainColor,
+                            'person'          => RtcHelper::formatPerson($s->supervisor),
                             'supervisors'     => $subNodes,
                             'skipManagerNode' => false,
                         ];
@@ -1006,7 +1002,7 @@ class RtcController extends Controller
             case 'section': {
                     $id = (int) $rawId;
 
-                    $s = Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
+                    $s = Section::with(['supervisor'])->findOrFail($id);
                     $title = $s->name ?? 'Section';
                     $mainColor = $pickColor("section-root-{$s->id}");
 
@@ -1014,24 +1010,24 @@ class RtcController extends Controller
                     $main = [
                         'title'      => $s->name ?? '-',
                         'person'     => RtcHelper::formatPerson($s->supervisor),
-                        'shortTerm'  => RtcHelper::formatCandidate($s->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($s->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($s->long,  'long'),
+                        'shortTerm'  => RtcHelper::formatCandidate(null, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate(null,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate(null,  'long'),
                         'colorClass' => $mainColor,
                     ];
 
                     $container = [
                         'title'           => $s->name,
                         'person'          => RtcHelper::formatPerson($s->supervisor),
-                        'shortTerm'       => RtcHelper::formatCandidate($s->short, 'short'),
-                        'midTerm'         => RtcHelper::formatCandidate($s->mid,   'mid'),
-                        'longTerm'        => RtcHelper::formatCandidate($s->long,  'long'),
+                        'shortTerm'       => RtcHelper::formatCandidate(null, 'short'),
+                        'midTerm'         => RtcHelper::formatCandidate(null,   'mid'),
+                        'longTerm'        => RtcHelper::formatCandidate(null,  'long'),
                         'colorClass'      => $mainColor,
                         'supervisors'     => [],
                         'skipManagerNode' => true,
                     ];
 
-                    $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                    $subs = SubSection::with(['leader'])
                         ->where('section_id', $s->id)->orderBy('name')->get();
 
                     foreach ($subs as $sub) {
@@ -1039,9 +1035,9 @@ class RtcController extends Controller
                         $container['supervisors'][] = [
                             'title'      => $sub->name,
                             'person'     => RtcHelper::formatPerson($sub->leader),
-                            'shortTerm'  => RtcHelper::formatCandidate($sub->short, 'short'),
-                            'midTerm'    => RtcHelper::formatCandidate($sub->mid,   'mid'),
-                            'longTerm'   => RtcHelper::formatCandidate($sub->long,  'long'),
+                            'shortTerm'  => RtcHelper::formatCandidate(null, 'short'),
+                            'midTerm'    => RtcHelper::formatCandidate(null,   'mid'),
+                            'longTerm'   => RtcHelper::formatCandidate(null,  'long'),
                             'colorClass' => $mainColor,
                         ];
                     }
@@ -1054,7 +1050,7 @@ class RtcController extends Controller
             case 'sub_section': {
                     $id = (int) $rawId;
 
-                    $sub = SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
+                    $sub = SubSection::with(['leader'])->findOrFail($id);
                     $title = $sub->name ?? 'Sub Section';
                     $mainColor = $pickColor("subsection-root-{$sub->id}");
 
@@ -1062,14 +1058,15 @@ class RtcController extends Controller
                     $main = [
                         'title'      => $sub->name ?? '-',
                         'person'     => RtcHelper::formatPerson($sub->leader),
-                        'shortTerm'  => RtcHelper::formatCandidate($sub->short, 'short'),
-                        'midTerm'    => RtcHelper::formatCandidate($sub->mid,   'mid'),
-                        'longTerm'   => RtcHelper::formatCandidate($sub->long,  'long'),
+                        'shortTerm'  => RtcHelper::formatCandidate(null, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate(null,   'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate(null,  'long'),
                         'colorClass' => $mainColor,
                     ];
                     $managers = [];
                     break;
                 }
+
 
             default:
                 abort(404, 'Unsupported filter');
@@ -1697,7 +1694,7 @@ class RtcController extends Controller
         return response()->json($payload);
     }
 
-    public function approve($id)
+    public function approve(int $id)
     {
         $rtc = Rtc::with('employee')->findOrFail($id);
 
