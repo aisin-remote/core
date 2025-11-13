@@ -324,31 +324,38 @@
                 });
 
                 function emitStd(node, parentId) {
-                    const thisId = nid();
+                    const skip = node.skipManagerNode === true ||
+                        node.skipManagerNode === 1 ||
+                        node.skipManagerNode === '1';
+
+                    const thisId = skip ? parentId : nid();
                     const baseTags = [];
                     if (node.no_plans) baseTags.push('no-plans');
 
-                    nodes.push({
-                        id: thisId,
-                        pid: parentId,
-                        department: clamp(node.title, 64),
-                        name: clamp(node.person?.name, 48),
-                        grade: node.person?.grade ?? '-',
-                        age: node.person?.age ?? '-',
-                        los: node.person?.los ?? '-',
-                        lcp: node.person?.lcp ?? '-',
-                        cand_st: node.no_plans ? '' : clamp(buildCandidateLabel(node.shortTerm), 90),
-                        cand_mt: node.no_plans ? '' : clamp(buildCandidateLabel(node.midTerm), 90),
-                        cand_lt: node.no_plans ? '' : clamp(buildCandidateLabel(node.longTerm), 90),
-                        color: colorMap[node.colorClass] || '#22c55e',
-                        img: node.person?.photo || null,
-                        field_9: node.no_plans ? '' : 'S/T • M/T • L/T • HAV',
-                        tags: baseTags.length ? baseTags : undefined
-                    });
+                    if (!skip) {
+                        nodes.push({
+                            id: thisId,
+                            pid: parentId,
+                            department: clamp(node.title, 64),
+                            name: clamp(node.person?.name, 48),
+                            grade: node.person?.grade ?? '-',
+                            age: node.person?.age ?? '-',
+                            los: node.person?.los ?? '-',
+                            lcp: node.person?.lcp ?? '-',
+                            cand_st: node.no_plans ? '' : clamp(buildCandidateLabel(node.shortTerm), 90),
+                            cand_mt: node.no_plans ? '' : clamp(buildCandidateLabel(node.midTerm), 90),
+                            cand_lt: node.no_plans ? '' : clamp(buildCandidateLabel(node.longTerm), 90),
+                            color: colorMap[node.colorClass] || '#22c55e',
+                            img: node.person?.photo || null,
+                            field_9: node.no_plans ? '' : 'S/T • M/T • L/T • HAV',
+                            tags: baseTags.length ? baseTags : undefined
+                        });
+                    }
 
                     (node.supervisors || []).forEach(ch => emitStd(ch, thisId));
                     return thisId;
                 }
+
 
                 managersArr.forEach(m => {
                     emitStd(m, rootId);
