@@ -478,6 +478,8 @@ class MasterController extends Controller
         'draft'     => 0,
         'submitted' => 1,
         'approved'  => 2,
+        'ongoing'   => 3,
+
     ];
 
     public function filter(Request $request)
@@ -671,6 +673,15 @@ class MasterController extends Controller
                     ->whereIn('term', $termAliases('long'))->orderByDesc('id')
                     ->with(['employee:id,name,grade,birthday_date'])->first();
 
+                $rtcOngoing = Rtc::whereIn('area', $areas)
+                    ->where('area_id', $item->id)
+                    ->whereNull('term')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $ongoingKey = \array_key_exists('ongoing', self::RTC_STATUS) ? 'ongoing' : 'continue';
+                $ongoingVal = self::RTC_STATUS[$ongoingKey] ?? 3;
+
                 $shortEmp = optional($rtcShort)->employee;
                 $midEmp   = optional($rtcMid)->employee;
                 $longEmp  = optional($rtcLong)->employee;
@@ -680,8 +691,6 @@ class MasterController extends Controller
                 $hasLong   = !is_null($longEmp);
                 $anyFilled = $hasShort || $hasMid || $hasLong;
 
-                // ===== STATUS (3 tingkat) =====
-                // 0=draft, 1=submitted, 2=approved; dukung -1=revised (opsional)
                 $s = optional($rtcShort)->status;
                 $m = optional($rtcMid)->status;
                 $l = optional($rtcLong)->status;
@@ -695,29 +704,29 @@ class MasterController extends Controller
 
                 $allApproved = $anyFilled && $statusVals->every(fn($v) => $v === self::RTC_STATUS['approved']);
 
-                // Tentukan overall
-                $overallStatus = null; // 0,1,2 atau null (not_set)
+                $overallStatus = null;
                 $label = 'Not Set';
                 $class = 'badge badge-danger';
                 $code  = 'not_set';
 
-                if (!$anyFilled) {
-                    // tetap Not Set
+                if (!$anyFilled && $rtcOngoing && (int)$rtcOngoing->status === (int)$ongoingVal) {
+                    $overallStatus = self::RTC_STATUS['draft'];
+                    $label = 'Draft';
+                    $class = 'badge badge-secondary';
+                    $code  = 'ongoing';
+                } elseif (!$anyFilled) {
                 } elseif ($allApproved) {
-                    $overallStatus = self::RTC_STATUS['approved']; // 2
+                    $overallStatus = self::RTC_STATUS['approved'];
                     $label = 'Approved';
                     $class = 'badge badge-success';
                     $code  = 'approved';
                 } elseif ($hasSubmitted || ($hasApproved && ($hasDraft || $hasRevised))) {
-                    // Jika ada yang submitted ATAU sebagian approved bercampur belum approved -> anggap Submitted (sedang proses)
-                    $overallStatus = self::RTC_STATUS['submitted']; // 1
+                    $overallStatus = self::RTC_STATUS['submitted'];
                     $label = 'Submitted';
                     $class = 'badge badge-warning';
                     $code  = 'submitted';
                 } else {
-                    // Ada isi tapi belum submit sama sekali -> Draft
-                    // (termasuk case revised-only)
-                    $overallStatus = self::RTC_STATUS['draft']; // 0
+                    $overallStatus = self::RTC_STATUS['draft'];
                     $label = $hasRevised ? 'Revised' : 'Draft';
                     $class = $hasRevised ? 'badge badge-danger' : 'badge badge-secondary';
                     $code  = $hasRevised ? 'revised' : 'draft';

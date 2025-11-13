@@ -24,6 +24,7 @@ class RtcController extends Controller
         'draft'     => 0,
         'submitted' => 1,
         'approved'  => 2,
+        'ongoing'   => 3,
     ];
 
     private function resolveRoleFlags($user): array
@@ -1099,13 +1100,6 @@ class RtcController extends Controller
             ];
             $terms = array_filter($terms, fn($v) => !empty($v));
 
-            if (empty($terms)) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Pilih minimal satu kandidat (ST/MT/LT).',
-                ], 422);
-            }
-
             $user   = auth()->user();
             $flags  = $this->resolveRoleFlags($user);
 
@@ -1124,9 +1118,20 @@ class RtcController extends Controller
                 ], 403);
             }
 
+            $areaKey = $filter;
+            $areaModel = match ($areaKey) {
+                'division'    => Division::find($areaId),
+                'department'  => Department::find($areaId),
+                'section'     => Section::find($areaId),
+                'sub_section' => SubSection::find($areaId),
+                'plant'       => Plant::find($areaId),
+                default       => null,
+            };
+
+            $picEmp = $this->currentPicFor($areaKey, $areaModel)['id'] ?? null;
+
             DB::beginTransaction();
 
-            // Save hanya boleh buat entri baru; jika sudah ada, balikan 409 (conflict)
             foreach ($terms as $term => $employeeId) {
                 $exists = Rtc::where([
                     'area'    => $filter,
@@ -1141,7 +1146,9 @@ class RtcController extends Controller
                         'message' => "RTC untuk term {$term} sudah ada. Gunakan Update.",
                     ], 409);
                 }
+            }
 
+            foreach ($terms as $term => $employeeId) {
                 Rtc::create([
                     'area'        => $filter,
                     'area_id'     => $areaId,
@@ -1151,13 +1158,40 @@ class RtcController extends Controller
                 ]);
             }
 
+            $ongoingExists = Rtc::where([
+                'area' => $filter,
+                'area_id' => $areaId,
+                'term' => null,
+            ])->exists();
+
+            $ongoingCreated = false;
+            if (!$ongoingExists && $picEmp) {
+                Rtc::create([
+                    'area'        => $filter,
+                    'area_id'     => $areaId,
+                    'term'        => null,
+                    'employee_id' => $picEmp,
+                    'status'      => self::RTC_STATUS['ongoing'], // 3
+                ]);
+                $ongoingCreated = true;
+            }
+
             DB::commit();
 
-            session()->flash('success', 'RTC berhasil disimpan (draft).');
+            $withTerms = count($terms) > 0;
+            $baseMsg = $withTerms
+                ? 'RTC (ST/MT/LT) berhasil disimpan sebagai draft.'
+                : 'RTC tanpa ST/MT/LT berhasil disimpan.';
+
+            $ongoingMsg = $ongoingCreated
+                ? ' Entri PIC area (ongoing) dibuat.'
+                : ($picEmp ? ' Entri PIC area sudah ada, tidak dibuat ulang.' : ' PIC area tidak ditemukan, entri ongoing dilewati.');
+
+            session()->flash('success', trim($baseMsg . ' ' . $ongoingMsg));
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'RTC berhasil disimpan sebagai draft.',
+                'message' => trim($baseMsg . ' ' . $ongoingMsg),
             ]);
         } catch (\Throwable $th) {
             DB::rollBack();
@@ -1236,6 +1270,7 @@ class RtcController extends Controller
             ], 500);
         }
     }
+
     public function update(Request $request)
     {
         try {
@@ -1250,120 +1285,103 @@ class RtcController extends Controller
             $filter = strtolower($request->input('filter'));
             $areaId = (int) $request->input('id');
 
-            $terms = [
+            $termsRaw = [
                 'short' => $request->input('short_term'),
                 'mid'   => $request->input('mid_term'),
                 'long'  => $request->input('long_term'),
             ];
-            $terms = array_filter($terms, fn($v) => !empty($v));
 
-            if (empty($terms)) {
-                return response()->json([
-                    'status'  => 'error',
-                    'message' => 'Pilih minimal satu kandidat (ST/MT/LT).',
-                ], 422);
-            }
+            $user  = auth()->user();
+            $flags = $this->resolveRoleFlags($user);
 
-            $user     = auth()->user();
-            $employee = $user->employee;
-
-            $posRaw = $employee && method_exists($employee, 'getNormalizedPosition')
-                ? strtolower((string) $employee->getNormalizedPosition())
-                : strtolower((string) ($employee->position ?? ''));
-
-            $isHRD      = ($user->role === 'HRD');
-            $isTop2     = in_array($posRaw, ['president', 'vpd', 'vice president director', 'wakil presdir'], true);
-            $isDirektur = ($user->role === 'User') && in_array($posRaw, ['direktur', 'director'], true);
-            $isGM       = in_array($posRaw, ['gm', 'act gm'], true);
-            $isMg       = in_array($posRaw, ['manager', 'coordinator'], true);
-
-            if ($isHRD || $isTop2) {
+            // HRD/Top2 hanya view
+            if ($flags['isHRD'] || $flags['isTop2']) {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'Tidak diizinkan: HRD/Top2 hanya dapat melihat.',
                 ], 403);
             }
 
-            $allowed = false;
-
-            switch ($filter) {
-                case 'direksi':
-                    if ($isDirektur) {
-                        $allowed = Plant::where('id', $areaId)
-                            ->where('director_id', $employee->id)->exists();
-                    }
-                    break;
-
-                case 'division':
-                    if ($isGM) {
-                        $allowed = Division::where('id', $areaId)
-                            ->where('gm_id', $employee->id)->exists();
-                    }
-                    break;
-
-                case 'department':
-                    if ($isMg) {
-                        $allowed = Department::where('id', $areaId)
-                            ->where('manager_id', $employee->id)->exists();
-                    }
-                    break;
-
-                case 'section':
-                    if ($isMg) {
-                        $allowed = Section::where('id', $areaId)
-                            ->whereHas(
-                                'department',
-                                fn($q) =>
-                                $q->where('manager_id', $employee->id)
-                            )->exists();
-                    }
-                    break;
-
-                case 'sub_section':
-                    if ($isMg) {
-                        $allowed = SubSection::where('id', $areaId)
-                            ->whereHas(
-                                'section.department',
-                                fn($q) =>
-                                $q->where('manager_id', $employee->id)
-                            )->exists();
-                    }
-                    break;
-
-                default:
-                    $allowed = false;
-            }
-
-            if (!$allowed) {
+            if (!$this->isAllowedToFill($filter, $areaId, $flags['employee'], $flags)) {
                 return response()->json([
                     'status'  => 'error',
                     'message' => 'Tidak diizinkan untuk mengisi RTC pada level ini.',
                 ], 403);
             }
 
+            $areaKey   = $filter;
+            $areaModel = match ($areaKey) {
+                'division'    => Division::find($areaId),
+                'department'  => Department::find($areaId),
+                'section'     => Section::find($areaId),
+                'sub_section' => SubSection::find($areaId),
+                'plant'       => Plant::find($areaId),
+                default       => null,
+            };
+
+            $picEmp = $this->currentPicFor($areaKey, $areaModel)['id'] ?? null;
+
+            $ongoingKey = \array_key_exists('ongoing', self::RTC_STATUS) ? 'ongoing' : 'continue';
+            $ongoingVal = self::RTC_STATUS[$ongoingKey];
+
             DB::beginTransaction();
 
-            foreach ($terms as $term => $employeeId) {
-                if (!in_array($term, ['short', 'mid', 'long'], true)) {
-                    continue;
-                }
+            foreach (['short', 'mid', 'long'] as $term) {
+                $employeeId = $termsRaw[$term] ?? null;
 
-                Rtc::updateOrCreate(
-                    [
+                if (!empty($employeeId)) {
+                    Rtc::updateOrCreate(
+                        [
+                            'area'    => $filter,
+                            'area_id' => $areaId,
+                            'term'    => $term,
+                        ],
+                        [
+                            'employee_id' => $employeeId,
+                            'status'      => self::RTC_STATUS['draft'], // 0
+                        ]
+                    );
+                } else {
+                    Rtc::where([
                         'area'    => $filter,
                         'area_id' => $areaId,
                         'term'    => $term,
-                    ],
-                    [
-                        'employee_id' => $employeeId,
-                        'status'      => self::RTC_STATUS['draft'], // 0 (kembali draft ketika diubah)
-                    ]
-                );
+                    ])->delete();
+                }
+            }
+
+            $ongoing = Rtc::where([
+                'area'    => $filter,
+                'area_id' => $areaId,
+                'term'    => null,
+            ])->first();
+
+            if ($picEmp) {
+                if ($ongoing) {
+                    if ((int)$ongoing->employee_id !== (int)$picEmp) {
+                        $ongoing->employee_id = $picEmp;
+                        $ongoing->status = $ongoingVal;
+                        $ongoing->save();
+                    } else {
+                        if ((int)$ongoing->status !== (int)$ongoingVal) {
+                            $ongoing->status = $ongoingVal;
+                            $ongoing->save();
+                        }
+                    }
+                } else {
+                    Rtc::create([
+                        'area'        => $filter,
+                        'area_id'     => $areaId,
+                        'term'        => null,
+                        'employee_id' => $picEmp,
+                        'status'      => $ongoingVal,
+                    ]);
+                }
             }
 
             DB::commit();
 
-            session()->flash('success', 'RTC berhasil disimpan (draft).');
+            session()->flash('success', 'RTC berhasil diupdate (draft).');
 
             return response()->json([
                 'status'  => 'success',
@@ -1507,9 +1525,10 @@ class RtcController extends Controller
             ], 403);
         }
 
-        // Ambil semua RTC target (case-insensitive match untuk area)
+        // IMPORTANT: exclude ongoing (term IS NULL) agar tidak ikut direvisi
         $rtcs = Rtc::whereRaw('LOWER(area) = ?', [$area])
             ->where('area_id', $areaId)
+            ->whereNotNull('term')
             ->get();
 
         if ($rtcs->isEmpty()) {
@@ -1517,7 +1536,6 @@ class RtcController extends Controller
                 'message' => 'No RTCs found in this area.'
             ], 404);
         }
-
 
         DB::transaction(function () use ($rtcs, $comment, $employee) {
             foreach ($rtcs as $rtc) {
@@ -1549,7 +1567,6 @@ class RtcController extends Controller
         $queue = collect();
         $stage = 'approve';
 
-        // semua jalur: ambil yang status=1 (submitted)
         if ($norm === 'gm') {
             $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
             $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
@@ -1558,6 +1575,7 @@ class RtcController extends Controller
 
             $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
                 ->where('status', 1)
+                ->whereNotNull('term')
                 ->where(function ($q) use ($deptIds, $sectionIds, $subIds) {
                     $q->where(fn($qq) => $qq->where('area', 'department')->whereIn('area_id', $deptIds))
                         ->orWhere(fn($qq) => $qq->where('area', 'section')->whereIn('area_id', $sectionIds))
@@ -1569,6 +1587,7 @@ class RtcController extends Controller
 
             $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
                 ->where('status', 1)
+                ->whereNotNull('term')
                 ->whereIn('area', ['division', 'Division'])
                 ->whereIn('area_id', $divIds)
                 ->get();
@@ -1577,6 +1596,7 @@ class RtcController extends Controller
 
             $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
                 ->where('status', 1)
+                ->whereNotNull('term')
                 ->whereIn('area', ['direksi', 'plant'])
                 ->whereIn('area_id', $plantIds)
                 ->get();
@@ -1585,6 +1605,7 @@ class RtcController extends Controller
 
             $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
                 ->where('status', 1)
+                ->whereNotNull('term')
                 ->whereIn('area', ['direksi', 'plant'])
                 ->whereIn('area_id', $plantIds)
                 ->get();
@@ -1598,9 +1619,9 @@ class RtcController extends Controller
 
                 $statusMap = [
                     -1 => 'Revised',
-                    0 => 'Draft',
-                    1 => 'Submitted',
-                    2 => 'Approved',
+                    0  => 'Draft',
+                    1  => 'Submitted',
+                    2  => 'Approved',
                 ];
 
                 $statusCounts = $items->groupBy('status')
@@ -1653,6 +1674,7 @@ class RtcController extends Controller
         $rtcs = Rtc::with(['employee', 'employee.department'])
             ->whereRaw('LOWER(area) = ?', [$area])
             ->where('area_id', $areaId)
+            ->whereNotNull('term') // ⬅️ exclude ongoing
             ->get(['id', 'employee_id', 'area', 'area_id', 'term', 'status']);
 
         $payload = $rtcs->map(function ($rtc) {
@@ -1660,7 +1682,7 @@ class RtcController extends Controller
                 'id'           => $rtc->id,
                 'term'         => $rtc->term,
                 'status'       => $rtc->status,
-                'employee_id'  => $rtc->employee_id,    // ⬅️ penting buat prefill
+                'employee_id'  => $rtc->employee_id,
                 'employee'     => [
                     'id'            => $rtc->employee->id ?? null,
                     'npk'           => $rtc->employee->npk ?? null,
@@ -1803,6 +1825,6 @@ class RtcController extends Controller
             default       => null,
         };
 
-        return $empId ? Employee::select('id', 'name', 'position')->find($empId) : null;
+        return $empId ? Employee::get(['id', 'name', 'position'])->find($empId) : null;
     }
 }

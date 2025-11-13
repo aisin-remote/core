@@ -9,6 +9,7 @@
 
 @push('custom-css')
     <style>
+        /* ===== Status chip base ===== */
         .status-chip {
             display: inline-flex;
             align-items: center;
@@ -20,48 +21,59 @@
             line-height: 1;
             border: 1px solid #e2e8f0;
             background: #f8fafc;
-            color: #334155
+            color: #334155;
         }
 
+        /* Approved (green) */
         .status-chip[data-status="approved"] {
             background: #ecfdf5;
             color: #065f46;
-            border-color: #a7f3d0
+            border-color: #a7f3d0;
         }
 
+        /* Submitted/Waiting (yellow) */
         .status-chip[data-status="waiting"] {
             background: #fffbeb;
             color: #92400e;
-            border-color: #fde68a
+            border-color: #fde68a;
         }
 
+        /* Draft (gray) */
         .status-chip[data-status="draft"] {
             background: #f8fafc;
             color: #334155;
-            border-color: #e2e8f0
+            border-color: #e2e8f0;
         }
 
+        /* Not created (neutral) */
         .status-chip[data-status="not_created"] {
             background: #f4f4f5;
             color: #27272a;
-            border-color: #e4e4e7
+            border-color: #e4e4e7;
+        }
+
+        /* NEW: Ongoing (blue-ish) */
+        .status-chip[data-status="ongoing"] {
+            background: #eff6ff;
+            color: #1e40af;
+            border-color: #bfdbfe;
         }
 
         .term-cell {
             max-width: 180px;
             white-space: normal;
             line-height: 1.25;
-            word-break: break-word
+            word-break: break-word;
         }
 
         .text-not-set {
             color: #475569;
-            opacity: .7
+            opacity: .7;
         }
 
         .action-stack {
             display: inline-flex;
-            gap: .5rem
+            gap: .5rem;
         }
 
         .select2-container {
@@ -268,7 +280,7 @@
 
                         <div class="modal-footer">
                             {{-- Save digunakan untuk Add & Update (edit) --}}
-                            <button type="submit" class="btn btn-primary" id="btnSave">Save</button>
+                            <button type="button" class="btn btn-primary" id="btnSave">Save</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
@@ -313,11 +325,19 @@
 
     <script>
         $(function() {
+            if (window.__RTC_INIT__) return;
+            window.__RTC_INIT__ = true;
+
+            window.CURRENT_AREA_ID = null;
+            window.EDIT_MODE = false; // false: Add, true: Edit
+            window.__RTC_SAVING__ = false; // in-flight request guard
+
+            // ===== Helpers =====
             function esc(s) {
                 return $('<div>').text(s ?? '').html();
             }
 
-            // ===== 3-status chip (0=draft,1=submitted,2=approved) =====
+            // ===== 3-status chip (0=draft,1=submitted,2=approved) + ONGOING =====
             function statusChip(overall) {
                 let statusNum = null,
                     label = '';
@@ -325,7 +345,9 @@
                     draft: 0,
                     submitted: 1,
                     approved: 2,
-                    waiting: 1
+                    waiting: 1,
+                    ongoing: 0, // new
+                    continue: 0 // alias if backend uses 'continue'
                 };
 
                 if (typeof overall === 'number') {
@@ -360,13 +382,24 @@
                         label: 'Approved'
                     },
                 };
+
                 const conf = map[statusNum] ?? {
                     ds: 'not_created',
                     icon: '<i class="far fa-circle"></i>',
                     label: 'Not Set'
                 };
-                const finalLabel = label || conf.label;
-                return `<span class="status-chip" data-status="${conf.ds}" title="${esc(finalLabel)}">${conf.icon}<span>${esc(finalLabel)}</span></span>`;
+
+                // Default label dari map / server
+                let finalLabel = label || conf.label;
+                // NEW: jika code 'ongoing' / 'continue', pakai ds & label 'ongoing'
+                let ds = conf.ds;
+                if (overall && typeof overall === 'object' && (overall.code === 'ongoing' || overall.code ===
+                        'continue')) {
+                    ds = 'ongoing';
+                    finalLabel = 'Ongoing';
+                }
+
+                return `<span class="status-chip" data-status="${ds}" title="${esc(finalLabel)}">${conf.icon}<span>${esc(finalLabel)}</span></span>`;
             }
 
             function renderEmpty(msg) {
@@ -375,6 +408,7 @@
                 );
             }
 
+            // ===== Tabel rows renderer =====
             function renderRows(items, filter) {
                 if (!items || !items.length) return renderEmpty('No data');
 
@@ -387,22 +421,22 @@
 
                 const rows = items.map((row, i) => {
                     const st = row.short?.name ? esc(row.short.name) :
-                    '<span class="text-not-set">-</span>';
+                        '<span class="text-not-set">-</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) : '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) : '<span class="text-not-set">-</span>';
 
-                    // Fallback draft jika ada isian tapi overall not_set
                     const anyFilled = !!(row.short?.name || row.mid?.name || row.long?.name);
                     const overallNotSet = !(row.overall && (row.overall.status !== null && row.overall
                             .status !== undefined)) &&
                         !(row.overall && row.overall.code && row.overall.code !== 'not_set');
-                    const overallForChip = (anyFilled && overallNotSet) ? {
-                        status: 0,
-                        label: 'Draft',
-                        code: 'draft'
-                    } : row.overall;
 
-                    // Ambil angka status untuk kontrol tombol
+                    const overallForChip = (anyFilled && overallNotSet) ? {
+                            status: 0,
+                            label: 'Draft',
+                            code: 'draft'
+                        } :
+                        row.overall;
+
                     let overallNum = null;
                     if (overallForChip && typeof overallForChip === 'object') {
                         if (typeof overallForChip.status === 'number') overallNum = overallForChip.status;
@@ -419,70 +453,66 @@
                     const pic = row.pic ? `<span title="${esc(fullName)}">${esc(showName)}</span>` :
                         `<span>-</span>`;
 
-                    // === Actions ===
                     const previewBtn =
                         `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
 
                     let actions = '';
                     if (anyFilled) {
-                        // Default: tampil Update + Submit saat masih Draft.
                         let showUpdate = true,
-                            showSubmit = true;
-
-                        // Sembunyikan Update & Submit jika sudah Submitted (1) atau Approved (2)
+                            showSubmit = true; // default: saat draft
                         if (overallNum === 1 || overallNum === 2) {
                             showUpdate = false;
                             showSubmit = false;
                         }
 
                         const updateBtn = `<a href="#" class="btn btn-sm btn-warning btn-edit"
-                                data-id="${row.id}"
-                                data-filter="${filter}"
-                                data-mode="edit"
-                                data-bs-toggle="modal" data-bs-target="#addPlanModal">Update</a>`;
+                              data-id="${row.id}"
+                              data-filter="${filter}"
+                              data-mode="edit"
+                              data-bs-toggle="modal" data-bs-target="#addPlanModal">Update</a>`;
 
                         const submitBtn = `<a href="#" class="btn btn-sm btn-primary btn-submit"
-                                data-id="${row.id}"
-                                data-filter="${filter}">Submit</a>`;
+                              data-id="${row.id}"
+                              data-filter="${filter}">Submit</a>`;
 
                         actions = `<div class="action-stack">
-                        ${previewBtn}
-                        ${showUpdate ? updateBtn : ''}
-                        ${showSubmit ? submitBtn : ''}
-                     </div>`;
+                          ${previewBtn}
+                          ${showUpdate ? updateBtn : ''}
+                          ${showSubmit ? submitBtn : ''}
+                        </div>`;
                     } else {
-                        // Tidak ada data sama sekali → Add (jika diizinkan) + Preview
                         const addBtn = (!window.READ_ONLY && !window.HIDE_ADD) ? `
-            <a href="#" class="btn btn-sm btn-success btn-show-modal"
-               data-id="${row.id}"
-               data-filter="${filter}"
-               data-mode="add"
-               data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>` : '';
+                          <a href="#" class="btn btn-sm btn-success btn-show-modal"
+                             data-id="${row.id}"
+                             data-filter="${filter}"
+                             data-mode="add"
+                             data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>` : '';
                         actions = `<div class="action-stack">${previewBtn}${addBtn}</div>`;
                     }
 
                     let kpiCells = '';
                     if (window.SHOW_KPI_COLS) {
                         kpiCells = `
-            <td class="text-start">${pic}</td>
-            <td class="text-start term-cell">${st}</td>
-            <td class="text-start term-cell">${mt}</td>
-            <td class="text-start term-cell">${lt}</td>
-            <td class="text-center">${statusHtml}</td>
-          `;
+                          <td class="text-start">${pic}</td>
+                          <td class="text-start term-cell">${st}</td>
+                          <td class="text-start term-cell">${mt}</td>
+                          <td class="text-start term-cell">${lt}</td>
+                          <td class="text-center">${statusHtml}</td>
+                        `;
                     }
 
                     return `<tr class="fs-7">
-          <td>${i+1}</td>
-          <td class="text-start">${esc(row.name)}</td>
-          ${kpiCells}
-          <td class="text-center">${actions}</td>
-        </tr>`;
+                        <td>${i+1}</td>
+                        <td class="text-start">${esc(row.name)}</td>
+                        ${kpiCells}
+                        <td class="text-center">${actions}</td>
+                    </tr>`;
                 }).join('');
 
                 $('#kt_table_users tbody').html(rows);
             }
 
+            // ===== Fetch list items =====
             function fetchItems(filter, containerId) {
                 const needsId = ['department', 'section', 'sub_section'].includes(filter);
 
@@ -525,14 +555,16 @@
             }
             window.fetchItems = fetchItems;
 
+            // ===== Direksi/Division helpers =====
             function loadDivisionsForCompany(companyCode) {
                 const code = (companyCode || '').toUpperCase();
                 const plants = (window.DIREKSI_BY_COMPANY && window.DIREKSI_BY_COMPANY[code]) ? window
                     .DIREKSI_BY_COMPANY[code] : [];
                 const reqs = plants.map(p => $.getJSON(window.ROUTE_FILTER, {
-                    filter: 'division',
-                    division_id: p.id
-                }).then(r => r.items || []).catch(() => []));
+                        filter: 'division',
+                        division_id: p.id
+                    })
+                    .then(r => r.items || []).catch(() => []));
                 return Promise.all(reqs).then(arr => {
                     const flat = arr.flat();
                     const uniq = Object.values(flat.reduce((acc, it) => {
@@ -545,6 +577,16 @@
                         `<option value="${it.id}">${$('<div>').text(it.name).html()}</option>`));
                     return uniq;
                 });
+            }
+
+            function populatePlants(companyCode) {
+                const $plant = $('#plantSelect');
+                $plant.prop('disabled', !companyCode);
+                $plant.empty().append('<option value="">-- Select Direksi --</option>');
+                const list = window.DIREKSI_BY_COMPANY[(companyCode || '').toUpperCase()] || [];
+                list.forEach(p => $plant.append(
+                    `<option value="${p.id}">${$('<div>').text(p.name).html()}</option>`));
+                renderEmpty('Select direksi first');
             }
 
             // ===== Initial load =====
@@ -568,17 +610,7 @@
             })();
 
             // ===== Filters (company/plant/division) =====
-            function populatePlants(companyCode) {
-                const $plant = $('#plantSelect');
-                $plant.prop('disabled', !companyCode);
-                $plant.empty().append('<option value="">-- Select Direksi --</option>');
-                const list = window.DIREKSI_BY_COMPANY[(companyCode || '').toUpperCase()] || [];
-                list.forEach(p => $plant.append(
-                    `<option value="${p.id}">${$('<div>').text(p.name).html()}</option>`));
-                renderEmpty('Select direksi first');
-            }
-
-            $('#companySelect').on('change', function() {
+            $(document).off('change', '#companySelect').on('change', '#companySelect', function() {
                 const comp = $(this).val() || '';
                 if (window.ACTIVE_FILTER === 'division') {
                     populatePlants(comp);
@@ -598,7 +630,7 @@
                 }
             });
 
-            $('#plantSelect').on('change', function() {
+            $(document).off('change', '#plantSelect').on('change', '#plantSelect', function() {
                 const pid = $(this).val() || '';
                 window.CONTAINER_ID = pid || null;
                 if (window.ACTIVE_FILTER === 'division') {
@@ -607,28 +639,43 @@
                 }
             });
 
-            $('#divisionSelect').on('change', function() {
+            $(document).off('change', '#divisionSelect').on('change', '#divisionSelect', function() {
                 const did = $(this).val() || '';
                 window.CONTAINER_ID = did || null;
                 if (did) fetchItems(window.ACTIVE_FILTER, did);
                 else renderEmpty('Select division first');
             });
 
-            $('#searchButton').on('click', function() {
+            $(document).off('click', '#searchButton').on('click', '#searchButton', function() {
                 const q = ($('#searchInput').val() || '').toLowerCase();
                 $('#kt_table_users tbody tr').each(function() {
                     $(this).toggle($(this).text().toLowerCase().includes(q));
                 });
             });
-        });
-    </script>
-@endpush
 
-@push('scripts')
-    <script>
-        $(function() {
-            window.CURRENT_AREA_ID = null;
-            window.EDIT_MODE = false; // false: Add, true: Edit
+            // ====== Modal RTC: Select2 & Candidates ======
+            function initSelect2InModal() {
+                $('#addPlanModal .rtc-s2').each(function() {
+                    const $el = $(this);
+                    if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+                    $el.select2({
+                        dropdownParent: $('#addPlanModal'),
+                        width: '100%',
+                        placeholder: $el.data('placeholder') || '-- Select --',
+                        allowClear: true
+                    });
+                });
+            }
+
+            function resetRtcModal() {
+                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                    $(sel).empty().append('<option value="">-- Select --</option>').trigger('change');
+                });
+                $('#cnt_st').text(0);
+                $('#cnt_mt').text(0);
+                $('#cnt_lt').text(0);
+                $('#rtc_counts').addClass('d-none');
+            }
 
             function loadCandidatesForActiveTab() {
                 return new Promise((resolve, reject) => {
@@ -677,12 +724,12 @@
                             lt = [];
                         rows.forEach(r => {
                             const opt = `
-              <option value="${r.employee_id}">
-                ${$('<div>').text(r.name).html()}
-                • ${$('<div>').text(r.job_function || '-').html()}
-                • ${$('<div>').text(r.level || '-').html()}
-                • ${$('<div>').text(r.plan_year || '-').html()}
-              </option>`;
+            <option value="${r.employee_id}">
+              ${$('<div>').text(r.name).html()}
+              • ${$('<div>').text(r.job_function || '-').html()}
+              • ${$('<div>').text(r.level || '-').html()}
+              • ${$('<div>').text(r.plan_year || '-').html()}
+            </option>`;
                             if (r.term === 'short') st.push(opt);
                             else if (r.term === 'mid') mt.push(opt);
                             else lt.push(opt);
@@ -708,31 +755,8 @@
                 });
             }
 
-            function initSelect2InModal() {
-                $('#addPlanModal .rtc-s2').each(function() {
-                    const $el = $(this);
-                    if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
-                    $el.select2({
-                        dropdownParent: $('#addPlanModal'),
-                        width: '100%',
-                        placeholder: $el.data('placeholder') || '-- Select --',
-                        allowClear: true
-                    });
-                });
-            }
-
-            function resetRtcModal() {
-                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
-                    $(sel).empty().append('<option value="">-- Select --</option>').trigger('change');
-                });
-                $('#cnt_st').text(0);
-                $('#cnt_mt').text(0);
-                $('#cnt_lt').text(0);
-                $('#rtc_counts').addClass('d-none');
-            }
-
-            // ===== Add (baru)
-            $(document).on('click', '.btn-show-modal', function(e) {
+            // ===== Open modal: Add =====
+            $(document).off('click', '.btn-show-modal').on('click', '.btn-show-modal', function(e) {
                 e.preventDefault();
                 window.CURRENT_AREA_ID = $(this).data('id') || null;
                 window.EDIT_MODE = false;
@@ -742,8 +766,8 @@
                 loadCandidatesForActiveTab().catch(() => {});
             });
 
-            // ===== Edit (update)
-            $(document).on('click', '.btn-edit', function(e) {
+            // ===== Open modal: Edit =====
+            $(document).off('click', '.btn-edit').on('click', '.btn-edit', function(e) {
                 e.preventDefault();
                 window.CURRENT_AREA_ID = $(this).data('id') || null;
                 window.EDIT_MODE = true;
@@ -769,7 +793,6 @@
                         (res || []).forEach(r => {
                             byTerm[(r.term || '').toLowerCase()] = r.employee_id || '';
                         });
-
                         if (byTerm.short) $('#short_term').val(String(byTerm.short)).trigger('change');
                         if (byTerm.mid) $('#mid_term').val(String(byTerm.mid)).trigger('change');
                         if (byTerm.long) $('#long_term').val(String(byTerm.long)).trigger('change');
@@ -779,8 +802,8 @@
                 $('#addPlanModal').modal('show');
             });
 
-            // ===== Submit
-            $(document).on('click', '.btn-submit', function(e) {
+            // ===== Submit (ajukan ke approval) =====
+            $(document).off('click', '.btn-submit').on('click', '.btn-submit', function(e) {
                 e.preventDefault();
                 const areaId = $(this).data('id') || null;
                 if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
@@ -818,8 +841,8 @@
                 });
             });
 
-            // ===== Modal lifecycle
-            $('#addPlanModal').on('hidden.bs.modal', function() {
+            // ===== Modal lifecycle =====
+            $(document).off('hidden.bs.modal', '#addPlanModal').on('hidden.bs.modal', '#addPlanModal', function() {
                 $(this).find('.rtc-s2').each(function() {
                     if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
                 });
@@ -828,12 +851,25 @@
                 resetRtcModal();
             });
 
-            // ===== SAVE (Add & Update)
-            $('#addPlanForm').on('submit', function(e) {
+            // ===== SAVE (Add & Update) — Satu-satunya handler submit =====
+            $(document).off('click', '#btnSave').on('click', '#btnSave', function() {
+                $('#addPlanForm').trigger('submit');
+            });
+
+            $(document).off('submit', '#addPlanForm').on('submit', '#addPlanForm', function(e) {
                 e.preventDefault();
 
+                if (window.__RTC_SAVING__) return;
+                window.__RTC_SAVING__ = true;
+
+                const $btn = $('#btnSave').prop('disabled', true);
+
                 const areaId = window.CURRENT_AREA_ID || null;
-                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+                if (!areaId) {
+                    window.__RTC_SAVING__ = false;
+                    $btn.prop('disabled', false);
+                    return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+                }
 
                 const payload = {
                     filter: (window.ACTIVE_FILTER || '').toLowerCase(),
@@ -843,21 +879,18 @@
                     long_term: $('#long_term').val() || ''
                 };
 
-                if (!payload.short_term && !payload.mid_term && !payload.long_term) {
-                    return Swal.fire('Validasi', 'Pilih minimal satu kandidat (ST/MT/LT).', 'warning');
-                }
-
                 const url = window.EDIT_MODE ? window.ROUTE_RTC_UPDATE : window.ROUTE_RTC_SAVE;
 
                 $.ajax({
                     url: url,
                     type: 'POST',
                     data: payload
-                }).done(function() {
+                }).done(function(res) {
                     $('#addPlanModal').modal('hide');
-                    const msg = window.EDIT_MODE ? 'Perubahan RTC disimpan (draft).' :
+                    const fallback = window.EDIT_MODE ? 'Perubahan RTC disimpan (draft).' :
                         'RTC berhasil disimpan (draft).';
-                    Swal.fire('Berhasil', msg, 'success');
+                    Swal.fire('Berhasil', (res && res.message) ? res.message : fallback, 'success');
+
                     const cid = window.CONTAINER_ID || null;
                     if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
                     else location.reload();
@@ -865,255 +898,12 @@
                     const msg = xhr?.responseJSON?.message || xhr?.statusText ||
                         'Gagal menyimpan RTC';
                     Swal.fire('Gagal', msg, 'error');
-                });
-            });
-        });
-    </script>
-@endpush
-
-@push('scripts')
-    <script>
-        $(function() {
-            window.CURRENT_AREA_ID = null;
-            window.EDIT_MODE = false; // false: Add, true: Edit
-
-            function loadCandidatesForActiveTab() {
-                return new Promise((resolve, reject) => {
-                    const TAB_TO_KODES = {
-                        direksi: ['GM', 'SGM', 'AGM'],
-                        division: ['SM', 'M'],
-                        department: ['AM', 'SS'],
-                        section: ['S', 'AS'],
-                        sub_section: []
-                    };
-
-                    const filter = (window.ACTIVE_FILTER || '').toLowerCase();
-                    const kodes = TAB_TO_KODES[filter] || [];
-
-                    resetRtcModal();
-                    if (!kodes.length) {
-                        resolve();
-                        return;
-                    }
-
-                    const paramsBase = {};
-                    const comp = ($('#companySelect').val() || '').toUpperCase();
-                    if (comp) paramsBase.company = comp;
-
-                    ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
-                        $(sel).html('<option value="">Loading...</option>').trigger('change');
-                    });
-
-                    const reqs = kodes.map(k =>
-                        $.getJSON(window.ROUTE_RTC_CANDIDATES, {
-                            ...paramsBase,
-                            kode: k
-                        })
-                        .then(r => (r && r.data) ? r.data : [])
-                        .catch(() => [])
-                    );
-
-                    Promise.all(reqs).then(chunks => {
-                        const data = chunks.flat();
-                        const uniq = {};
-                        data.forEach(r => uniq[`${r.employee_id}|${r.term}`] = r);
-                        const rows = Object.values(uniq);
-
-                        const st = [],
-                            mt = [],
-                            lt = [];
-                        rows.forEach(r => {
-                            const opt = `
-              <option value="${r.employee_id}">
-                ${$('<div>').text(r.name).html()}
-                • ${$('<div>').text(r.job_function || '-').html()}
-                • ${$('<div>').text(r.level || '-').html()}
-                • ${$('<div>').text(r.plan_year || '-').html()}
-              </option>`;
-                            if (r.term === 'short') st.push(opt);
-                            else if (r.term === 'mid') mt.push(opt);
-                            else lt.push(opt);
-                        });
-
-                        $('#short_term').html('<option value="">-- Select --</option>' + st.join(
-                            '')).trigger('change');
-                        $('#mid_term').html('<option value="">-- Select --</option>' + mt.join(''))
-                            .trigger('change');
-                        $('#long_term').html('<option value="">-- Select --</option>' + lt.join(''))
-                            .trigger('change');
-
-                        $('#cnt_st').text(st.length);
-                        $('#cnt_mt').text(mt.length);
-                        $('#cnt_lt').text(lt.length);
-                        $('#rtc_counts').toggleClass('d-none', rows.length === 0);
-
-                        resolve();
-                    }).catch(err => {
-                        resetRtcModal();
-                        reject(err);
-                    });
-                });
-            }
-
-            function initSelect2InModal() {
-                $('#addPlanModal .rtc-s2').each(function() {
-                    const $el = $(this);
-                    if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
-                    $el.select2({
-                        dropdownParent: $('#addPlanModal'),
-                        width: '100%',
-                        placeholder: $el.data('placeholder') || '-- Select --',
-                        allowClear: true
-                    });
-                });
-            }
-
-            function resetRtcModal() {
-                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
-                    $(sel).empty().append('<option value="">-- Select --</option>').trigger('change');
-                });
-                $('#cnt_st').text(0);
-                $('#cnt_mt').text(0);
-                $('#cnt_lt').text(0);
-                $('#rtc_counts').addClass('d-none');
-            }
-
-            // ===== Add (baru)
-            $(document).on('click', '.btn-show-modal', function(e) {
-                e.preventDefault();
-                window.CURRENT_AREA_ID = $(this).data('id') || null;
-                window.EDIT_MODE = false;
-                $('#addPlanLabel').text('Add RTC');
-                $('#btnSave').text('Save');
-                $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
-                loadCandidatesForActiveTab().catch(() => {});
-            });
-
-            // ===== Edit (update)
-            $(document).on('click', '.btn-edit', function(e) {
-                e.preventDefault();
-                window.CURRENT_AREA_ID = $(this).data('id') || null;
-                window.EDIT_MODE = true;
-                $('#addPlanLabel').text('Edit RTC');
-                $('#btnSave').text('Save');
-
-                const area = (window.ACTIVE_FILTER || '').toLowerCase();
-                const area_id = window.CURRENT_AREA_ID;
-
-                $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
-
-                loadCandidatesForActiveTab()
-                    .then(() => $.ajax({
-                        url: "{{ route('rtc.area.items') }}",
-                        method: 'GET',
-                        data: {
-                            area,
-                            area_id
-                        }
-                    }))
-                    .then((res) => {
-                        const byTerm = {};
-                        (res || []).forEach(r => {
-                            byTerm[(r.term || '').toLowerCase()] = r.employee_id || '';
-                        });
-
-                        if (byTerm.short) $('#short_term').val(String(byTerm.short)).trigger('change');
-                        if (byTerm.mid) $('#mid_term').val(String(byTerm.mid)).trigger('change');
-                        if (byTerm.long) $('#long_term').val(String(byTerm.long)).trigger('change');
-                    })
-                    .catch(() => {});
-
-                $('#addPlanModal').modal('show');
-            });
-
-            // ===== Submit
-            $(document).on('click', '.btn-submit', function(e) {
-                e.preventDefault();
-                const areaId = $(this).data('id') || null;
-                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
-
-                const payload = {
-                    filter: (window.ACTIVE_FILTER || '').toLowerCase(),
-                    id: areaId
-                };
-
-                Swal.fire({
-                    title: 'Submit RTC?',
-                    text: 'Setelah submit, RTC akan diajukan untuk approval.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Submit',
-                    cancelButtonText: 'Batal'
-                }).then((res) => {
-                    if (!res.isConfirmed) return;
-
-                    $.ajax({
-                        url: window.ROUTE_RTC_SUBMIT,
-                        type: 'POST',
-                        data: payload
-                    }).done(function() {
-                        Swal.fire('Berhasil', 'RTC berhasil di-submit.', 'success');
-                        const cid = window.CONTAINER_ID || null;
-                        if (typeof fetchItems === 'function') fetchItems(window
-                            .ACTIVE_FILTER, cid);
-                        else location.reload();
-                    }).fail(function(xhr) {
-                        const msg = xhr?.responseJSON?.message || xhr?.statusText ||
-                            'Gagal submit RTC';
-                        Swal.fire('Gagal', msg, 'error');
-                    });
+                }).always(function() {
+                    window.__RTC_SAVING__ = false;
+                    $btn.prop('disabled', false);
                 });
             });
 
-            // ===== Modal lifecycle
-            $('#addPlanModal').on('hidden.bs.modal', function() {
-                $(this).find('.rtc-s2').each(function() {
-                    if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
-                });
-                window.CURRENT_AREA_ID = null;
-                window.EDIT_MODE = false;
-                resetRtcModal();
-            });
-
-            // ===== SAVE (Add & Update)
-            $('#addPlanForm').on('submit', function(e) {
-                e.preventDefault();
-
-                const areaId = window.CURRENT_AREA_ID || null;
-                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
-
-                const payload = {
-                    filter: (window.ACTIVE_FILTER || '').toLowerCase(),
-                    id: areaId,
-                    short_term: $('#short_term').val() || '',
-                    mid_term: $('#mid_term').val() || '',
-                    long_term: $('#long_term').val() || ''
-                };
-
-                if (!payload.short_term && !payload.mid_term && !payload.long_term) {
-                    return Swal.fire('Validasi', 'Pilih minimal satu kandidat (ST/MT/LT).', 'warning');
-                }
-
-                const url = window.EDIT_MODE ? window.ROUTE_RTC_UPDATE : window.ROUTE_RTC_SAVE;
-
-                $.ajax({
-                    url: url,
-                    type: 'POST',
-                    data: payload
-                }).done(function() {
-                    $('#addPlanModal').modal('hide');
-                    const msg = window.EDIT_MODE ? 'Perubahan RTC disimpan (draft).' :
-                        'RTC berhasil disimpan (draft).';
-                    Swal.fire('Berhasil', msg, 'success');
-                    const cid = window.CONTAINER_ID || null;
-                    if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
-                    else location.reload();
-                }).fail(function(xhr) {
-                    const msg = xhr?.responseJSON?.message || xhr?.statusText ||
-                        'Gagal menyimpan RTC';
-                    Swal.fire('Gagal', msg, 'error');
-                });
-            });
         });
     </script>
 @endpush
