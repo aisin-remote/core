@@ -125,8 +125,6 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('icp')->group(function () {
-        // Pindahkan create di atas agar tidak tertabrak oleh {company}
-
         Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
 
         Route::get('/create/{employee_id}', [IcpController::class, 'create'])->name('icp.create');
@@ -134,6 +132,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
 
         Route::get('/history/{id}', [IcpController::class, 'show'])->name('icp.show');
+        Route::get('/modal/{icp}', [IcpController::class, 'showModal'])
+            ->name('icp.show-modal');
         Route::get('/export/{employee_id}', [IcpController::class, 'export'])->name('icp.export');
 
         Route::get('/edit/{id}', [IcpController::class, 'edit'])->name('icp.edit');

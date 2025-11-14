@@ -146,14 +146,12 @@ class IcpController extends Controller
     {
         $user = auth()->user();
 
-        // Parameter standar DataTables
         $draw = (int) $request->input('draw', 1);
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
         $searchValue = trim($request->input('search.value', ''));
         $filter = $request->input('filter', 'all');
 
-        // Base query: join ke employee untuk memfilter kolom karyawan
         $base = Icp::query()->with('employee')
             ->when($company, fn($q) => $q->whereHas('employee', fn($e) => $e->where('company_name', $company)));
 
@@ -548,6 +546,55 @@ class IcpController extends Controller
             'employee' => $employee,
             'icp' => $assessments
         ]);
+    }
+
+    public function showModal($icp_id, Request $request)
+    {
+
+        $icp = Icp::select('id', 'employee_id', 'aspiration', 'career_target', 'date', 'job_function', 'position', 'level', 'readiness')
+            ->orderBy('date', 'desc')
+            ->with([
+                'details' => function ($query) {
+                    $query->select('icp_id', 'plan_year', 'job_function', 'position', 'level', 'current_technical', 'current_nontechnical', 'required_technical', 'required_nontechnical', 'development_technical', 'development_nontechnical');
+                },
+                'employee',
+                'steps'
+            ])
+            ->find($icp_id);
+
+        $performanceData = PerformanceAppraisalHistory::where('employee_id', $icp->employee_id)
+            ->selectRaw('YEAR(date) as year, score')
+            ->orderByDesc('date')->get()
+            ->groupBy('year')
+            ->map(fn($it) => $it->first()->score)
+            ->sortKeys()
+            ->take(3)
+            ->toArray();
+
+        $edu  = $icp->employee->educations->first();
+
+        if (!$icp) {
+            if ($request->ajax()) {
+                return response(
+                    '<div class="alert alert-danger mb-0">ICP tidak ditemukan.</div>',
+                    404
+                );
+            }
+
+            abort(404);
+        }
+
+        $header = [
+            'performanceData' => $performanceData,
+            'edu'             => $edu
+        ];
+
+        if ($request->ajax()) {
+            return view('website.modal.icp.show-detail', [
+                'icp' => $icp,
+                'header' => $header
+            ]);
+        }
     }
 
     public function export($employee_id)

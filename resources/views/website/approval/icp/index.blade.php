@@ -3,6 +3,88 @@
 @section('title', $title ?? 'Approval')
 @section('breadcrumbs', $title ?? 'Approval')
 
+@push('custom-css')
+    <style>
+        :root {
+            --stage-border: #3f4a5a;
+            --stage-head-bg: #1f2937;
+            --stage-head-fg: #fff;
+            --stage-accent: #111827;
+            --detail-bg: #f3f4f6;
+            --detail-border: #d1d5db;
+            --shadow-inset: rgba(63, 74, 90, .20);
+            --shadow-card: rgba(0, 0, 0, .08);
+            --radius-card: 1rem;
+            --radius-detail: .65rem;
+            --space-card: 1.25rem;
+        }
+
+        .stage-card {
+            position: relative;
+            border: 2.5px solid var(--stage-border);
+            border-radius: var(--radius-card);
+            background: #fff;
+            overflow: hidden;
+            box-shadow: 0 6px 18px var(--shadow-card)
+        }
+
+        .stage-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--stage-head-bg);
+            color: var(--stage-head-fg);
+            border-bottom: 2px solid var(--stage-border);
+            padding: 1rem 1.25rem;
+            font-weight: 700
+        }
+
+        .stage-head strong {
+            font-size: 1.1rem
+        }
+
+        .stage-body {
+            padding: var(--space-card)
+        }
+
+        .detail-row {
+            background: var(--detail-bg);
+            border: 2px solid var(--detail-border);
+            border-radius: var(--radius-detail);
+            padding: 14px
+        }
+
+        .stage-card.theme-blue,
+        .stage-card.theme-green,
+        .stage-card.theme-amber,
+        .stage-card.theme-purple,
+        .stage-card.theme-rose {
+            border-color: var(--stage-border);
+            box-shadow: 0 0 0 3px var(--shadow-inset) inset, 0 6px 18px var(--shadow-card)
+        }
+
+        .stage-card.theme-blue .stage-head,
+        .stage-card.theme-green .stage-head,
+        .stage-card.theme-amber .stage-head,
+        .stage-card.theme-purple .stage-head,
+        .stage-card.theme-rose .stage-head {
+            background: var(--stage-head-bg);
+            border-bottom-color: var(--stage-border);
+            color: var(--stage-head-fg)
+        }
+
+        .icp-readonly-value {
+            min-height: 38px;
+            padding: .375rem .75rem;
+            border-radius: .25rem;
+            border: 1px solid #e5e7eb;
+            background-color: #f9fafb;
+            font-size: .875rem;
+            white-space: pre-wrap;
+        }
+    </style>
+@endpush
+
 @section('main')
     @if (session('success'))
         <script>
@@ -67,11 +149,13 @@
                                 <td>{{ $deptName }}</td>
                                 <td>{{ $employee->position ?? '-' }}</td>
                                 <td class="text-center">
-                                    <a href="{{ route('icp.export', ['employee_id' => $employee->id]) }}"
-                                        class="btn btn-sm btn-success">
-                                        <i class="fas fa-file-excel"></i> Export
-                                    </a>
+                                    {{-- Tombol LIHAT (buka modal dengan ICP ID) --}}
+                                    <button type="button" class="btn btn-sm btn-primary btn-lihat"
+                                        data-url="{{ route('icp.show-modal', ['icp' => $icp->id]) }}">
+                                        <i class="fas fa-eye"></i> Lihat
+                                    </button>
 
+                                    {{-- Tombol REVISE --}}
                                     <button class="btn btn-sm btn-danger btn-revise" data-id="{{ $icp->id }}">
                                         <i class="fas fa-edit"></i> Revise
                                     </button>
@@ -92,14 +176,63 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal Lihat ICP (wrapper; isi body akan di-load via AJAX) --}}
+    <div class="modal fade" id="modalLihatIcp" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Detail ICP</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-0">Memuat data...</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Tutup</button>
+                </div>
+            </div>
+        </div>
+    </div>
 @endsection
+
 
 @push('scripts')
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            // Approve
+            // ================== LIHAT (SHOW MODAL) ==================
+            const modalEl = document.getElementById('modalLihatIcp');
+            const modalBody = modalEl.querySelector('.modal-body');
+            const bsModal = new bootstrap.Modal(modalEl);
+
+            document.querySelectorAll('.btn-lihat').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const url = btn.dataset.url;
+                    if (!url) return;
+
+                    // Placeholder saat loading
+                    modalBody.innerHTML = '<p class="text-center mb-0">Loading...</p>';
+                    bsModal.show();
+
+                    fetch(url, {
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(r => r.text())
+                        .then(html => {
+                            modalBody.innerHTML = html;
+                        })
+                        .catch(() => {
+                            modalBody.innerHTML =
+                                '<div class="alert alert-danger mb-0">Gagal memuat data ICP.</div>';
+                        });
+                });
+            });
+
+            // ================== APPROVE ==================
             document.querySelectorAll('.btn-approve').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const id = btn.dataset.icpId;
@@ -139,7 +272,7 @@
                 });
             });
 
-            // Revise
+            // ================== REVISE ==================
             document.querySelectorAll('.btn-revise').forEach(btn => {
                 btn.addEventListener('click', () => {
                     Swal.fire({
