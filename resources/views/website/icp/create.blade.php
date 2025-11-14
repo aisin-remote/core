@@ -344,7 +344,6 @@
                         <input type="number" min="2000" max="2100" class="form-control form-control-sm stage-year"
                             name="stages[__S__][year]" style="width:110px" readonly required>
                     </div>
-                    <button type="button" class="btn btn-danger btn-sm btn-remove-stage">Remove</button>
                 </div>
 
                 <div class="stage-body">
@@ -736,13 +735,6 @@
 
             yearInput.readOnly = true;
             yearInput.value = (DEFAULTS.plan_year + 1) + idx;
-
-            // remove stage
-            stage.querySelector('.btn-remove-stage').addEventListener('click', () => {
-                stage.remove();
-                reindexStages();
-                forceLastStagePositionToCareerTarget();
-            });
 
             stage.querySelector('.btn-add-detail').addEventListener('click', () => addDetail(stage));
             addDetail(stage);
