@@ -389,37 +389,30 @@
 
                             {{-- Technical Skills --}}
                             <div class="icp-subsection">
-                                <div class="icp-subsection-title">Technical Competencies</div>
-
+                                <div class="icp-subsection-title">Details</div>
                                 <div class="icp-grid-3">
                                     <div>
-                                        <div class="icp-field-label">Current</div>
+                                        <div class="icp-field-label">Current Technical</div>
                                         <div class="icp-field-value">
                                             {{ $detail->current_technical ?? '-' }}
                                         </div>
                                     </div>
 
                                     <div>
-                                        <div class="icp-field-label">Required</div>
+                                        <div class="icp-field-label">Required Technical</div>
                                         <div class="icp-field-value">
                                             {{ $detail->required_technical ?? '-' }}
                                         </div>
                                     </div>
 
                                     <div>
-                                        <div class="icp-field-label">Development Plan</div>
+                                        <div class="icp-field-label">Development Technical</div>
                                         <div class="icp-field-value">
                                             {{ $detail->development_technical ?? '-' }}
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-
-                            {{-- Non-Technical Skills --}}
-                            <div class="icp-subsection">
-                                <div class="icp-subsection-title">Non-Technical Competencies</div>
-
-                                <div class="icp-grid-3">
+                                <div class="icp-grid-3 mt-2">
                                     <div>
                                         <div class="icp-field-label">Current</div>
                                         <div class="icp-field-value">
