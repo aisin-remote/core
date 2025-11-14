@@ -354,7 +354,6 @@
                             class="form-control form-control-sm stage-year" name="stages[__S__][year]" style="width:110px"
                             required>
                     </div>
-                    <button type="button" class="btn btn-danger btn-sm btn-remove-stage">Remove</button>
                 </div>
 
                 <div class="stage-body">
@@ -442,7 +441,7 @@
         </template>
     @endverbatim
 
-@endSection
+@endsection
 
 @push('scripts')
     <script>
@@ -753,7 +752,7 @@
 
 
         /* =======================================
-           STAGE BUILDER
+            STAGE BUILDER
         ========================================*/
 
         function buildStageDOM(data = null) {
@@ -781,7 +780,6 @@
             const jobSel = stage.querySelector('.stage-job');
             const posSel = stage.querySelector('.stage-position');
             const lvlSel = stage.querySelector('.stage-level');
-            const rmBtn = stage.querySelector('.btn-remove-stage');
 
             // hidden job_source (disubmit ke backend)
             let jobSrc = stage.querySelector('.job-source');
@@ -793,12 +791,10 @@
                 stage.appendChild(jobSrc);
             }
 
-            // isi dropdown
             fillJobs(jobSel);
             fillGrades(lvlSel);
             fillPositionsRanged(posSel, CURRENT_RTC_CODE, INITIAL_CAREER_TARGET);
 
-            // event
             jobSel.addEventListener('change', () => {
                 const opt = jobSel.options[jobSel.selectedIndex];
                 const source = opt?.dataset.source || '';
@@ -813,17 +809,11 @@
                 refreshStageTechs(stage, source, jobName);
             });
 
-            rmBtn.addEventListener('click', () => {
-                stage.remove();
-                reindexStages();
-            });
-
             // Prefill data existing
             if (data) {
                 // year
                 yearEl.value = data.year ?? data.plan_year ?? '';
 
-                // job function select
                 if (data.job_function) {
                     const match = [...jobSel.options].find(o => o.value === data.job_function);
                     if (match) {
@@ -842,9 +832,7 @@
                         const opt = document.createElement('option');
                         opt.value = data.position_code;
                         const meta = RTC_LIST.find(r => r.code === data.position_code);
-                        opt.textContent = meta ?
-                            `${meta.position} (${meta.code})` :
-                            data.position_code;
+                        opt.textContent = meta ? `${meta.position} (${meta.code})` : data.position_code;
                         posSel.appendChild(opt);
                     }
                     posSel.value = data.position_code;
@@ -855,26 +843,22 @@
                     fillGrades(lvlSel, data.level);
                 }
 
-                // detail list
+                // details
                 if (Array.isArray(data.details) && data.details.length) {
                     data.details.forEach(d => addDetail(stage, d));
                 } else {
                     addDetail(stage);
                 }
             } else {
-                // stage baru kosong -> minimal 1 detail kosong
+                // stage baru kosong → minimal 1 detail
                 addDetail(stage);
             }
 
-            // mode evaluate = readonly
             if (IS_EVALUATE) {
                 yearEl.classList.add('ro');
                 jobSel.classList.add('ro');
                 posSel.classList.add('ro');
                 lvlSel.classList.add('ro');
-                rmBtn.classList.add('d-none');
-
-                // hilangkan tombol remove di detail juga di addDetail()
             }
 
             return stage;
@@ -944,43 +928,57 @@
             const careerEl = $id('career_target');
             const careerVal = careerEl.value;
 
-            // butuh career target
+            showCareerTargetWarning(true);
             if (!careerVal) {
-                container.innerHTML = '';
-                showCareerTargetWarning(true);
                 return;
             } else {
                 showCareerTargetWarning(false);
             }
 
-            const val = dateEl.value; // 'YYYY-MM-DD'
+            const val = dateEl.value;
             if (!val) {
-                // kalau tanggal kosong: jangan generate apa2
-                container.innerHTML = '';
                 return;
             }
 
             const currentYear = (new Date()).getFullYear();
             const targetYear = Number(val.split('-')[0]);
 
-            // minimal 1 stage, maksimal HARD_MAX_STAGE
-            let diff = targetYear - currentYear;
-            if (diff < 1) diff = 1;
-            if (diff > HARD_MAX_STAGE) diff = HARD_MAX_STAGE;
+            let desiredCount = targetYear - currentYear;
+            if (desiredCount < 1) desiredCount = 1;
+            if (desiredCount > HARD_MAX_STAGE) desiredCount = HARD_MAX_STAGE;
 
-            container.innerHTML = '';
+            let stages = getStageCards();
+            const currentCount = stages.length;
 
-            for (let i = 0; i < diff; i++) {
-                const stage = buildStageDOM();
-                if (!stage) break;
+            // ===== CASE 1: belum ada stage sama sekali (misal fallback seperti create) =====
+            if (currentCount === 0) {
+                for (let i = 0; i < desiredCount; i++) {
+                    buildStageDOM();
+                }
+            } else {
+                // ===== CASE 2: sudah ada stage (update mode) =====
+                // kalau Date Target mundur -> kurangi stage dari belakang
+                if (desiredCount < currentCount) {
+                    for (let i = currentCount - 1; i >= desiredCount; i--) {
+                        container.removeChild(stages[i]); // hapus stage paling belakang
+                    }
+                }
+
+                // kalau Date Target maju -> tambah stage baru di belakang
+                if (desiredCount > currentCount) {
+                    for (let i = currentCount; i < desiredCount; i++) {
+                        buildStageDOM(); // stage baru kosong, tidak mengubah yang lama
+                    }
+                }
             }
 
-            // set nilai year per stage (mulai currentYear+1, sama kayak create)
+            // set tahun untuk stage yang BELUM punya nilai, biar tidak overwrite data lama
             const startYear = currentYear + 1;
-            getStageCards().forEach((stage, i) => {
+            stages = getStageCards();
+            stages.forEach((stage, idx) => {
                 const yearInput = stage.querySelector('.stage-year');
                 if (yearInput && !yearInput.value) {
-                    yearInput.value = startYear + i;
+                    yearInput.value = startYear + idx;
                 }
             });
 
