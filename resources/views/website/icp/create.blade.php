@@ -218,6 +218,7 @@
                                             return $year . ' = ' . $score;
                                         })
                                         ->implode(' | ');
+
                                 @endphp
 
                                 <div class="mb-3">
@@ -820,15 +821,9 @@
             const careerSelect = document.getElementById('career_target');
             const careerVal = careerSelect.value;
 
-            if (!careerVal) {
-                container.innerHTML = '';
-                showCareerTargetWarning(true);
-                return;
-            } else {
-                showCareerTargetWarning(false);
-            }
+            showCareerTargetWarning(false);
 
-            const val = dateEl.value; // "YYYY-MM-DD"
+            const val = dateEl.value;
             if (!val) {
                 container.innerHTML = '';
                 return;
@@ -848,7 +843,11 @@
             }
 
             reindexStages();
-            forceLastStagePositionToCareerTarget();
+
+            if (careerVal) {
+                forceLastStagePositionToCareerTarget();
+            }
+
             setReadinessFromTargetDate();
         }
 
