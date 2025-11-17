@@ -179,6 +179,11 @@
                 <input type="hidden" name="employee_id" value="{{ $icp->employee_id }}">
                 <input type="hidden" id="employee_current_code" value="{{ $currentRtcCode ?? '' }}">
 
+                <input type="hidden" name="employee_current_position"
+                    value="{{ $employee->position ?? ($icp->employee->position ?? '') }}">
+
+                <input type="hidden" name="readiness" value="{{ $icp->readiness ?? 0 }}">
+
                 {{-- ================= HEADER CARD ================= --}}
                 <div class="card shadow-sm rounded-3 mb-4">
                     <div class="card-body p-4">
@@ -371,6 +376,9 @@
                                 required disabled>
                                 <option value="">Select Position</option>
                             </select>
+                            <!-- hidden yang benar-benar dikirim ke backend -->
+                            <input type="hidden" class="stage-position-hidden" name="stages[__S__][position_code]"
+                                value="">
                         </div>
 
                         <div class="col-md-4">
@@ -461,7 +469,6 @@
         const TECHS = @json($technicalCompetencies->pluck('competency'));
         const COMPANY = @json($employee->company_name ?? $icp->employee->company_name);
         const GRADES = @json($grades->pluck('aisin_grade'));
-        const RTC_LIST = @json($rtcList);
         const CURRENT_RTC_CODE = @json($currentRtcCode ?? null);
 
         // Stage hasil rebuild dari controller (plan_year-grouped)
@@ -474,6 +481,8 @@
         const HARD_MAX_STAGE = 10;
 
         const THEMES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
+
+        const RTC_LIST = @json($rtcList);
         const RTC_RANK = Object.fromEntries(
             RTC_LIST.map((x, i) => [String(x.code || '').toUpperCase(), i])
         );
@@ -596,9 +605,8 @@
             });
         }
 
-
         /* =======================================
-           SELECT2 UNTUK TECH
+            SELECT2 UNTUK TECH
         ========================================*/
 
         function initTechSelects(scope, techListOverride = null) {
@@ -780,6 +788,7 @@
             const jobSel = stage.querySelector('.stage-job');
             const posSel = stage.querySelector('.stage-position');
             const lvlSel = stage.querySelector('.stage-level');
+            const posHidden = stage.querySelector('.stage-position-hidden');
 
             // hidden job_source (disubmit ke backend)
             let jobSrc = stage.querySelector('.job-source');
@@ -794,6 +803,13 @@
             fillJobs(jobSel);
             fillGrades(lvlSel);
             fillPositionsRanged(posSel, CURRENT_RTC_CODE, INITIAL_CAREER_TARGET);
+
+            // sinkronisasi select posisi -> hidden posisi
+            if (posSel && posHidden) {
+                posSel.addEventListener('change', () => {
+                    posHidden.value = posSel.value || '';
+                });
+            }
 
             jobSel.addEventListener('change', () => {
                 const opt = jobSel.options[jobSel.selectedIndex];
@@ -836,6 +852,10 @@
                         posSel.appendChild(opt);
                     }
                     posSel.value = data.position_code;
+
+                    if (posHidden) {
+                        posHidden.value = data.position_code;
+                    }
                 }
 
                 // level / grade
@@ -878,6 +898,7 @@
 
             const posSel = lastStage.querySelector('.stage-position');
             const lvlSel = lastStage.querySelector('.stage-level');
+            const posHidden = lastStage.querySelector('.stage-position-hidden');
 
             // rebuild options sesuai range CURRENT_RTC_CODE..careerVal
             fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerVal);
@@ -895,10 +916,15 @@
 
             if (careerVal) {
                 posSel.value = careerVal;
+                if (posHidden) {
+                    posHidden.value = careerVal;
+                }
             }
 
-            // LAST stage selalu locked
+            // LAST stage selalu locked (UI), tapi hidden tetap dikirim
             posSel.disabled = true;
+            posSel.classList.add('locked-pos');
+            posSel.style.pointerEvents = 'none';
 
             if (!lvlSel.options.length) {
                 fillGrades(lvlSel);
@@ -988,7 +1014,7 @@
 
 
         /* =======================================
-           INIT PAGE
+            INIT PAGE
         ========================================*/
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1010,7 +1036,6 @@
 
                 EXISTING_STAGES.forEach(s => {
                     const stage = buildStageDOM(s);
-                    // setelah buildStageDOM(s) kita belum nyentuh lock, kita lock nanti dibawah
                 });
 
                 // Setelah semua stage masuk, kita reindex & force lock
@@ -1054,11 +1079,17 @@
                 // refill tiap stage position list + kosongin value
                 stages.forEach(stage => {
                     const posSel = stage.querySelector('.stage-position');
+                    const posHidden = stage.querySelector('.stage-position-hidden');
                     const lvlSel = stage.querySelector('.stage-level');
 
                     fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerNow);
                     posSel.value = '';
                     posSel.disabled = false;
+                    posSel.classList.remove('locked-pos');
+                    posSel.style.pointerEvents = '';
+
+                    if (posHidden) posHidden.value = '';
+
                     fillGrades(lvlSel, "");
                 });
 
@@ -1087,10 +1118,12 @@
                     return;
                 }
 
-                // last stage position wajib == career target
+                // last stage position wajib == career target (pakai hidden utk jaga2)
                 const lastStage = stages[stages.length - 1];
                 const lastPosSel = lastStage.querySelector('.stage-position');
-                const lastPosVal = lastPosSel ? lastPosSel.value : '';
+                const lastPosHidden = lastStage.querySelector('.stage-position-hidden');
+
+                const lastPosVal = lastPosHidden?.value || lastPosSel?.value || '';
                 if (lastPosVal !== careerVal) {
                     e.preventDefault();
                     Swal.fire(

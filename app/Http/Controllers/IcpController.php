@@ -396,7 +396,9 @@ class IcpController extends Controller
 
         $currentYear = now()->year;
         $rtcMap  = RtcTarget::mapAll();
-        $rtcList = collect(RtcTarget::order())
+        $currentCodeGuess = RtcTarget::codeFromPositionName($employee->position);
+        $orderedCodes = RtcTarget::codesFrom($currentCodeGuess);
+        $rtcList = collect($orderedCodes)
             ->map(function ($code) use ($rtcMap) {
                 return [
                     'code'     => $code,
@@ -406,12 +408,11 @@ class IcpController extends Controller
             ->unique('position')
             ->values();
 
-        $currentCodeGuess = RtcTarget::codeFromPositionName($employee->position);
         if ($currentCodeGuess) {
             $map = RtcTarget::map($currentCodeGuess);
             $currentPositionName = $map['position'] ?? $employee->position;
         } else {
-            $currentPositionName = $employee->position;
+            $currentCodeGuess = RtcTarget::codeFromPositionName($employee->position);
         }
 
         $defaultStages = [
@@ -457,7 +458,6 @@ class IcpController extends Controller
     public function store(StoreIcpRequest $request)
     {
         $data = $request->validated();
-
         DB::beginTransaction();
         try {
             $icp = Icp::create([
@@ -1051,8 +1051,10 @@ class IcpController extends Controller
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
         // Career target dropdown (harus sama formatnya dengan create)
+        $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
         $rtcMap  = RtcTarget::mapAll();
-        $rtcList = collect(RtcTarget::order())
+        $orderedCodes = RtcTarget::codesFrom($currentRtcCode);
+        $rtcList = collect($orderedCodes)
             ->map(function ($code) use ($rtcMap) {
                 return [
                     'code'     => $code,
@@ -1062,8 +1064,6 @@ class IcpController extends Controller
             ->unique('position')
             ->values();
 
-        // kode RTC posisi current karyawan sekarang (batas bawah untuk posisi stage)
-        $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
 
         // Performance appraisal terakhir per tahun (max 3 tahun) -> sama kayak create()
         $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
@@ -1146,30 +1146,25 @@ class IcpController extends Controller
     public function update(StoreIcpRequest $request, $id)
     {
         $data = $request->validated();
-
         DB::beginTransaction();
         try {
             $icp = Icp::findOrFail($id);
 
-            // --- Basic update ICP row ---
             $icp->update([
                 'employee_id'    => $data['employee_id'],
                 'aspiration'     => $data['aspiration'],
-                'career_target'  => $data['career_target_code'], // tetap simpan kode target
+                'readiness'     => $data['readiness'],
+                'career_target'  => $data['career_target_code'],
                 'date'           => $data['date'],
                 'status'         => Icp::STATUS_DRAFT,
             ]);
 
-            // --- Safety check backend:
-            // pastikan last stage position == career_target_code
-            // (front-end JS enforce ini tapi jangan 100% percaya UI)
             if (!empty($data['stages']) && is_array($data['stages'])) {
                 $lastStage      = end($data['stages']);
                 $careerTarget   = $data['career_target_code'];
                 $lastPosition   = $lastStage['position_code'] ?? ($lastStage['_effective_position'] ?? null);
 
                 if ($careerTarget && $lastPosition && $careerTarget !== $lastPosition) {
-                    // kita anggap ini fatal - bisa juga fallback force override kalau kamu mau
                     DB::rollBack();
                     return back()
                         ->with('error', 'Posisi di stage terakhir harus sama dengan Career Target.')
@@ -1177,12 +1172,10 @@ class IcpController extends Controller
                 }
             }
 
-            // --- Replace seluruh detail ICP ---
             $icp->details()->delete();
 
             $rowsToInsert = [];
 
-            // Loop semua stage yg dikirim form
             foreach (($data['stages'] ?? []) as $stage) {
 
                 $year      = isset($stage['year']) ? (int) $stage['year'] : null;
@@ -1190,12 +1183,7 @@ class IcpController extends Controller
                 $jobSource = $stage['job_source']      ?? null;
                 $level     = $stage['level']           ?? null;
 
-                // position_code di form adalah kode RTC posisi stage tsb
-                // _effective_position dipakai di create() untuk safety,
-                // kita mirror di update kalau suatu saat dipakai front-end.
                 $effectivePos = $stage['_effective_position'] ?? ($stage['position_code'] ?? null);
-
-                // setiap "detail" = 1 row di tabel icp_details
                 foreach (($stage['details'] ?? []) as $d) {
                     $rowsToInsert[] = [
                         'icp_id'                    => $icp->id,
