@@ -140,13 +140,6 @@
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">IPP List</h3>
-                <div class="d-flex align-items-center">
-                    <form method="GET" action="{{ url()->current() }}" class="d-flex mb-3" onsubmit="return false;">
-                        <input type="text" id="searchInputEmployee" name="search" class="form-control me-2"
-                            placeholder="Search..." style="width:250px" value="{{ request('search') }}">
-                        <button type="button" class="btn btn-primary me-3" id="searchButton">Search</button>
-                    </form>
-                </div>
             </div>
 
             <div class="card-body">
@@ -236,8 +229,6 @@
     <script>
         (function() {
             const tableBody = document.querySelector('#kt_table_users tbody');
-            const searchInput = document.getElementById('searchInputEmployee');
-            const searchBtn = document.getElementById('searchButton');
 
             const params = new URLSearchParams(window.location.search);
             const company = @json($company ?? '');
@@ -261,8 +252,6 @@
                 department: @json($me->bagian ?? ''),
                 grade: @json($me->grade ?? ''),
             };
-
-            if (!searchInput.value) searchInput.value = initialSearch;
 
             function statusLabel(s) {
                 const map = {
@@ -293,23 +282,26 @@
             // === INIT DATATABLES ===
             const dt = $('#kt_table_users').DataTable({
                 processing: true,
-                serverSide: false,
+                serverSide: true,
                 searching: true,
                 lengthChange: false,
                 pageLength: 10,
                 ordering: false,
                 ajax: function(d, callback, settings) {
-                    const page = Math.floor(d.start / d.length) + 1;
-                    const perPage = d.length;
+                    const start = Number.isFinite(+d.start) ? +d.start : 0;
+                    const length = Number.isFinite(+d.length) ? +d.length : 10;
+                    const perPage = length > 0 ? length : 10;
+                    const page = Math.floor(start / perPage) + 1;
+                    const term = d.search?.value ?? ''; // <-- ambil keyword dari DataTables
 
                     const url = new URL(@json(route('ipp.list.json')));
                     if (company) url.searchParams.set('company', company);
                     url.searchParams.set('filter', filter);
-                    url.searchParams.set('search', searchInput.value || '');
+                    url.searchParams.set('search', term); // <-- kirim ke backend
                     url.searchParams.set('filter_year', year);
                     if (status) url.searchParams.set('status', status);
-                    url.searchParams.set('page', page);
-                    url.searchParams.set('per_page', perPage);
+                    url.searchParams.set('page', page.toString());
+                    url.searchParams.set('per_page', perPage.toString());
 
                     fetch(url.toString(), {
                             headers: {
@@ -321,12 +313,12 @@
                             let data = json.data || [];
 
                             // --- prepend baris milik user sendiri jika belum ada ---
-                            if (selfEmp.id) {
+                            if (selfEmp?.id) {
                                 const already = data.some(r => (r.employee && r.employee.id) === selfEmp
                                     .id);
                                 if (!already) {
                                     data.unshift({
-                                        no: '—', // biar tampil paling atas; tidak ikut penomoran server
+                                        no: '—',
                                         employee: {
                                             id: selfEmp.id,
                                             npk: selfEmp.npk,
@@ -338,7 +330,7 @@
                                             grade: selfEmp.grade,
                                         },
                                         on_year: year,
-                                        status: 'not_created', // biar chip tampil netral; modal tetap bisa "Show"
+                                        status: 'not_created',
                                     });
                                 }
                             }
@@ -346,8 +338,8 @@
                             const rows = data.map(r => {
                                 const emp = r.employee || {};
                                 const photo = emp.photo ?
-                                    `<img src="${emp.photo}" class="emp-photo" alt="${emp.name||''}">` :
-                                    `<div class="emp-fallback">${(emp.name||'?').slice(0,2)}</div>`;
+                                    `<img src="${emp.photo}" class="emp-photo" alt="${emp.name || ''}">` :
+                                    `<div class="emp-fallback">${(emp.name || '?').slice(0, 2)}</div>`;
                                 return [
                                     r.no ?? '—',
                                     photo,
@@ -357,15 +349,17 @@
                                     emp.position ?? '-',
                                     emp.department ?? '-',
                                     emp.grade ?? '-',
-                                    actionBtn(r)
+                                    actionBtn(r),
                                 ];
                             });
 
                             callback({
                                 draw: d.draw,
-                                recordsTotal: (json.meta?.total ?? rows.length),
-                                recordsFiltered: (json.meta?.total ?? rows.length),
-                                data: rows
+                                recordsTotal: (json.meta?.total ?? rows
+                                    .length), // total tanpa search
+                                recordsFiltered: (json.meta?.filtered ?? rows
+                                    .length), // total setelah search
+                                data: rows,
                             });
                         })
                         .catch(err => {
@@ -388,16 +382,6 @@
                         className: 'align-middle fs-7'
                     }
                 ]
-            });
-
-            // Trigger reload saat klik Search
-            searchBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                dt.ajax.reload();
-            });
-            // Enter di input Search
-            searchInput.addEventListener('keyup', (e) => {
-                if (e.key === 'Enter') dt.ajax.reload();
             });
 
             // === SHOW MODAL HANDLER (delegated, aman utk redraw) ===

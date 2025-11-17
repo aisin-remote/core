@@ -513,6 +513,8 @@
                 if (lim && lim.min && !$('#apStart').val()) $('#apStart').val(lim.min);
                 if (lim && lim.max && !$('#apDue').val()) $('#apDue').val(lim.max);
 
+                onItemDatesChange();
+
                 apModal.show();
             });
 
@@ -635,7 +637,10 @@
                 e.preventDefault();
                 if (LOCKED) return;
 
+                onItemDatesChange();
+
                 const monthsSelected = MONTHS.filter(m => $('#m' + m).is(':checked'));
+
 
                 const payload = {
                     mode: $('#apMode').val(),

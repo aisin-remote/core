@@ -82,8 +82,8 @@
                         <!-- Schedule (hidden, backend use only) -->
                         <div class="col-12 d-none" id="apScheduleWrapper">
                             <div class="d-flex flex-wrap gap-2">
-                                @php $mList=['APR','MAY','JUN','JUL','AGT','SEPT','OCT','NOV','DEC','JAN','FEB','MAR']; @endphp
-                                @foreach ($mList as $m)
+                                @php $month=['APR','MAY','JUN','JUL','AGT','SEPT','OCT','NOV','DEC','JAN','FEB','MAR']; @endphp
+                                @foreach ($month as $m)
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="checkbox" id="m{{ $m }}"
                                             disabled>
