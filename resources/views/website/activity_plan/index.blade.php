@@ -126,7 +126,6 @@
         </div>
     </div>
 
-    {{-- Modal Tambah/Edit Item (lihat catatan field di atas) --}}
     @include('website.activity_plan.modal.create')
 @endsection
 
@@ -641,7 +640,6 @@
 
                 const monthsSelected = MONTHS.filter(m => $('#m' + m).is(':checked'));
 
-
                 const payload = {
                     mode: $('#apMode').val(),
                     row_id: $('#apRowId').val() || null,
@@ -679,7 +677,6 @@
                         return toast('Tanggal item harus dalam Start–Due IPP Point.', 'danger');
                     }
                 }
-
 
                 try {
                     const res = await fetch(routeStore(), {
@@ -748,6 +745,10 @@
                         dropdownParent: $('#apItemModal')
                     });
                 }
+
+                $('#apItemModal').on('shown.bs.modal', function() {
+                    $('#apKind').trigger('focus');
+                });
             });
 
         })(jQuery);

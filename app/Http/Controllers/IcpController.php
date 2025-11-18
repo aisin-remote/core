@@ -860,7 +860,7 @@ class IcpController extends Controller
                 $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
                 $drawing->setPath($imgPath);
                 $drawing->setCoordinates($cellImageTarget);
-                $drawing->setHeight(95);
+                $drawing->setHeight(110);
                 $drawing->setWorksheet($sheet);
             }
         };
