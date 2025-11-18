@@ -715,8 +715,30 @@
 
                     Promise.all(reqs).then(chunks => {
                         const data = chunks.flat();
+
+                        // Unik per employee saja
                         const uniq = {};
-                        data.forEach(r => uniq[`${r.employee_id}|${r.term}`] = r);
+                        data.forEach(r => {
+                            if (!r || !r.employee_id) return;
+
+                            const key = r.employee_id;
+                            const existing = uniq[key];
+
+                            if (!existing) {
+                                // belum ada: pakai yang ini dulu
+                                uniq[key] = r;
+                                return;
+                            }
+
+                            // sudah ada: pilih yang plan_year lebih besar
+                            const currentYear = parseInt(existing.plan_year, 10) || 0;
+                            const newYear = parseInt(r.plan_year, 10) || 0;
+
+                            if (newYear > currentYear) {
+                                uniq[key] = r;
+                            }
+                        });
+
                         const rows = Object.values(uniq);
 
                         const st = [],
@@ -724,12 +746,13 @@
                             lt = [];
                         rows.forEach(r => {
                             const opt = `
-            <option value="${r.employee_id}">
-              ${$('<div>').text(r.name).html()}
-              • ${$('<div>').text(r.job_function || '-').html()}
-              • ${$('<div>').text(r.level || '-').html()}
-              • ${$('<div>').text(r.plan_year || '-').html()}
-            </option>`;
+                                <option value="${r.employee_id}">
+                                ${$('<div>').text(r.name).html()}
+                                • ${$('<div>').text(r.job_function || '-').html()}
+                                • ${$('<div>').text(r.level || '-').html()}
+                                • ${$('<div>').text(r.plan_year || '-').html()}
+                                </option>`;
+
                             if (r.term === 'short') st.push(opt);
                             else if (r.term === 'mid') mt.push(opt);
                             else lt.push(opt);
