@@ -134,59 +134,97 @@ class RenderActivityPlanSheet
         $this->applyMediumBorders($sheet, self::ROW_START, $dataEndRow, $signatureEndRow);
 
         // ✅ Apply column settings dan auto-wrap
-        $this->applyColumnSettings($sheet);
+        $this->applyColumnSettings($sheet, $dataEndRow);
     }
 
     /**
      * Tambahkan bagian tanda tangan setelah data activity plan
      * Mengembalikan baris terakhir yang terpakai (baris "Date :" paling bawah)
      */
+    /**
+     * Tambahkan bagian tanda tangan setelah data activity plan
+     * dan kembalikan baris terakhir (baris "Date :" paling bawah).
+     */
     private function addSignatureSection(Worksheet $sheet, int $lastDataRow, Ipp $ipp): int
     {
         // Mulai dari baris terakhir data + 2 baris
         $startRow = $lastDataRow + 2;
+        $titleRow = $startRow;
 
-        // Siapkan nama-nama berdasarkan struktur model yang ada
-        $preparedByName         = $ipp->employee->name ?? $ipp->nama ?? '';   // Prepared by
-        $checkedByName          = $ipp->picReviewer->name ?? '';              // Checked by
-        $superiorOfSuperiorName = $ipp->approvedBy->name ?? '';               // Superior of Superior
+        // Nama-nama
+        $preparedByName         = $ipp->employee->name ?? $ipp->nama ?? '';
+        $checkedByName          = $ipp->picReviewer->name ?? '';
+        $superiorOfSuperiorName = $ipp->approvedBy->name ?? '';
 
-        // Kolom untuk setiap tanda tangan - MULAI DARI KOLOM G
-        $columns = [
-            'G' => ['title' => 'Superior of Superior', 'name' => $superiorOfSuperiorName],
-            'L' => ['title' => 'Checked by',           'name' => $checkedByName],
-            'Q' => ['title' => 'Prepared by',          'name' => $preparedByName],
+        /**
+         * Bagi area I..T (12 kolom) menjadi 3 blok sama lebar (4 kolom per blok):
+         *  - Superior of Superior: I..L
+         *  - Checked by         : M..P
+         *  - Prepared by        : Q..T
+         */
+        $blocks = [
+            [
+                'title' => 'Superior of Superior',
+                'name'  => $superiorOfSuperiorName,
+                'from'  => 'I',
+                'to'    => 'L',
+            ],
+            [
+                'title' => 'Checked by',
+                'name'  => $checkedByName,
+                'from'  => 'M',
+                'to'    => 'P',
+            ],
+            [
+                'title' => 'Prepared by',
+                'name'  => $preparedByName,
+                'from'  => 'Q',
+                'to'    => 'T',
+            ],
         ];
 
-        $titleRow   = $startRow;
-        $maxDateRow = $startRow;
+        $maxDateRow = $titleRow;
 
-        foreach ($columns as $col => $data) {
-            // Judul (Superior of Superior, Checked by, Prepared by)
-            $sheet->setCellValue($col . $titleRow, $data['title']);
-            $sheet->getStyle($col . $titleRow)->getAlignment()
+        foreach ($blocks as $block) {
+            $fromCol = $block['from'];
+            $toCol   = $block['to'];
+
+            // === 1. BARIS JUDUL ===
+            $titleRange = $fromCol . $titleRow . ':' . $toCol . $titleRow;
+            $sheet->mergeCells($titleRange);
+            $sheet->setCellValue($fromCol . $titleRow, $block['title']);
+            $sheet->getStyle($titleRange)->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                 ->setVertical(Alignment::VERTICAL_CENTER);
 
-            // Baris kosong untuk tanda tangan
-            $signatureRow = $titleRow + 2;
-            $sheet->getRowDimension($signatureRow)->setRowHeight(40); // Tinggi baris untuk tanda tangan
+            // === 2. BARIS KOTAK TANDA TANGAN (TEMPAT IMAGE) ===
+            $signatureRow   = $titleRow + 2;               // 1 baris kosong di bawah judul
+            $signatureRange = $fromCol . $signatureRow . ':' . $toCol . $signatureRow;
 
-            // Border untuk area tanda tangan
-            $signatureCell = $col . $signatureRow;
-            $sheet->getStyle($signatureCell)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $sheet->mergeCells($signatureRange);
+            // tinggi baris besar untuk gambar
+            $sheet->getRowDimension($signatureRow)->setRowHeight(80);
 
-            // Nama di bawah tanda tangan
-            $nameRow = $signatureRow + 1;
-            $sheet->setCellValue($col . $nameRow, $data['name']);
-            $sheet->getStyle($col . $nameRow)->getAlignment()
+            $sheet->getStyle($signatureRange)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+
+            // === 3. BARIS NAMA ===
+            $nameRow   = $signatureRow + 1;
+            $nameRange = $fromCol . $nameRow . ':' . $toCol . $nameRow;
+
+            $sheet->mergeCells($nameRange);
+            $sheet->setCellValue($fromCol . $nameRow, $block['name']);
+            $sheet->getStyle($nameRange)->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                 ->setVertical(Alignment::VERTICAL_CENTER);
 
-            // Tanggal di bawah nama
-            $dateRow = $nameRow + 1;
-            $sheet->setCellValue($col . $dateRow, 'Date :');
-            $sheet->getStyle($col . $dateRow)->getAlignment()
+            // === 4. BARIS DATE ===
+            $dateRow   = $nameRow + 1;
+            $dateRange = $fromCol . $dateRow . ':' . $toCol . $dateRow;
+
+            $sheet->mergeCells($dateRange);
+            $sheet->setCellValue($fromCol . $dateRow, 'Date :');
+            $sheet->getStyle($dateRange)->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                 ->setVertical(Alignment::VERTICAL_CENTER);
 
@@ -195,32 +233,19 @@ class RenderActivityPlanSheet
             }
         }
 
-        // Set lebar kolom untuk area tanda tangan
-        $sheet->getColumnDimension('G')->setWidth(65); // Superior of Superior
+        $bottomRow = $maxDateRow + 3;
 
-        $sheet->getColumnDimension('H')->setWidth(5);
-        $sheet->getColumnDimension('I')->setWidth(5);
-        $sheet->getColumnDimension('J')->setWidth(5);
-        $sheet->getColumnDimension('K')->setWidth(5);
+        for ($r = $maxDateRow + 1; $r <= $bottomRow; $r++) {
+            $sheet->getRowDimension($r)->setRowHeight(18);
+        }
 
-        $sheet->getColumnDimension('L')->setWidth(20); // Checked by
-        $sheet->getColumnDimension('M')->setWidth(5);
-        $sheet->getColumnDimension('N')->setWidth(5);
-        $sheet->getColumnDimension('O')->setWidth(5);
-        $sheet->getColumnDimension('P')->setWidth(5);
-
-        $sheet->getColumnDimension('Q')->setWidth(20); // Prepared by
-
-        $bottomRow = $maxDateRow + 2;
-
-        // PENTING: kembalikan baris terakhir untuk dipakai hitung border bawah
         return $bottomRow;
     }
 
     /**
      * Apply column settings dengan auto-wrap untuk semua kolom
      */
-    private function applyColumnSettings(Worksheet $sheet): void
+    private function applyColumnSettings(Worksheet $sheet, int $dataEndRow = 0): void
     {
         // Kolom B (NO) - fixed width dengan auto-wrap
         $sheet->getColumnDimension('B')->setWidth(8);
@@ -240,7 +265,7 @@ class RenderActivityPlanSheet
 
         // Kolom I-T (SCHEDULE BULANAN)
         foreach (self::COL_MONTHS as $col) {
-            $sheet->getColumnDimension($col)->setWidth(6);
+            $sheet->getColumnDimension($col)->setWidth(7.5);
         }
 
         // Kolom A, U, V (border samping)
@@ -249,28 +274,29 @@ class RenderActivityPlanSheet
         $sheet->getColumnDimension('V')->setWidth(3);
 
         // Apply auto-wrap untuk semua kolom data (B sampai T)
-        $this->applyAutoWrapToAllColumns($sheet);
+        $this->applyAutoWrapToAllColumns($sheet, $dataEndRow);
     }
 
     /**
      * Apply auto-wrap text untuk semua kolom data
      */
-    private function applyAutoWrapToAllColumns(Worksheet $sheet): void
+    private function applyAutoWrapToAllColumns(Worksheet $sheet, int $dataEndRow): void
     {
-        $highestRow   = $sheet->getHighestRow();
         $firstDataRow = self::ROW_START;
 
-        $dataRange = 'B' . $firstDataRow . ':T' . $highestRow;
+        // HANYA range data, tidak menyentuh baris signature
+        $dataRange = 'B' . $firstDataRow . ':T' . $dataEndRow;
 
         $sheet->getStyle($dataRange)->getAlignment()
             ->setWrapText(true)
             ->setVertical(Alignment::VERTICAL_TOP);
 
-        // Set auto height untuk semua row yang berisi data
-        for ($row = $firstDataRow; $row <= $highestRow; $row++) {
+        // Auto height hanya untuk baris data
+        for ($row = $firstDataRow; $row <= $dataEndRow; $row++) {
             $sheet->getRowDimension($row)->setRowHeight(-1); // Auto height
         }
     }
+
 
     private function formatCategory(string $category): string
     {
