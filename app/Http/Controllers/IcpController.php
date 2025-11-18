@@ -425,10 +425,11 @@ class IcpController extends Controller
         // Ambil appraisal terakhir per tahun (max 3 tahun)
         $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
             ->selectRaw('YEAR(date) as year, score')
-            ->orderByDesc('date')->get()
+            ->orderByDesc('date')
+            ->get()
             ->groupBy('year')
             ->map(fn($it) => $it->first()->score)
-            ->sortKeys()
+            ->sortKeysDesc()
             ->take(3)
             ->toArray();
 
@@ -622,10 +623,11 @@ class IcpController extends Controller
         // Ambil appraisal terakhir per tahun (max 3 tahun)
         $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
             ->selectRaw('YEAR(date) as year, score')
-            ->orderByDesc('date')->get()
+            ->orderByDesc('date')
+            ->get()
             ->groupBy('year')
             ->map(fn($it) => $it->first()->score)
-            ->sortKeys()
+            ->sortKeysDesc()
             ->take(3)
             ->toArray();
 
@@ -684,8 +686,8 @@ class IcpController extends Controller
         $sheet->setCellValue('G9', $ais);
         $sheet->setCellValue('C13', (string) $icp->aspiration);
         $sheet->setCellValue('D16', (string) $icp->career_target);
-        if ($minYear) {
-            $sheet->setCellValue('L16', $minYear);
+        if ($maxYear) {
+            $sheet->setCellValue('L16', $maxYear);
         }
 
         /* =====================================================
@@ -858,7 +860,7 @@ class IcpController extends Controller
                 $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
                 $drawing->setPath($imgPath);
                 $drawing->setCoordinates($cellImageTarget);
-                $drawing->setHeight(100);
+                $drawing->setHeight(95);
                 $drawing->setWorksheet($sheet);
             }
         };
