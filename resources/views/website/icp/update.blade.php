@@ -285,8 +285,8 @@
                                         class="form-select form-select-sm {{ $isEvaluate ? 'ro' : '' }}" required>
                                         <option value="">Select Position</option>
                                         @foreach ($rtcList as $rt)
-                                            <option value="{{ $rt['code'] }}" @selected(old('career_target_code', $icp->career_target) == $rt['code'])>
-                                                {{ $rt['position'] }} ({{ $rt['code'] }})
+                                            <option value="{{ $rt['position'] }}" @selected(old('career_target_code') === $rt['position'])>
+                                                {{ $rt['position'] }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -606,7 +606,7 @@
         }
 
         /* =======================================
-            SELECT2 UNTUK TECH
+           SELECT2 UNTUK TECH
         ========================================*/
 
         function initTechSelects(scope, techListOverride = null) {
@@ -1014,7 +1014,7 @@
 
 
         /* =======================================
-            INIT PAGE
+           INIT PAGE
         ========================================*/
 
         document.addEventListener('DOMContentLoaded', () => {

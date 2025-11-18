@@ -992,8 +992,8 @@ class IcpController extends Controller
 
             // catat komentar (kalau punya tabel comment history ICP)
             if ($emp = auth()->user()->employee) {
-                $icp->commentHistory()->create([
-                    'comment' => (string) $request->input('comment', ''),
+                $icp->snapshots()->create([
+                    'reason' => (string) $request->input('comment', ''),
                     'employee_id' => $emp->id,
                 ]);
             }
