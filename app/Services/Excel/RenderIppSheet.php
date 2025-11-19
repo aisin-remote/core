@@ -268,23 +268,29 @@ class RenderIppSheet
             return null;
         };
 
+        $sigRowTop    = 34 + $offset; // baris pertama kotak tanda tangan
+        $sigRowBottom = 35 + $offset; // baris kedua kotak tanda tangan (untuk yang 2 baris)
+        $dateRow      = 42 + $offset; // baris date di bawah tanda tangan
+
         $AREAS = [
             'approved' => [ // kiri
-                'rect'   => 'H34:Q35',
-                'anchor' => 'H34',
-                'date'   => 'I42:S42',
+                'rect'   => "H{$sigRowTop}:Q{$sigRowBottom}",
+                'anchor' => "H{$sigRowTop}",
+                'date'   => "I{$dateRow}:S{$dateRow}",
             ],
             'checked' => [  // tengah
-                'rect'   => 'V34',
-                'anchor' => 'V34',
-                'date'   => 'U42:AG42',
+                // di template kamu rect-nya hanya satu cell (merge sudah ada di file)
+                'rect'   => "V{$sigRowTop}",
+                'anchor' => "V{$sigRowTop}",
+                'date'   => "U{$dateRow}:AG{$dateRow}",
             ],
             'employee' => [ // kanan
-                'rect'   => 'AK34',
-                'anchor' => 'AK34',
-                'date'   => 'AJ42:AU42'
+                'rect'   => "AK{$sigRowTop}",
+                'anchor' => "AK{$sigRowTop}",
+                'date'   => "AJ{$dateRow}:AU{$dateRow}",
             ],
         ];
+
 
         $status = strtolower((string)$ipp->status);
 
