@@ -6,7 +6,6 @@ namespace App\Services\Excel;
 use App\Models\Employee;
 use App\Models\Ipp;
 use App\Models\IppPoint;
-use Illuminate\Support\Str;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
@@ -20,7 +19,7 @@ class RenderIppSheet
         /** @var Worksheet $sheet */
         $sheet = $wb->getSheetByName('IPP form') ?? $wb->getActiveSheet();
 
-        // ==== ambil data yang sama seperti controller-mu ====
+        // ==== ambil data ====
         $ipp     = Ipp::with(['employee', 'checkedBy', 'approvedBy'])->findOrFail($ippId);
         $owner   = Employee::findOrFail($ipp->employee_id);
         $points  = IppPoint::where('ipp_id', $ipp->id)->orderBy('id')->get();
@@ -44,7 +43,7 @@ class RenderIppSheet
             ];
         }
 
-        // PIC reviewer (tetap sesuai kode-mu)
+        // PIC reviewer
         $assignLevel = method_exists($owner, 'getCreateAuth') ? $owner->getCreateAuth() : null;
         $pic = $assignLevel && method_exists($owner, 'getSuperiorsByLevel')
             ? optional($owner->getSuperiorsByLevel($assignLevel)->first())->name
@@ -55,7 +54,7 @@ class RenderIppSheet
             'department'  => (string)($owner->bagian ?? $ipp->department ?? ''),
             'section'     => (string)($ipp->section ?? ''),
             'division'    => (string)($ipp->division ?? ''),
-            'date_review' => $ipp->date_review ? substr((string)$ipp->date_review, 0, 10) : '',
+            'date_review' => $ipp->checked_at ? substr((string)$ipp->checked_at, 0, 10) : '',
             'pic_review'  => $pic,
             'on_year'     => (string)$ipp->on_year,
         ];
@@ -71,7 +70,7 @@ class RenderIppSheet
                 'vertical'   => Alignment::VERTICAL_TOP,
                 'wrapText'   => true,
             ],
-            'font' => ['name' => 'Tahoma', 'size' => 14],
+            'font' => ['name' => 'Tahoma', 'size' => 14, 'bold' => true],
         ]);
 
         $sheet->setCellValue('J7',  $identitas['nama']);
@@ -85,7 +84,7 @@ class RenderIppSheet
         }
 
         // =========================
-        // TABEL KONTEN (persis)
+        // TABEL KONTEN
         // =========================
         $R_ACTIVITY_FROM = 'B';
         $R_ACTIVITY_TO   = 'Q';
@@ -138,6 +137,12 @@ class RenderIppSheet
             $headerAnchor = ($HEADER[$cat] ?? 13) + $offset;
             $baseRow      = $headerAnchor + 1;
 
+            // tinggi dasar ambil dari template
+            $baseRowHeight = $sheet->getRowDimension($baseRow)->getRowHeight();
+            if ($baseRowHeight <= 0) {
+                $baseRowHeight = 18;
+            }
+
             // sisip baris tambahan (n-1) & clone style
             if ($n > 1) {
                 $sheet->insertNewRowBefore($baseRow + 1, $n - 1);
@@ -146,7 +151,7 @@ class RenderIppSheet
                         $sheet->getStyle("B{$baseRow}:{$lastColLtr}{$baseRow}"),
                         "B{$r}:{$lastColLtr}{$r}"
                     );
-                    $sheet->getRowDimension($r)->setRowHeight(-1);
+                    $sheet->getRowDimension($r)->setRowHeight($baseRowHeight);
                 }
             }
 
@@ -164,11 +169,21 @@ class RenderIppSheet
                 $sheet->getStyle("B{$r}:{$lastColLtr}{$r}")
                     ->getFont()->setName($BASE_FONT_NAME)->setSize($BASE_FONT_SIZE);
 
-                // Normalisasi & hitung baris
-                $activity = $this->xlText($row['activity']   ?? '');
-                $mid      = $this->xlText($row['target_mid'] ?? '');
-                $one      = $this->xlText($row['target_one'] ?? '');
+                // Normalisasi + paksa word-wrap manual
+                $activity = $this->autoWrapText(
+                    $this->xlText($row['activity'] ?? ''),
+                    60 // kira-kira 60 karakter per baris untuk kolom activity
+                );
+                $mid = $this->autoWrapText(
+                    $this->xlText($row['target_mid'] ?? ''),
+                    60
+                );
+                $one = $this->autoWrapText(
+                    $this->xlText($row['target_one'] ?? ''),
+                    60
+                );
 
+                // hitung jumlah baris
                 $maxLines = max(
                     $this->countLines($activity),
                     $this->countLines($mid),
@@ -180,15 +195,18 @@ class RenderIppSheet
                 $sheet->mergeCells("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
                 $sheet->setCellValue("{$R_ACTIVITY_FROM}{$r}", $activity);
                 $sheet->getStyle("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                    ->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+                    ->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                    ->setVertical(Alignment::VERTICAL_TOP)
+                    ->setWrapText(true);
                 $outlineThin("{$R_ACTIVITY_FROM}{$r}:{$R_ACTIVITY_TO}{$r}");
 
                 // WEIGHT (R:T)
                 $sheet->mergeCells("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}");
                 $sheet->setCellValue("{$R_WEIGHT_FROM}{$r}", ((int)($row['weight'] ?? 0)) / 100);
                 $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                    ->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                     ->setVertical(Alignment::VERTICAL_CENTER);
                 $sheet->getStyle("{$R_WEIGHT_FROM}{$r}:{$R_WEIGHT_TO}{$r}")
                     ->getNumberFormat()->setFormatCode('0%');
@@ -198,25 +216,38 @@ class RenderIppSheet
                 $sheet->mergeCells("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
                 $sheet->setCellValue("{$R_MID_FROM}{$r}", $mid);
                 $sheet->getStyle("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                    ->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+                    ->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                    ->setVertical(Alignment::VERTICAL_TOP)
+                    ->setWrapText(true);
                 $outlineThin("{$R_MID_FROM}{$r}:{$R_MID_TO}{$r}");
 
                 // ONE YEAR (AI:AU)
                 $sheet->mergeCells("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
                 $sheet->setCellValue("{$R_ONE_FROM}{$r}", $one);
                 $sheet->getStyle("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                    ->setVertical(Alignment::VERTICAL_TOP)->setWrapText(true);
+                    ->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                    ->setVertical(Alignment::VERTICAL_TOP)
+                    ->setWrapText(true);
                 $outlineThin("{$R_ONE_FROM}{$r}:{$R_ONE_TO}{$r}");
 
                 // DUE DATE (AV:BA)
                 $sheet->mergeCells("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}");
                 $sheet->setCellValue("{$R_DUE_FROM}{$r}", (string)($row['due_date'] ?? ''));
                 $sheet->getStyle("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                    ->setVertical(Alignment::VERTICAL_CENTER)->setWrapText(true);
+                    ->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                    ->setVertical(Alignment::VERTICAL_CENTER)
+                    ->setWrapText(true);
                 $outlineMedium("{$R_DUE_FROM}{$r}:{$R_DUE_TO}{$r}");
+
+                // wrap untuk seluruh range baris
+                $sheet->getStyle("{$R_ACTIVITY_FROM}{$r}:{$R_DUE_TO}{$r}")
+                    ->getAlignment()->setWrapText(true);
+
+                // tinggi baris = tinggi dasar x jumlah baris
+                $sheet->getRowDimension($r)->setRowHeight($baseRowHeight * $maxLines);
             }
 
             // offset baris sisipan
@@ -224,7 +255,7 @@ class RenderIppSheet
         }
 
         // =========================
-        // SIGNATURE (persis)
+        // SIGNATURE
         // =========================
 
         $renderSignature = function (string $rect, string $anchor, ?string $imgPath, ?string $date, string $dateRect) use ($sheet) {
@@ -268,9 +299,10 @@ class RenderIppSheet
             return null;
         };
 
+        // posisi signature mengikuti offset dari tabel
         $sigRowTop    = 34 + $offset; // baris pertama kotak tanda tangan
-        $sigRowBottom = 35 + $offset; // baris kedua kotak tanda tangan (untuk yang 2 baris)
-        $dateRow      = 42 + $offset; // baris date di bawah tanda tangan
+        $sigRowBottom = 35 + $offset; // baris kedua kotak tanda tangan
+        $dateRow      = 42 + $offset; // baris date
 
         $AREAS = [
             'approved' => [ // kiri
@@ -279,7 +311,6 @@ class RenderIppSheet
                 'date'   => "I{$dateRow}:S{$dateRow}",
             ],
             'checked' => [  // tengah
-                // di template kamu rect-nya hanya satu cell (merge sudah ada di file)
                 'rect'   => "V{$sigRowTop}",
                 'anchor' => "V{$sigRowTop}",
                 'date'   => "U{$dateRow}:AG{$dateRow}",
@@ -290,7 +321,6 @@ class RenderIppSheet
                 'date'   => "AJ{$dateRow}:AU{$dateRow}",
             ],
         ];
-
 
         $status = strtolower((string)$ipp->status);
 
@@ -310,18 +340,54 @@ class RenderIppSheet
         $approvedSig = $resolveSignaturePath($approvedByEmp);
 
         if ($status === 'submitted') {
-            $renderSignature($AREAS['employee']['rect'], $AREAS['employee']['anchor'], $ownerSig, $submitDate, $AREAS['employee']['date']);
+            $renderSignature(
+                $AREAS['employee']['rect'],
+                $AREAS['employee']['anchor'],
+                $ownerSig,
+                $submitDate,
+                $AREAS['employee']['date']
+            );
         } elseif ($status === 'checked') {
-            $renderSignature($AREAS['employee']['rect'], $AREAS['employee']['anchor'], $ownerSig,   $submitDate,  $AREAS['employee']['date']);
-            $renderSignature($AREAS['checked']['rect'],  $AREAS['checked']['anchor'],  $checkedSig, $checkedDate, $AREAS['checked']['date']);
+            $renderSignature(
+                $AREAS['employee']['rect'],
+                $AREAS['employee']['anchor'],
+                $ownerSig,
+                $submitDate,
+                $AREAS['employee']['date']
+            );
+            $renderSignature(
+                $AREAS['checked']['rect'],
+                $AREAS['checked']['anchor'],
+                $checkedSig,
+                $checkedDate,
+                $AREAS['checked']['date']
+            );
         } elseif ($status === 'approved') {
-            $renderSignature($AREAS['employee']['rect'], $AREAS['employee']['anchor'], $ownerSig,    $submitDate,   $AREAS['employee']['date']);
-            $renderSignature($AREAS['checked']['rect'],  $AREAS['checked']['anchor'],  $checkedSig,  $checkedDate,  $AREAS['checked']['date']);
-            $renderSignature($AREAS['approved']['rect'], $AREAS['approved']['anchor'], $approvedSig, $approvedDate, $AREAS['approved']['date']);
+            $renderSignature(
+                $AREAS['employee']['rect'],
+                $AREAS['employee']['anchor'],
+                $ownerSig,
+                $submitDate,
+                $AREAS['employee']['date']
+            );
+            $renderSignature(
+                $AREAS['checked']['rect'],
+                $AREAS['checked']['anchor'],
+                $checkedSig,
+                $checkedDate,
+                $AREAS['checked']['date']
+            );
+            $renderSignature(
+                $AREAS['approved']['rect'],
+                $AREAS['approved']['anchor'],
+                $approvedSig,
+                $approvedDate,
+                $AREAS['approved']['date']
+            );
         }
     }
 
-    // ===== helpers (dipindah dari controller) =====
+    // ===== helpers =====
 
     private function colIndex(string $letters): int
     {
@@ -343,5 +409,16 @@ class RenderIppSheet
     private function countLines(string $s): int
     {
         return max(1, substr_count($s, "\n") + 1);
+    }
+
+    private function autoWrapText(string $s, int $width): string
+    {
+        $s = trim($s);
+        if ($s === '') {
+            return '';
+        }
+
+        // pakai wordwrap supaya pecah di spasi, bukan di tengah kata
+        return wordwrap($s, $width, "\n", false);
     }
 }
