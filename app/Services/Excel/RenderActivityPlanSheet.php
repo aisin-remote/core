@@ -44,7 +44,6 @@ class RenderActivityPlanSheet
         set_time_limit(300);
         ini_set('memory_limit', '512M');
 
-        // Validasi worksheet
         if (is_null($sheet) || $sheet->getTitle() === '') {
             throw new \Exception('Worksheet untuk Activity Plan tidak valid');
         }
@@ -61,7 +60,6 @@ class RenderActivityPlanSheet
             $sheet->setCellValue('B1', 'ACTIVITY PLAN YEAR ' . $ipp->on_year);
         }
 
-        // Set header data dengan error handling
         $this->setCellValueSafe(
             $sheet,
             self::CELL_NAME_NPK,
@@ -78,35 +76,22 @@ class RenderActivityPlanSheet
             $this->drawCategoryRow($sheet, $currentRow, 'No Data Available');
             $currentRow++;
             $this->drawEmptyDataRow($sheet, $currentRow);
-            // tetap boleh pakai signature meski tidak dipakai return-nya
             $this->addSignatureSection($sheet, $currentRow + 1, $ipp);
-
-            // Tetap apply column settings meski data kosong
             $this->applyColumnSettings($sheet);
             return;
         }
 
-        // Group items by category dan activity
         $groupedItems = $this->groupItemsByCategoryAndActivity($items);
-
         $no = 1;
-
         foreach ($groupedItems as $category => $activities) {
-            // Convert category ke format yang diinginkan
             $formattedCategory = $this->formatCategory($category);
 
-            // Draw category row
             $this->drawCategoryRow($sheet, $currentRow, $formattedCategory);
             $currentRow++;
 
-            // Draw activity items untuk category ini
             foreach ($activities as $activity => $activityItems) {
-                // Baris judul activity
-                $this->drawActivityRow($sheet, $currentRow, $no, $activity, '', '', '', '', 0, true);
-                $currentRow++;
-                $no++;
+                $isFirstRowOfActivity = true;
 
-                // Draw detail items untuk activity ini
                 foreach ($activityItems as $it) {
                     $kind   = $it->kind_of_activity ?: '—';
                     $pic    = $this->shortenName($it->pic?->name ?: ($it->pic_name ?: '—'));
@@ -114,26 +99,36 @@ class RenderActivityPlanSheet
                     $due    = $this->fmtDateMonthYear($it->cached_due_date ?: $it->ippPoint?->due_date);
                     $mask   = (int)($it->schedule_mask ?? 0);
 
-                    $this->drawActivityDetailRow($sheet, $currentRow, $no, $kind, $pic, $target, $due, $mask);
+                    $activityText = $isFirstRowOfActivity ? $activity : '';
+                    $noText = $isFirstRowOfActivity ? $no : '';
+
+                    // sekarang objectives diisi di row yang sama
+                    $this->drawActivityDetailRow(
+                        $sheet,
+                        $currentRow,
+                        $noText,
+                        $activityText,
+                        $kind,
+                        $pic,
+                        $target,
+                        $due,
+                        $mask
+                    );
+
                     $currentRow++;
-                    $no++;
+                    $isFirstRowOfActivity = false;
                 }
+                $no++;
             }
         }
 
-        // baris terakhir data
         $dataEndRow = $currentRow - 1;
 
-        // Tambahkan bagian tanda tangan setelah data activity plan
-        // fungsi akan mengembalikan baris terakhir yang terpakai (baris "Date :" paling bawah)
         $signatureEndRow = $this->addSignatureSection($sheet, $dataEndRow, $ipp);
 
         $this->applyLeftBorders($sheet, self::ROW_START, $dataEndRow);
         $this->applyScheduleBorders($sheet, self::ROW_START, $dataEndRow);
-
         $this->applyMediumBorders($sheet, self::ROW_START, $dataEndRow, $signatureEndRow);
-
-        // ✅ Apply column settings dan auto-wrap
         $this->applyColumnSettings($sheet, $dataEndRow);
     }
 
@@ -374,82 +369,48 @@ class RenderActivityPlanSheet
         $s->getRowDimension($row)->setRowHeight(25);
     }
 
-    private function drawActivityRow(
-        Worksheet $s,
-        int $row,
-        int|string $no,
-        string $activity,
-        string $kind,
-        string $pic,
-        string $target,
-        ?string $due,
-        int $mask,
-        bool $isActivityRow = false
-    ): void {
-        // Set values - hanya activity yang diisi
-        $s->setCellValue(self::COL_NO . $row, $no);
-
-        // Merge cells untuk activity (C dan D)
-        $objRange = self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row;
-        $s->mergeCells($objRange);
-        $s->setCellValue(self::COL_OBJECTIVES_FROM . $row, $activity);
-
-        // Kolom lainnya dikosongkan untuk activity row
-        $s->setCellValue(self::COL_KIND . $row, '');
-        $s->setCellValue(self::COL_PIC . $row, '');
-        $s->setCellValue(self::COL_TARGET . $row, '');
-        $s->setCellValue(self::COL_DUE . $row, '');
-
-        // Set bulanan - dikosongkan untuk activity row
-        foreach (self::COL_MONTHS as $col) {
-            $s->setCellValue($col . $row, '');
-        }
-
-        // Apply styles untuk activity row
-        $this->applyActivityRowStyles($s, $row, true);
-    }
-
     private function drawActivityDetailRow(
         Worksheet $s,
         int $row,
         int|string $no,
+        string $activity,   // <-- TAMBAHAN PARAMETER
         string $kind,
         string $pic,
         string $target,
         ?string $due,
         int $mask
     ): void {
-        // Set values untuk detail row
+        // NO (boleh kosong untuk baris kedua dst)
         $s->setCellValue(self::COL_NO . $row, $no);
+
+        // OBJECTIVES (C–D) – hanya baris pertama yang diisi, sisanya dikosongkan
+        $objRange = self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row;
+        $s->mergeCells($objRange);
+        $s->setCellValue(self::COL_OBJECTIVES_FROM . $row, $activity);
+
+        // KIND, PIC, TARGET, DUE
         $s->setCellValue(self::COL_KIND . $row, $kind);
         $s->setCellValue(self::COL_PIC . $row, $pic);
         $s->setCellValue(self::COL_TARGET . $row, $target);
         $s->setCellValue(self::COL_DUE . $row, $due ?? '—');
 
-        // Objectives dikosongkan untuk detail row
-        $objRange = self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row;
-        $s->mergeCells($objRange);
-        $s->setCellValue(self::COL_OBJECTIVES_FROM . $row, '');
-
-        // Set bulanan (warna, bukan ceklis)
+        // SCHEDULE BULANAN (I–T)
         foreach (self::COL_MONTHS as $i => $col) {
             $cellAddress = $col . $row;
             if ($mask & (1 << $i)) {
-                // Bulan aktif -> cell diwarnai
                 $s->setCellValue($cellAddress, '');
                 $s->getStyle($cellAddress)->getFill()
                     ->setFillType(Fill::FILL_SOLID)
-                    ->getStartColor()->setRGB('73bef8'); // biru (boleh diganti)
+                    ->getStartColor()->setRGB('73bef8');
             } else {
-                // Bulan tidak aktif -> kosong tanpa fill
                 $s->setCellValue($cellAddress, '');
                 $s->getStyle($cellAddress)->getFill()
                     ->setFillType(Fill::FILL_NONE);
             }
         }
 
-        // Apply styles untuk detail row
-        $this->applyActivityRowStyles($s, $row, false);
+        // Anggap baris yang punya activity (tidak kosong) sebagai "activity row"
+        $this->applyActivityRowStyles($s, $row, $activity !== '');
     }
 
     private function drawEmptyDataRow(Worksheet $s, int $row): void
@@ -470,10 +431,8 @@ class RenderActivityPlanSheet
 
     private function applyActivityRowStyles(Worksheet $s, int $row, bool $isActivityRow = false): void
     {
-        // Set row height untuk accommodate wrap text
         $s->getRowDimension($row)->setRowHeight(-1); // Auto height
 
-        // Alignment styles dengan wrap text untuk semua kolom B-T
         $dataRange = self::COL_NO . $row . ':' . self::COL_MONTHS[array_key_last(self::COL_MONTHS)] . $row;
 
         $s->getStyle($dataRange)->getAlignment()
@@ -505,7 +464,6 @@ class RenderActivityPlanSheet
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
 
-        // Style khusus untuk activity row (teks bold)
         if ($isActivityRow) {
             $s->getStyle(self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row)
                 ->getFont()->setBold(true);
