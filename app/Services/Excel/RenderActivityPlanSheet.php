@@ -4,10 +4,12 @@ namespace App\Services\Excel;
 
 use App\Models\Ipp;
 use App\Models\ActivityPlan;
+use App\Models\Employee;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class RenderActivityPlanSheet
 {
@@ -136,45 +138,83 @@ class RenderActivityPlanSheet
      * Tambahkan bagian tanda tangan setelah data activity plan
      * Mengembalikan baris terakhir yang terpakai (baris "Date :" paling bawah)
      */
-    /**
-     * Tambahkan bagian tanda tangan setelah data activity plan
-     * dan kembalikan baris terakhir (baris "Date :" paling bawah).
-     */
     private function addSignatureSection(Worksheet $sheet, int $lastDataRow, Ipp $ipp): int
     {
         // Mulai dari baris terakhir data + 2 baris
         $startRow = $lastDataRow + 2;
         $titleRow = $startRow;
 
-        // Nama-nama
-        $preparedByName         = $ipp->employee->name ?? $ipp->nama ?? '';
-        $checkedByName          = $ipp->picReviewer->name ?? '';
-        $superiorOfSuperiorName = $ipp->approvedBy->name ?? '';
+    // === DATA PEGAWAI & REVIEWER ===
+        /** @var Employee|null $preparedEmp */
+        $preparedEmp = $ipp->employee;
+        /** @var Employee|null $checkedEmp */
+        $checkedEmp  = $ipp->picReviewer;
+        /** @var Employee|null $approvedEmp */
+        $approvedEmp = $ipp->approvedBy;
+
+        $preparedByName         = $preparedEmp->name ?? $ipp->nama ?? '';
+        $checkedByName          = $checkedEmp->name ?? '';
+        $superiorOfSuperiorName = $approvedEmp->name ?? '';
+
+        // === STATUS & TANGGAL ===
+        $status = strtolower((string) $ipp->status); // submitted / checked / approved
+
+        $statusRank = [
+            'submitted' => 1,
+            'checked'   => 2,
+            'approved'  => 3,
+        ];
+        $currentRank = $statusRank[$status] ?? 0;
+
+        $submitAt   = $ipp->last_submitted_at ?? $ipp->submitted_at;
+        $checkedAt  = $ipp->checked_at;
+        $approvedAt = $ipp->approved_at;
+
+        $submitDateStr   = $submitAt   ? substr((string) $submitAt,   0, 10) : null;
+        $checkedDateStr  = $checkedAt  ? substr((string) $checkedAt,  0, 10) : null;
+        $approvedDateStr = $approvedAt ? substr((string) $approvedAt, 0, 10) : null;
+
+        // === PATH SIGNATURE IMAGE ===
+        $preparedSigPath = $this->resolveSignaturePath($preparedEmp);
+        $checkedSigPath  = $this->resolveSignaturePath($checkedEmp);
+        $approvedSigPath = $this->resolveSignaturePath($approvedEmp);
 
         /**
          * Bagi area I..T (12 kolom) menjadi 3 blok sama lebar (4 kolom per blok):
-         *  - Superior of Superior: I..L
-         *  - Checked by         : M..P
-         *  - Prepared by        : Q..T
+         *  - Superior of Superior: I..L (role: approved)
+         *  - Checked by         : M..P (role: checked)
+         *  - Prepared by        : Q..T (role: employee)
          */
         $blocks = [
             [
-                'title' => 'Superior of Superior',
-                'name'  => $superiorOfSuperiorName,
-                'from'  => 'I',
-                'to'    => 'L',
+                'role'          => 'approved',
+                'title'         => 'Superior of Superior',
+                'name'          => $superiorOfSuperiorName,
+                'from'          => 'I',
+                'to'            => 'L',
+                'sigPath'       => $approvedSigPath,
+                'date'          => $approvedDateStr,
+                'minStatusRank' => $statusRank['approved'], // tampil kalau status >= approved
             ],
             [
-                'title' => 'Checked by',
-                'name'  => $checkedByName,
-                'from'  => 'M',
-                'to'    => 'P',
+                'role'          => 'checked',
+                'title'         => 'Checked by',
+                'name'          => $checkedByName,
+                'from'          => 'M',
+                'to'            => 'P',
+                'sigPath'       => $checkedSigPath,
+                'date'          => $checkedDateStr,
+                'minStatusRank' => $statusRank['checked'], // tampil kalau status >= checked
             ],
             [
-                'title' => 'Prepared by',
-                'name'  => $preparedByName,
-                'from'  => 'Q',
-                'to'    => 'T',
+                'role'          => 'employee',
+                'title'         => 'Prepared by',
+                'name'          => $preparedByName,
+                'from'          => 'Q',
+                'to'            => 'T',
+                'sigPath'       => $preparedSigPath,
+                'date'          => $submitDateStr,
+                'minStatusRank' => $statusRank['submitted'], // tampil kalau status >= submitted
             ],
         ];
 
@@ -193,15 +233,31 @@ class RenderActivityPlanSheet
                 ->setVertical(Alignment::VERTICAL_CENTER);
 
             // === 2. BARIS KOTAK TANDA TANGAN (TEMPAT IMAGE) ===
-            $signatureRow   = $titleRow + 2;               // 1 baris kosong di bawah judul
+            $signatureRow   = $titleRow + 2;
             $signatureRange = $fromCol . $signatureRow . ':' . $toCol . $signatureRow;
 
             $sheet->mergeCells($signatureRange);
-            // tinggi baris besar untuk gambar
             $sheet->getRowDimension($signatureRow)->setRowHeight(80);
 
             $sheet->getStyle($signatureRange)->getBorders()->getAllBorders()
                 ->setBorderStyle(Border::BORDER_THIN);
+
+            if (
+                $currentRank >= $block['minStatusRank']
+                && !empty($block['sigPath'])
+                && is_file($block['sigPath'])
+            ) {
+                $drawing = new Drawing();
+                $drawing->setName('Signature');
+                $drawing->setDescription('Signature ' . $block['role']);
+                $drawing->setPath($block['sigPath']);
+                $drawing->setCoordinates($fromCol . $signatureRow);
+                $drawing->setResizeProportional(true);
+                $drawing->setHeight(100);
+                $drawing->setOffsetX(8);
+                $drawing->setOffsetY(5);
+                $drawing->setWorksheet($sheet);
+            }
 
             // === 3. BARIS NAMA ===
             $nameRow   = $signatureRow + 1;
@@ -218,7 +274,14 @@ class RenderActivityPlanSheet
             $dateRange = $fromCol . $dateRow . ':' . $toCol . $dateRow;
 
             $sheet->mergeCells($dateRange);
-            $sheet->setCellValue($fromCol . $dateRow, 'Date :');
+
+            // Tampilkan "Date : yyyy-mm-dd" kalau status memenuhi dan ada tanggal
+            $dateText = 'Date :';
+            if ($currentRank >= $block['minStatusRank'] && !empty($block['date'])) {
+                $dateText .= ' ' . $block['date'];
+            }
+
+            $sheet->setCellValue($fromCol . $dateRow, $dateText);
             $sheet->getStyle($dateRange)->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER)
                 ->setVertical(Alignment::VERTICAL_CENTER);
@@ -228,6 +291,7 @@ class RenderActivityPlanSheet
             }
         }
 
+        // Tambah beberapa baris kosong di bawah area signature
         $bottomRow = $maxDateRow + 3;
 
         for ($r = $maxDateRow + 1; $r <= $bottomRow; $r++) {
@@ -236,6 +300,34 @@ class RenderActivityPlanSheet
 
         return $bottomRow;
     }
+
+    /**
+     * Cari file signature berdasarkan data Employee
+     */
+    private function resolveSignaturePath(?Employee $emp): ?string
+    {
+        if (!$emp) {
+            return null;
+        }
+
+        // Kalau ada path khusus di kolom signature_path
+        if (!empty($emp->signature_path)) {
+            $p = storage_path('app/public/' . ltrim($emp->signature_path, '/'));
+            if (is_file($p)) {
+                return $p;
+            }
+        }
+
+        // Fallback: public/storage/signatures/{id}.png
+        $p2 = public_path('storage/signatures/' . $emp->id . '.png');
+        if (is_file($p2)) {
+            return $p2;
+        }
+
+        return null;
+    }
+
+
 
     /**
      * Apply column settings dengan auto-wrap untuk semua kolom
@@ -322,25 +414,15 @@ class RenderActivityPlanSheet
 
     private function shortenName(string $name): string
     {
-        if ($name === '—' || strlen(trim($name)) <= 3) {
-            return $name;
+        $name = trim($name);
+
+        if ($name === '' || $name === '—') {
+            return $name === '' ? '—' : $name;
         }
 
-        // Ambil inisial (3 huruf pertama)
-        $words     = explode(' ', trim($name));
-        $initials  = '';
+        $parts = preg_split('/\s+/', $name);
 
-        foreach ($words as $word) {
-            if (strlen($word) > 0) {
-                $initials .= strtoupper(substr($word, 0, 1));
-            }
-            if (strlen($initials) >= 3) {
-                break;
-            }
-        }
-
-        // Pastikan panjang 3 karakter
-        return str_pad(substr($initials, 0, 3), 3, ' ', STR_PAD_RIGHT);
+        return $parts[0] ?? $name;
     }
 
     private function drawCategoryRow(Worksheet $s, int $row, string $category): void
@@ -373,17 +455,17 @@ class RenderActivityPlanSheet
         Worksheet $s,
         int $row,
         int|string $no,
-        string $activity,   // <-- TAMBAHAN PARAMETER
+        string $activity,
         string $kind,
         string $pic,
         string $target,
         ?string $due,
         int $mask
     ): void {
-        // NO (boleh kosong untuk baris kedua dst)
+        // NO
         $s->setCellValue(self::COL_NO . $row, $no);
 
-        // OBJECTIVES (C–D) – hanya baris pertama yang diisi, sisanya dikosongkan
+        // OBJECTIVES (C–D)
         $objRange = self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row;
         $s->mergeCells($objRange);
         $s->setCellValue(self::COL_OBJECTIVES_FROM . $row, $activity);
@@ -409,7 +491,6 @@ class RenderActivityPlanSheet
             }
         }
 
-        // Anggap baris yang punya activity (tidak kosong) sebagai "activity row"
         $this->applyActivityRowStyles($s, $row, $activity !== '');
     }
 
