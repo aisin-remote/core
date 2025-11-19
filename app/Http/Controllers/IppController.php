@@ -811,9 +811,8 @@ class IppController
             $perPage = min(100, max(5, (int) $request->query('per_page', 10)));
 
             // Levels (guard if null / methods not exist)
-            $checkLevel   = method_exists($me, 'getFirstApproval') ? $me->getFirstApproval() : null;
-            $approveLevel = method_exists($me, 'getFinalApproval') ? $me->getFinalApproval() : null;
-
+            $checkLevel   = method_exists($me, 'getCreateAuth') ? $me->getCreateAuth() : null;
+            $approveLevel = method_exists($me, 'getFirstApproval') ? $me->getFirstApproval() : null;
             $subCheckIds = collect();
             $subApproveIds = collect();
 
@@ -823,6 +822,7 @@ class IppController
             if ($approveLevel && method_exists($me, 'getSubordinatesByLevel')) {
                 $subApproveIds = $me->getSubordinatesByLevel($approveLevel)->pluck('id');
             }
+
 
             // Helpers: common constraints
             $baseIPP = Ipp::with(['employee.user'])
@@ -872,6 +872,7 @@ class IppController
                         return $ipp;
                     });
             }
+
 
             // Merge both stages, latest updated first
             $all = $checkIpps->merge($approveIpps)
