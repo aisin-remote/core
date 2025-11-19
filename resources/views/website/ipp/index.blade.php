@@ -1307,7 +1307,7 @@
                     return;
                 }
                 if (!window.__currentIppId) {
-                    toast('IPP belum terinisialisasi.', 'danger');
+                    toast('IPP & Activity Plan belum terinisialisasi.', 'danger');
                     return;
                 }
                 if (!confirm('Submit IPP + Activity Plan sekarang?')) return;
