@@ -984,7 +984,6 @@ class IcpController extends Controller
             $icp->status = 0; // Revise
             $icp->save();
 
-            // tandai step aktif sebagai revised (opsional):
             $current = $icp->steps->where('status', 'pending')->sortBy('step_order')->first();
             if ($current) {
                 $current->update(['status' => 'revised']);
@@ -994,7 +993,8 @@ class IcpController extends Controller
             if ($emp = auth()->user()->employee) {
                 $icp->snapshots()->create([
                     'reason' => (string) $request->input('comment', ''),
-                    'employee_id' => $emp->id,
+                    'steps' => $icp->status,
+                    'created_by' => $emp->id,
                 ]);
             }
         });
