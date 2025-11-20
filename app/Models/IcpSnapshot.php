@@ -14,4 +14,9 @@ class IcpSnapshot extends Model
     {
         return $this->belongsTo(Icp::class);
     }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(Employee::class, 'created_by');
+    }
 }

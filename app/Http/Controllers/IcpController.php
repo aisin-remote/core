@@ -17,6 +17,7 @@ use App\Models\GradeConversion;
 use App\Models\IcpApprovalStep;
 use App\Helpers\ApprovalHelper;
 use App\Http\Requests\StoreIcpRequest;
+use App\Models\IcpSnapshot;
 use App\Models\MatrixCompetency;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -890,6 +891,42 @@ class IcpController extends Controller
         (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($path);
 
         return response()->download($path)->deleteFileAfterSend(true);
+    }
+
+    public function comment($id)
+    {
+        $snapshots = IcpSnapshot::with('createdBy')
+            ->where('icp_id', $id)
+            ->orderByDesc('created_at')
+            ->get([
+                'id',
+                'icp_id',
+                'reason',
+                'steps',
+                'created_by',
+                'created_at',
+            ]);
+        $comments = $snapshots->map(function ($item) {
+            return [
+                'employee' => [
+                    'name' => optional($item->createdBy)->name
+                ],
+                'comment' => $item->reason,
+                'steps' => $item->steps,
+                'created_at' => $item->created_at?->format('d/m/Y H:i'),
+            ];
+        });
+
+        $lastUpload = $snapshots->first();
+
+        return response()->json([
+            'comments' => $comments,
+            'lastUpload' => $lastUpload
+                ? [
+                    'created_at' => $lastUpload->created_at?->format('d/m/Y H:i'),
+                ]
+                : null,
+        ]);
     }
 
 
