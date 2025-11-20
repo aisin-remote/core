@@ -568,6 +568,97 @@
                 </div>
             </div>
 
+            {{-- ===================== ICP ===================== --}}
+            <div class="col-12 col-xl-6 col-xxl-4">
+                <div class="panel shadow-sm">
+                    <div class="panel-head">
+                        <h3 class="text-white">
+                            <i class="fas fa-clipboard-list"></i>
+                            <span class="fw-bold">ICP</span>
+                        </h3>
+                        <span class="counter">{{ $allIcpTasks->count() }} Items</span>
+                    </div>
+
+                    <div class="panel-body panel-scroll">
+                        @forelse ($allIcpTasks as $i => $item)
+                            @php
+                                // sekarang status diambil dari ICP (relasi di IcpApprovalStep)
+                                $raw = (int) $item->icp->getRawOriginal('status');
+
+                                $cfg =
+                                    $raw === 1
+                                        ? [
+                                            'tone' => 'warn',
+                                            'status' => 'status-warn',
+                                            'icon' => 'fa-clipboard-check',
+                                            'label' => 'Need Check',
+                                        ]
+                                        : ($raw === 2
+                                            ? [
+                                                'tone' => 'warn',
+                                                'status' => 'status-warn',
+                                                'icon' => 'fa-exclamation-circle',
+                                                'label' => 'Need Approve',
+                                            ]
+                                            : [
+                                                'tone' => 'muted',
+                                                'status' => 'status-muted',
+                                                'icon' => 'fa-circle-question',
+                                                'label' => 'Unknown',
+                                            ]);
+                            @endphp
+
+                            @php
+                                $employee = $item->icp->employee;
+                            @endphp
+
+                            @if ($isHRD)
+                                <a class="link-plain disabled-link" href="{{ route('icp.approval') }}">
+                                    <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
+                                        <div class="tone tone-{{ $cfg['tone'] }}"></div>
+
+                                        <div>
+                                            <h5 class="task-title mb-1">{{ $employee->name }}</h5>
+                                            <div class="task-sub">{{ $employee->company_name ?? '-' }}</div>
+                                        </div>
+
+                                        <span class="status-chip {{ $cfg['status'] }}">
+                                            <i class="fas {{ $cfg['icon'] }}"></i>{{ $cfg['label'] }}
+                                        </span>
+                                    </div>
+                                </a>
+                            @else
+                                <a class="link-plain" href="{{ route('icp.approval') }}">
+                                    <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
+                                        <div class="tone tone-{{ $cfg['tone'] }}"></div>
+
+                                        <div>
+                                            <h5 class="task-title mb-1">{{ $employee->name }}</h5>
+                                            <div class="task-sub">{{ $employee->company_name ?? '-' }}</div>
+                                        </div>
+
+                                        <span class="status-chip {{ $cfg['status'] }}">
+                                            <i class="fas {{ $cfg['icon'] }}"></i>{{ $cfg['label'] }}
+                                        </span>
+                                    </div>
+                                </a>
+                            @endif
+                        @empty
+                            <div class="task-row">
+                                <div class="tone tone-ok"></div>
+                                <h5 class="task-title mb-0 text-success">
+                                    <i class="fas fa-check-circle me-2"></i> No Task.
+                                </h5>
+                                <span class="status-chip status-ok">
+                                    <i class="fas fa-circle-check"></i>Clear
+                                </span>
+                            </div>
+                        @endforelse
+                    </div>
+                </div>
+            </div>
+
+
             {{-- ===================== RTC ===================== --}}
             <div class="col-12 col-xl-6 col-xxl-4">
                 <div class="panel shadow-sm">
