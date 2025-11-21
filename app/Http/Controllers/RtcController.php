@@ -360,9 +360,16 @@ class RtcController extends Controller
                 'sub_section' => 0,
             ];
 
+            /*
+             * 1) Company
+             */
             if ($tabs['company']['show'] ?? false) {
                 $counts['company'] = $nz(RtcService::countNotSet('company', []));
             }
+
+            /*
+             * 2) Direksi
+             */
             if ($tabs['direksi']['show'] ?? false) {
                 if ($isDirektur && $employee->plant) {
                     $counts['direksi'] = $nz(RtcService::countNotSet('direksi', [
@@ -375,6 +382,10 @@ class RtcController extends Controller
                     ]));
                 }
             }
+
+            /*
+             * 3) Division (tetap pakai scope penuh per role)
+             */
             if ($tabs['division']['show'] ?? false) {
                 if ($isGM) {
                     $divIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
@@ -383,28 +394,51 @@ class RtcController extends Controller
                 } else {
                     $divIds = Division::pluck('id')->all();
                 }
+
                 $counts['division'] = $nz(RtcService::countNotSet('division', [
                     'division_ids' => $divIds,
                 ]));
             }
 
+            /*
+             * 4) Department / Section / Sub Section
+             */
+            $divisionIdsForCounts = [];
+
             if ($isGM) {
-                $baseDivisionIds = Division::where('gm_id', $employee->id)->pluck('id')->all();
+                $divisionIdsForCounts = Division::where('gm_id', $employee->id)->pluck('id')->all();
             } elseif ($isDirektur && $employee->plant) {
-                $baseDivisionIds = Division::where('plant_id', $employee->plant->id)->pluck('id')->all();
+                $divisionIdsForCounts = Division::where('plant_id', $employee->plant->id)->pluck('id')->all();
             } elseif ($isMg) {
-                $baseDivisionIds = Division::whereHas('departments', function ($q) use ($employee) {
+                $divisionIdsForCounts = Division::whereHas('departments', function ($q) use ($employee) {
                     $q->where('manager_id', $employee->id);
                 })->pluck('id')->all();
             } else {
-                $baseDivisionIds = Division::pluck('id')->all();
+                $divisionIdsForCounts = Division::pluck('id')->all();
+            }
+
+            if (
+                in_array($tableFilter, ['department', 'section', 'sub_section'], true)
+                && $containerId
+            ) {
+                if (in_array($containerId, $divisionIdsForCounts, true)) {
+                    $divisionIdsForCounts = [$containerId];
+                } else {
+                    $divisionIdsForCounts = [$containerId];
+                }
             }
 
             foreach (['department', 'section', 'sub_section'] as $lvl) {
-                if (($tabs[$lvl]['show'] ?? false) && !empty($baseDivisionIds)) {
-                    $counts[$lvl] = $nz(RtcService::countNotSet($lvl, [
-                        'division_ids' => $baseDivisionIds,
-                    ]));
+                if (($tabs[$lvl]['show'] ?? false) && !empty($divisionIdsForCounts)) {
+                    $filters = [
+                        'division_ids' => $divisionIdsForCounts
+                    ];
+
+                    if ($isMg) {
+                        $filters['manager_id'] = $employee->id;
+                    }
+
+                    $counts[$lvl] = $nz(RtcService::countNotSet($lvl, $filters));
                 }
             }
 
@@ -412,6 +446,8 @@ class RtcController extends Controller
                 if (!($tab['show'] ?? false)) continue;
                 $tabs[$k]['not_set_count'] = $counts[$k] ?? 0;
             }
+
+
 
             Log::debug('[RTC][list] view computed', [
                 'trace'          => $trace,

@@ -13,6 +13,7 @@ class RtcService
      * @param  array  $filters
      *   - 'division_ids' => int[]  (membatasi cakupan division dan turunannya)
      *   - 'plant_ids'    => int[]  (membatasi cakupan plant; dipakai direksi/division aggregasi by plant)
+     *   - 'manager_id'   => int    (khusus utk scope Manager; hanya department/section/sub_section di dept yg dia pimpin)
      * @return int
      */
     public static function countNotSet(string $level, array $filters = []): int
@@ -72,6 +73,10 @@ class RtcService
                     $q->join('divisions as d', 'd.id', '=', 'dep.division_id')
                         ->whereIn('d.plant_id', (array) $filters['plant_ids']);
                 }
+                // Hanya department yang manager_id = manager ini (jika diberikan)
+                if (!empty($filters['manager_id'])) {
+                    $q->where('dep.manager_id', (int) $filters['manager_id']);
+                }
 
                 return (int) DB::table(DB::raw("({$q->toSql()}) as dd"))
                     ->mergeBindings($q)
@@ -94,6 +99,10 @@ class RtcService
                 if (!empty($filters['plant_ids'])) {
                     $q->join('divisions as d', 'd.id', '=', 'dep.division_id')
                         ->whereIn('d.plant_id', (array) $filters['plant_ids']);
+                }
+                // Hanya section di department yang manager_id = manager ini (jika diberikan)
+                if (!empty($filters['manager_id'])) {
+                    $q->where('dep.manager_id', (int) $filters['manager_id']);
                 }
 
                 return (int) DB::table(DB::raw("({$q->toSql()}) as ss"))
@@ -118,6 +127,10 @@ class RtcService
                 if (!empty($filters['plant_ids'])) {
                     $q->join('divisions as d', 'd.id', '=', 'dep.division_id')
                         ->whereIn('d.plant_id', (array) $filters['plant_ids']);
+                }
+                // Hanya sub_section di bawah department yang manager_id = manager ini (jika diberikan)
+                if (!empty($filters['manager_id'])) {
+                    $q->where('dep.manager_id', (int) $filters['manager_id']);
                 }
 
                 return (int) DB::table(DB::raw("({$q->toSql()}) as ssss"))

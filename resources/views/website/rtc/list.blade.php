@@ -79,6 +79,37 @@
         .select2-container {
             width: 100% !important;
         }
+
+        /* ===== Tab alert badge (jumlah Not Set) ===== */
+        .tab-alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            padding: .15rem .55rem;
+            border-radius: 9999px;
+            font-size: .7rem;
+            font-weight: 600;
+            line-height: 1;
+            border: 1px solid transparent;
+        }
+
+        /* Ada Not Set → merah */
+        .tab-alert-badge--danger {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        /* Tidak ada Not Set → abu-abu kalem */
+        .tab-alert-badge--muted {
+            background: #f4f4f5;
+            color: #52525b;
+            border-color: #e4e4e7;
+        }
+
+        .tab-alert-badge i {
+            font-size: .7rem;
+        }
     </style>
 @endpush
 
@@ -118,9 +149,14 @@
                                         {{ $t['label'] }}
                                         @if ($eligibleForBadge)
                                             <span
-                                                class="badge rounded-pill {{ $count > 0 ? 'bg-warning-subtle text-warning-emphasis' : 'bg-secondary' }} ms-2"
+                                                class="tab-alert-badge {{ $count > 0 ? 'tab-alert-badge--danger' : 'tab-alert-badge--muted' }} ms-2"
                                                 id="tabBadge-{{ $key }}">
-                                                {{ $count }}
+                                                @if ($count > 0)
+                                                    <i class="fas fa-circle-exclamation"></i>
+                                                @else
+                                                    <i class="far fa-circle"></i>
+                                                @endif
+                                                <span>{{ $count }}</span>
                                             </span>
                                         @endif
                                     </a>
@@ -337,6 +373,40 @@
                 return $('<div>').text(s ?? '').html();
             }
 
+            // ===== Helper: update badge di tab aktif berdasarkan items yang baru di-load =====
+            function updateTabBadge(tabKey, items) {
+                const $badge = $('#tabBadge-' + tabKey);
+                if (!$badge.length) return; // tab ini memang tidak punya badge
+
+                let notSetCount = 0;
+
+                (items || []).forEach(function(row) {
+                    const anyFilled =
+                        (row.short && row.short.name) ||
+                        (row.mid && row.mid.name) ||
+                        (row.long && row.long.name);
+
+                    if (!anyFilled) {
+                        notSetCount++;
+                    }
+                });
+
+                // Update angka
+                $badge.find('span').last().text(notSetCount);
+
+                // Update warna + icon
+                $badge
+                    .removeClass('tab-alert-badge--danger tab-alert-badge--muted')
+                    .addClass(notSetCount > 0 ? 'tab-alert-badge--danger' : 'tab-alert-badge--muted');
+
+                const $icon = $badge.find('i').first();
+                if (notSetCount > 0) {
+                    $icon.attr('class', 'fas fa-circle-exclamation');
+                } else {
+                    $icon.attr('class', 'far fa-circle');
+                }
+            }
+
             // ===== 3-status chip (0=draft,1=submitted,2=approved) + ONGOING =====
             function statusChip(overall) {
                 let statusNum = null,
@@ -546,6 +616,8 @@
                     .then(res => {
                         const items = res.items || [];
                         renderRows(items, filter);
+                        // === update badge untuk tab ini ===
+                        updateTabBadge(filter, items);
                         return items;
                     })
                     .catch(() => {
@@ -709,8 +781,7 @@
                             ...paramsBase,
                             kode: k
                         })
-                        .then(r => (r && r.data) ? r.data : [])
-                        .catch(() => [])
+                        .then(r => (r && r.data) ? r.data : []).catch(() => [])
                     );
 
                     Promise.all(reqs).then(chunks => {
