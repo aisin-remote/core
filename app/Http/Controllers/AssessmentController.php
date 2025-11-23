@@ -17,11 +17,13 @@ use App\Imports\AssessmentImport;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Hav;
+use App\Support\OpaqueId;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\Request;
@@ -103,6 +105,10 @@ class AssessmentController extends Controller
             ])
             ->get();
 
+        foreach ($assessments as $assessment) {
+            $assessment->tok = OpaqueId::encode($assessment->id);
+        }
+
         return response()->json([
             'employee' => $employee,
             'assessments' => $assessments
@@ -112,8 +118,23 @@ class AssessmentController extends Controller
     /**
      * Show assessment details by date
      */
-    public function showByDate($assessment_id, $date)
+    public function showByDate(string $tok, string $date)
     {
+        $validator = Validator::make(
+            ['date' => $date],
+            ['date' => ['required', 'date_format:Y-m-d']]
+        );
+
+        if ($validator->fails()) {
+            return back()->with('warning', 'Format tanggal tidak valid.');
+        }
+
+        // Decode token; pakai cek is_null supaya id=0 tidak dianggap false
+        $assessment_id = OpaqueId::decode($tok);
+        if (is_null($assessment_id)) {
+            return back()->with('warning', 'Dilarang melakukan hal ini ya.');
+        }
+
         $assessment = Assessment::findOrFail($assessment_id);
         $employee = Employee::with(
             'departments',

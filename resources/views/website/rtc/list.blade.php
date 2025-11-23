@@ -9,6 +9,7 @@
 
 @push('custom-css')
     <style>
+        /* ===== Status chip base ===== */
         .status-chip {
             display: inline-flex;
             align-items: center;
@@ -20,59 +21,94 @@
             line-height: 1;
             border: 1px solid #e2e8f0;
             background: #f8fafc;
-            color: #334155
+            color: #334155;
         }
 
+        /* Approved (green) */
         .status-chip[data-status="approved"] {
             background: #ecfdf5;
             color: #065f46;
-            border-color: #a7f3d0
+            border-color: #a7f3d0;
         }
 
-        .status-chip[data-status="revised"] {
-            background: #f51515;
-            color: #fffbeb;
-            border-color: #f51515
-        }
-
-        .status-chip[data-status="checked"],
+        /* Submitted/Waiting (yellow) */
         .status-chip[data-status="waiting"] {
             background: #fffbeb;
             color: #92400e;
-            border-color: #fde68a
+            border-color: #fde68a;
         }
 
+        /* Draft (gray) */
         .status-chip[data-status="draft"] {
             background: #f8fafc;
             color: #334155;
-            border-color: #e2e8f0
+            border-color: #e2e8f0;
         }
 
+        /* Not created (neutral) */
         .status-chip[data-status="not_created"] {
             background: #f4f4f5;
             color: #27272a;
-            border-color: #e4e4e7
+            border-color: #e4e4e7;
+        }
+
+        /* NEW: Ongoing (blue-ish) */
+        .status-chip[data-status="ongoing"] {
+            background: #eff6ff;
+            color: #1e40af;
+            border-color: #bfdbfe;
         }
 
         .term-cell {
             max-width: 180px;
             white-space: normal;
             line-height: 1.25;
-            word-break: break-word
+            word-break: break-word;
         }
 
         .text-not-set {
             color: #475569;
-            opacity: .7
+            opacity: .7;
         }
 
         .action-stack {
             display: inline-flex;
-            gap: .5rem
+            gap: .5rem;
         }
 
         .select2-container {
             width: 100% !important;
+        }
+
+        /* ===== Tab alert badge (jumlah Not Set) ===== */
+        .tab-alert-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .25rem;
+            padding: .15rem .55rem;
+            border-radius: 9999px;
+            font-size: .7rem;
+            font-weight: 600;
+            line-height: 1;
+            border: 1px solid transparent;
+        }
+
+        /* Ada Not Set → merah */
+        .tab-alert-badge--danger {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: #fecaca;
+        }
+
+        /* Tidak ada Not Set → abu-abu kalem */
+        .tab-alert-badge--muted {
+            background: #f4f4f5;
+            color: #52525b;
+            border-color: #e4e4e7;
+        }
+
+        .tab-alert-badge i {
+            font-size: .7rem;
         }
     </style>
 @endpush
@@ -113,9 +149,14 @@
                                         {{ $t['label'] }}
                                         @if ($eligibleForBadge)
                                             <span
-                                                class="badge rounded-pill {{ $count > 0 ? 'bg-warning-subtle text-warning-emphasis' : 'bg-secondary' }} ms-2"
+                                                class="tab-alert-badge {{ $count > 0 ? 'tab-alert-badge--danger' : 'tab-alert-badge--muted' }} ms-2"
                                                 id="tabBadge-{{ $key }}">
-                                                {{ $count }}
+                                                @if ($count > 0)
+                                                    <i class="fas fa-circle-exclamation"></i>
+                                                @else
+                                                    <i class="far fa-circle"></i>
+                                                @endif
+                                                <span>{{ $count }}</span>
                                             </span>
                                         @endif
                                     </a>
@@ -124,7 +165,6 @@
                         @endforeach
                     </ul>
                 @endif
-
 
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
@@ -229,14 +269,14 @@
         </div>
     </div>
 
-    {{-- Modal Add Plan --}}
+    {{-- Modal Add/Edit RTC --}}
     @unless ($readOnly)
         <div class="modal fade" id="addPlanModal" tabindex="-1" aria-labelledby="addPlanLabel" aria-hidden="true">
             <div class="modal-dialog">
                 <form id="addPlanForm">
                     <div class="modal-content">
                         <div class="modal-header">
-                            <h5 class="modal-title" id="addPlanLabel">Add Plan</h5>
+                            <h5 class="modal-title" id="addPlanLabel">Add RTC</h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
 
@@ -275,7 +315,8 @@
                         </div>
 
                         <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary">Save</button>
+                            {{-- Save digunakan untuk Add & Update (edit) --}}
+                            <button type="button" class="btn btn-primary" id="btnSave">Save</button>
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         </div>
                     </div>
@@ -304,49 +345,131 @@
         window.VISIBLE_TABS = @json(collect($tabs)->filter(fn($t) => $t['show'])->keys()->values());
 
         window.ROUTE_RTC_CANDIDATES = @json(route('rtc.candidates'));
+        window.ROUTE_RTC_SAVE = @json(route('rtc.save'));
         window.ROUTE_RTC_UPDATE = @json(route('rtc.update'));
+        window.ROUTE_RTC_SUBMIT = @json(route('rtc.submit'));
+    </script>
+
+    <script>
+        // CSRF untuk semua POST
+        $.ajaxSetup({
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        });
     </script>
 
     <script>
         $(function() {
+            if (window.__RTC_INIT__) return;
+            window.__RTC_INIT__ = true;
+
+            window.CURRENT_AREA_ID = null;
+            window.EDIT_MODE = false; // false: Add, true: Edit
+            window.__RTC_SAVING__ = false; // in-flight request guard
+
+            // ===== Helpers =====
             function esc(s) {
                 return $('<div>').text(s ?? '').html();
             }
 
-            function statusChip(overall) {
-                const map = {
-                    approved: {
-                        ds: 'approved',
-                        icon: '<i class="fas fa-circle-check"></i>'
-                    },
-                    checked: {
-                        ds: 'checked',
-                        icon: '<i class="fas fa-clipboard-check"></i>'
-                    },
-                    submitted: {
-                        ds: 'waiting',
-                        icon: '<i class="fas fa-paper-plane"></i>'
-                    },
-                    partial: {
-                        ds: 'draft',
-                        icon: '<i class="far fa-pen-to-square"></i>'
-                    },
-                    complete_no_submit: {
-                        ds: 'draft',
-                        icon: '<i class="far fa-pen-to-square"></i>'
-                    },
-                    revised: {
-                        ds: 'revised',
-                        icon: '<i class="far fa-pen-to-square"></i>'
-                    },
-                    not_set: {
-                        ds: 'not_created',
-                        icon: '<i class="far fa-circle"></i>'
+            // ===== Helper: update badge di tab aktif berdasarkan items yang baru di-load =====
+            function updateTabBadge(tabKey, items) {
+                const $badge = $('#tabBadge-' + tabKey);
+                if (!$badge.length) return; // tab ini memang tidak punya badge
+
+                let notSetCount = 0;
+
+                (items || []).forEach(function(row) {
+                    const anyFilled =
+                        (row.short && row.short.name) ||
+                        (row.mid && row.mid.name) ||
+                        (row.long && row.long.name);
+
+                    if (!anyFilled) {
+                        notSetCount++;
                     }
+                });
+
+                // Update angka
+                $badge.find('span').last().text(notSetCount);
+
+                // Update warna + icon
+                $badge
+                    .removeClass('tab-alert-badge--danger tab-alert-badge--muted')
+                    .addClass(notSetCount > 0 ? 'tab-alert-badge--danger' : 'tab-alert-badge--muted');
+
+                const $icon = $badge.find('i').first();
+                if (notSetCount > 0) {
+                    $icon.attr('class', 'fas fa-circle-exclamation');
+                } else {
+                    $icon.attr('class', 'far fa-circle');
+                }
+            }
+
+            // ===== 3-status chip (0=draft,1=submitted,2=approved) + ONGOING =====
+            function statusChip(overall) {
+                let statusNum = null,
+                    label = '';
+                const codeToNum = {
+                    draft: 0,
+                    submitted: 1,
+                    approved: 2,
+                    waiting: 1,
+                    ongoing: 0, // new
+                    continue: 0 // alias if backend uses 'continue'
                 };
-                const conf = map[overall?.code] ?? map['not_set'];
-                const label = overall?.label || 'Not Set';
-                return `<span class="status-chip" data-status="${conf.ds}" title="${esc(label)}">${conf.icon}<span>${esc(label)}</span></span>`;
+
+                if (typeof overall === 'number') {
+                    statusNum = overall;
+                } else if (overall && typeof overall === 'object') {
+                    if (typeof overall.status === 'number') statusNum = overall.status;
+                    else if (overall.code && (overall.code in codeToNum)) statusNum = codeToNum[overall.code];
+                    if (overall.label) label = overall.label;
+                } else if (typeof overall === 'string' && overall in codeToNum) {
+                    statusNum = codeToNum[overall];
+                }
+
+                if (statusNum === null || isNaN(statusNum)) {
+                    const lab = label || (overall && overall.label) || 'Not Set';
+                    return `<span class="status-chip" data-status="not_created" title="${esc(lab)}"><i class="far fa-circle"></i><span>${esc(lab)}</span></span>`;
+                }
+
+                const map = {
+                    0: {
+                        ds: 'draft',
+                        icon: '<i class="far fa-pen-to-square"></i>',
+                        label: 'Draft'
+                    },
+                    1: {
+                        ds: 'waiting',
+                        icon: '<i class="fas fa-paper-plane"></i>',
+                        label: 'Submitted'
+                    },
+                    2: {
+                        ds: 'approved',
+                        icon: '<i class="fas fa-circle-check"></i>',
+                        label: 'Approved'
+                    },
+                };
+
+                const conf = map[statusNum] ?? {
+                    ds: 'not_created',
+                    icon: '<i class="far fa-circle"></i>',
+                    label: 'Not Set'
+                };
+
+                // Default label dari map / server
+                let finalLabel = label || conf.label;
+                // NEW: jika code 'ongoing' / 'continue', pakai ds & label 'ongoing'
+                let ds = conf.ds;
+                if (overall && typeof overall === 'object' && (overall.code === 'ongoing' || overall.code ===
+                        'continue')) {
+                    ds = 'ongoing';
+                    finalLabel = 'Ongoing';
+                }
+
+                return `<span class="status-chip" data-status="${ds}" title="${esc(finalLabel)}">${conf.icon}<span>${esc(finalLabel)}</span></span>`;
             }
 
             function renderEmpty(msg) {
@@ -355,14 +478,46 @@
                 );
             }
 
+            // ===== Tabel rows renderer =====
             function renderRows(items, filter) {
                 if (!items || !items.length) return renderEmpty('No data');
+
+                const codeToNum = {
+                    draft: 0,
+                    submitted: 1,
+                    approved: 2,
+                    waiting: 1
+                };
+
                 const rows = items.map((row, i) => {
                     const st = row.short?.name ? esc(row.short.name) :
                         '<span class="text-not-set">-</span>';
                     const mt = row.mid?.name ? esc(row.mid.name) : '<span class="text-not-set">-</span>';
                     const lt = row.long?.name ? esc(row.long.name) : '<span class="text-not-set">-</span>';
-                    const statusHtml = statusChip(row.overall);
+
+                    const anyFilled = !!(row.short?.name || row.mid?.name || row.long?.name);
+                    const overallNotSet = !(row.overall && (row.overall.status !== null && row.overall
+                            .status !== undefined)) &&
+                        !(row.overall && row.overall.code && row.overall.code !== 'not_set');
+
+                    const overallForChip = (anyFilled && overallNotSet) ? {
+                            status: 0,
+                            label: 'Draft',
+                            code: 'draft'
+                        } :
+                        row.overall;
+
+                    let overallNum = null;
+                    if (overallForChip && typeof overallForChip === 'object') {
+                        if (typeof overallForChip.status === 'number') overallNum = overallForChip.status;
+                        else if (overallForChip.code && (overallForChip.code in codeToNum)) overallNum =
+                            codeToNum[overallForChip.code];
+                    } else if (typeof overallForChip === 'string' && (overallForChip in codeToNum)) {
+                        overallNum = codeToNum[overallForChip];
+                    }
+
+                    const statusHtml = statusChip(overallForChip);
+
                     const fullName = row.pic?.name || '-';
                     const showName = (fullName || '').trim().split(/\s+/).slice(0, 2).join(' ');
                     const pic = row.pic ? `<span title="${esc(fullName)}">${esc(showName)}</span>` :
@@ -371,36 +526,51 @@
                     const previewBtn =
                         `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
 
-                    let addBtn = '';
-                    if (!window.READ_ONLY && !window.HIDE_ADD && row.can_add) {
-                        addBtn = `<a href="#" class="btn btn-sm btn-success btn-show-modal"
-                            data-id="${row.id}"
-                            data-filter="${filter}"
-                            data-mode="add"
-                            data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>`;
-                    }
+                    let actions = '';
+                    if (anyFilled) {
+                        let showUpdate = true,
+                            showSubmit = true; // default: saat draft
+                        if (overallNum === 1 || overallNum === 2) {
+                            showUpdate = false;
+                            showSubmit = false;
+                        }
 
-                    let reviseBtn = '';
-                    if (row.can_revise) {
-                        reviseBtn = `<a href="#" class="btn btn-sm btn-warning btn-revise"
-                            data-id="${row.id}"
-                            data-filter="${filter}"
-                            data-mode="revise"
-                            data-bs-toggle="modal" data-bs-target="#addPlanModal">Revise</a>`;
-                    }
+                        const updateBtn = `<a href="#" class="btn btn-sm btn-warning btn-edit"
+                              data-id="${row.id}"
+                              data-filter="${filter}"
+                              data-mode="edit"
+                              data-bs-toggle="modal" data-bs-target="#addPlanModal">Update</a>`;
 
-                    const actions = `<div class="action-stack">${previewBtn}${addBtn}${reviseBtn}</div>`;
+                        const submitBtn = `<a href="#" class="btn btn-sm btn-primary btn-submit"
+                              data-id="${row.id}"
+                              data-filter="${filter}">Submit</a>`;
+
+                        actions = `<div class="action-stack">
+                          ${previewBtn}
+                          ${showUpdate ? updateBtn : ''}
+                          ${showSubmit ? submitBtn : ''}
+                        </div>`;
+                    } else {
+                        const addBtn = (!window.READ_ONLY && !window.HIDE_ADD) ? `
+                          <a href="#" class="btn btn-sm btn-success btn-show-modal"
+                             data-id="${row.id}"
+                             data-filter="${filter}"
+                             data-mode="add"
+                             data-bs-toggle="modal" data-bs-target="#addPlanModal">Add</a>` : '';
+                        actions = `<div class="action-stack">${previewBtn}${addBtn}</div>`;
+                    }
 
                     let kpiCells = '';
                     if (window.SHOW_KPI_COLS) {
                         kpiCells = `
-                            <td class="text-start">${pic}</td>
-                            <td class="text-start term-cell">${st}</td>
-                            <td class="text-start term-cell">${mt}</td>
-                            <td class="text-start term-cell">${lt}</td>
-                            <td class="text-center">${statusHtml}</td>
+                          <td class="text-start">${pic}</td>
+                          <td class="text-start term-cell">${st}</td>
+                          <td class="text-start term-cell">${mt}</td>
+                          <td class="text-start term-cell">${lt}</td>
+                          <td class="text-center">${statusHtml}</td>
                         `;
                     }
+
                     return `<tr class="fs-7">
                         <td>${i+1}</td>
                         <td class="text-start">${esc(row.name)}</td>
@@ -408,9 +578,11 @@
                         <td class="text-center">${actions}</td>
                     </tr>`;
                 }).join('');
+
                 $('#kt_table_users tbody').html(rows);
             }
 
+            // ===== Fetch list items =====
             function fetchItems(filter, containerId) {
                 const needsId = ['department', 'section', 'sub_section'].includes(filter);
 
@@ -444,6 +616,8 @@
                     .then(res => {
                         const items = res.items || [];
                         renderRows(items, filter);
+                        // === update badge untuk tab ini ===
+                        updateTabBadge(filter, items);
                         return items;
                     })
                     .catch(() => {
@@ -453,14 +627,16 @@
             }
             window.fetchItems = fetchItems;
 
+            // ===== Direksi/Division helpers =====
             function loadDivisionsForCompany(companyCode) {
                 const code = (companyCode || '').toUpperCase();
                 const plants = (window.DIREKSI_BY_COMPANY && window.DIREKSI_BY_COMPANY[code]) ? window
                     .DIREKSI_BY_COMPANY[code] : [];
                 const reqs = plants.map(p => $.getJSON(window.ROUTE_FILTER, {
-                    filter: 'division',
-                    division_id: p.id
-                }).then(r => r.items || []).catch(() => []));
+                        filter: 'division',
+                        division_id: p.id
+                    })
+                    .then(r => r.items || []).catch(() => []));
                 return Promise.all(reqs).then(arr => {
                     const flat = arr.flat();
                     const uniq = Object.values(flat.reduce((acc, it) => {
@@ -475,22 +651,26 @@
                 });
             }
 
+            function populatePlants(companyCode) {
+                const $plant = $('#plantSelect');
+                $plant.prop('disabled', !companyCode);
+                $plant.empty().append('<option value="">-- Select Direksi --</option>');
+                const list = window.DIREKSI_BY_COMPANY[(companyCode || '').toUpperCase()] || [];
+                list.forEach(p => $plant.append(
+                    `<option value="${p.id}">${$('<div>').text(p.name).html()}</option>`));
+                renderEmpty('Select direksi first');
+            }
+
             // ===== Initial load =====
             (function init() {
                 if (window.IS_COMPANY_SCOPE) {
-                    if (window.ACTIVE_FILTER === 'company') {
-                        fetchItems('company', null);
-                    } else if (window.ACTIVE_FILTER === 'plant') {
-                        renderEmpty('Select company first');
-                    } else if (window.ACTIVE_FILTER === 'division') {
-                        renderEmpty('Select company & direksi first');
-                    } else {
-                        renderEmpty('Select company first');
-                    }
+                    if (window.ACTIVE_FILTER === 'company') fetchItems('company', null);
+                    else if (window.ACTIVE_FILTER === 'plant') renderEmpty('Select company first');
+                    else if (window.ACTIVE_FILTER === 'division') renderEmpty('Select company & direksi first');
+                    else renderEmpty('Select company first');
                 } else {
-                    if (window.ACTIVE_FILTER === 'plant') {
-                        fetchItems('plant', null);
-                    } else if (window.ACTIVE_FILTER === 'division') {
+                    if (window.ACTIVE_FILTER === 'plant') fetchItems('plant', null);
+                    else if (window.ACTIVE_FILTER === 'division') {
                         if (window.IS_GM) fetchItems('division', null);
                         else if (window.CONTAINER_ID) fetchItems('division', window.CONTAINER_ID);
                         else renderEmpty('Select direksi first');
@@ -502,17 +682,7 @@
             })();
 
             // ===== Filters (company/plant/division) =====
-            function populatePlants(companyCode) {
-                const $plant = $('#plantSelect');
-                $plant.prop('disabled', !companyCode);
-                $plant.empty().append('<option value="">-- Select Direksi --</option>');
-                const list = window.DIREKSI_BY_COMPANY[(companyCode || '').toUpperCase()] || [];
-                list.forEach(p => $plant.append(
-                    `<option value="${p.id}">${$('<div>').text(p.name).html()}</option>`));
-                renderEmpty('Select direksi first');
-            }
-
-            $('#companySelect').on('change', function() {
+            $(document).off('change', '#companySelect').on('change', '#companySelect', function() {
                 const comp = $(this).val() || '';
                 if (window.ACTIVE_FILTER === 'division') {
                     populatePlants(comp);
@@ -532,7 +702,7 @@
                 }
             });
 
-            $('#plantSelect').on('change', function() {
+            $(document).off('change', '#plantSelect').on('change', '#plantSelect', function() {
                 const pid = $(this).val() || '';
                 window.CONTAINER_ID = pid || null;
                 if (window.ACTIVE_FILTER === 'division') {
@@ -541,27 +711,43 @@
                 }
             });
 
-            $('#divisionSelect').on('change', function() {
+            $(document).off('change', '#divisionSelect').on('change', '#divisionSelect', function() {
                 const did = $(this).val() || '';
                 window.CONTAINER_ID = did || null;
                 if (did) fetchItems(window.ACTIVE_FILTER, did);
                 else renderEmpty('Select division first');
             });
 
-            $('#searchButton').on('click', function() {
+            $(document).off('click', '#searchButton').on('click', '#searchButton', function() {
                 const q = ($('#searchInput').val() || '').toLowerCase();
                 $('#kt_table_users tbody tr').each(function() {
                     $(this).toggle($(this).text().toLowerCase().includes(q));
                 });
             });
-        });
-    </script>
-@endpush
-@push('scripts')
-    <script>
-        $(function() {
-            window.CURRENT_AREA_ID = null;
-            window.EDIT_MODE = false;
+
+            // ====== Modal RTC: Select2 & Candidates ======
+            function initSelect2InModal() {
+                $('#addPlanModal .rtc-s2').each(function() {
+                    const $el = $(this);
+                    if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
+                    $el.select2({
+                        dropdownParent: $('#addPlanModal'),
+                        width: '100%',
+                        placeholder: $el.data('placeholder') || '-- Select --',
+                        allowClear: true
+                    });
+                });
+            }
+
+            function resetRtcModal() {
+                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
+                    $(sel).empty().append('<option value="">-- Select --</option>').trigger('change');
+                });
+                $('#cnt_st').text(0);
+                $('#cnt_mt').text(0);
+                $('#cnt_lt').text(0);
+                $('#rtc_counts').addClass('d-none');
+            }
 
             function loadCandidatesForActiveTab() {
                 return new Promise((resolve, reject) => {
@@ -595,14 +781,35 @@
                             ...paramsBase,
                             kode: k
                         })
-                        .then(r => (r && r.data) ? r.data : [])
-                        .catch(() => [])
+                        .then(r => (r && r.data) ? r.data : []).catch(() => [])
                     );
 
                     Promise.all(reqs).then(chunks => {
                         const data = chunks.flat();
+
+                        // Unik per employee saja
                         const uniq = {};
-                        data.forEach(r => uniq[`${r.employee_id}|${r.term}`] = r);
+                        data.forEach(r => {
+                            if (!r || !r.employee_id) return;
+
+                            const key = r.employee_id;
+                            const existing = uniq[key];
+
+                            if (!existing) {
+                                // belum ada: pakai yang ini dulu
+                                uniq[key] = r;
+                                return;
+                            }
+
+                            // sudah ada: pilih yang plan_year lebih besar
+                            const currentYear = parseInt(existing.plan_year, 10) || 0;
+                            const newYear = parseInt(r.plan_year, 10) || 0;
+
+                            if (newYear > currentYear) {
+                                uniq[key] = r;
+                            }
+                        });
+
                         const rows = Object.values(uniq);
 
                         const st = [],
@@ -610,12 +817,13 @@
                             lt = [];
                         rows.forEach(r => {
                             const opt = `
-            <option value="${r.employee_id}">
-              ${$('<div>').text(r.name).html()}
-              • ${$('<div>').text(r.job_function || '-').html()}
-              • ${$('<div>').text(r.level || '-').html()}
-              • ${$('<div>').text(r.plan_year || '-').html()}
-            </option>`;
+                                <option value="${r.employee_id}">
+                                ${$('<div>').text(r.name).html()}
+                                • ${$('<div>').text(r.job_function || '-').html()}
+                                • ${$('<div>').text(r.level || '-').html()}
+                                • ${$('<div>').text(r.plan_year || '-').html()}
+                                </option>`;
+
                             if (r.term === 'short') st.push(opt);
                             else if (r.term === 'mid') mt.push(opt);
                             else lt.push(opt);
@@ -641,43 +849,25 @@
                 });
             }
 
-            function initSelect2InModal() {
-                $('#addPlanModal .rtc-s2').each(function() {
-                    const $el = $(this);
-                    if ($el.hasClass('select2-hidden-accessible')) $el.select2('destroy');
-                    $el.select2({
-                        dropdownParent: $('#addPlanModal'),
-                        width: '100%',
-                        placeholder: $el.data('placeholder') || '-- Select --',
-                        allowClear: true
-                    });
-                });
-            }
-
-            function resetRtcModal() {
-                ['#short_term', '#mid_term', '#long_term'].forEach(sel => {
-                    $(sel).empty().append('<option value="">-- Select --</option>').trigger('change');
-                });
-                $('#cnt_st').text(0);
-                $('#cnt_mt').text(0);
-                $('#cnt_lt').text(0);
-                $('#rtc_counts').addClass('d-none');
-            }
-
-            $(document).on('click', '.btn-show-modal', function(e) {
+            // ===== Open modal: Add =====
+            $(document).off('click', '.btn-show-modal').on('click', '.btn-show-modal', function(e) {
                 e.preventDefault();
                 window.CURRENT_AREA_ID = $(this).data('id') || null;
                 window.EDIT_MODE = false;
-                $('#addPlanLabel').text('Add Plan');
+                $('#addPlanLabel').text('Add RTC');
+                $('#btnSave').text('Save');
                 $('#addPlanModal').one('shown.bs.modal', initSelect2InModal);
                 loadCandidatesForActiveTab().catch(() => {});
             });
 
-            $(document).on('click', '.btn-revise', function(e) {
+            // ===== Open modal: Edit =====
+            $(document).off('click', '.btn-edit').on('click', '.btn-edit', function(e) {
                 e.preventDefault();
                 window.CURRENT_AREA_ID = $(this).data('id') || null;
                 window.EDIT_MODE = true;
-                $('#addPlanLabel').text('Revise Plan');
+                $('#addPlanLabel').text('Edit RTC');
+                $('#btnSave').text('Save');
+
                 const area = (window.ACTIVE_FILTER || '').toLowerCase();
                 const area_id = window.CURRENT_AREA_ID;
 
@@ -697,7 +887,6 @@
                         (res || []).forEach(r => {
                             byTerm[(r.term || '').toLowerCase()] = r.employee_id || '';
                         });
-
                         if (byTerm.short) $('#short_term').val(String(byTerm.short)).trigger('change');
                         if (byTerm.mid) $('#mid_term').val(String(byTerm.mid)).trigger('change');
                         if (byTerm.long) $('#long_term').val(String(byTerm.long)).trigger('change');
@@ -707,7 +896,47 @@
                 $('#addPlanModal').modal('show');
             });
 
-            $('#addPlanModal').on('hidden.bs.modal', function() {
+            // ===== Submit (ajukan ke approval) =====
+            $(document).off('click', '.btn-submit').on('click', '.btn-submit', function(e) {
+                e.preventDefault();
+                const areaId = $(this).data('id') || null;
+                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+
+                const payload = {
+                    filter: (window.ACTIVE_FILTER || '').toLowerCase(),
+                    id: areaId
+                };
+
+                Swal.fire({
+                    title: 'Submit RTC?',
+                    text: 'Setelah submit, RTC akan diajukan untuk approval.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Submit',
+                    cancelButtonText: 'Batal'
+                }).then((res) => {
+                    if (!res.isConfirmed) return;
+
+                    $.ajax({
+                        url: window.ROUTE_RTC_SUBMIT,
+                        type: 'POST',
+                        data: payload
+                    }).done(function() {
+                        Swal.fire('Berhasil', 'RTC berhasil di-submit.', 'success');
+                        const cid = window.CONTAINER_ID || null;
+                        if (typeof fetchItems === 'function') fetchItems(window
+                            .ACTIVE_FILTER, cid);
+                        else location.reload();
+                    }).fail(function(xhr) {
+                        const msg = xhr?.responseJSON?.message || xhr?.statusText ||
+                            'Gagal submit RTC';
+                        Swal.fire('Gagal', msg, 'error');
+                    });
+                });
+            });
+
+            // ===== Modal lifecycle =====
+            $(document).off('hidden.bs.modal', '#addPlanModal').on('hidden.bs.modal', '#addPlanModal', function() {
                 $(this).find('.rtc-s2').each(function() {
                     if ($(this).hasClass('select2-hidden-accessible')) $(this).select2('destroy');
                 });
@@ -716,12 +945,25 @@
                 resetRtcModal();
             });
 
-            // SUBMIT
-            $('#addPlanForm').on('submit', function(e) {
+            // ===== SAVE (Add & Update) — Satu-satunya handler submit =====
+            $(document).off('click', '#btnSave').on('click', '#btnSave', function() {
+                $('#addPlanForm').trigger('submit');
+            });
+
+            $(document).off('submit', '#addPlanForm').on('submit', '#addPlanForm', function(e) {
                 e.preventDefault();
 
+                if (window.__RTC_SAVING__) return;
+                window.__RTC_SAVING__ = true;
+
+                const $btn = $('#btnSave').prop('disabled', true);
+
                 const areaId = window.CURRENT_AREA_ID || null;
-                if (!areaId) return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+                if (!areaId) {
+                    window.__RTC_SAVING__ = false;
+                    $btn.prop('disabled', false);
+                    return Swal.fire('Oops', 'Area tidak valid.', 'warning');
+                }
 
                 const payload = {
                     filter: (window.ACTIVE_FILTER || '').toLowerCase(),
@@ -731,19 +973,18 @@
                     long_term: $('#long_term').val() || ''
                 };
 
-                if (!payload.short_term && !payload.mid_term && !payload.long_term) {
-                    return Swal.fire('Validasi', 'Pilih minimal satu kandidat (ST/MT/LT).', 'warning');
-                }
+                const url = window.EDIT_MODE ? window.ROUTE_RTC_UPDATE : window.ROUTE_RTC_SAVE;
 
                 $.ajax({
-                    url: window.ROUTE_RTC_UPDATE,
-                    type: 'GET',
+                    url: url,
+                    type: 'POST',
                     data: payload
-                }).done(function() {
+                }).done(function(res) {
                     $('#addPlanModal').modal('hide');
-                    const msg = window.EDIT_MODE ? 'Perubahan RTC disimpan.' :
-                        'RTC berhasil disimpan.';
-                    Swal.fire('Berhasil', msg, 'success');
+                    const fallback = window.EDIT_MODE ? 'Perubahan RTC disimpan (draft).' :
+                        'RTC berhasil disimpan (draft).';
+                    Swal.fire('Berhasil', (res && res.message) ? res.message : fallback, 'success');
+
                     const cid = window.CONTAINER_ID || null;
                     if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
                     else location.reload();
@@ -751,8 +992,12 @@
                     const msg = xhr?.responseJSON?.message || xhr?.statusText ||
                         'Gagal menyimpan RTC';
                     Swal.fire('Gagal', msg, 'error');
+                }).always(function() {
+                    window.__RTC_SAVING__ = false;
+                    $btn.prop('disabled', false);
                 });
             });
+
         });
     </script>
 @endpush

@@ -179,6 +179,11 @@
                 <input type="hidden" name="employee_id" value="{{ $icp->employee_id }}">
                 <input type="hidden" id="employee_current_code" value="{{ $currentRtcCode ?? '' }}">
 
+                <input type="hidden" name="employee_current_position"
+                    value="{{ $employee->position ?? ($icp->employee->position ?? '') }}">
+
+                <input type="hidden" name="readiness" value="{{ $icp->readiness ?? 0 }}">
+
                 {{-- ================= HEADER CARD ================= --}}
                 <div class="card shadow-sm rounded-3 mb-4">
                     <div class="card-body p-4">
@@ -280,8 +285,8 @@
                                         class="form-select form-select-sm {{ $isEvaluate ? 'ro' : '' }}" required>
                                         <option value="">Select Position</option>
                                         @foreach ($rtcList as $rt)
-                                            <option value="{{ $rt['code'] }}" @selected(old('career_target_code', $icp->career_target) == $rt['code'])>
-                                                {{ $rt['position'] }} ({{ $rt['code'] }})
+                                            <option value="{{ $rt['position'] }}" @selected(old('career_target_code') === $rt['position'])>
+                                                {{ $rt['position'] }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -354,7 +359,6 @@
                             class="form-control form-control-sm stage-year" name="stages[__S__][year]" style="width:110px"
                             required>
                     </div>
-                    <button type="button" class="btn btn-danger btn-sm btn-remove-stage">Remove</button>
                 </div>
 
                 <div class="stage-body">
@@ -372,6 +376,9 @@
                                 required disabled>
                                 <option value="">Select Position</option>
                             </select>
+                            <!-- hidden yang benar-benar dikirim ke backend -->
+                            <input type="hidden" class="stage-position-hidden" name="stages[__S__][position_code]"
+                                value="">
                         </div>
 
                         <div class="col-md-4">
@@ -442,7 +449,7 @@
         </template>
     @endverbatim
 
-@endSection
+@endsection
 
 @push('scripts')
     <script>
@@ -462,7 +469,6 @@
         const TECHS = @json($technicalCompetencies->pluck('competency'));
         const COMPANY = @json($employee->company_name ?? $icp->employee->company_name);
         const GRADES = @json($grades->pluck('aisin_grade'));
-        const RTC_LIST = @json($rtcList);
         const CURRENT_RTC_CODE = @json($currentRtcCode ?? null);
 
         // Stage hasil rebuild dari controller (plan_year-grouped)
@@ -475,6 +481,8 @@
         const HARD_MAX_STAGE = 10;
 
         const THEMES = ['theme-blue', 'theme-green', 'theme-amber', 'theme-purple', 'theme-rose'];
+
+        const RTC_LIST = @json($rtcList);
         const RTC_RANK = Object.fromEntries(
             RTC_LIST.map((x, i) => [String(x.code || '').toUpperCase(), i])
         );
@@ -596,7 +604,6 @@
                 }
             });
         }
-
 
         /* =======================================
            SELECT2 UNTUK TECH
@@ -753,7 +760,7 @@
 
 
         /* =======================================
-           STAGE BUILDER
+            STAGE BUILDER
         ========================================*/
 
         function buildStageDOM(data = null) {
@@ -781,7 +788,7 @@
             const jobSel = stage.querySelector('.stage-job');
             const posSel = stage.querySelector('.stage-position');
             const lvlSel = stage.querySelector('.stage-level');
-            const rmBtn = stage.querySelector('.btn-remove-stage');
+            const posHidden = stage.querySelector('.stage-position-hidden');
 
             // hidden job_source (disubmit ke backend)
             let jobSrc = stage.querySelector('.job-source');
@@ -793,12 +800,17 @@
                 stage.appendChild(jobSrc);
             }
 
-            // isi dropdown
             fillJobs(jobSel);
             fillGrades(lvlSel);
             fillPositionsRanged(posSel, CURRENT_RTC_CODE, INITIAL_CAREER_TARGET);
 
-            // event
+            // sinkronisasi select posisi -> hidden posisi
+            if (posSel && posHidden) {
+                posSel.addEventListener('change', () => {
+                    posHidden.value = posSel.value || '';
+                });
+            }
+
             jobSel.addEventListener('change', () => {
                 const opt = jobSel.options[jobSel.selectedIndex];
                 const source = opt?.dataset.source || '';
@@ -813,17 +825,11 @@
                 refreshStageTechs(stage, source, jobName);
             });
 
-            rmBtn.addEventListener('click', () => {
-                stage.remove();
-                reindexStages();
-            });
-
             // Prefill data existing
             if (data) {
                 // year
                 yearEl.value = data.year ?? data.plan_year ?? '';
 
-                // job function select
                 if (data.job_function) {
                     const match = [...jobSel.options].find(o => o.value === data.job_function);
                     if (match) {
@@ -842,12 +848,14 @@
                         const opt = document.createElement('option');
                         opt.value = data.position_code;
                         const meta = RTC_LIST.find(r => r.code === data.position_code);
-                        opt.textContent = meta ?
-                            `${meta.position} (${meta.code})` :
-                            data.position_code;
+                        opt.textContent = meta ? `${meta.position} (${meta.code})` : data.position_code;
                         posSel.appendChild(opt);
                     }
                     posSel.value = data.position_code;
+
+                    if (posHidden) {
+                        posHidden.value = data.position_code;
+                    }
                 }
 
                 // level / grade
@@ -855,26 +863,22 @@
                     fillGrades(lvlSel, data.level);
                 }
 
-                // detail list
+                // details
                 if (Array.isArray(data.details) && data.details.length) {
                     data.details.forEach(d => addDetail(stage, d));
                 } else {
                     addDetail(stage);
                 }
             } else {
-                // stage baru kosong -> minimal 1 detail kosong
+                // stage baru kosong → minimal 1 detail
                 addDetail(stage);
             }
 
-            // mode evaluate = readonly
             if (IS_EVALUATE) {
                 yearEl.classList.add('ro');
                 jobSel.classList.add('ro');
                 posSel.classList.add('ro');
                 lvlSel.classList.add('ro');
-                rmBtn.classList.add('d-none');
-
-                // hilangkan tombol remove di detail juga di addDetail()
             }
 
             return stage;
@@ -894,6 +898,7 @@
 
             const posSel = lastStage.querySelector('.stage-position');
             const lvlSel = lastStage.querySelector('.stage-level');
+            const posHidden = lastStage.querySelector('.stage-position-hidden');
 
             // rebuild options sesuai range CURRENT_RTC_CODE..careerVal
             fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerVal);
@@ -911,10 +916,15 @@
 
             if (careerVal) {
                 posSel.value = careerVal;
+                if (posHidden) {
+                    posHidden.value = careerVal;
+                }
             }
 
-            // LAST stage selalu locked
+            // LAST stage selalu locked (UI), tapi hidden tetap dikirim
             posSel.disabled = true;
+            posSel.classList.add('locked-pos');
+            posSel.style.pointerEvents = 'none';
 
             if (!lvlSel.options.length) {
                 fillGrades(lvlSel);
@@ -944,43 +954,57 @@
             const careerEl = $id('career_target');
             const careerVal = careerEl.value;
 
-            // butuh career target
+            showCareerTargetWarning(true);
             if (!careerVal) {
-                container.innerHTML = '';
-                showCareerTargetWarning(true);
                 return;
             } else {
                 showCareerTargetWarning(false);
             }
 
-            const val = dateEl.value; // 'YYYY-MM-DD'
+            const val = dateEl.value;
             if (!val) {
-                // kalau tanggal kosong: jangan generate apa2
-                container.innerHTML = '';
                 return;
             }
 
             const currentYear = (new Date()).getFullYear();
             const targetYear = Number(val.split('-')[0]);
 
-            // minimal 1 stage, maksimal HARD_MAX_STAGE
-            let diff = targetYear - currentYear;
-            if (diff < 1) diff = 1;
-            if (diff > HARD_MAX_STAGE) diff = HARD_MAX_STAGE;
+            let desiredCount = targetYear - currentYear;
+            if (desiredCount < 1) desiredCount = 1;
+            if (desiredCount > HARD_MAX_STAGE) desiredCount = HARD_MAX_STAGE;
 
-            container.innerHTML = '';
+            let stages = getStageCards();
+            const currentCount = stages.length;
 
-            for (let i = 0; i < diff; i++) {
-                const stage = buildStageDOM();
-                if (!stage) break;
+            // ===== CASE 1: belum ada stage sama sekali (misal fallback seperti create) =====
+            if (currentCount === 0) {
+                for (let i = 0; i < desiredCount; i++) {
+                    buildStageDOM();
+                }
+            } else {
+                // ===== CASE 2: sudah ada stage (update mode) =====
+                // kalau Date Target mundur -> kurangi stage dari belakang
+                if (desiredCount < currentCount) {
+                    for (let i = currentCount - 1; i >= desiredCount; i--) {
+                        container.removeChild(stages[i]); // hapus stage paling belakang
+                    }
+                }
+
+                // kalau Date Target maju -> tambah stage baru di belakang
+                if (desiredCount > currentCount) {
+                    for (let i = currentCount; i < desiredCount; i++) {
+                        buildStageDOM(); // stage baru kosong, tidak mengubah yang lama
+                    }
+                }
             }
 
-            // set nilai year per stage (mulai currentYear+1, sama kayak create)
+            // set tahun untuk stage yang BELUM punya nilai, biar tidak overwrite data lama
             const startYear = currentYear + 1;
-            getStageCards().forEach((stage, i) => {
+            stages = getStageCards();
+            stages.forEach((stage, idx) => {
                 const yearInput = stage.querySelector('.stage-year');
                 if (yearInput && !yearInput.value) {
-                    yearInput.value = startYear + i;
+                    yearInput.value = startYear + idx;
                 }
             });
 
@@ -1012,7 +1036,6 @@
 
                 EXISTING_STAGES.forEach(s => {
                     const stage = buildStageDOM(s);
-                    // setelah buildStageDOM(s) kita belum nyentuh lock, kita lock nanti dibawah
                 });
 
                 // Setelah semua stage masuk, kita reindex & force lock
@@ -1056,11 +1079,17 @@
                 // refill tiap stage position list + kosongin value
                 stages.forEach(stage => {
                     const posSel = stage.querySelector('.stage-position');
+                    const posHidden = stage.querySelector('.stage-position-hidden');
                     const lvlSel = stage.querySelector('.stage-level');
 
                     fillPositionsRanged(posSel, CURRENT_RTC_CODE, careerNow);
                     posSel.value = '';
                     posSel.disabled = false;
+                    posSel.classList.remove('locked-pos');
+                    posSel.style.pointerEvents = '';
+
+                    if (posHidden) posHidden.value = '';
+
                     fillGrades(lvlSel, "");
                 });
 
@@ -1089,10 +1118,12 @@
                     return;
                 }
 
-                // last stage position wajib == career target
+                // last stage position wajib == career target (pakai hidden utk jaga2)
                 const lastStage = stages[stages.length - 1];
                 const lastPosSel = lastStage.querySelector('.stage-position');
-                const lastPosVal = lastPosSel ? lastPosSel.value : '';
+                const lastPosHidden = lastStage.querySelector('.stage-position-hidden');
+
+                const lastPosVal = lastPosHidden?.value || lastPosSel?.value || '';
                 if (lastPosVal !== careerVal) {
                     e.preventDefault();
                     Swal.fire(

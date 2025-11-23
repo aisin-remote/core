@@ -528,12 +528,12 @@
                 {{-- Toolbar: Activity Plan link + Export --}}
                 <div class="d-flex justify-content-end mt-3 gap-2">
                     <div class="d-flex gap-2">
-                        <a href="#" class="btn btn-success d-none" id="btnExportExcel"
+                        <a href="#" class="btn btn-success d-none btn-export" data-kind="Excel" id="btnExportExcel"
                             data-href-template="{{ route('ipp.export.excel', '__ID__') }}">
                             <i class="bi bi-file-earmark-spreadsheet"></i> Export Excel
                         </a>
 
-                        <a href="#" class="btn btn-danger d-none" id="btnExportPDF"
+                        <a href="#" class="btn btn-danger d-none btn-export" data-kind="PDF" id="btnExportPDF"
                             data-href-template="{{ route('ipp.export.pdf', '__ID__') }}">
                             <i class="bi bi-file-earmark-pdf"></i> Export PDF
                         </a>
@@ -552,6 +552,8 @@
 
     {{-- Modal Tambah/Edit Point --}}
     @include('website.ipp.modal.create')
+
+    @include('layouts.partials.export-overlay')
 @endsection
 
 @push('scripts')
@@ -1305,7 +1307,7 @@
                     return;
                 }
                 if (!window.__currentIppId) {
-                    toast('IPP belum terinisialisasi.', 'danger');
+                    toast('IPP & Activity Plan belum terinisialisasi.', 'danger');
                     return;
                 }
                 if (!confirm('Submit IPP + Activity Plan sekarang?')) return;

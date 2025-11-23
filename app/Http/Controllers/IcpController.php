@@ -17,6 +17,7 @@ use App\Models\GradeConversion;
 use App\Models\IcpApprovalStep;
 use App\Helpers\ApprovalHelper;
 use App\Http\Requests\StoreIcpRequest;
+use App\Models\IcpSnapshot;
 use App\Models\MatrixCompetency;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -146,14 +147,12 @@ class IcpController extends Controller
     {
         $user = auth()->user();
 
-        // Parameter standar DataTables
         $draw = (int) $request->input('draw', 1);
         $start = (int) $request->input('start', 0);
         $length = (int) $request->input('length', 10);
         $searchValue = trim($request->input('search.value', ''));
         $filter = $request->input('filter', 'all');
 
-        // Base query: join ke employee untuk memfilter kolom karyawan
         $base = Icp::query()->with('employee')
             ->when($company, fn($q) => $q->whereHas('employee', fn($e) => $e->where('company_name', $company)));
 
@@ -398,7 +397,9 @@ class IcpController extends Controller
 
         $currentYear = now()->year;
         $rtcMap  = RtcTarget::mapAll();
-        $rtcList = collect(RtcTarget::order())
+        $currentCodeGuess = RtcTarget::codeFromPositionName($employee->position);
+        $orderedCodes = RtcTarget::codesFrom($currentCodeGuess);
+        $rtcList = collect($orderedCodes)
             ->map(function ($code) use ($rtcMap) {
                 return [
                     'code'     => $code,
@@ -408,12 +409,11 @@ class IcpController extends Controller
             ->unique('position')
             ->values();
 
-        $currentCodeGuess = RtcTarget::codeFromPositionName($employee->position);
         if ($currentCodeGuess) {
             $map = RtcTarget::map($currentCodeGuess);
             $currentPositionName = $map['position'] ?? $employee->position;
         } else {
-            $currentPositionName = $employee->position;
+            $currentCodeGuess = RtcTarget::codeFromPositionName($employee->position);
         }
 
         $defaultStages = [
@@ -426,10 +426,11 @@ class IcpController extends Controller
         // Ambil appraisal terakhir per tahun (max 3 tahun)
         $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
             ->selectRaw('YEAR(date) as year, score')
-            ->orderByDesc('date')->get()
+            ->orderByDesc('date')
+            ->get()
             ->groupBy('year')
             ->map(fn($it) => $it->first()->score)
-            ->sortKeys()
+            ->sortKeysDesc()
             ->take(3)
             ->toArray();
 
@@ -459,7 +460,6 @@ class IcpController extends Controller
     public function store(StoreIcpRequest $request)
     {
         $data = $request->validated();
-
         DB::beginTransaction();
         try {
             $icp = Icp::create([
@@ -550,6 +550,55 @@ class IcpController extends Controller
         ]);
     }
 
+    public function showModal($icp_id, Request $request)
+    {
+
+        $icp = Icp::select('id', 'employee_id', 'aspiration', 'career_target', 'date', 'job_function', 'position', 'level', 'readiness')
+            ->orderBy('date', 'desc')
+            ->with([
+                'details' => function ($query) {
+                    $query->select('icp_id', 'plan_year', 'job_function', 'position', 'level', 'current_technical', 'current_nontechnical', 'required_technical', 'required_nontechnical', 'development_technical', 'development_nontechnical');
+                },
+                'employee',
+                'steps'
+            ])
+            ->find($icp_id);
+
+        $performanceData = PerformanceAppraisalHistory::where('employee_id', $icp->employee_id)
+            ->selectRaw('YEAR(date) as year, score')
+            ->orderByDesc('date')->get()
+            ->groupBy('year')
+            ->map(fn($it) => $it->first()->score)
+            ->sortKeys()
+            ->take(3)
+            ->toArray();
+
+        $edu  = $icp->employee->educations->first();
+
+        if (!$icp) {
+            if ($request->ajax()) {
+                return response(
+                    '<div class="alert alert-danger mb-0">ICP tidak ditemukan.</div>',
+                    404
+                );
+            }
+
+            abort(404);
+        }
+
+        $header = [
+            'performanceData' => $performanceData,
+            'edu'             => $edu
+        ];
+
+        if ($request->ajax()) {
+            return view('website.modal.icp.show-detail', [
+                'icp' => $icp,
+                'header' => $header
+            ]);
+        }
+    }
+
     public function export($employee_id)
     {
         $employee = Employee::with([
@@ -575,10 +624,11 @@ class IcpController extends Controller
         // Ambil appraisal terakhir per tahun (max 3 tahun)
         $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
             ->selectRaw('YEAR(date) as year, score')
-            ->orderByDesc('date')->get()
+            ->orderByDesc('date')
+            ->get()
             ->groupBy('year')
             ->map(fn($it) => $it->first()->score)
-            ->sortKeys()
+            ->sortKeysDesc()
             ->take(3)
             ->toArray();
 
@@ -637,8 +687,8 @@ class IcpController extends Controller
         $sheet->setCellValue('G9', $ais);
         $sheet->setCellValue('C13', (string) $icp->aspiration);
         $sheet->setCellValue('D16', (string) $icp->career_target);
-        if ($minYear) {
-            $sheet->setCellValue('L16', $minYear);
+        if ($maxYear) {
+            $sheet->setCellValue('L16', $maxYear);
         }
 
         /* =====================================================
@@ -811,7 +861,7 @@ class IcpController extends Controller
                 $drawing = new \PhpOffice\PhpSpreadsheet\Worksheet\Drawing();
                 $drawing->setPath($imgPath);
                 $drawing->setCoordinates($cellImageTarget);
-                $drawing->setHeight(100);
+                $drawing->setHeight(110);
                 $drawing->setWorksheet($sheet);
             }
         };
@@ -841,6 +891,42 @@ class IcpController extends Controller
         (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($path);
 
         return response()->download($path)->deleteFileAfterSend(true);
+    }
+
+    public function comment($id)
+    {
+        $snapshots = IcpSnapshot::with('createdBy')
+            ->where('icp_id', $id)
+            ->orderByDesc('created_at')
+            ->get([
+                'id',
+                'icp_id',
+                'reason',
+                'steps',
+                'created_by',
+                'created_at',
+            ]);
+        $comments = $snapshots->map(function ($item) {
+            return [
+                'employee' => [
+                    'name' => optional($item->createdBy)->name
+                ],
+                'comment' => $item->reason,
+                'steps' => $item->steps,
+                'created_at' => $item->created_at?->format('d/m/Y H:i'),
+            ];
+        });
+
+        $lastUpload = $snapshots->first();
+
+        return response()->json([
+            'comments' => $comments,
+            'lastUpload' => $lastUpload
+                ? [
+                    'created_at' => $lastUpload->created_at?->format('d/m/Y H:i'),
+                ]
+                : null,
+        ]);
     }
 
 
@@ -935,7 +1021,6 @@ class IcpController extends Controller
             $icp->status = 0; // Revise
             $icp->save();
 
-            // tandai step aktif sebagai revised (opsional):
             $current = $icp->steps->where('status', 'pending')->sortBy('step_order')->first();
             if ($current) {
                 $current->update(['status' => 'revised']);
@@ -943,9 +1028,10 @@ class IcpController extends Controller
 
             // catat komentar (kalau punya tabel comment history ICP)
             if ($emp = auth()->user()->employee) {
-                $icp->commentHistory()->create([
-                    'comment' => (string) $request->input('comment', ''),
-                    'employee_id' => $emp->id,
+                $icp->snapshots()->create([
+                    'reason' => (string) $request->input('comment', ''),
+                    'steps' => $icp->status,
+                    'created_by' => $emp->id,
                 ]);
             }
         });
@@ -1004,8 +1090,10 @@ class IcpController extends Controller
         $divsCompetencies = $technicalCompetencies->whereNotNull('divs_id')->values();
 
         // Career target dropdown (harus sama formatnya dengan create)
+        $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
         $rtcMap  = RtcTarget::mapAll();
-        $rtcList = collect(RtcTarget::order())
+        $orderedCodes = RtcTarget::codesFrom($currentRtcCode);
+        $rtcList = collect($orderedCodes)
             ->map(function ($code) use ($rtcMap) {
                 return [
                     'code'     => $code,
@@ -1015,8 +1103,6 @@ class IcpController extends Controller
             ->unique('position')
             ->values();
 
-        // kode RTC posisi current karyawan sekarang (batas bawah untuk posisi stage)
-        $currentRtcCode = RtcTarget::codeFromPositionName($employee->position);
 
         // Performance appraisal terakhir per tahun (max 3 tahun) -> sama kayak create()
         $performanceData = PerformanceAppraisalHistory::where('employee_id', $employee->id)
@@ -1099,30 +1185,25 @@ class IcpController extends Controller
     public function update(StoreIcpRequest $request, $id)
     {
         $data = $request->validated();
-
         DB::beginTransaction();
         try {
             $icp = Icp::findOrFail($id);
 
-            // --- Basic update ICP row ---
             $icp->update([
                 'employee_id'    => $data['employee_id'],
                 'aspiration'     => $data['aspiration'],
-                'career_target'  => $data['career_target_code'], // tetap simpan kode target
+                'readiness'     => $data['readiness'],
+                'career_target'  => $data['career_target_code'],
                 'date'           => $data['date'],
                 'status'         => Icp::STATUS_DRAFT,
             ]);
 
-            // --- Safety check backend:
-            // pastikan last stage position == career_target_code
-            // (front-end JS enforce ini tapi jangan 100% percaya UI)
             if (!empty($data['stages']) && is_array($data['stages'])) {
                 $lastStage      = end($data['stages']);
                 $careerTarget   = $data['career_target_code'];
                 $lastPosition   = $lastStage['position_code'] ?? ($lastStage['_effective_position'] ?? null);
 
                 if ($careerTarget && $lastPosition && $careerTarget !== $lastPosition) {
-                    // kita anggap ini fatal - bisa juga fallback force override kalau kamu mau
                     DB::rollBack();
                     return back()
                         ->with('error', 'Posisi di stage terakhir harus sama dengan Career Target.')
@@ -1130,12 +1211,10 @@ class IcpController extends Controller
                 }
             }
 
-            // --- Replace seluruh detail ICP ---
             $icp->details()->delete();
 
             $rowsToInsert = [];
 
-            // Loop semua stage yg dikirim form
             foreach (($data['stages'] ?? []) as $stage) {
 
                 $year      = isset($stage['year']) ? (int) $stage['year'] : null;
@@ -1143,12 +1222,7 @@ class IcpController extends Controller
                 $jobSource = $stage['job_source']      ?? null;
                 $level     = $stage['level']           ?? null;
 
-                // position_code di form adalah kode RTC posisi stage tsb
-                // _effective_position dipakai di create() untuk safety,
-                // kita mirror di update kalau suatu saat dipakai front-end.
                 $effectivePos = $stage['_effective_position'] ?? ($stage['position_code'] ?? null);
-
-                // setiap "detail" = 1 row di tabel icp_details
                 foreach (($stage['details'] ?? []) as $d) {
                     $rowsToInsert[] = [
                         'icp_id'                    => $icp->id,

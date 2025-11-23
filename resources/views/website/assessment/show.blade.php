@@ -37,8 +37,8 @@
                                     <td class="text-center">{{ $assessment->date }}</td>
                                     <td class="text-center">
                                         <a class="btn btn-info btn-sm"
-                                            href="{{ route('assessments.showByDate', ['assessment_id' => $assessment->id, 'date' => $assessment->date]) }}">
-                                            Detail
+                                            href="{{ route('assessments.showByDate', ['tok' => $assessment->id, 'date' => $assessment->date]) }}">
+                                            Detail Assessment
                                         </a>
 
                                         @if (!empty($assessment->upload))

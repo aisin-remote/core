@@ -118,17 +118,17 @@ class HavController extends Controller
 
         $titles = [
             13 => 'Maximal Contributor',
-            7 => 'Top Performer',
-            3 => 'Future Star',
-            1 => 'Star',
+            7  => 'Top Performer',
+            3  => 'Future Star',
+            1  => 'Star',
             14 => 'Contributor',
-            8 => 'Strong Performer',
-            4 => 'Potential Candidate',
-            2 => 'Future Star',
+            8  => 'Strong Performer',
+            4  => 'Potential Candidate',
+            2  => 'Future Star',
             15 => 'Minimal Contributor',
-            9 => 'Career Person',
-            6 => 'Candidate',
-            5 => 'Raw Diamond',
+            9  => 'Career Person',
+            6  => 'Candidate',
+            5  => 'Raw Diamond',
             16 => 'Dead Wood',
             12 => 'Problem Employee',
             11 => 'Unfit Employee',
@@ -206,7 +206,7 @@ class HavController extends Controller
      */
     public function list(Request $request, $company = null)
     {
-        $title = 'Add Employee';
+        $title = 'HAV List';
         $user = auth()->user();
         $filter = $request->input('filter', 'all');
         $search = $request->input('search'); // ambil input search dari request
@@ -344,19 +344,19 @@ class HavController extends Controller
         $employee = $user->employee;
         $filter = $request->input('filter', 'all');
         $search = $request->input('search');
+        $normalized = $employee->getNormalizedPosition();
 
-        // Posisi yang terlihat
         $allPositions = ['Direktur', 'GM', 'Manager', 'Coordinator', 'Section Head', 'Supervisor', 'Leader', 'JP', 'Operator'];
         $rawPosition = $employee->position ?? 'Operator';
-        $currentPosition = Str::contains($rawPosition, 'Act ') ? trim(str_replace('Act', '', $rawPosition)) : $rawPosition;
-        $positionIndex = array_search($currentPosition, $allPositions);
-        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : [];
+        $currentPosition = Str::startsWith($rawPosition, 'Act ')
+            ? trim(Str::after($rawPosition, 'Act '))
+            : $rawPosition;
+        $positionIndex = array_search($currentPosition, $allPositions, true);
+        $visiblePositions = $positionIndex !== false ? array_slice($allPositions, $positionIndex) : $allPositions;
 
-        // Ambil subordinate berdasarkan level otorisasi
         $approvallevel = $employee->getCreateAuth();
         $subordinateIds = $employee->getSubordinatesByLevel($approvallevel)->pluck('id')->toArray();
 
-        // Ambil semua subordinate (filtered)
         $subordinates = Employee::whereIn('id', $subordinateIds)
             ->when($company, fn($q) => $q->where('company_name', $company))
             ->when($filter && $filter !== 'all', function ($q) use ($filter) {
@@ -368,7 +368,7 @@ class HavController extends Controller
             ->when($search, fn($q) => $q->where('name', 'like', '%' . $search . '%'))
             ->with([
                 'hav' => function ($q) {
-                    $q->orderByDesc('created_at') // urutkan biar first() dapat yang terbaru
+                    $q->orderByDesc('created_at')
                         ->with(['details', 'commentHistory']);
                 }
             ])
@@ -379,30 +379,65 @@ class HavController extends Controller
 
             $allowAdd = false;
             $virtualStatus = optional($latestHav)->status;
-            $badgeClass = 'badge-light-warning';
+            $badgeClass = 'badge-light';
 
-            if ($latestHav && $latestHav->status == 2) {
-                $addAfter = Carbon::parse($latestHav->created_at)->addYear();
+            if ($latestHav && (int)$latestHav->status === 2) {
+                $addAfter = Carbon::parse($latestHav->created_at)->addYear(); // perbaikan created_at
                 if (now()->gte($addAfter)) {
                     $allowAdd = true;
-                    $virtualStatus = null; // Set status virtual jadi '-' (null)
+                    $virtualStatus = null;
                 }
             }
 
-            // Set status for blade
             $statusRaw = optional($latestHav)->status;
             $isAssessmentOne = $latestHav && $latestHav->details->contains('is_assessment', 1);
 
             $statusText = $this->setBadgeStatus($statusRaw, $latestHav, $isAssessmentOne);
+            $approver = null;
+            $level = 0;
 
-            // Set tombol action blade
-            // “+ Add” tampil kalau:
-            // - belum punya HAV, atau
-            // - sudah Approved > 1 tahun (allowAdd), atau
-            // - masih punya HAV tapi is_assessment == 1 (mengikuti logic lama)
+            if ($statusText === 'Submitted') {
+                $level = (int) $emp->getCreateAuth() + 1;
+            } elseif ($statusText === 'Approved' || str_starts_with($statusText, 'Approved (Expired)')) {
+                $level = (int) $emp->getCreateAuth() + 1;
+            }
+
+            if ($level > 0) {
+                $sup = $emp->getSuperiorsByLevel($level)->last();
+                $approver = $sup->position ?? null;
+            }
+
+            if ($approver) {
+                if ($statusText === 'Submitted') {
+                    $statusText = 'Checking by ' . $approver;
+                } elseif ($statusText === 'Approved') {
+                    $statusText = 'Approved by ' . $approver;
+                } elseif (str_starts_with($statusText, 'Approved (Expired)')) {
+
+                    $statusText = 'Approved (Expired) by ' . $approver;
+                }
+            }
+            $badgeMap = [
+                'Submitted'                   => 'badge-light-primary',
+                'Checking'                    => 'badge-light-warning',
+                'Revised'                     => 'badge-light-danger',
+                'Approved'                    => 'badge-light-success',
+                'Approved by'                 => 'badge-light-success',
+                'Approved (Expired)'          => 'badge-light-dark',
+                'Approved (Expired) by'       => 'badge-light-dark',
+                'Not Created'                 => 'badge-light',
+                '-'                           => 'badge-light',
+            ];
+
+            $badgeClass = 'badge-light';
+            foreach ($badgeMap as $key => $class) {
+                if ($statusText === $key || str_starts_with($statusText, $key . ' ')) {
+                    $badgeClass = $class;
+                    break;
+                }
+            }
+
             $showAdd = (!$latestHav) || $allowAdd || ($latestHav && !$allowAdd && (int)$isAssessmentOne === 1);
-
-            // “Revise” tampil kalau is_assessment == 0 DAN status == 1 (Revised)
             $showRevise = ($latestHav && (int)$isAssessmentOne === 0 && (int)$latestHav->status == 1);
 
             $checkLevel  = $emp?->getFirstApproval();
@@ -422,7 +457,6 @@ class HavController extends Controller
                 'revise_hav_id' => $latestHav?->id,
             ];
         });
-
 
         return view('website.hav.assign', compact('title', 'employees', 'filter', 'company', 'search', 'visiblePositions'));
     }
@@ -841,7 +875,7 @@ class HavController extends Controller
         $title = 'Add Employee';
         $user = auth()->user();
         $filter = $request->input('filter', 'all');
-        $search = $request->input('search'); // ambil input search dari request
+        $search = $request->input('search');
 
         if ($user->role === 'HRD') {
             $employees = Hav::with('employee')
@@ -1038,7 +1072,7 @@ class HavController extends Controller
 
     private function setBadgeStatus($statusRaw, $latestHav, $isAssessmentOne)
     {
-        $baseText = match ($statusRaw) {
+        $baseText = match ((int) $statusRaw) {
             0 => 'Submitted',
             1 => 'Revised',
             2 => 'Approved',
@@ -1046,14 +1080,12 @@ class HavController extends Controller
             default => '-',
         };
 
-        if ($statusRaw === 0 & $isAssessmentOne) {
-            $statusText = 'Not Created';
-        } elseif ($statusRaw === 2 && Carbon::parse($latestHav->crated_at)->addYear()->isPast()) {
-            $statusText = '-';
-        } else {
-            $statusText = $baseText;
+        if ((int)$statusRaw === 0 && $isAssessmentOne) {
+            return 'Not Created';
+        } elseif ((int)$statusRaw === 2 && $latestHav && Carbon::parse($latestHav->created_at)->addYear()->isPast()) {
+            return 'Approved (Expired)';
         }
 
-        return $statusText;
+        return $baseText;
     }
 }

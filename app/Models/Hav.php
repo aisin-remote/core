@@ -31,6 +31,11 @@ class Hav extends Model
         return $this->hasMany(HavCommentHistory::class, 'hav_id');
     }
 
+    public function latestHav()
+    {
+        return $this->hasOne(\App\Models\Hav::class, 'employee_id')
+            ->latest('created_at'); // ORDER BY created_at DESC LIMIT 1
+    }
 
     // Many-to-One: Hav -> Employee
     public function quadran()
@@ -65,5 +70,21 @@ class Hav extends Model
     public function assessment()
     {
         return $this->belongsTo(Assessment::class, 'assessment_id', 'id');
+    }
+
+    public function isApproved(): bool
+    {
+        return (int) $this->status === 2;
+    }
+
+    public function isExpiredOneYear(): bool
+    {
+        return $this->created_at?->copy()->addYear()->isPast() ?? false;
+    }
+
+    public function hasAssessmentOne(): bool
+    {
+        // Pastikan kolomnya benar: is_assessment bernilai 1
+        return $this->details()->where('is_assessment', 1)->exists();
     }
 }

@@ -36,22 +36,20 @@ class IppWorkbookExporter
             $apWb = IOFactory::load($tplAp);
             $apTemplateSheet = $apWb->getSheetByName('Activity Plan') ?? $apWb->getSheet(0);
 
-            // Buat sheet baru untuk Activity Plan (bukan clone)
-            $newSheet = new \PhpOffice\PhpSpreadsheet\Worksheet\Worksheet($wb, 'Activity Plan');
-            $wb->addSheet($newSheet);
+            $sheetIndex = $wb->getSheetCount();
+            $wb->addExternalSheet($apTemplateSheet, $sheetIndex);
 
-            // Copy semua konten dari template ke sheet baru
-            $this->copySheetContent($apTemplateSheet, $newSheet);
+            $apSheet = $wb->getSheet($sheetIndex);
+            $apSheet->setTitle('Activity Plan');
 
-            // Render data ke sheet baru
-            $this->apRenderer->render($newSheet, $ippId);
+            $this->apRenderer->render($apSheet, $ippId);
 
             logger('Sheet details before rendering Activity Plan:', [
-                'sheet_title' => $newSheet->getTitle(),
-                'sheet_index' => $wb->getIndex($newSheet),
+                'sheet_title' => $apSheet->getTitle(),
+                'sheet_index' => $wb->getIndex($apSheet),
                 'total_sheets' => $wb->getSheetCount(),
-                'highest_row' => $newSheet->getHighestRow(),
-                'highest_column' => $newSheet->getHighestColumn(),
+                'highest_row' => $apSheet->getHighestRow(),
+                'highest_column' => $apSheet->getHighestColumn(),
             ]);
 
             // Set active sheet ke IPP form

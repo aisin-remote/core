@@ -55,6 +55,24 @@ class RtcTarget
         ];
     }
 
+    public static function codesFrom(?string $minCode = null): array
+    {
+        $ord = self::order();
+
+        if (!$minCode) {
+            return $ord;
+        }
+
+        $minCode = strtoupper(trim($minCode));
+        $idx = array_search($minCode, $ord, true);
+
+        if ($idx === false) {
+            return $ord;
+        }
+
+        return array_slice($ord, $idx);
+    }
+
     /**
      * Kalau dipanggil tanpa argumen, sebelumnya function ini ngembaliin seluruh map.
      * Behavior itu masih aku pertahankan supaya nggak ngerusak tempat lain.

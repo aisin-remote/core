@@ -2,8 +2,11 @@
 
 namespace App\Helpers;
 
+use App\Models\Hav;
+use App\Models\HavQuadrant;
 use App\Models\Rtc;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class RtcHelper
 {
@@ -66,65 +69,77 @@ class RtcHelper
         ];
     }
 
-    /**
-     * Format kandidat (Short/Mid/Long Term) + sisipkan info RTC terbaru per term
-     * untuk area/id yang telah di-set via setAreaContext().
-     *
-     * @param  mixed        $candidate  Relasi Employee? boleh null
-     * @param  string|null  $term       'short' | 'mid' | 'long' (WAJIB agar override RTC tepat)
-     */
     public static function formatCandidate($candidate, ?string $term = null): array
     {
-        // Nilai dasar dari kandidat relasi (kalau ada)
         $base = [
-            'name'  => $candidate->name  ?? '-',
-            'grade' => $candidate->grade ?? '-',
-            'age'   => ($candidate && $candidate->birthday_date) ? Carbon::parse($candidate->birthday_date)->age : '-',
+            'name'  => '-',
+            'grade' => '-',
+            'age'   => '-',
         ];
 
-        // Jika belum ada context area atau term tak diberikan, kembalikan base + meta default
-        if (!self::$area || !self::$areaId || !$term) {
-            return array_merge($base, [
-                'rtc_status'     => 0,
-                'rtc_term'       => $term ?? 'short',
-                'rtc_created_at' => null,
-                'rtc_id'         => null,
-            ]);
+        $rtc = null;
+
+        if (self::$area && self::$areaId && $term) {
+            $rtc = self::latestRtcForTerm(self::$area, self::$areaId, $term);
         }
 
-        // Ambil RTC terbaru untuk konteks area & term
-        $rtc = self::latestRtcForTerm(self::$area, self::$areaId, $term);
 
-        // Jika tidak ada RTC, tetap kembalikan base + meta default
-        if (!$rtc) {
-            return array_merge($base, [
-                'rtc_status'     => 0,
-                'rtc_term'       => $term,
-                'rtc_created_at' => null,
-                'rtc_id'         => null,
-            ]);
+        if ($rtc && $rtc->employee) {
+            $emp = $rtc->employee;
+
+            $base['name']  = $emp->name  ?? '-';
+            $base['grade'] = $emp->grade ?? '-';
+            $base['age']   = $emp->birthday_date
+                ? Carbon::parse($emp->birthday_date)->age
+                : '-';
+        } elseif ($candidate) {
+            $base['name']  = $candidate->name  ?? '-';
+            $base['grade'] = $candidate->grade ?? '-';
+            $base['age']   = $candidate->birthday_date
+                ? Carbon::parse($candidate->birthday_date)->age
+                : '-';
         }
 
-        // Override field kandidat dari employee di RTC (jika ada)
-        $emp = $rtc->employee;
-        if ($emp) {
-            $base['name']  = $emp->name  ?: $base['name'];
-            $base['grade'] = $emp->grade ?: $base['grade'];
-            $base['age']   = ($emp->birthday_date) ? Carbon::parse($emp->birthday_date)->age : $base['age'];
+        $humanAssests = [];
+        $employeeId = null;
+
+        if ($rtc && $rtc->employee_id) {
+            $employeeId = $rtc->employee_id;
+        } elseif ($candidate && isset($candidate->id)) {
+            $employeeId = $candidate->id;
         }
 
-        // created_at RTC — gunakan updated_at jika ada (sering jadi "waktu terakhir set")
+        if ($employeeId) {
+            $hav = Hav::where('employee_id', $employeeId)
+                ->select('quadrant', 'year', DB::raw('COUNT(*) as count'))
+                ->groupBy('quadrant', 'year')
+                ->orderByDesc('year')
+                ->get();
+
+            if ($hav->isNotEmpty()) {
+                $humanAssests = $hav->toArray();
+            } else {
+                $havQuadrants = HavQuadrant::where('employee_id', $employeeId)->get();
+                $humanAssests = $havQuadrants->toArray();
+            }
+        }
+
         $createdText = null;
-        $ts = $rtc->updated_at ?? $rtc->created_at;
-        if ($ts) {
-            $createdText = Carbon::parse($ts)->timezone('Asia/Jakarta')->format('d M Y, H:i');
+        if ($rtc) {
+            $ts = $rtc->updated_at ?? $rtc->created_at;
+            if ($ts) {
+                $createdText = Carbon::parse($ts)
+                    ->timezone('Asia/Jakarta')
+                    ->format('d M Y, H:i');
+            }
         }
 
         return array_merge($base, [
             'rtc_status'     => (int) ($rtc->status ?? 0),
-            'rtc_term'       => $term,
+            'rtc_term'       => $term ?? 'short',
             'rtc_created_at' => $createdText,
-            'rtc_id'         => $rtc->id,
+            'rtc_id'         => $rtc->id ?? null,
+            'human_assets'   => $humanAssests
         ]);
     }
 
@@ -155,13 +170,13 @@ class RtcHelper
      */
     protected static function latestRtcForTerm(string $area, int $areaId, string $term): ?Rtc
     {
-        // normalisasi kecil-besar huruf sesuai data
-        // (di controller kamu sudah kirim 'Division' / 'department' / 'section' / 'sub_section')
+        $normalizedArea = strtolower($area);
+
         return Rtc::with('employee')
-            ->where('area', $area)
+            ->whereRaw('LOWER(area) = ?', [$normalizedArea])
             ->where('area_id', $areaId)
-            ->where('term', $term)         // 'short' | 'mid' | 'long'
-            ->orderByDesc('updated_at')    // pakai updated_at supaya terlihat paling baru
+            ->where('term', $term)
+            ->orderByDesc('updated_at')
             ->orderByDesc('created_at')
             ->first();
     }

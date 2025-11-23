@@ -4,10 +4,12 @@ namespace App\Services\Excel;
 
 use App\Models\Ipp;
 use App\Models\ActivityPlan;
+use App\Models\Employee;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Style\Border;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class RenderActivityPlanSheet
 {
@@ -17,7 +19,6 @@ class RenderActivityPlanSheet
     private const CELL_SECTION   = 'E6';
 
     private const ROW_START      = 11; // Baris mulai data
-    private const ROW_SIGNATURE  = 14; // Baris awal tanda tangan (akan disesuaikan)
 
     private const COL_NO         = 'B';
     private const COL_OBJECTIVES_FROM = 'C';
@@ -29,7 +30,8 @@ class RenderActivityPlanSheet
 
     private const COL_MONTHS = ['I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'];
     private const FIRST_COL  = 'A';  // Kolom pertama untuk border medium
-    private const LAST_COL   = 'U';  // Kolom terakhir untuk border medium
+    private const LAST_COL   = 'U';  // Kolom terakhir untuk border medium (data)
+    private const OUTER_COL  = 'V';  // Kolom luar untuk border medium + signature
 
     // Mapping category ke format yang diinginkan
     private const CATEGORY_MAPPING = [
@@ -41,12 +43,14 @@ class RenderActivityPlanSheet
 
     public function render(Worksheet $sheet, int $ippId): void
     {
-        // Validasi worksheet
+        set_time_limit(300);
+        ini_set('memory_limit', '512M');
+
         if (is_null($sheet) || $sheet->getTitle() === '') {
             throw new \Exception('Worksheet untuk Activity Plan tidak valid');
         }
 
-        $ipp = Ipp::with('employee')->findOrFail($ippId);
+        $ipp = Ipp::with(['employee', 'picReviewer', 'approvedBy'])->findOrFail($ippId);
         $plan = ActivityPlan::with([
             'employee',
             'items' => fn($q) => $q->orderBy('id'),
@@ -54,8 +58,15 @@ class RenderActivityPlanSheet
             'items.ippPoint',
         ])->where('ipp_id', $ippId)->first();
 
-        // Set header data dengan error handling
-        $this->setCellValueSafe($sheet, self::CELL_NAME_NPK,  trim(($ipp->nama ?? $ipp->employee?->name ?? '—') . ' / ' . ($ipp->employee?->npk ?? '—')));
+        if (!empty($ipp->on_year)) {
+            $sheet->setCellValue('B1', 'ACTIVITY PLAN YEAR ' . $ipp->on_year);
+        }
+
+        $this->setCellValueSafe(
+            $sheet,
+            self::CELL_NAME_NPK,
+            trim(($ipp->nama ?? $ipp->employee?->name ?? '—') . ' / ' . ($ipp->employee?->npk ?? '—'))
+        );
         $this->setCellValueSafe($sheet, self::CELL_DIVISION,  $plan?->division   ?: $ipp->division   ?: '—');
         $this->setCellValueSafe($sheet, self::CELL_DEPT,      $plan?->department ?: $ipp->department ?: '—');
         $this->setCellValueSafe($sheet, self::CELL_SECTION,   $plan?->section    ?: $ipp->section    ?: '—');
@@ -67,33 +78,22 @@ class RenderActivityPlanSheet
             $this->drawCategoryRow($sheet, $currentRow, 'No Data Available');
             $currentRow++;
             $this->drawEmptyDataRow($sheet, $currentRow);
-            $this->adjustSignatureSection($sheet, $currentRow + 1);
+            $this->addSignatureSection($sheet, $currentRow + 1, $ipp);
+            $this->applyColumnSettings($sheet);
             return;
         }
 
-        // Group items by category dan activity
         $groupedItems = $this->groupItemsByCategoryAndActivity($items);
-
         $no = 1;
-
         foreach ($groupedItems as $category => $activities) {
-            // Convert category ke format yang diinginkan
             $formattedCategory = $this->formatCategory($category);
 
-            // Draw category row
             $this->drawCategoryRow($sheet, $currentRow, $formattedCategory);
             $currentRow++;
 
-            // Draw activity items untuk category ini
             foreach ($activities as $activity => $activityItems) {
-                $firstItem = $activityItems->first();
+                $isFirstRowOfActivity = true;
 
-                // Draw activity row (hanya sekali)
-                $this->drawActivityRow($sheet, $currentRow, $no, $activity, '', '', '', '', 0, true);
-                $currentRow++;
-                $no++;
-
-                // Draw detail items untuk activity ini
                 foreach ($activityItems as $it) {
                     $kind   = $it->kind_of_activity ?: '—';
                     $pic    = $this->shortenName($it->pic?->name ?: ($it->pic_name ?: '—'));
@@ -101,25 +101,289 @@ class RenderActivityPlanSheet
                     $due    = $this->fmtDateMonthYear($it->cached_due_date ?: $it->ippPoint?->due_date);
                     $mask   = (int)($it->schedule_mask ?? 0);
 
-                    $this->drawActivityDetailRow($sheet, $currentRow, $no, $kind, $pic, $target, $due, $mask);
+                    $activityText = $isFirstRowOfActivity ? $activity : '';
+                    $noText = $isFirstRowOfActivity ? $no : '';
+
+                    // sekarang objectives diisi di row yang sama
+                    $this->drawActivityDetailRow(
+                        $sheet,
+                        $currentRow,
+                        $noText,
+                        $activityText,
+                        $kind,
+                        $pic,
+                        $target,
+                        $due,
+                        $mask
+                    );
+
                     $currentRow++;
-                    $no++;
+                    $isFirstRowOfActivity = false;
                 }
+                $no++;
             }
         }
 
-        // Sesuaikan posisi tanda tangan berdasarkan jumlah data
-        $signatureStartRow = $this->adjustSignatureSection($sheet, $currentRow);
+        $dataEndRow = $currentRow - 1;
 
-        // Apply medium border untuk kolom A dan U dari awal data sampai satu baris setelah signature
-        $this->applyMediumSideBorders($sheet, self::ROW_START, $signatureStartRow + 3);
+        $signatureEndRow = $this->addSignatureSection($sheet, $dataEndRow, $ipp);
 
-        // Apply inner borders untuk data (B-T) - hanya border kiri untuk kolom B-H
-        $this->applyLeftBorders($sheet, self::ROW_START, $currentRow - 1);
-
-        // Apply special borders untuk schedule (I-T) - kiri, atas, bawah
-        $this->applyScheduleBorders($sheet, self::ROW_START, $currentRow - 1);
+        $this->applyLeftBorders($sheet, self::ROW_START, $dataEndRow);
+        $this->applyScheduleBorders($sheet, self::ROW_START, $dataEndRow);
+        $this->applyMediumBorders($sheet, self::ROW_START, $dataEndRow, $signatureEndRow);
+        $this->applyColumnSettings($sheet, $dataEndRow);
     }
+
+    /**
+     * Tambahkan bagian tanda tangan setelah data activity plan
+     * Mengembalikan baris terakhir yang terpakai (baris "Date :" paling bawah)
+     */
+    private function addSignatureSection(Worksheet $sheet, int $lastDataRow, Ipp $ipp): int
+    {
+        // Mulai dari baris terakhir data + 2 baris
+        $startRow = $lastDataRow + 2;
+        $titleRow = $startRow;
+
+    // === DATA PEGAWAI & REVIEWER ===
+        /** @var Employee|null $preparedEmp */
+        $preparedEmp = $ipp->employee;
+        /** @var Employee|null $checkedEmp */
+        $checkedEmp  = $ipp->picReviewer;
+        /** @var Employee|null $approvedEmp */
+        $approvedEmp = $ipp->approvedBy;
+
+        $preparedByName         = $preparedEmp->name ?? $ipp->nama ?? '';
+        $checkedByName          = $checkedEmp->name ?? '';
+        $superiorOfSuperiorName = $approvedEmp->name ?? '';
+
+        // === STATUS & TANGGAL ===
+        $status = strtolower((string) $ipp->status); // submitted / checked / approved
+
+        $statusRank = [
+            'submitted' => 1,
+            'checked'   => 2,
+            'approved'  => 3,
+        ];
+        $currentRank = $statusRank[$status] ?? 0;
+
+        $submitAt   = $ipp->last_submitted_at ?? $ipp->submitted_at;
+        $checkedAt  = $ipp->checked_at;
+        $approvedAt = $ipp->approved_at;
+
+        $submitDateStr   = $submitAt   ? substr((string) $submitAt,   0, 10) : null;
+        $checkedDateStr  = $checkedAt  ? substr((string) $checkedAt,  0, 10) : null;
+        $approvedDateStr = $approvedAt ? substr((string) $approvedAt, 0, 10) : null;
+
+        // === PATH SIGNATURE IMAGE ===
+        $preparedSigPath = $this->resolveSignaturePath($preparedEmp);
+        $checkedSigPath  = $this->resolveSignaturePath($checkedEmp);
+        $approvedSigPath = $this->resolveSignaturePath($approvedEmp);
+
+        /**
+         * Bagi area I..T (12 kolom) menjadi 3 blok sama lebar (4 kolom per blok):
+         *  - Superior of Superior: I..L (role: approved)
+         *  - Checked by         : M..P (role: checked)
+         *  - Prepared by        : Q..T (role: employee)
+         */
+        $blocks = [
+            [
+                'role'          => 'approved',
+                'title'         => 'Superior of Superior',
+                'name'          => $superiorOfSuperiorName,
+                'from'          => 'I',
+                'to'            => 'L',
+                'sigPath'       => $approvedSigPath,
+                'date'          => $approvedDateStr,
+                'minStatusRank' => $statusRank['approved'], // tampil kalau status >= approved
+            ],
+            [
+                'role'          => 'checked',
+                'title'         => 'Checked by',
+                'name'          => $checkedByName,
+                'from'          => 'M',
+                'to'            => 'P',
+                'sigPath'       => $checkedSigPath,
+                'date'          => $checkedDateStr,
+                'minStatusRank' => $statusRank['checked'], // tampil kalau status >= checked
+            ],
+            [
+                'role'          => 'employee',
+                'title'         => 'Prepared by',
+                'name'          => $preparedByName,
+                'from'          => 'Q',
+                'to'            => 'T',
+                'sigPath'       => $preparedSigPath,
+                'date'          => $submitDateStr,
+                'minStatusRank' => $statusRank['submitted'], // tampil kalau status >= submitted
+            ],
+        ];
+
+        $maxDateRow = $titleRow;
+
+        foreach ($blocks as $block) {
+            $fromCol = $block['from'];
+            $toCol   = $block['to'];
+
+            // === 1. BARIS JUDUL ===
+            $titleRange = $fromCol . $titleRow . ':' . $toCol . $titleRow;
+            $sheet->mergeCells($titleRange);
+            $sheet->setCellValue($fromCol . $titleRow, $block['title']);
+            $sheet->getStyle($titleRange)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+
+            // === 2. BARIS KOTAK TANDA TANGAN (TEMPAT IMAGE) ===
+            $signatureRow   = $titleRow + 2;
+            $signatureRange = $fromCol . $signatureRow . ':' . $toCol . $signatureRow;
+
+            $sheet->mergeCells($signatureRange);
+            $sheet->getRowDimension($signatureRow)->setRowHeight(80);
+
+            $sheet->getStyle($signatureRange)->getBorders()->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
+
+            if (
+                $currentRank >= $block['minStatusRank']
+                && !empty($block['sigPath'])
+                && is_file($block['sigPath'])
+            ) {
+                $drawing = new Drawing();
+                $drawing->setName('Signature');
+                $drawing->setDescription('Signature ' . $block['role']);
+                $drawing->setPath($block['sigPath']);
+                $drawing->setCoordinates($fromCol . $signatureRow);
+                $drawing->setResizeProportional(true);
+                $drawing->setHeight(100);
+                $drawing->setOffsetX(8);
+                $drawing->setOffsetY(5);
+                $drawing->setWorksheet($sheet);
+            }
+
+            // === 3. BARIS NAMA ===
+            $nameRow   = $signatureRow + 1;
+            $nameRange = $fromCol . $nameRow . ':' . $toCol . $nameRow;
+
+            $sheet->mergeCells($nameRange);
+            $sheet->setCellValue($fromCol . $nameRow, $block['name']);
+            $sheet->getStyle($nameRange)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+
+            // === 4. BARIS DATE ===
+            $dateRow   = $nameRow + 1;
+            $dateRange = $fromCol . $dateRow . ':' . $toCol . $dateRow;
+
+            $sheet->mergeCells($dateRange);
+
+            // Tampilkan "Date : yyyy-mm-dd" kalau status memenuhi dan ada tanggal
+            $dateText = 'Date :';
+            if ($currentRank >= $block['minStatusRank'] && !empty($block['date'])) {
+                $dateText .= ' ' . $block['date'];
+            }
+
+            $sheet->setCellValue($fromCol . $dateRow, $dateText);
+            $sheet->getStyle($dateRange)->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+
+            if ($dateRow > $maxDateRow) {
+                $maxDateRow = $dateRow;
+            }
+        }
+
+        // Tambah beberapa baris kosong di bawah area signature
+        $bottomRow = $maxDateRow + 3;
+
+        for ($r = $maxDateRow + 1; $r <= $bottomRow; $r++) {
+            $sheet->getRowDimension($r)->setRowHeight(18);
+        }
+
+        return $bottomRow;
+    }
+
+    /**
+     * Cari file signature berdasarkan data Employee
+     */
+    private function resolveSignaturePath(?Employee $emp): ?string
+    {
+        if (!$emp) {
+            return null;
+        }
+
+        // Kalau ada path khusus di kolom signature_path
+        if (!empty($emp->signature_path)) {
+            $p = storage_path('app/public/' . ltrim($emp->signature_path, '/'));
+            if (is_file($p)) {
+                return $p;
+            }
+        }
+
+        // Fallback: public/storage/signatures/{id}.png
+        $p2 = public_path('storage/signatures/' . $emp->id . '.png');
+        if (is_file($p2)) {
+            return $p2;
+        }
+
+        return null;
+    }
+
+
+
+    /**
+     * Apply column settings dengan auto-wrap untuk semua kolom
+     */
+    private function applyColumnSettings(Worksheet $sheet, int $dataEndRow = 0): void
+    {
+        // Kolom B (NO) - fixed width dengan auto-wrap
+        $sheet->getColumnDimension('B')->setWidth(8);
+        $sheet->getColumnDimension('C')->setWidth(50);
+
+        // Kolom C & D (OBJECTIVES)
+        $sheet->getColumnDimension('D')->setAutoSize(true);
+
+        // Kolom E (KIND OF ACTIVITY)
+        $sheet->getColumnDimension('E')->setAutoSize(true);
+
+        // Kolom F (PIC)
+        $sheet->getColumnDimension('F')->setWidth(10);
+
+        // Kolom H (DUE DATE)
+        $sheet->getColumnDimension('H')->setWidth(12);
+
+        // Kolom I-T (SCHEDULE BULANAN)
+        foreach (self::COL_MONTHS as $col) {
+            $sheet->getColumnDimension($col)->setWidth(7.5);
+        }
+
+        // Kolom A, U, V (border samping)
+        $sheet->getColumnDimension('A')->setWidth(3);
+        $sheet->getColumnDimension('U')->setWidth(3);
+        $sheet->getColumnDimension('V')->setWidth(3);
+
+        // Apply auto-wrap untuk semua kolom data (B sampai T)
+        $this->applyAutoWrapToAllColumns($sheet, $dataEndRow);
+    }
+
+    /**
+     * Apply auto-wrap text untuk semua kolom data
+     */
+    private function applyAutoWrapToAllColumns(Worksheet $sheet, int $dataEndRow): void
+    {
+        $firstDataRow = self::ROW_START;
+
+        // HANYA range data, tidak menyentuh baris signature
+        $dataRange = 'B' . $firstDataRow . ':T' . $dataEndRow;
+
+        $sheet->getStyle($dataRange)->getAlignment()
+            ->setWrapText(true)
+            ->setVertical(Alignment::VERTICAL_TOP);
+
+        // Auto height hanya untuk baris data
+        for ($row = $firstDataRow; $row <= $dataEndRow; $row++) {
+            $sheet->getRowDimension($row)->setRowHeight(-1); // Auto height
+        }
+    }
+
 
     private function formatCategory(string $category): string
     {
@@ -131,8 +395,8 @@ class RenderActivityPlanSheet
         $grouped = collect();
 
         foreach ($items as $item) {
-            $category = $item->cached_category ?: ($item->ippPoint->category ?? 'Uncategorized');
-            $activity = $item->cached_activity ?: ($item->ippPoint->activity ?? 'Uncategorized Activity');
+            $category = $item->cached_category ?: ($item->ippPoint->category ?? '');
+            $activity = $item->cached_activity ?: ($item->ippPoint->activity ?? '');
 
             if (!$grouped->has($category)) {
                 $grouped->put($category, collect());
@@ -150,25 +414,15 @@ class RenderActivityPlanSheet
 
     private function shortenName(string $name): string
     {
-        if ($name === '—' || strlen(trim($name)) <= 3) {
-            return $name;
+        $name = trim($name);
+
+        if ($name === '' || $name === '—') {
+            return $name === '' ? '—' : $name;
         }
 
-        // Ambil inisial (3 huruf pertama)
-        $words = explode(' ', trim($name));
-        $initials = '';
+        $parts = preg_split('/\s+/', $name);
 
-        foreach ($words as $word) {
-            if (strlen($word) > 0) {
-                $initials .= strtoupper(substr($word, 0, 1));
-            }
-            if (strlen($initials) >= 3) {
-                break;
-            }
-        }
-
-        // Pastikan panjang 3 karakter
-        return str_pad(substr($initials, 0, 3), 3, ' ', STR_PAD_RIGHT);
+        return $parts[0] ?? $name;
     }
 
     private function drawCategoryRow(Worksheet $s, int $row, string $category): void
@@ -185,19 +439,19 @@ class RenderActivityPlanSheet
             ],
             'alignment' => [
                 'horizontal' => Alignment::HORIZONTAL_LEFT,
-                'vertical' => Alignment::VERTICAL_CENTER,
+                'vertical'   => Alignment::VERTICAL_CENTER,
             ],
             'fill' => [
                 'fillType' => Fill::FILL_SOLID,
-                'color' => ['rgb' => 'E6E6E6'] // Light gray background
-            ]
+                'color'    => ['rgb' => 'E6E6E6'], // Light gray background
+            ],
         ]);
 
         // Set row height
         $s->getRowDimension($row)->setRowHeight(25);
     }
 
-    private function drawActivityRow(
+    private function drawActivityDetailRow(
         Worksheet $s,
         int $row,
         int|string $no,
@@ -206,62 +460,38 @@ class RenderActivityPlanSheet
         string $pic,
         string $target,
         ?string $due,
-        int $mask,
-        bool $isActivityRow = false
+        int $mask
     ): void {
-        // Set values - hanya activity yang diisi
+        // NO
         $s->setCellValue(self::COL_NO . $row, $no);
 
-        // Merge cells untuk activity (C dan D)
+        // OBJECTIVES (C–D)
         $objRange = self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row;
         $s->mergeCells($objRange);
         $s->setCellValue(self::COL_OBJECTIVES_FROM . $row, $activity);
 
-        // Kolom lainnya dikosongkan untuk activity row
-        $s->setCellValue(self::COL_KIND . $row, '');
-        $s->setCellValue(self::COL_PIC . $row, '');
-        $s->setCellValue(self::COL_TARGET . $row, '');
-        $s->setCellValue(self::COL_DUE . $row, '');
-
-        // Set bulanan - dikosongkan untuk activity row
-        foreach (self::COL_MONTHS as $col) {
-            $s->setCellValue($col . $row, '');
-        }
-
-        // Apply styles untuk activity row
-        $this->applyActivityRowStyles($s, $row, true);
-    }
-
-    private function drawActivityDetailRow(
-        Worksheet $s,
-        int $row,
-        int|string $no,
-        string $kind,
-        string $pic,
-        string $target,
-        ?string $due,
-        int $mask
-    ): void {
-        // Set values untuk detail row
-        $s->setCellValue(self::COL_NO . $row, $no);
+        // KIND, PIC, TARGET, DUE
         $s->setCellValue(self::COL_KIND . $row, $kind);
         $s->setCellValue(self::COL_PIC . $row, $pic);
         $s->setCellValue(self::COL_TARGET . $row, $target);
         $s->setCellValue(self::COL_DUE . $row, $due ?? '—');
 
-        // Objectives dikosongkan untuk detail row
-        $objRange = self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row;
-        $s->mergeCells($objRange);
-        $s->setCellValue(self::COL_OBJECTIVES_FROM . $row, '');
-
-        // Set bulanan
+        // SCHEDULE BULANAN (I–T)
         foreach (self::COL_MONTHS as $i => $col) {
-            $flag = ($mask & (1 << $i)) ? '✓' : '';
-            $s->setCellValue($col . $row, $flag);
+            $cellAddress = $col . $row;
+            if ($mask & (1 << $i)) {
+                $s->setCellValue($cellAddress, '');
+                $s->getStyle($cellAddress)->getFill()
+                    ->setFillType(Fill::FILL_SOLID)
+                    ->getStartColor()->setRGB('73bef8');
+            } else {
+                $s->setCellValue($cellAddress, '');
+                $s->getStyle($cellAddress)->getFill()
+                    ->setFillType(Fill::FILL_NONE);
+            }
         }
 
-        // Apply styles untuk detail row
-        $this->applyActivityRowStyles($s, $row, false);
+        $this->applyActivityRowStyles($s, $row, $activity !== '');
     }
 
     private function drawEmptyDataRow(Worksheet $s, int $row): void
@@ -282,10 +512,8 @@ class RenderActivityPlanSheet
 
     private function applyActivityRowStyles(Worksheet $s, int $row, bool $isActivityRow = false): void
     {
-        // Set row height untuk accommodate wrap text
         $s->getRowDimension($row)->setRowHeight(-1); // Auto height
 
-        // Alignment styles dengan wrap text untuk semua kolom B-T
         $dataRange = self::COL_NO . $row . ':' . self::COL_MONTHS[array_key_last(self::COL_MONTHS)] . $row;
 
         $s->getStyle($dataRange)->getAlignment()
@@ -317,7 +545,6 @@ class RenderActivityPlanSheet
                 ->setHorizontal(Alignment::HORIZONTAL_CENTER);
         }
 
-        // Style khusus untuk activity row (teks bold)
         if ($isActivityRow) {
             $s->getStyle(self::COL_OBJECTIVES_FROM . $row . ':' . self::COL_OBJECTIVES_TO . $row)
                 ->getFont()->setBold(true);
@@ -334,19 +561,7 @@ class RenderActivityPlanSheet
                 'borders' => [
                     'left' => [
                         'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => '000000'],
-                    ],
-                    'top' => [
-                        'borderStyle' => Border::BORDER_NONE,
-                        'color' => ['rgb' => '000000'],
-                    ],
-                    'bottom' => [
-                        'borderStyle' => Border::BORDER_NONE,
-                        'color' => ['rgb' => '000000'],
-                    ],
-                    'right' => [
-                        'borderStyle' => Border::BORDER_NONE,
-                        'color' => ['rgb' => '000000'],
+                        'color'       => ['rgb' => '000000'],
                     ],
                 ],
             ]);
@@ -363,171 +578,101 @@ class RenderActivityPlanSheet
                 'borders' => [
                     'left' => [
                         'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => '000000'],
+                        'color'       => ['rgb' => '000000'],
                     ],
                     'top' => [
                         'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => '000000'],
+                        'color'       => ['rgb' => '000000'],
                     ],
                     'bottom' => [
                         'borderStyle' => Border::BORDER_THIN,
-                        'color' => ['rgb' => '000000'],
-                    ],
-                    'right' => [
-                        'borderStyle' => Border::BORDER_NONE,
-                        'color' => ['rgb' => '000000'],
+                        'color'       => ['rgb' => '000000'],
                     ],
                 ],
             ]);
         }
 
         // Tambahkan border kanan untuk kolom terakhir schedule (T)
-        $lastScheduleCol = self::COL_MONTHS[array_key_last(self::COL_MONTHS)];
+        $lastScheduleCol   = self::COL_MONTHS[array_key_last(self::COL_MONTHS)];
         $lastScheduleRange = $lastScheduleCol . $startRow . ':' . $lastScheduleCol . $endRow;
 
         $sheet->getStyle($lastScheduleRange)->applyFromArray([
             'borders' => [
                 'right' => [
                     'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
+                    'color'       => ['rgb' => '000000'],
                 ],
             ],
         ]);
     }
 
-    private function applyMediumSideBorders(Worksheet $sheet, int $startRow, int $endRow): void
+    /**
+     * Border medium:
+     * - kiri (A) dari startRow sampai signatureEndRow
+     * - kanan data (U) dari startRow sampai dataEndRow
+     * - kanan luar (V) dari startRow sampai signatureEndRow
+     * - bottom A..V di dataEndRow
+     * - bottom A..V di signatureEndRow
+     */
+    private function applyMediumBorders(Worksheet $sheet, int $startRow, int $dataEndRow, int $signatureEndRow): void
     {
-        // Apply medium border untuk kolom A dari startRow sampai endRow
-        $sheet->getStyle(self::FIRST_COL . $startRow . ':' . self::FIRST_COL . $endRow)->applyFromArray([
+        // 1) Border kiri (kolom A) dari awal data sampai akhir signature
+        $sheet->getStyle(self::FIRST_COL . $startRow . ':' . self::FIRST_COL . $signatureEndRow)
+            ->applyFromArray([
+                'borders' => [
+                    'right' => [
+                        'borderStyle' => Border::BORDER_MEDIUM,
+                        'color'       => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+
+        // 2) Border kanan untuk area DATA (kolom U) - hanya sampai baris terakhir data
+        $sheet->getStyle(self::LAST_COL . $startRow . ':' . self::LAST_COL . $dataEndRow)
+            ->applyFromArray([
+                'borders' => [
+                    'left' => [
+                        'borderStyle' => Border::BORDER_MEDIUM,
+                        'color'       => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+
+        // 3) Border kanan luar (kolom V) - sampai akhir signature
+        $sheet->getStyle(self::OUTER_COL . $startRow . ':' . self::OUTER_COL . $signatureEndRow)
+            ->applyFromArray([
+                'borders' => [
+                    'left' => [
+                        'borderStyle' => Border::BORDER_MEDIUM,
+                        'color'       => ['rgb' => '000000'],
+                    ],
+                ],
+            ]);
+
+        // 4) Garis bawah medium di baris terakhir DATA, dari A sampai V
+        //    (biar sudut kanan bawah tidak "bolong")
+        $bottomDataRange = 'B' . $dataEndRow . ':' . 'T' . $dataEndRow;
+        $sheet->getStyle($bottomDataRange)->applyFromArray([
             'borders' => [
-                'right' => [
+                'bottom' => [
                     'borderStyle' => Border::BORDER_MEDIUM,
-                    'color' => ['rgb' => '000000'],
+                    'color'       => ['rgb' => '000000'],
                 ],
             ],
         ]);
 
-        // Apply medium border untuk kolom U dari startRow sampai endRow
-        $sheet->getStyle(self::LAST_COL . $startRow . ':' . self::LAST_COL . $endRow)->applyFromArray([
+        // 5) Garis bawah medium paling bawah (setelah signature), dari A sampai V
+        $bottomSignRange = 'B' . $signatureEndRow . ':' . 'U' . $signatureEndRow;
+        $sheet->getStyle($bottomSignRange)->applyFromArray([
             'borders' => [
-                'left' => [
+                'bottom' => [
                     'borderStyle' => Border::BORDER_MEDIUM,
-                    'color' => ['rgb' => '000000'],
+                    'color'       => ['rgb' => '000000'],
                 ],
             ],
         ]);
     }
 
-    private function adjustSignatureSection(Worksheet $sheet, int $lastDataRow): int
-    {
-        // Hitung baris untuk tanda tangan (2 baris setelah data terakhir)
-        $signatureStartRow = $lastDataRow + 2;
-
-        // Copy style dari baris tanda tangan template ke posisi baru
-        $this->copySignatureStyles($sheet, $signatureStartRow);
-
-        // Set nilai untuk tanda tangan
-        $this->setSignatureValues($sheet, $signatureStartRow);
-
-        return $signatureStartRow;
-    }
-
-    private function copySignatureStyles(Worksheet $sheet, int $signatureRow): void
-    {
-        // Area yang perlu di-copy style-nya
-        $areasToCopy = [
-            'G' . self::ROW_SIGNATURE . ':T' . (self::ROW_SIGNATURE + 3) // Area tanda tangan
-        ];
-
-        foreach ($areasToCopy as $range) {
-            try {
-                $style = $sheet->getStyle($range);
-                $newRange = $this->shiftRange($range, $signatureRow - self::ROW_SIGNATURE);
-                $sheet->duplicateStyle($style, $newRange);
-            } catch (\Exception $e) {
-                // Jika gagal copy style, buat style manual
-                $this->createSignatureStyle($sheet, $signatureRow);
-                break;
-            }
-        }
-
-        // Set row height untuk area tanda tangan
-        for ($i = 0; $i < 4; $i++) {
-            $sheet->getRowDimension($signatureRow + $i)->setRowHeight(25);
-        }
-    }
-
-    private function shiftRange(string $range, int $rowShift): string
-    {
-        $parts = explode(':', $range);
-        $newRange = '';
-
-        foreach ($parts as $part) {
-            preg_match('/([A-Z]+)(\d+)/', $part, $matches);
-            $col = $matches[1];
-            $row = $matches[2] + $rowShift;
-            $newRange .= $col . $row . ':';
-        }
-
-        return rtrim($newRange, ':');
-    }
-
-    private function createSignatureStyle(Worksheet $sheet, int $startRow): void
-    {
-        // Buat border untuk area tanda tangan
-        $signatureRange = 'G' . $startRow . ':T' . ($startRow + 3);
-
-        $sheet->getStyle($signatureRange)->applyFromArray([
-            'borders' => [
-                'outline' => [
-                    'borderStyle' => Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
-                ]
-            ],
-        ]);
-
-        // Set alignment untuk tanggal
-        $dateCells = [
-            'I' . ($startRow + 2), // Superior of Superior date
-            'M' . ($startRow + 2), // Superior date
-            'S' . ($startRow + 2)  // Employee date
-        ];
-
-        foreach ($dateCells as $cell) {
-            $sheet->getStyle($cell)->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                ->setVertical(Alignment::VERTICAL_CENTER);
-        }
-    }
-
-    private function setSignatureValues(Worksheet $sheet, int $startRow): void
-    {
-        // Set label untuk tanda tangan
-        $sheet->setCellValue('G' . $startRow, 'Superior of Superior');
-        $sheet->setCellValue('K' . $startRow, 'Superior');
-        $sheet->setCellValue('Q' . $startRow, 'Employee');
-
-        // Set label untuk tanggal
-        $sheet->setCellValue('I' . ($startRow + 2), 'Date :');
-        $sheet->setCellValue('M' . ($startRow + 2), 'Date :');
-        $sheet->setCellValue('S' . ($startRow + 2), 'Date :');
-
-        // Apply styles untuk label
-        $labelCells = [
-            'G' . $startRow,
-            'K' . $startRow,
-            'Q' . $startRow,
-            'I' . ($startRow + 2),
-            'M' . ($startRow + 2),
-            'S' . ($startRow + 2)
-        ];
-
-        foreach ($labelCells as $cell) {
-            $sheet->getStyle($cell)->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                ->setVertical(Alignment::VERTICAL_CENTER);
-        }
-    }
 
     private function setCellValueSafe(Worksheet $s, string $addr, string $val): void
     {
@@ -549,7 +694,7 @@ class RenderActivityPlanSheet
         try {
             return \Carbon\Carbon::parse($d)->format('M Y'); // Hanya bulan dan tahun
         } catch (\Throwable) {
-            return (string)$d;
+            return (string) $d;
         }
     }
 }

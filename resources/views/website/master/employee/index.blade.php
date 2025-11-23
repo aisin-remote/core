@@ -103,10 +103,12 @@
                                 <td>{{ $employees->grade }}</td>
                                 <td>{{ \Carbon\Carbon::parse($employees->birthday_date)->age }}</td>
 
-                                {{-- ✅ Modified Action buttons --}}
+                                @php
+                                    $userId = (string) $employees->user_id;
+                                    $tok = App\Support\OpaqueId::encode((int) $userId);
+                                @endphp
                                 <td class="text-center nowrap" style="min-width: 120px;">
-                                    <a href="{{ route('employee.edit', "$employees->user_id") }}"
-                                        class="btn btn-warning btn-sm me-1">
+                                    <a href="{{ route('employee.edit', $tok) }}" class="btn btn-warning btn-sm me-1">
                                         <i class="fa fa-edit"></i>
                                     </a>
                                     <button type="button" class="btn btn-danger btn-sm delete-btn"

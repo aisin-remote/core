@@ -563,17 +563,18 @@ class ActivityPlanController extends Controller
         }
 
         $v = validator($request->all(), [
-            'mode' => ['required', Rule::in(['create', 'edit'])],
-            'row_id' => ['nullable', 'integer'],
-            'ipp_point_id' => ['required', 'integer'],
+            'mode'             => ['required', Rule::in(['create', 'edit'])],
+            'row_id'           => ['nullable', 'integer'],
+            'ipp_point_id'     => ['required', 'integer'],
             'kind_of_activity' => ['required', 'string', 'max:255'],
-            'target' => ['nullable', 'string'],
-            'pic_employee_id' => ['required', 'integer', 'exists:employees,id'],
-            'start_date' => ['required', 'date_format:Y-m-d'],
-            'due_date' => ['required', 'date_format:Y-m-d'],
-            'months' => ['array', 'min:1'],
-            'months.*' => ['string', Rule::in($this->months())],
+            'target'           => ['nullable', 'string'],
+            'pic_employee_id'  => ['required', 'integer', 'exists:employees,id'],
+            'start_date'       => ['required', 'date_format:Y-m-d'],
+            'due_date'         => ['required', 'date_format:Y-m-d'],
+            'months'           => ['array', 'min:1'],
+            'months.*'         => ['string', Rule::in($this->months())],
         ]);
+
         if ($v->fails()) {
             return response()->json(['message' => $v->errors()->first()], 422);
         }
@@ -631,10 +632,10 @@ class ActivityPlanController extends Controller
         $mask = $this->monthsToMask($months);
 
         $cache = [
-            'cached_category' => $point->category,
-            'cached_activity' => $point->activity,
+            'cached_category'   => $point->category,
+            'cached_activity'   => $point->activity,
             'cached_start_date' => $iStart->toDateString(),
-            'cached_due_date' => $iDue->toDateString(),
+            'cached_due_date'   => $iDue->toDateString(),
         ];
 
         try {
@@ -652,20 +653,20 @@ class ActivityPlanController extends Controller
                 }
 
                 $item->update(array_merge([
-                    'ipp_point_id' => $point->id,
+                    'ipp_point_id'     => $point->id,
                     'kind_of_activity' => $request->input('kind_of_activity'),
-                    'target' => $request->input('target'),
-                    'pic_employee_id' => (int) $request->input('pic_employee_id'),
-                    'schedule_mask' => $mask,
+                    'target'           => $request->input('target'),
+                    'pic_employee_id'  => (int) $request->input('pic_employee_id'),
+                    'schedule_mask'    => $mask,
                 ], $cache));
             } else {
                 $item = ActivityPlanItem::create(array_merge([
                     'activity_plan_id' => $plan->id,
-                    'ipp_point_id' => $point->id,
+                    'ipp_point_id'     => $point->id,
                     'kind_of_activity' => $request->input('kind_of_activity'),
-                    'target' => $request->input('target'),
-                    'pic_employee_id' => (int) $request->input('pic_employee_id'),
-                    'schedule_mask' => $mask,
+                    'target'           => $request->input('target'),
+                    'pic_employee_id'  => (int) $request->input('pic_employee_id'),
+                    'schedule_mask'    => $mask,
                 ], $cache));
             }
 
@@ -675,23 +676,23 @@ class ActivityPlanController extends Controller
             return response()->json([
                 'message' => 'Draft tersimpan.',
                 'item' => [
-                    'id' => $item->id,
-                    'ipp_point_id' => $item->ipp_point_id,
-                    'kind_of_activity' => $item->kind_of_activity,
-                    'target' => $item->target,
-                    'pic_employee_id' => $item->pic_employee_id,
-                    'schedule_mask' => (int) $item->schedule_mask,
-                    'cached_category' => $item->cached_category,
-                    'cached_activity' => $item->cached_activity,
+                    'id'                => $item->id,
+                    'ipp_point_id'      => $item->ipp_point_id,
+                    'kind_of_activity'  => $item->kind_of_activity,
+                    'target'            => $item->target,
+                    'pic_employee_id'   => $item->pic_employee_id,
+                    'schedule_mask'     => (int) $item->schedule_mask,
+                    'cached_category'   => $item->cached_category,
+                    'cached_activity'   => $item->cached_activity,
                     'cached_start_date' => optional($item->cached_start_date)->toDateString() ?: $item->cached_start_date,
-                    'cached_due_date' => optional($item->cached_due_date)->toDateString() ?: $item->cached_due_date,
-                    'pic' => $item->pic ? ['id' => $item->pic->id, 'name' => $item->pic->name, 'npk' => $item->pic->npk] : null,
-                    'ipp_point' => $item->ippPoint ? [
-                        'id' => $item->ippPoint->id,
-                        'category' => $item->ippPoint->category,
-                        'activity' => $item->ippPoint->activity,
+                    'cached_due_date'   => optional($item->cached_due_date)->toDateString() ?: $item->cached_due_date,
+                    'pic'               => $item->pic ? ['id' => $item->pic->id, 'name' => $item->pic->name, 'npk' => $item->pic->npk] : null,
+                    'ipp_point'         => $item->ippPoint ? [
+                        'id'         => $item->ippPoint->id,
+                        'category'   => $item->ippPoint->category,
+                        'activity'   => $item->ippPoint->activity,
                         'start_date' => optional($item->ippPoint->start_date)->toDateString(),
-                        'due_date' => optional($item->ippPoint->due_date)->toDateString(),
+                        'due_date'   => optional($item->ippPoint->due_date)->toDateString(),
                     ] : null,
                 ],
             ]);

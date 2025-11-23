@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\CompanyScoped;
+use App\Models\IcpSnapshot as ModelsIcpSnapshot;
 use IcpSnapshot;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -46,6 +47,6 @@ class Icp extends Model
 
     public function snapshots()
     {
-        return $this->hasMany(IcpSnapshot::class, 'icp_id');
+        return $this->hasMany(ModelsIcpSnapshot::class, 'icp_id');
     }
 }

@@ -54,16 +54,17 @@
     #kt_app_header .form-control {
         font-size: 1rem;
     }
-
 </style>
 
 <div id="kt_app_header" class="app-header">
-    <div class="app-container container-fluid d-flex align-items-stretch justify-content-between" id="kt_app_header_container">
+    <div class="app-container container-fluid d-flex align-items-stretch justify-content-between"
+        id="kt_app_header_container">
 
         {{-- Left: brand + page title --}}
         <div class="d-flex align-items-center gap-3">
             {{-- Mobile sidebar toggle (opsional, kalau pakai sidebar) --}}
-            <button class="btn btn-icon d-lg-none" id="kt_app_sidebar_mobile_toggle" type="button" aria-label="Toggle sidebar">
+            <button class="btn btn-icon d-lg-none" id="kt_app_sidebar_mobile_toggle" type="button"
+                aria-label="Toggle sidebar">
                 <i class="ki-duotone ki-abstract-14 fs-3"><span class="path1"></span><span class="path2"></span></i>
             </button>
 
@@ -75,7 +76,7 @@
 
             {{-- Judul halaman --}}
             @php
-            $headerTitle = trim($__env->yieldContent('title')) ?: 'HR - People Development';
+                $headerTitle = trim($__env->yieldContent('title')) ?: 'HR - People Development';
             @endphp
             <div class="app-header-title d-none d-md-block">{{ $headerTitle }}</div>
         </div>
@@ -90,7 +91,8 @@
                 </button>
                 <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 320px;">
                     <form action="" method="GET" class="d-flex" role="search">
-                        <input name="q" type="text" class="form-control me-2" placeholder="Cari..." aria-label="Search" autofocus>
+                        <input name="q" type="text" class="form-control me-2" placeholder="Cari..."
+                            aria-label="Search" autofocus>
                         <button class="btn btn-primary" type="submit">Cari</button>
                     </form>
                 </div>
@@ -100,7 +102,8 @@
             <div class="dropdown">
                 <button class="btn p-0 border-0" data-bs-toggle="dropdown" aria-expanded="false" aria-label="User menu">
                     <span class="d-inline-flex align-items-center">
-                        <img src="{{ asset('assets/media/avatars/user.jpg') }}" class="rounded-3" width="35" height="35" alt="User">
+                        <img src="{{ asset('assets/media/avatars/user.jpg') }}" class="rounded-3" width="35"
+                            height="35" alt="User">
                     </span>
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end">
@@ -113,8 +116,9 @@
                     </li>
 
                     @if (auth()->user()?->role === 'User')
-                    <li><a class="dropdown-item" href="/employee/detail/{{ auth()->user()->employee->npk }}">My Profile</a></li>
-                    <li><a class="dropdown-item" href="/change-password">Change Password</a></li>
+                        <li><a class="dropdown-item" href="/employee/detail/{{ auth()->user()->employee->npk }}">My
+                                Profile</a></li>
+                        <li><a class="dropdown-item" href="/change-password">Change Password</a></li>
                     @endif
 
                     <li>
@@ -161,5 +165,4 @@
             });
         }
     });
-
 </script>

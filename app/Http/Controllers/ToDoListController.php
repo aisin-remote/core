@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Hav;
-use App\Models\Idp;
-use App\Models\Rtc;
+use App\Helpers\ApprovalHelper;
 use App\Models\Employee;
+use App\Models\Hav;
+use App\Models\Icp;
+use App\Models\IcpApprovalStep;
+use App\Models\Idp;
 use App\Models\Ipp;
+use App\Models\Rtc;
 use Illuminate\Http\Request;
 
 class ToDoListController extends Controller
@@ -14,41 +17,82 @@ class ToDoListController extends Controller
     public function index()
     {
         $user     = auth()->user();
-        $role     = $user->role;
         $employee = $user->employee;
-        $company  = $employee->company_name ?? null;
 
-        // ===== HRD = superadmin: akses semua karyawan =====
+        [$normalized, $subCreate, $subCheck, $subApprove] = $this->resolveScopes($user, $employee);
+
+        $assessments    = $this->getLatestHavAssessments($subCreate);
+        $unassignedIdps = $this->buildUnassignedIdps($assessments);
+
+        $draftIdpCollection   = $this->getDraftIdps($subCreate);
+        $reviseIdpCollection  = $this->getReviseIdps($subCreate);
+        $pendingIdpCollection = $this->getPendingIdps($subCheck, $subApprove, $normalized);
+
+        $allIdpTasks = $this->mergeAllIdpTasks(
+            $unassignedIdps,
+            $draftIdpCollection,
+            $reviseIdpCollection,
+            $pendingIdpCollection
+        );
+
+        $allHavTasks = $this->getHavTasks($subCheck);
+        $allRtcTasks = $this->getRtcTasks($subCheck, $subApprove);
+        $allIppTasks = $this->getIppTasks($employee, $user);
+        $allIcpTasks = $this->getIcpTasks();
+
+        return view('website.todolist.index', compact(
+            'allIdpTasks',
+            'allHavTasks',
+            'allRtcTasks',
+            'allIppTasks',
+            'allIcpTasks'
+        ));
+    }
+
+    /**
+     * Tentukan normalized position dan scope karyawan yang boleh dibuat/check/approve.
+     */
+    private function resolveScopes($user, $employee): array
+    {
+        $role = $user->role;
+
+        // HRD = superadmin: akses semua karyawan
         if ($role === 'HRD') {
-            // ambil semua employee id
-            $allIds    = Employee::pluck('id')->toArray();
-            $subCreate = $allIds;
-            $subCheck  = $allIds;
+            $allIds     = Employee::pluck('id')->toArray();
+            $subCreate  = $allIds;
+            $subCheck   = $allIds;
             $subApprove = $allIds;
-
-            // Normalized posisi diset khusus agar branch lain tidak jalan
             $normalized = 'hrd';
-        } else {
-            // ===== Non-HRD: pakai aturan existing =====
-            $normalized  = $employee?->getNormalizedPosition();
-            $createLevel = $employee?->getCreateAuth();
-            $subCreate   = $employee?->getSubordinatesByLevel($createLevel)->pluck('id')->toArray() ?? [];
 
-            $checkLevel  = $employee?->getFirstApproval();
-            $approveLevel = $employee?->getFinalApproval();
-
-            if ($normalized === 'vpd') {
-                // VPD: check=GM, approve=Manager
-                $subCheck   = $employee->getSubordinatesByLevel($checkLevel,  ['gm'])->pluck('id')->toArray();
-                $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
-            } else {
-                $subCheck   = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
-                $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
-            }
+            return [$normalized, $subCreate, $subCheck, $subApprove];
         }
 
-        // ===== Ambil HAV terbaru per karyawan (hanya yang bisa dibuat oleh user/HRD) =====
-        $assessments = Hav::with(['employee', 'details.idp', 'details.alc'])
+        // Non-HRD: pakai aturan existing
+        $normalized  = $employee?->getNormalizedPosition();
+        $createLevel = $employee?->getCreateAuth();
+        $subCreate   = $employee?->getSubordinatesByLevel($createLevel)->pluck('id')->toArray() ?? [];
+
+        $checkLevel   = $employee?->getFirstApproval();
+        $approveLevel = $employee?->getFinalApproval();
+
+        if ($normalized === 'vpd') {
+            // VPD: check = GM, approve = Manager
+            $subCheck   = $employee->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+        } else {
+            $subCheck   = $employee->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+            $subApprove = $employee->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+        }
+
+        return [$normalized, $subCreate, $subCheck, $subApprove];
+    }
+
+    /**
+     * Ambil HAV terbaru per karyawan (hanya yang bisa dibuat oleh user/HRD).
+     */
+    private function getLatestHavAssessments(array $subCreate)
+    {
+        return Hav::with(['employee', 'details.idp', 'details.alc'])
             ->whereIn('employee_id', $subCreate)
             ->whereIn('id', function ($q) {
                 $q->selectRaw('id')
@@ -56,15 +100,18 @@ class ToDoListController extends Controller
                     ->whereRaw('a.created_at = (SELECT MAX(created_at) FROM havs WHERE employee_id = a.employee_id)');
             })
             ->get();
+    }
 
-        // ==== Build kandidat IDP yang belum ada (unassigned) ====
+    /**
+     * Bangun list HAV detail yang belum dibuat IDP (unassigned).
+     */
+    private function buildUnassignedIdps($assessments)
+    {
         $emp = [];
+
         foreach ($assessments as $assessment) {
             foreach ($assessment->details as $detail) {
                 $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-
-                // ambil IDP valid (bukan -1)
-                $validIdp = $idps->first(fn($idp) => $idp && $idp->status !== -1);
 
                 if ((int) $detail->score < 3 || $detail->suggestion_development !== null) {
                     $emp[$assessment->employee_id][] = [
@@ -81,13 +128,14 @@ class ToDoListController extends Controller
         $employeeCompany = $assessments->pluck('employee.company_name', 'employee_id')->toArray();
 
         $notExistInIdp = [];
+
         foreach ($emp as $employeeId => $items) {
             foreach ($items as $item) {
                 $exists = Idp::where('hav_detail_id', $item['hav_detail_id'])
                     ->where('alc_id', $item['alc_id'])
                     ->exists();
 
-                if (!$exists) {
+                if (! $exists) {
                     $notExistInIdp[] = [
                         'employee_name'    => $employeeNames[$employeeId]   ?? 'Unknown',
                         'employee_npk'     => $employeeNpk[$employeeId]     ?? 'Unknown',
@@ -96,25 +144,38 @@ class ToDoListController extends Controller
                         'alc_id'           => $item['alc_id'],
                         'alc_name'         => $item['alc_name'] ?? 'Unknown',
                     ];
+
+                    // 1 task per employee
                     break;
                 }
             }
         }
 
-        // ===== Draft =====
+        return collect($notExistInIdp)->map(function ($item) {
+            $item['type'] = 'unassigned';
+
+            return $item;
+        });
+    }
+
+    /**
+     * Ambil IDP berstatus draft (status = 0).
+     */
+    private function getDraftIdps(array $subCreate)
+    {
         $draftIdps = Employee::with([
             'hav.details' => function ($q) {
                 $q->whereHas('idp', fn($qq) => $qq->where('status', 0))
                     ->with(['idp' => fn($qq) => $qq->where('status', 0)])
                     ->orderBy('created_at')
                     ->take(1);
-            }
+            },
         ])
             ->whereIn('id', $subCreate)
             ->whereHas('hav.details.idp', fn($q) => $q->where('status', 0))
             ->get();
 
-        $draftIdpCollection = $draftIdps->map(function ($employee) {
+        return $draftIdps->map(function ($employee) {
             $hav    = $employee->hav->first();
             $detail = optional($hav?->details->first());
             $idp    = optional($detail?->idp);
@@ -129,91 +190,30 @@ class ToDoListController extends Controller
                 'target'           => $idp?->development_target ?? '-',
             ];
         });
+    }
 
-        // ===== Revisi =====
-        $reviseIdps = Employee::with(['hav.details.idp' => fn($q) => $q->where('status', -1)->orderBy('created_at')])
+    /**
+     * Ambil IDP yang perlu revisi (status = -1).
+     */
+    private function getReviseIdps(array $subCreate)
+    {
+        $reviseIdps = Employee::with([
+            'hav.details.idp' => fn($q) => $q->where('status', -1)->orderBy('created_at'),
+        ])
             ->whereIn('id', $subCreate)
             ->whereHas('hav.details.idp', fn($q) => $q->where('status', -1))
             ->get();
 
-        $reviseIdpCollection = $reviseIdps->flatMap(function ($employee) {
+        return $reviseIdps->flatMap(function ($employee) {
             return $employee->hav->flatMap(function ($hav) use ($employee) {
                 return collect($hav->details)->flatMap(function ($detail) use ($employee) {
                     $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-                    return $idps->filter(fn($idp) => $idp->status === -1)->map(function ($idp) use ($employee) {
-                        return [
-                            'type'             => 'revise',
-                            'employee_name'    => $employee->name,
-                            'employee_npk'     => $employee->npk,
-                            'employee_company' => $employee->company_name,
-                            'category'         => $idp->category ?? '-',
-                            'program'          => $idp->development_program ?? '-',
-                            'target'           => $idp->development_target ?? '-',
-                            'created_at'       => $idp->created_at,
-                        ];
-                    });
-                });
-            });
-        });
 
-        // ===== Pending (status 1/2/3 sesuai peran) =====
-        $checkIdps = Employee::with(['hav.details.idp' => fn($q) => $q->where('status', 1)->orderBy('created_at')])
-            ->whereIn('id', $subCheck)
-            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 1))
-            ->get();
-
-        $approveIdpsQuery = Employee::with(['hav.details.idp' => fn($q) => $q->orderBy('created_at')])
-            ->whereIn('id', $subApprove)
-            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 2));
-
-        if ($normalized === 'president') {
-            $approveIdpsQuery->where('position', '!=', 'Manager');
-        }
-
-        $approveIdps = $approveIdpsQuery->get()->filter(function ($employee) {
-            return $employee->hav->every(function ($hav) {
-                $statuses = collect($hav->details)->flatMap(function ($detail) {
-                    $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-                    return $idps->pluck('status');
-                })->unique();
-
-                return $statuses->count() === 1 && $statuses->first() === 2;
-            });
-        });
-
-        if ($normalized === 'president') {
-            $presidenApproveIdps = Employee::with(['hav.details.idp' => fn($q) => $q->orderBy('created_at')])
-                ->whereIn('id', $subApprove)
-                ->whereHas('hav.details.idp', fn($q) => $q->where('status', 3))
-                ->whereDoesntHave('hav.details', function ($q) {
-                    $q->whereHas('idp', fn($qq) => $qq->where('status', 2));
-                })
-                ->get()
-                ->filter(function ($employee) {
-                    return $employee->hav->every(function ($hav) {
-                        $statuses = collect($hav->details)->flatMap(function ($detail) {
-                            $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-                            return $idps->pluck('status');
-                        })->unique();
-
-                        return $statuses->count() === 1 && $statuses->first() === 3;
-                    });
-                });
-        }
-
-        $pendingIdps = $checkIdps->merge($approveIdps);
-        if ($normalized === 'president') {
-            $pendingIdps = $pendingIdps->merge($presidenApproveIdps ?? collect())->unique();
-        }
-
-        $pendingIdpCollection = $pendingIdps->flatMap(function ($employee) {
-            return $employee->hav->flatMap(function ($hav) use ($employee) {
-                return collect($hav->details)->flatMap(function ($detail) use ($employee) {
-                    $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
-                    return $idps->filter(fn($idp) => in_array($idp->status, [1, 2, 3]))
+                    return $idps
+                        ->filter(fn($idp) => $idp->status === -1)
                         ->map(function ($idp) use ($employee) {
                             return [
-                                'type'             => $idp->status === 1 ? 'need_check' : 'need_approval',
+                                'type'             => 'revise',
                                 'employee_name'    => $employee->name,
                                 'employee_npk'     => $employee->npk,
                                 'employee_company' => $employee->company_name,
@@ -225,95 +225,240 @@ class ToDoListController extends Controller
                         });
                 });
             });
-        })
+        });
+    }
+
+    /**
+     * Ambil IDP pending (status 1/2/3) sesuai peran (check/approve/president).
+     */
+    private function getPendingIdps(array $subCheck, array $subApprove, ?string $normalized)
+    {
+        // IDP status 1 (need check)
+        $checkIdps = Employee::with([
+            'hav.details.idp' => fn($q) => $q->where('status', 1)->orderBy('created_at'),
+        ])
+            ->whereIn('id', $subCheck)
+            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 1))
+            ->get();
+
+        // IDP status 2 (need approve)
+        $approveIdpsQuery = Employee::with([
+            'hav.details.idp' => fn($q) => $q->orderBy('created_at'),
+        ])
+            ->whereIn('id', $subApprove)
+            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 2));
+
+        if ($normalized === 'president') {
+            $approveIdpsQuery->where('position', '!=', 'Manager');
+        }
+
+        $approveIdps = $approveIdpsQuery
+            ->get()
+            ->filter(function ($employee) {
+                return $employee->hav->every(function ($hav) {
+                    $statuses = collect($hav->details)->flatMap(function ($detail) {
+                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+
+                        return $idps->pluck('status');
+                    })->unique();
+
+                    return $statuses->count() === 1 && $statuses->first() === 2;
+                });
+            });
+
+        // IDP status 3 khusus president
+        $presidenApproveIdps = collect();
+
+        if ($normalized === 'president') {
+            $presidenApproveIdps = Employee::with([
+                'hav.details.idp' => fn($q) => $q->orderBy('created_at'),
+            ])
+                ->whereIn('id', $subApprove)
+                ->whereHas('hav.details.idp', fn($q) => $q->where('status', 3))
+                ->whereDoesntHave('hav.details', function ($q) {
+                    $q->whereHas('idp', fn($qq) => $qq->where('status', 2));
+                })
+                ->get()
+                ->filter(function ($employee) {
+                    return $employee->hav->every(function ($hav) {
+                        $statuses = collect($hav->details)->flatMap(function ($detail) {
+                            $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+
+                            return $idps->pluck('status');
+                        })->unique();
+
+                        return $statuses->count() === 1 && $statuses->first() === 3;
+                    });
+                });
+        }
+
+        $pendingIdps = $checkIdps->merge($approveIdps);
+
+        if ($normalized === 'president') {
+            $pendingIdps = $pendingIdps->merge($presidenApproveIdps)->unique();
+        }
+
+        return $pendingIdps
+            ->flatMap(function ($employee) {
+                return $employee->hav->flatMap(function ($hav) use ($employee) {
+                    return collect($hav->details)->flatMap(function ($detail) use ($employee) {
+                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+
+                        return $idps
+                            ->filter(fn($idp) => in_array($idp->status, [1, 2, 3]))
+                            ->map(function ($idp) use ($employee) {
+                                return [
+                                    'type'             => $idp->status === 1 ? 'need_check' : 'need_approval',
+                                    'employee_name'    => $employee->name,
+                                    'employee_npk'     => $employee->npk,
+                                    'employee_company' => $employee->company_name,
+                                    'category'         => $idp->category ?? '-',
+                                    'program'          => $idp->development_program ?? '-',
+                                    'target'           => $idp->development_target ?? '-',
+                                    'created_at'       => $idp->created_at,
+                                ];
+                            });
+                    });
+                });
+            })
             ->sortBy('created_at')
             ->unique('employee_npk')
             ->values();
+    }
 
-        // ===== Unassigned dari HAV (belum dibuat IDP) =====
-        $unassignedIdps = collect($notExistInIdp)->map(function ($item) {
-            $item['type'] = 'unassigned';
-            return $item;
-        });
-
-        // ===== Gabung semua IDP tasks =====
-        $allIdpTasks = $unassignedIdps
+    /**
+     * Gabungkan semua jenis IDP tasks.
+     */
+    private function mergeAllIdpTasks($unassignedIdps, $draftIdpCollection, $reviseIdpCollection, $pendingIdpCollection)
+    {
+        return $unassignedIdps
             ->merge($draftIdpCollection)
             ->merge($reviseIdpCollection)
             ->merge($pendingIdpCollection);
+    }
 
-        // ===== HAV tasks =====
-        $allHavTasks = Hav::with('employee')
+    /**
+     * HAV tasks (status 0 untuk subCheck).
+     */
+    private function getHavTasks(array $subCheck)
+    {
+        return Hav::with('employee')
             ->whereIn('employee_id', $subCheck)
             ->where('status', 0)
             ->get()
             ->unique('employee_id')
             ->values();
+    }
 
-        // ===== RTC tasks =====
-        $allRtcTasks = Rtc::with('employee')
+    /**
+     * ICP tasks: pakai logic approval berbasis IcpApprovalStep.
+     * Mengembalikan list step ICP yang pending untuk role user saat ini.
+     */
+    private function getIcpTasks()
+    {
+        $me   = auth()->user()->employee;
+        $role = ApprovalHelper::roleKeyFor($me);
+
+        // role utama
+        $rolesToMatch = [$role];
+
+        // toleransi data lama
+        if ($role === 'director') {
+            $rolesToMatch[] = 'direktur';
+        }
+
+        if ($role === 'president') {
+            $rolesToMatch[] = 'presiden';
+        }
+
+        if ($role === 'gm') {
+            $rolesToMatch[] = 'general manager';
+        }
+
+        $steps = IcpApprovalStep::with(['icp.employee', 'icp.steps'])
+            ->whereIn('role', $rolesToMatch)
+            ->where('status', 'pending')
+            ->whereHas('icp', function ($q) {
+                $q->where('status', '!=', 4);
+            })
+            ->orderBy('step_order')
+            ->get()
+            ->filter(function ($s) {
+                return $s->icp->steps->every(function ($x) use ($s) {
+                    return $x->step_order >= $s->step_order || $x->status === 'done';
+                });
+            })
+            ->values();
+
+        return $steps;
+    }
+
+
+    /**
+     * RTC tasks (status 0/1 sesuai scope).
+     */
+    private function getRtcTasks(array $subCheck, array $subApprove)
+    {
+        return Rtc::with('employee')
             ->where(function ($query) use ($subCheck, $subApprove) {
                 $query->where(function ($q) use ($subCheck) {
-                    $q->whereIn('employee_id', $subCheck)->where('status', 0);
+                    $q->whereIn('employee_id', $subCheck)
+                        ->where('status', 0);
                 })->orWhere(function ($q) use ($subApprove) {
-                    $q->whereIn('employee_id', $subApprove)->where('status', 1);
+                    $q->whereIn('employee_id', $subApprove)
+                        ->where('status', 1);
                 });
             })
             ->get();
+    }
 
-        // ===== IPP tasks =====
-        $year = now()->year;
+    /**
+     * IPP tasks untuk karyawan yang login di tahun berjalan.
+     */
+    private function getIppTasks($employee, $user): array
+    {
+        $year       = now()->year;
+        $allIppTasks = [];
+        $message    = null;
 
-        $ippTasks = [
-            "activity_management" => 0,
-            "crp"                 => 0,
-            "people_development"  => 0,
-            "special_assignment"  => 0,
-            "total"               => 0,
-            "status"              => "",
-            "employee_company"    => "",
-            "employee_npk"        => ""
+        $employeeId = $employee->id ?? $user->employee_id ?? null;
 
-        ];
-        $message = null;
-        $employeesWithoutIppThisYear = collect();
-
-        $employeeId = $employee->id ?? auth()->user()->employee_id ?? null;
-        $ipp = null;
         $ipp = Ipp::with('employee')
             ->where('employee_id', $employeeId)
             ->where('on_year', $year)
             ->latest('created_at')
             ->first();
 
-        if (!$ipp) {
+        if (! $ipp) {
             $summary = [];
             $message = "The {$year} IPP has not yet been created.";
         } else {
-            $summary = is_array($ipp->summary) ? $ipp->summary : (json_decode($ipp->summary, true) ?? []);
+            $summary = is_array($ipp->summary)
+                ? $ipp->summary
+                : (json_decode($ipp->summary, true) ?? []);
             $message = null;
         }
 
         $ippTasks = [
-            "activity_management" => $summary["activity_management"] ?? 0,
-            "crp"                 => $summary["crp"] ?? 0,
-            "people_development"  => $summary["people_development"] ?? 0,
-            "special_assignment"  => $summary["special_assignment"] ?? 0,
-            "total"               => $summary["total"] ?? array_sum([
-                $summary["activity_management"] ?? 0,
-                $summary["crp"] ?? 0,
-                $summary["people_development"] ?? 0,
-                $summary["special_assignment"] ?? 0,
+            'activity_management' => $summary['activity_management'] ?? 0,
+            'crp'                 => $summary['crp'] ?? 0,
+            'people_development'  => $summary['people_development'] ?? 0,
+            'special_assignment'  => $summary['special_assignment'] ?? 0,
+            'total'               => $summary['total'] ?? array_sum([
+                $summary['activity_management'] ?? 0,
+                $summary['crp'] ?? 0,
+                $summary['people_development'] ?? 0,
+                $summary['special_assignment'] ?? 0,
             ]),
-            "status"            => $ipp->status ?? "Not Created",
-            "employee_name"    => $ipp->employee->name ?? "",
-            "employee_company"    => $ipp->employee->company_name ?? "",
-            "employee_npk"        => $ipp->employee->npk ?? ""
+            'status'              => $ipp->status ?? 'Not Created',
+            'employee_name'       => $ipp->employee->name ?? '',
+            'employee_company'    => $ipp->employee->company_name ?? '',
+            'employee_npk'        => $ipp->employee->npk ?? '',
         ];
 
         $allIppTasks['ippTasks'] = $ippTasks;
-        $allIppTasks['message']     = $message;
+        $allIppTasks['message']  = $message;
 
-        return view('website.todolist.index', compact('allIdpTasks', 'allHavTasks', 'allRtcTasks', 'allIppTasks'));
+        return $allIppTasks;
     }
 }

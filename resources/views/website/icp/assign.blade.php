@@ -380,6 +380,13 @@
                                                 </button>
                                             </form>
                                         @endif
+
+                                        @if ($icp)
+                                            <a data-id="{{ $icp->id }}" class="btn btn-info btn-sm btn-comment"
+                                                href="#">
+                                                <i class="fas fa-comments"></i> Comment
+                                            </a>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
@@ -440,6 +447,9 @@
             </div>
         </div>
     </div>
+
+    {{-- Modal Comment --}}
+    @include('website.modal.icp.comment')
 @endsection
 
 @push('scripts')
@@ -509,6 +519,94 @@
                     container: 'body'
                 });
             });
+        });
+
+        function showCommentHistoryModal(response) {
+            $('#commentHistoryModal').modal('show');
+            $('#commentList').empty();
+
+            if (response.lastUpload) {
+                let formattedDate = '-';
+
+                if (response.lastUpload.created_at) {
+                    const [datePart, timePart] = response.lastUpload.created_at.split(' ');
+                    const [day, month, year] = datePart.split('/');
+
+                    const jsDate = new Date(`${year}-${month}-${day}T${timePart || '00:00'}`);
+
+                    if (!isNaN(jsDate)) {
+                        formattedDate = jsDate.toLocaleDateString('id-ID', {
+                            day: '2-digit',
+                            month: 'long',
+                            year: 'numeric'
+                        });
+                    } else {
+                        formattedDate = response.lastUpload.created_at;
+                    }
+                }
+
+                $('#lastUploadInfo').html(`Last Submit: <strong>${formattedDate}</strong>`);
+            } else {
+                $('#lastUploadInfo').html('No uploads found');
+            }
+        }
+
+        $(document).on('click', '.btn-comment', function(e) {
+            e.preventDefault();
+            const icp_id = $(this).data('id');
+            console.log(icp_id);
+
+            $("#commentList").empty();
+
+            $.get(`{{ url('/icp/comment') }}/${icp_id}`, function(response) {
+                    showCommentHistoryModal(response);
+
+                    const comments = response.comments || response.comment || [];
+
+                    if (comments.length) {
+                        $("#commentList").empty();
+
+                        comments.forEach(function(comment) {
+                            let formattedDate = '-';
+
+                            if (comment.created_at) {
+                                const [datePart, timePart] = comment.created_at.split(' ');
+                                const [day, month, year] = datePart.split('/');
+
+                                const jsDate = new Date(
+                                    `${year}-${month}-${day}T${timePart || '00:00'}`);
+
+                                if (!isNaN(jsDate)) {
+                                    formattedDate = new Intl.DateTimeFormat('id-ID', {
+                                        day: 'numeric',
+                                        month: 'long',
+                                        year: 'numeric'
+                                    }).format(jsDate);
+                                } else {
+                                    formattedDate = comment.created_at;
+                                }
+                            }
+
+                            $("#commentList").append(`
+                        <li class="list-group-item mb-2 d-flex justify-content-between align-items-start flex-column flex-sm-row">
+                            <div><strong>${comment.employee?.name ?? '-'} :</strong><br>${comment.comment ?? '-'}</div>
+                            <div class="text-muted small text-end mt-2 mt-sm-0 d-flex justify-content-center align-items-center">
+                                <strong>${formattedDate}</strong>
+                            </div>
+                        </li>
+                    `);
+                        });
+                    } else {
+                        $("#commentList").append(
+                            '<li class="list-group-item text-muted">No comments found.</li>'
+                        );
+                    }
+
+                    $('#commentHistoryModal').modal('show');
+                })
+                .fail(function() {
+                    alert('Failed to load comment history.');
+                });
         });
     </script>
 @endpush

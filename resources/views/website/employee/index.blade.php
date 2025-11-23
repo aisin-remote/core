@@ -33,14 +33,17 @@
                 <ul class="nav nav-tabs nav-line-tabs nav-line-tabs-2x border-0 fs-5 fw-semibold mb-4" role="tablist"
                     style="cursor:pointer">
                     <li class="nav-item" role="presentation">
-                        <a class="nav-link fs-7 {{ $filter === 'all' ? 'active' : '' }} filter-tab" data-filter="all">
+                        <a class="nav-link fs-7 {{ request('filter') === 'all' || is_null(request('filter')) ? 'active' : '' }}"
+                            href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => 'all']) }}">
                             <i class="fas fa-list me-2"></i>Show All
                         </a>
                     </li>
+
+                    {{-- Tab Dinamis Berdasarkan Posisi --}}
                     @foreach ($visiblePositions as $position)
                         <li class="nav-item" role="presentation">
-                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter === $position ? 'active' : '' }} filter-tab"
-                                data-filter="{{ $position }}">
+                            <a class="nav-link fs-7 my-0 mx-3 {{ $filter == $position ? 'active' : '' }}"
+                                href="{{ route('employee.index', ['company' => $company, 'search' => request('search'), 'filter' => $position]) }}">
                                 <i class="fas fa-user-tag me-2"></i>{{ $position }}
                             </a>
                         </li>
@@ -72,6 +75,7 @@
                                         default => $employee->department?->name,
                                     };
                                     $userId = (string) $employee->user_id;
+                                    $tok = App\Support\OpaqueId::encode((int) $userId);
                                 @endphp
                                 <tr class="fs-7" data-position="{{ $employee->position }}">
                                     <td>{{ $index + 1 }}</td>
@@ -88,7 +92,7 @@
                                     <td>{{ $employee->grade }}</td>
                                     <td>{{ \Carbon\Carbon::parse($employee->birthday_date)->age }}</td>
                                     <td class="text-center">
-                                        <a href="{{ route('employee.show', $userId) }}" class="btn btn-info btn-sm">
+                                        <a href="{{ route('employee.show', $tok) }}" class="btn btn-info btn-sm">
                                             <i class="fa fa-eye"></i>
                                         </a>
                                     </td>
@@ -102,7 +106,6 @@
                     <small class="text-muted fw-bold">
                         Catatan: Hubungi HRD Human Capital jika data karyawan yang dicari tidak tersedia.
                     </small>
-                    {{-- Tidak ada Laravel links() karena client-side --}}
                 </div>
             </div>
         </div>

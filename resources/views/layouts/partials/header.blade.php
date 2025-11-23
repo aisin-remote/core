@@ -155,13 +155,15 @@
                         class="menu-item here show menu-here-bg menu-lg-down-accordion me-0 me-lg-2">
                         <span class="menu-link">
                             @php
-                                $title = match (ucfirst(request()->path())) {
-                                    'Hav' => 'Human Assets Value',
-                                    'Idp' => 'Individual Development Plan',
-                                    default => ucfirst(request()->path()),
-                                };
+                                $computedTitle =
+                                    $title ??
+                                    match (ucfirst(request()->path())) {
+                                        'Hav' => 'Human Assets Value',
+                                        'Idp' => 'Individual Development Plan',
+                                        default => ucfirst(request()->path()),
+                                    };
                             @endphp
-                            <span class="menu-title">{{ $title }}</span>
+                            <span class="menu-title">{{ $computedTitle }}</span>
                             <span class="menu-arrow d-lg-none"></span>
                         </span>
                     </div>
@@ -174,22 +176,26 @@
                 <div class="app-navbar-item d-none d-md-flex me-2" title="Waktu Jakarta (WIB)" data-bs-toggle="tooltip">
                     <span id="header-clock" class="header-clock">--:--:-- WIB</span>
                 </div>
-
+                @php
+                    $photo = auth()->user()->employee?->photo;
+                @endphp
                 <div class="app-navbar-item ms-1 ms-md-4" id="kt_header_user_menu_toggle">
                     <div class="cursor-pointer symbol symbol-35px"
                         data-kt-menu-trigger="{default: 'click', lg: 'hover'}" data-kt-menu-attach="parent"
                         data-kt-menu-placement="bottom-end">
-                        <img src="{{ asset('storage/' . auth()->user()->employee->photo) }}" class="rounded-3"
-                            alt="user">
+                        <img src="{{ $photo ? Storage::url($photo) : asset('assets/media/avatars/300-1.jpg') }}"
+                            class="rounded-3" alt="user">
                     </div>
 
                     <div class="menu menu-sub menu-sub-dropdown menu-column menu-rounded menu-gray-800 menu-state-bg menu-state-color fw-semibold py-4 fs-6 w-300px"
                         data-kt-menu="true">
                         <div class="separator my-2"></div>
-
+                        @php
+                            $tok = App\Support\OpaqueId::encode((int) auth()->user()->id);
+                        @endphp
                         @if (auth()->user())
                             <div class="menu-item px-5">
-                                <a href="/employee/detail/{{ auth()->user()->id }}" class="menu-link px-5">My
+                                <a href="/employee/detail/{{ $tok }}" class="menu-link px-5">My
                                     Profile</a>
                             </div>
                             <div class="menu-item px-5">

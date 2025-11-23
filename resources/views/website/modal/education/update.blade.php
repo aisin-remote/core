@@ -46,8 +46,7 @@
                         <div class="col-6">
                             <label class="form-label">Start Year</label>
                             <input type="date" name="start_date" class="form-control"
-                                value="{{ $education->start_date ? \Illuminate\Support\Carbon::parse($education->start_date)->format('Y-m-d') : '' }}"
-                                required>
+                                value="{{ $education->start_date ? \Illuminate\Support\Carbon::parse($education->start_date)->format('Y-m-d') : '' }}">
                         </div>
                         <div class="col-6">
                             <label class="form-label">End Year

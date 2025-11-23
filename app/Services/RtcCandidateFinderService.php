@@ -46,11 +46,11 @@ class RtcCandidateFinderService
 
         return $employees->map(function ($e) use ($year) {
             $allDetails = $e->icp
-                ->flatMap(fn($icp) => $icp->details)
-                ->sortBy('plan_year')
-                ->values();
+                ->flatMap(fn($icp) => $icp->details);
+            $d = $allDetails
+                ->sortByDesc('plan_year')
+                ->first();
 
-            $d = $allDetails->first();
             if (!$d) return null;
 
             $diff = (int) $d->plan_year - $year;

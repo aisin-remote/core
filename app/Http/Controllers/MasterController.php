@@ -70,28 +70,18 @@ class MasterController extends Controller
 
         $allPositions = [
             'President',
-            'VPD',
             'Direktur',
-            'Act Direktur',
-            'Act GM',
             'GM',
-            'Act Manager',
             'Manager',
             'Coordinator',
             'Section Head',
-            'Act Section Head',
-            'Act Supervisor',
             'Supervisor',
-            'Act Leader',
             'Leader',
-            'Staff',
-            'Act JP',
             'JP',
-            'Operator'
+            'Operator',
         ];
 
         $rawPosition = $user->employee->position ?? 'Operator';
-
         $visiblePositions = [];
 
         if ($user->isHRDorDireksi()) {
@@ -484,6 +474,14 @@ class MasterController extends Controller
         return view('website.master.grade.index');
     }
 
+    private const RTC_STATUS = [
+        'draft'     => 0,
+        'submitted' => 1,
+        'approved'  => 2,
+        'ongoing'   => 3,
+
+    ];
+
     public function filter(Request $request)
     {
         $trace = (string) Str::uuid();
@@ -587,12 +585,8 @@ class MasterController extends Controller
                         $q = Department::query()
                             ->when($containerId > 0, fn($qq) => $qq->where('division_id', $containerId));
 
-                        if ($isMg) {
-                            $q->where('manager_id', $employee->id);
-                        }
-                        if ($isGM) {
-                            $q->whereHas('division', fn($dv) => $dv->where('gm_id', $employee->id));
-                        }
+                        if ($isMg)  $q->where('manager_id', $employee->id);
+                        if ($isGM)  $q->whereHas('division', fn($dv) => $dv->where('gm_id', $employee->id));
                         if ($isDir && $employee->plant) {
                             $q->whereHas('division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
                         }
@@ -607,12 +601,8 @@ class MasterController extends Controller
                             ->when($containerId > 0, fn($qq) =>
                             $qq->whereHas('department', fn($d) => $d->where('division_id', $containerId)));
 
-                        if ($isMg) {
-                            $q->whereHas('department', fn($d) => $d->where('manager_id', $employee->id));
-                        }
-                        if ($isGM) {
-                            $q->whereHas('department.division', fn($dv) => $dv->where('gm_id', $employee->id));
-                        }
+                        if ($isMg)  $q->whereHas('department', fn($d) => $d->where('manager_id', $employee->id));
+                        if ($isGM)  $q->whereHas('department.division', fn($dv) => $dv->where('gm_id', $employee->id));
                         if ($isDir && $employee->plant) {
                             $q->whereHas('department.division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
                         }
@@ -627,12 +617,8 @@ class MasterController extends Controller
                             ->when($containerId > 0, fn($qq) =>
                             $qq->whereHas('section.department', fn($d) => $d->where('division_id', $containerId)));
 
-                        if ($isMg) {
-                            $q->whereHas('section.department', fn($d) => $d->where('manager_id', $employee->id));
-                        }
-                        if ($isGM) {
-                            $q->whereHas('section.department.division', fn($dv) => $dv->where('gm_id', $employee->id));
-                        }
+                        if ($isMg)  $q->whereHas('section.department', fn($d) => $d->where('manager_id', $employee->id));
+                        if ($isGM)  $q->whereHas('section.department.division', fn($dv) => $dv->where('gm_id', $employee->id));
                         if ($isDir && $employee->plant) {
                             $q->whereHas('section.department.division', fn($dv) => $dv->where('plant_id', $employee->plant->id));
                         }
@@ -676,7 +662,7 @@ class MasterController extends Controller
             };
             $areas = $areaAliases($areaKey);
 
-            $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey, $isGM, $isDir) {  // ✅ tambahkan $isGM
+            $items = $data->map(function ($item) use ($areas, $termAliases, $areaKey, $isGM, $isDir) {
                 $rtcShort = Rtc::whereIn('area', $areas)->where('area_id', $item->id)
                     ->whereIn('term', $termAliases('short'))->orderByDesc('id')
                     ->with(['employee:id,name,grade,birthday_date'])->first();
@@ -687,6 +673,15 @@ class MasterController extends Controller
                     ->whereIn('term', $termAliases('long'))->orderByDesc('id')
                     ->with(['employee:id,name,grade,birthday_date'])->first();
 
+                $rtcOngoing = Rtc::whereIn('area', $areas)
+                    ->where('area_id', $item->id)
+                    ->whereNull('term')
+                    ->orderByDesc('id')
+                    ->first();
+
+                $ongoingKey = \array_key_exists('ongoing', self::RTC_STATUS) ? 'ongoing' : 'continue';
+                $ongoingVal = self::RTC_STATUS[$ongoingKey] ?? 3;
+
                 $shortEmp = optional($rtcShort)->employee;
                 $midEmp   = optional($rtcMid)->employee;
                 $longEmp  = optional($rtcLong)->employee;
@@ -694,74 +689,80 @@ class MasterController extends Controller
                 $hasShort  = !is_null($shortEmp);
                 $hasMid    = !is_null($midEmp);
                 $hasLong   = !is_null($longEmp);
-                $complete3 = $hasShort && $hasMid && $hasLong;
+                $anyFilled = $hasShort || $hasMid || $hasLong;
 
                 $s = optional($rtcShort)->status;
                 $m = optional($rtcMid)->status;
                 $l = optional($rtcLong)->status;
 
-                $statusVals = collect([$s, $m, $l])->filter(fn($v) => in_array($v, [0, 1, 2, -1], true));
-                $allApproved = $complete3 && $statusVals->every(fn($v) => $v === 2);
+                $statusVals = collect([$s, $m, $l])->filter(fn($v) => $v !== null);
 
+                $hasRevised   = $statusVals->contains(-1); // legacy optional
+                $hasApproved  = $statusVals->contains(self::RTC_STATUS['approved']);  // 2
+                $hasSubmitted = $statusVals->contains(self::RTC_STATUS['submitted']); // 1
+                $hasDraft     = $statusVals->contains(self::RTC_STATUS['draft']);     // 0
+
+                $allApproved = $anyFilled && $statusVals->every(fn($v) => $v === self::RTC_STATUS['approved']);
+
+                $overallStatus = null;
                 $label = 'Not Set';
                 $class = 'badge badge-danger';
                 $code  = 'not_set';
 
-                if ($complete3) {
-                    if ($statusVals->isEmpty()) {
-                        $label = 'Complete';
-                        $class = 'badge badge-secondary';
-                        $code  = 'complete_no_submit';
-                    } else {
-                        $hasRevised   = $statusVals->contains(-1);
-                        $allChecked   = $statusVals->every(fn($v) => $v === 1);
-                        $hasSubmitted = $statusVals->contains(0);
-
-                        if ($hasRevised) {
-                            // ❗️asal ada satu term revised, overall = Revised
-                            $label = 'Revised';
-                            $class = 'badge badge-danger';
-                            $code  = 'revised';
-                        } elseif ($allApproved) {
-                            $label = 'Approved';
-                            $class = 'badge badge-success';
-                            $code  = 'approved';
-                        } elseif ($allChecked) {
-                            $label = 'Checked';
-                            $class = 'badge badge-info';
-                            $code  = 'checked';
-                        } elseif ($hasSubmitted) {
-                            // campuran yg mengandung submitted (0)
-                            $label = 'Submitted';
-                            $class = 'badge badge-warning';
-                            $code  = 'submitted';
-                        } else {
-                            // campuran lain (mis. 1 & 2) anggap draft/partial
-                            $label = 'Draft';
-                            $class = 'badge badge-secondary';
-                            $code  = 'complete_no_submit';
-                        }
-                    }
+                if (!$anyFilled && $rtcOngoing && (int)$rtcOngoing->status === (int)$ongoingVal) {
+                    $overallStatus = self::RTC_STATUS['draft'];
+                    $label = 'Draft';
+                    $class = 'badge badge-secondary';
+                    $code  = 'ongoing';
+                } elseif (!$anyFilled) {
+                } elseif ($allApproved) {
+                    $overallStatus = self::RTC_STATUS['approved'];
+                    $label = 'Approved';
+                    $class = 'badge badge-success';
+                    $code  = 'approved';
+                } elseif ($hasSubmitted || ($hasApproved && ($hasDraft || $hasRevised))) {
+                    $overallStatus = self::RTC_STATUS['submitted'];
+                    $label = 'Submitted';
+                    $class = 'badge badge-warning';
+                    $code  = 'submitted';
+                } else {
+                    $overallStatus = self::RTC_STATUS['draft'];
+                    $label = $hasRevised ? 'Revised' : 'Draft';
+                    $class = $hasRevised ? 'badge badge-danger' : 'badge badge-secondary';
+                    $code  = $hasRevised ? 'revised' : 'draft';
                 }
 
                 $picEmp = $this->currentPicFor($areaKey, $item);
+
+                // hak add/update sederhana: boleh add jika belum lengkap 3 term
+                $complete3 = $hasShort && $hasMid && $hasLong;
                 $canAddByRole =
-                    !($isGM && in_array($areaKey, ['department', 'section', 'sub_section'], true))
-                    && !($isDir && in_array($areaKey, ['division', 'department', 'section', 'sub_section'], true));
+                    !($isGM && in_array($areaKey, ['department', 'section', 'sub_section'], true)) &&
+                    !($isDir && in_array($areaKey, ['division', 'department', 'section', 'sub_section'], true));
                 $canRevised = $canAddByRole && $complete3 && !$allApproved;
+
                 return [
-                    'id'         => $item->id,
-                    'name'       => $item->name,
-                    'pic'        => $picEmp ? ['id' => $picEmp->id, 'name' => $picEmp->name, 'position' => $picEmp->position] : null,
-                    'short'      => ['name' => $shortEmp?->name, 'status' => $s],
-                    'mid'        => ['name' => $midEmp?->name,  'status' => $m],
-                    'long'       => ['name' => $longEmp?->name, 'status' => $l],
-                    'overall'    => ['label' => $label, 'class' => $class, 'code' => $code],
-                    'can_add'    => $canAddByRole && !$complete3,                                                                       // 🔒
-                    'can_revise' => $canRevised
+                    'id'   => $item->id,
+                    'name' => $item->name,
+                    'pic'  => $picEmp ? ['id' => $picEmp->id, 'name' => $picEmp->name, 'position' => $picEmp->position] : null,
+
+                    // per-term
+                    'short' => ['name' => $shortEmp?->name, 'status' => $s],
+                    'mid'   => ['name' => $midEmp?->name,  'status' => $m],
+                    'long'  => ['name' => $longEmp?->name, 'status' => $l],
+
+                    // overall
+                    'overall' => [
+                        'label'  => $label,
+                        'class'  => $class,
+                        'code'   => $code,
+                        'status' => $overallStatus, // 0,1,2 atau null jika not_set
+                    ],
+
+                    'can_add'    => $canAddByRole && !$complete3,
+                    'can_revise' => $canRevised,
                 ];
             });
-
 
             $resp = response()->json(['items' => $items->values()]);
 

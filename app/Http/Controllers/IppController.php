@@ -99,7 +99,7 @@ class IppController
                 Log::warning('IPP listJson: user tidak punya relasi employee', ['user_id' => $user->id ?? null]);
                 return response()->json([
                     'data' => [],
-                    'meta' => ['total' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1]
+                    'meta' => ['total' => 0, 'filtered' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1]
                 ]);
             }
 
@@ -114,6 +114,19 @@ class IppController
             $perPage  = min(100, max(5, (int) $request->query('per_page', 20)));
 
             $companyParam = strtolower((string) $request->query('company', ''));
+
+            $filterUi     = (string) $request->query('filter', 'all');
+            $norm         = $this->mapTabToNormalized($filterUi);
+            $year         = $request->integer('filter_year');
+            $status       = (string) $request->query('status', '');
+            $npk          = (string) $request->query('npk', '');
+
+            $term = trim((string) $request->query('search', ''));
+
+            // paging
+            $page    = max(1, (int) $request->query('page', 1));
+            $perPage = min(100, max(5, (int) $request->query('per_page', 20)));
+
             $isHRDTop = method_exists($user, 'isHRDorDireksi') ? $user->isHRDorDireksi() : false;
 
             Log::info('IPP listJson params', [
@@ -127,46 +140,31 @@ class IppController
                 'page'         => $page,
                 'per_page'     => $perPage,
                 'filter_year'  => $year,
+                'term'         => $term,
             ]);
 
             $aliasesBucket = $this->aliasesByNormalized();
+            $planYear      = (string) $this->planOnYear();
 
-            $empQuery = null;
-            $total    = 0;
-            $records  = collect();
-            $planYear = (string) $this->planOnYear();
-
-            // =========================================================
-            //                HRD / DIREKSI  (FULL COMPANY)
-            // =========================================================
+            // ------------------------------------------------------------------
+            // Base query tanpa SEARCH (dipakai utk total & dasar filtered)
+            // ------------------------------------------------------------------
             if ($isHRDTop) {
-                $empQuery = Employee::query()
+                $baseEmp = Employee::query()
                     ->when(in_array($companyParam, ['aii', 'aiia'], true), function ($q) use ($companyParam) {
                         $q->whereRaw('LOWER(company_name) = ?', [$companyParam]);
                     })
                     ->select($this->baseEmpSelect())
                     ->addSelect($this->ippSelects($year));
 
-                $this->applyCommonFilters($empQuery, $norm, $aliasesBucket, $npk, $search);
-                $this->applyStatusFilter($empQuery, $status);
+                // filter umum (tanpa search)
+                $this->applyCommonFilters($baseEmp, $norm, $aliasesBucket, $npk, /* $search param lama tak dipakai */ '');
+                $this->applyStatusFilter($baseEmp, $status);
 
-                $this->logQuery('IPP listJson HRD SQL', $empQuery);
-
-                $total   = (clone $empQuery)->count();
-                $records = $empQuery
-                    ->orderByRaw('CASE WHEN ipp_updated_at IS NULL THEN 1 ELSE 0 END ASC')
-                    ->orderByDesc('ipp_updated_at')
-                    ->orderBy('employees.name')
-                    ->forPage($page, $perPage)
-                    ->get();
-
-                // =========================================================
-                //              NON-HRD (HANYA BAWAHAN ∪ PIC)
-                // =========================================================
+                $this->logQuery('IPP listJson HRD base SQL', $baseEmp);
             } else {
-                // hitung bawahan & karyawan yang menunjuk saya sebagai PIC → HANYA untuk non-HRD
+                // non-HRD: batasi ke bawahan ∪ PIC
                 $subordinateIds = $this->getSubordinatesFromStructure($me)->pluck('id')->toArray();
-
                 $picEmployeeIds = Ipp::when(strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
                     ->where('pic_review_id', $me->id)
                     ->pluck('employee_id')
@@ -177,43 +175,52 @@ class IppController
                     Log::info('IPP listJson: non-HRD, targetEmployeeIds kosong', ['employee_id' => $me->id]);
                     return response()->json([
                         'data' => [],
-                        'meta' => ['total' => 0, 'page' => $page, 'per_page' => $perPage, 'last_page' => 1],
+                        'meta' => ['total' => 0, 'filtered' => 0, 'page' => $page, 'per_page' => $perPage, 'last_page' => 1],
                     ]);
                 }
 
-                $empQuery = Employee::query()
+                $baseEmp = Employee::query()
                     ->whereIn('id', $targetEmployeeIds)
-                    ->where('company_name', $me->company_name) // batasi ke company user
+                    ->where('company_name', $me->company_name)
                     ->select($this->baseEmpSelect())
                     ->addSelect($this->ippSelects($year));
 
-                $this->applyCommonFilters($empQuery, $norm, $aliasesBucket, $npk, $search);
-                $this->applyStatusFilter($empQuery, $status);
+                $this->applyCommonFilters($baseEmp, $norm, $aliasesBucket, $npk, /* no search */ '');
+                $this->applyStatusFilter($baseEmp, $status);
 
-                $this->logQuery('IPP listJson Non-HRD SQL', $empQuery);
-
-                $total   = (clone $empQuery)->count();
-                $records = $empQuery
-                    ->orderByRaw('CASE WHEN ipp_updated_at IS NULL THEN 1 ELSE 0 END ASC')
-                    ->orderByDesc('ipp_updated_at')
-                    ->orderBy('employees.name')
-                    ->forPage($page, $perPage)
-                    ->get();
+                $this->logQuery('IPP listJson Non-HRD base SQL', $baseEmp);
             }
 
-            // --- mapping output (dipakai kedua branch) ---
-            $planYearLocal = $planYear; // capture untuk closure
-            $data = $records->values()->map(function (Employee $row, $idx) use ($page, $perPage, $year, $planYearLocal) {
-                $hasIpp     = !is_null($row->ipp_id);
-                $normalized = method_exists($row, 'getNormalizedPosition')
+            $totalAll = (clone $baseEmp)->count();
+
+            $withSearch = (clone $baseEmp)->when($term !== '', function ($q) use ($term) {
+                $t = "%{$term}%";
+                $q->where(function ($qq) use ($t) {
+                    $qq->where('employees.name', 'like', $t)
+                        ->orWhere('employees.npk', 'like', $t)
+                        ->orWhere('employees.name', 'like', $t)
+                        ->orWhere('employees.position', 'like', $t);
+                });
+            });
+
+            $filteredCount = (clone $withSearch)->count();
+
+            $records = $withSearch
+                ->orderByRaw('CASE WHEN ipp_updated_at IS NULL THEN 1 ELSE 0 END ASC')
+                ->orderByDesc('ipp_updated_at')
+                ->orderBy('employees.name')
+                ->forPage($page, $perPage)
+                ->get();
+
+            $data = $records->values()->map(function (Employee $row, $idx) use ($page, $perPage, $year, $planYear) {
+                $hasIpp      = !is_null($row->ipp_id);
+                $normalized  = method_exists($row, 'getNormalizedPosition')
                     ? strtolower($row->getNormalizedPosition())
                     : strtolower($row->position ?? '');
-
-                $department = $row->ipp_department ?: $row->bagian;
-
+                $department  = $row->ipp_department ?: $row->bagian;
                 $onYearValue = $hasIpp
                     ? (string) $row->ipp_on_year
-                    : (strtolower($year) === 'all' ? (string) $planYearLocal : (string) $year);
+                    : (strtolower((string) $year) === 'all' ? (string) $planYear : (string) $year);
 
                 return [
                     'no'       => ($page - 1) * $perPage + $idx + 1,
@@ -239,10 +246,11 @@ class IppController
             return response()->json([
                 'data' => $data,
                 'meta' => [
-                    'total'     => (int) $total,
+                    'total'     => (int) $totalAll,                 // untuk recordsTotal
+                    'filtered'  => (int) $filteredCount,            // untuk recordsFiltered
                     'page'      => $page,
                     'per_page'  => $perPage,
-                    'last_page' => (int) ceil(((int)$total ?: 0) / $perPage),
+                    'last_page' => (int) max(1, (int) ceil(($filteredCount ?: 0) / $perPage)),
                 ],
             ]);
         } catch (\Throwable $e) {
@@ -251,7 +259,7 @@ class IppController
             ]);
             return response()->json([
                 'data' => [],
-                'meta' => ['total' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1],
+                'meta' => ['total' => 0, 'filtered' => 0, 'page' => 1, 'per_page' => 10, 'last_page' => 1],
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -803,9 +811,8 @@ class IppController
             $perPage = min(100, max(5, (int) $request->query('per_page', 10)));
 
             // Levels (guard if null / methods not exist)
-            $checkLevel   = method_exists($me, 'getFirstApproval') ? $me->getFirstApproval() : null;
-            $approveLevel = method_exists($me, 'getFinalApproval') ? $me->getFinalApproval() : null;
-
+            $checkLevel   = method_exists($me, 'getCreateAuth') ? $me->getCreateAuth() : null;
+            $approveLevel = method_exists($me, 'getFirstApproval') ? $me->getFirstApproval() : null;
             $subCheckIds = collect();
             $subApproveIds = collect();
 
@@ -815,6 +822,7 @@ class IppController
             if ($approveLevel && method_exists($me, 'getSubordinatesByLevel')) {
                 $subApproveIds = $me->getSubordinatesByLevel($approveLevel)->pluck('id');
             }
+
 
             // Helpers: common constraints
             $baseIPP = Ipp::with(['employee.user'])
@@ -864,6 +872,7 @@ class IppController
                         return $ipp;
                     });
             }
+
 
             // Merge both stages, latest updated first
             $all = $checkIpps->merge($approveIpps)

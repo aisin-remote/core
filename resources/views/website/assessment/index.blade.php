@@ -550,7 +550,7 @@
                             <td class="text-center">${assessment.date}</td>
                             <td class="text-center">${assessment.target_position || '-'}</td>
                             <td class="text-center">
-                                <a class="btn btn-info btn-sm" href="/assessment/${assessment.id}/${assessment.date}">
+                                <a class="btn btn-info btn-sm" href="/assessment/${assessment.tok}/${assessment.date}">
                                     Detail
                                 </a>
                                 <a class="btn btn-primary btn-sm"

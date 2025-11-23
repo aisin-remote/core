@@ -125,8 +125,6 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('icp')->group(function () {
-        // Pindahkan create di atas agar tidak tertabrak oleh {company}
-
         Route::get('/', [IcpController::class, 'assign'])->name('icp.assign');
 
         Route::get('/create/{employee_id}', [IcpController::class, 'create'])->name('icp.create');
@@ -134,6 +132,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/list/{company?}', [IcpController::class, 'index'])->name('icp.list');
 
         Route::get('/history/{id}', [IcpController::class, 'show'])->name('icp.show');
+        Route::get('/comment/{id}', [IcpController::class, 'comment'])->name('icp.comment');
+        Route::get('/modal/{icp}', [IcpController::class, 'showModal'])
+            ->name('icp.show-modal');
         Route::get('/export/{employee_id}', [IcpController::class, 'export'])->name('icp.export');
 
         Route::get('/edit/{id}', [IcpController::class, 'edit'])->name('icp.edit');
@@ -202,13 +203,13 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('employee')->group(function () {
-        Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create'); // Menampilkan form create
+        Route::get('/create', [EmployeeController::class, 'create'])->name('employee.create');
         Route::get('employee/check-email', [EmployeeController::class, 'checkEmail'])->name('employee.checkEmail');
-        Route::post('/', [EmployeeController::class, 'store'])->name('employee.store'); // Menyimpan data
-        Route::get('/{id}/edit', [EmployeeController::class, 'edit'])->name('employee.edit'); // Menampilkan form edit
-        Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update'); // Memperbarui data
-        Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy'); // Menghapus data
-        Route::get('/detail/{id}', [EmployeeController::class, 'show'])->name('employee.show'); // Menampilkan detail Employee
+        Route::post('/', [EmployeeController::class, 'store'])->name('employee.store');
+        Route::get('/{tok}/edit', [EmployeeController::class, 'edit'])->name('employee.edit');
+        Route::put('/{employee}', [EmployeeController::class, 'update'])->name('employee.update');
+        Route::delete('/{id}', [EmployeeController::class, 'destroy'])->name('employee.destroy');
+        Route::get('/detail/{tok}', [EmployeeController::class, 'show'])->name('employee.show');
 
         Route::post('/master/import', [EmployeeController::class, 'import'])->name('employee.import');
         Route::post('/status/{id}', [EmployeeController::class, 'status'])->name('employee.status');
@@ -273,17 +274,24 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/update', [AssessmentController::class, 'update'])->name('assessments.update');
         Route::get('/detail/{id}', [AssessmentController::class, 'getAssessmentDetail']);
         Route::get('/history/{employee_id}', [AssessmentController::class, 'show'])->name('assessments.show'); // Ubah ke 'history/{employee_id}'
-        Route::get('/{assessment_id}/{date}', [AssessmentController::class, 'showByDate'])->name('assessments.showByDate'); // Pindahkan ke bawah
         Route::post('/', [AssessmentController::class, 'store'])->name('assessments.store');
         Route::delete('/{id}', [AssessmentController::class, 'destroy'])->name('assessments.destroy');
+        Route::get('/{tok}/{date}', [AssessmentController::class, 'showByDate'])
+            ->where([
+                'tok'  => '[A-Za-z0-9_-]+',   // base64-url safe
+                'date' => '\d{4}-\d{2}-\d{2}',
+            ])
+            ->name('assessments.showByDate');
     });
 
     Route::prefix('rtc')->group(function () {
+        Route::post('/save', [RtcController::class, 'save'])->name('rtc.save');
+        Route::post('/update', [RtcController::class, 'update'])->name('rtc.update');
+        Route::post('/submit', [RtcController::class, 'submit'])->name('rtc.submit');
         Route::get('/candidates', [RtcCandidateController::class, 'index'])->name('rtc.candidates');
         Route::get('/summary/{id?}', [RtcController::class, 'summary'])->name('rtc.summary');
         Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/list/{id?}', [RtcController::class, 'list'])->name('rtc.list');
-        Route::get('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
     });
 

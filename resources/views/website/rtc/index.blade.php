@@ -299,7 +299,6 @@
                                 <small class="text-muted d-block mt-1">Daftar sudah difilter berdasar ICP: posisi, level,
                                     dan plan_year (≥ tahun ini).</small>
                             </div>
-
                             <div id="candidate_info" class="border rounded p-3 d-none">
                                 <div class="d-flex align-items-center justify-content-between">
                                     <div>
