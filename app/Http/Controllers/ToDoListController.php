@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApprovalHelper;
+use App\Helpers\IppApprovalHelper;
 use App\Models\Employee;
 use App\Models\Hav;
 use App\Models\Icp;
@@ -11,6 +12,7 @@ use App\Models\Idp;
 use App\Models\Ipp;
 use App\Models\Rtc;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ToDoListController extends Controller
 {
@@ -412,53 +414,125 @@ class ToDoListController extends Controller
             ->get();
     }
 
-    /**
-     * IPP tasks untuk karyawan yang login di tahun berjalan.
-     */
-    private function getIppTasks($employee, $user): array
-    {
-        $year       = now()->year;
-        $allIppTasks = [];
-        $message    = null;
+    private function getIppTasks(
+        $employee = null,
+        $user = null
+    ): array {
+        try {
+            // ==== Ambil user & employee dari auth sebagai default ====
+            $authUser = auth()->user();
 
-        $employeeId = $employee->id ?? $user->employee_id ?? null;
+            $user     = $user ?? $authUser;
+            $employee = $employee ?? $user->employee;
+            $year     = now()->year + 1; // hanya untuk pesan, kalau mau, boleh dihapus/diganti
 
-        $ipp = Ipp::with('employee')
-            ->where('employee_id', $employeeId)
-            ->where('on_year', $year)
-            ->latest('created_at')
-            ->first();
+            // =========================
+            // 1. IPP SAYA (USER LOGIN)
+            // =========================
 
-        if (! $ipp) {
-            $summary = [];
-            $message = "The {$year} IPP has not yet been created.";
-        } else {
-            $summary = is_array($ipp->summary)
-                ? $ipp->summary
-                : (json_decode($ipp->summary, true) ?? []);
-            $message = null;
+            if (! $employee) {
+                $ippTasks = [
+                    'activity_management' => 0,
+                    'crp'                 => 0,
+                    'people_development'  => 0,
+                    'special_assignment'  => 0,
+                    'total'               => 0,
+                    'status'              => 'Not Created',
+                    'employee_name'       => optional($user)->name ?? '',
+                    'employee_company'    => '',
+                    'employee_npk'        => '',
+                ];
+
+                return [
+                    'ippTasks'        => $ippTasks,
+                    'message'         => 'Employee untuk user login tidak ditemukan.',
+                    'subordinateIpps' => [],
+                ];
+            }
+
+            // Ambil IPP milik employee login (tanpa filter tahun, latest)
+            $ipp = Ipp::with('employee')
+                ->where('employee_id', $employee->id)
+                ->latest('created_at')
+                ->first();
+
+            if (! $ipp) {
+                $message = "The {$year} IPP has not yet been created.";
+
+                $ippTasks = [
+                    'activity_management' => 0,
+                    'crp'                 => 0,
+                    'people_development'  => 0,
+                    'special_assignment'  => 0,
+                    'total'               => 0,
+                    'status'              => 'Not Created',
+                    'employee_name'       => $employee->name ?? '',
+                    'employee_company'    => $employee->company_name ?? '',
+                    'employee_npk'        => $employee->npk ?? '',
+                ];
+            } else {
+                $summary = is_array($ipp->summary)
+                    ? $ipp->summary
+                    : (json_decode($ipp->summary, true) ?? []);
+
+                $activityManagement = $summary['activity_management'] ?? 0;
+                $crp                = $summary['crp'] ?? 0;
+                $peopleDevelopment  = $summary['people_development'] ?? 0;
+                $specialAssignment  = $summary['special_assignment'] ?? 0;
+
+                $message = null;
+
+                $ippTasks = [
+                    'activity_management' => $activityManagement,
+                    'crp'                 => $crp,
+                    'people_development'  => $peopleDevelopment,
+                    'special_assignment'  => $specialAssignment,
+                    'total'               => $summary['total'] ?? array_sum([
+                        $activityManagement,
+                        $crp,
+                        $peopleDevelopment,
+                        $specialAssignment,
+                    ]),
+                    'status'              => $ipp->status ?? 'Not Created',
+                    'employee_name'       => optional($ipp->employee)->name ?? '',
+                    'employee_company'    => optional($ipp->employee)->company_name ?? '',
+                    'employee_npk'        => optional($ipp->employee)->npk ?? '',
+                ];
+            }
+
+            // =======================================
+            // 2. IPP BAWAHAN (CHECK / APPROVE)
+            // =======================================
+
+            $subordinateRows = [];
+
+            if ($employee) {
+                $subordinateRows = IppApprovalHelper::getApprovalRows($employee, 'all', '')->all();
+            }
+
+            return [
+                'ippTasks'        => $ippTasks,       // IPP milik user login
+                'message'         => $message,        // pesan kalau belum ada IPP
+                'subordinateIpps' => $subordinateRows // daftar IPP bawahan butuh check/approve
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [
+                'ippTasks'        => [
+                    'activity_management' => 0,
+                    'crp'                 => 0,
+                    'people_development'  => 0,
+                    'special_assignment'  => 0,
+                    'total'               => 0,
+                    'status'              => 'Error',
+                    'employee_name'       => optional(optional(auth()->user())->employee)->name ?? '',
+                    'employee_company'    => optional(optional(auth()->user())->employee)->company_name ?? '',
+                    'employee_npk'        => optional(optional(auth()->user())->employee)->npk ?? '',
+                ],
+                'message'         => 'Terjadi kesalahan saat mengambil data IPP.',
+                'subordinateIpps' => [],
+            ];
         }
-
-        $ippTasks = [
-            'activity_management' => $summary['activity_management'] ?? 0,
-            'crp'                 => $summary['crp'] ?? 0,
-            'people_development'  => $summary['people_development'] ?? 0,
-            'special_assignment'  => $summary['special_assignment'] ?? 0,
-            'total'               => $summary['total'] ?? array_sum([
-                $summary['activity_management'] ?? 0,
-                $summary['crp'] ?? 0,
-                $summary['people_development'] ?? 0,
-                $summary['special_assignment'] ?? 0,
-            ]),
-            'status'              => $ipp->status ?? 'Not Created',
-            'employee_name'       => $ipp->employee->name ?? '',
-            'employee_company'    => $ipp->employee->company_name ?? '',
-            'employee_npk'        => $ipp->employee->npk ?? '',
-        ];
-
-        $allIppTasks['ippTasks'] = $ippTasks;
-        $allIppTasks['message']  = $message;
-
-        return $allIppTasks;
     }
 }

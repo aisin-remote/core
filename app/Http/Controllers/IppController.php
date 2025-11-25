@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\IppApprovalHelper;
 use App\Models\ActivityPlan;
 use App\Models\ActivityPlanItem;
 use App\Models\Department;
@@ -804,111 +805,25 @@ class IppController
                 ]);
             }
 
-            // Query params
             $year    = (string) $request->query('filter_year', 'all');
             $search  = trim((string) $request->query('search', ''));
             $page    = max(1, (int) $request->query('page', 1));
             $perPage = min(100, max(5, (int) $request->query('per_page', 10)));
 
-            // Levels (guard if null / methods not exist)
-            $checkLevel   = method_exists($me, 'getCreateAuth') ? $me->getCreateAuth() : null;
-            $approveLevel = method_exists($me, 'getFirstApproval') ? $me->getFirstApproval() : null;
-            $subCheckIds = collect();
-            $subApproveIds = collect();
+            // Pakai helper -> semua IPP bawahan (tanpa pagination dulu)
+            $allRows = IppApprovalHelper::getApprovalRows($me, $year, $search);
 
-            if ($checkLevel && method_exists($me, 'getSubordinatesByLevel')) {
-                $subCheckIds = $me->getSubordinatesByLevel($checkLevel)->pluck('id');
-            }
-            if ($approveLevel && method_exists($me, 'getSubordinatesByLevel')) {
-                $subApproveIds = $me->getSubordinatesByLevel($approveLevel)->pluck('id');
-            }
+            $total = $allRows->count();
 
+            $paged = $allRows->forPage($page, $perPage)->values();
 
-            // Helpers: common constraints
-            $baseIPP = Ipp::with(['employee.user'])
-                ->when(strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
-                ->where('employee_id', '!=', $me->id) // jangan tampilkan milik saya sendiri
-                // skip owner role HRD
-                ->whereHas('employee.user', function ($q) {
-                    $q->whereRaw('UPPER(role) != ?', ['HRD']);
-                })
-                // optional search by owner
-                ->when($search !== '', function ($q) use ($search) {
-                    $q->whereHas('employee', function ($qq) use ($search) {
-                        $qq->where('name', 'like', "%{$search}%")
-                            ->orWhere('npk', 'like', "%{$search}%")
-                            ->orWhere('position', 'like', "%{$search}%")
-                            ->orWhere('company_name', 'like', "%{$search}%");
-                    });
-                });
-
-            // === Stage 1: CHECK (subordinates at check level) ===
-            $checkIpps = collect();
-            if ($subCheckIds->isNotEmpty()) {
-                $checkIpps = (clone $baseIPP)
-                    ->where('status', 'submitted')
-                    ->whereHas('employee', function ($q) use ($subCheckIds) {
-                        $q->whereIn('id', $subCheckIds->all());
-                    })
-                    ->get()
-                    ->map(function (Ipp $ipp) {
-                        $ipp->stage = 'check';
-                        return $ipp;
-                    });
-            }
-
-            // === Stage 2: APPROVE (subordinates at final approval level), excluding ones already in CHECK ===
-            $approveIpps = collect();
-            if ($subApproveIds->isNotEmpty()) {
-                $approveIpps = (clone $baseIPP)
-                    ->where('status', 'checked')
-                    ->whereHas('employee', function ($q) use ($subApproveIds) {
-                        $q->whereIn('id', $subApproveIds->all());
-                    })
-                    ->whereNotIn('id', $checkIpps->pluck('id')->all())
-                    ->get()
-                    ->map(function (Ipp $ipp) {
-                        $ipp->stage = 'approve';
-                        return $ipp;
-                    });
-            }
-
-
-            // Merge both stages, latest updated first
-            $all = $checkIpps->merge($approveIpps)
-                ->sortByDesc(fn(Ipp $x) => $x->updated_at ?? $x->created_at)
-                ->values();
-
-            $total = $all->count();
-
-            // Pagination on collection
-            $paged = $all->forPage($page, $perPage)->values();
-
-            // Map to rows
-            $rows = $paged->map(function (Ipp $ipp, $idx) use ($page, $perPage) {
-                $e = $ipp->employee;
-                return [
-                    'no'        => ($page - 1) * $perPage + $idx + 1,
-                    'id'        => $ipp->id,
-                    'stage'     => $ipp->stage,            // 'check' or 'approve'
-                    'status'    => (string) $ipp->status,  // 'submitted' or 'checked'
-                    'on_year'   => (string) $ipp->on_year,
-                    'updated_at' => optional($ipp->updated_at)->toDateTimeString(),
-                    'employee'  => [
-                        'id'        => $e->id,
-                        'npk'       => (string) $e->npk,
-                        'name'      => (string) $e->name,
-                        'company'   => (string) $e->company_name,
-                        'position'  => (string) $e->position,
-                        'department' => (string) ($e->bagian ?? ''),
-                        'grade'     => (string) ($e->grade ?? ''),
-                        'role'      => optional($e->user)->role, // for reference (already filtered != HRD)
-                    ],
-                ];
+            $rowsWithNo = $paged->map(function (array $row, int $idx) use ($page, $perPage) {
+                $row['no'] = ($page - 1) * $perPage + $idx + 1;
+                return $row;
             });
 
             return response()->json([
-                'data' => $rows,
+                'data' => $rowsWithNo,
                 'meta' => [
                     'total'     => (int) $total,
                     'page'      => (int) $page,
