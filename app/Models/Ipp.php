@@ -68,4 +68,9 @@ class Ipp extends Model
     {
         return $this->hasOne(ActivityPlan::class, 'ipp_id', 'id');
     }
+
+    public function steps()
+    {
+        return $this->hasMany(IppApprovalStep::class);
+    }
 }

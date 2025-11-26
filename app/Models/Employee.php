@@ -312,15 +312,22 @@ class Employee extends Model
         if ($normalizedPosition === 'vpd') {
             $managerIds = Department::pluck('manager_id')->filter();
             $gmIds = Division::pluck('gm_id')->filter();
-
-            $subordinateIds = $managerIds->merge($gmIds)->unique();
+            $drIds = Plant::pluck('director_id')->filter();
+            $subordinateIds = $managerIds
+                ->merge($gmIds)
+                ->merge($drIds)
+                ->unique();
         } elseif ($normalizedPosition === 'president') {
             $managerIds = Department::pluck('manager_id')->filter()->unique();
             $divisionGmIds = Division::pluck('gm_id')->filter()->unique();
+            $drIds = Plant::pluck('director_id')->filter();
 
-            $subordinateIds = $managerIds->isNotEmpty()
-                ? $managerIds->merge($divisionGmIds)->unique()
-                : $divisionGmIds;
+            $base = $managerIds->isNotEmpty() ? $managerIds : collect();
+
+            $subordinateIds = $base
+                ->merge($divisionGmIds)
+                ->merge($drIds)
+                ->unique();
         }
 
 

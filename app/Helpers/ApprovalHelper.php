@@ -144,4 +144,65 @@ class ApprovalHelper
 
         return [];
     }
+
+    /**
+     * Chain khusus IPP
+     */
+    public static function expectedIppChainForEmployee(Employee $e)
+    {
+        $role = self::roleKeyFor($e);
+
+        if ($role === 'operator') {
+            return [
+                ['type' => 'check', 'role' => 'jp', 'label' => 'Checking by JP'],
+                ['type' => 'approve', 'role' => 'leader', 'label' => 'Approve by Leader']
+            ];
+        }
+
+        if ($role === 'jp') {
+            return [
+                ['type' => 'check', 'role' => 'leader', 'label' => 'Checking by Leader'],
+                ['type' => 'approve', 'role' => 'supervisor', 'label' => 'Approve by Supervisor']
+            ];
+        }
+
+        if ($role === 'leader') {
+            return [
+                ['type' => 'check', 'role' => 'supervisor', 'label' => 'Checking by Supervisor'],
+                ['type' => 'approve', 'role' => 'manager', 'label' => 'Approve by Manager']
+            ];
+        }
+
+
+        if ($role === 'supervisor') {
+            return [
+                ['type' => 'check', 'role' => 'manager', 'label' => 'Checking by Manager'],
+                ['type' => 'approve', 'role' => 'gm', 'label' => 'Approve by GM']
+            ];
+        }
+
+        if ($role === 'manager') {
+            return [
+                ['type' => 'check', 'role' => 'gm', 'label' => 'Checking by GM'],
+                ['type' => 'approve', 'role' => 'director', 'label' => 'Approve by Direktur']
+            ];
+        }
+
+        if ($role === 'gm') {
+            return [
+                ['type' => 'check', 'role' => 'director', 'label' => 'Checking by Direktur'],
+                ['type' => 'approve', 'role' => 'vpd', 'label' => 'Approve by VPD']
+            ];
+        }
+
+        if ($role === 'director') {
+            return [
+                ['type' => 'check', 'role' => 'vpd', 'label' => 'Checking by VPD'],
+                ['type' => 'approve', 'role' => 'president', 'label' => 'Approve by President']
+            ];
+        }
+
+        // vpd, president atau posisi lain yang didefinisikan
+        return [];
+    }
 }

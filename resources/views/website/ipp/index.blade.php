@@ -1064,6 +1064,13 @@
                             $tbody.append(makeRowHtml(newRowId, rowData));
                         }
                     }
+                    if (res?.ipp_id || res?.ipp?.id) {
+                        window.__currentIppId = res.ipp_id || res.ipp.id;
+                        syncExportLinks(window.__currentIppId);
+                        syncActivityPlanLink(window.__currentIppId);
+                        updateExportVisibility();
+                    }
+
                     recalcAll();
                     pointModal.hide();
                     toast(res?.message || 'Draft tersimpan.');

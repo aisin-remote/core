@@ -1307,10 +1307,8 @@ class IcpController extends Controller
 
         DB::beginTransaction();
         try {
-            // seed steps sesuai chain, lalu set status ringkas:
-            $this->seedStepsForIcp($icp); // method kamu yang sudah ada
-            // override status jadi SUBMITTED (1) agar jelas
-            $icp->status = Icp::STATUS_SUBMITTED; // 1
+            $this->seedStepsForIcp($icp);
+            $icp->status = Icp::STATUS_SUBMITTED;
             $icp->save();
 
             DB::commit();
