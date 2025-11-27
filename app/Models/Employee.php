@@ -293,7 +293,7 @@ class Employee extends Model
 
         // Jika tidak diberikan posisi yang diizinkan, gunakan default lama
         if (empty($allowedPositions)) {
-            $allowedPositions = ['manager', 'supervisor', 'leader', 'jp', 'operator', 'gm'];
+            $allowedPositions = ['manager', 'supervisor', 'leader', 'jp', 'operator', 'gm', 'direktur'];
         }
 
         return $currentEmployees->filter(function ($employee) use ($allowedPositions) {
@@ -501,7 +501,7 @@ class Employee extends Model
         return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader', 'manager' => 3,
             'supervisor', 'gm', 'direktur' => 2,
-            'vpd' => 1,
+            'vpd', 'president' => 1,
             default => 0,
         };
     }

@@ -37,6 +37,11 @@ class IppApprovalHelper
             $rolesToMatch[] = 'general manager';
         }
 
+        if ($role === 'vpd') {
+            $rolesToMatch[] = 'vpd';
+        }
+
+
         // === 2. Tentukan bawahan untuk CHECK & APPROVE (logic lama) ===
         $subCheckIds   = collect();
         $subApproveIds = collect();
@@ -53,6 +58,10 @@ class IppApprovalHelper
             if ($approveLevel) {
                 $subApproveIds = $me->getSubordinatesByLevel($approveLevel)->pluck('id');
             }
+        }
+
+        if ($role === 'vpd' && $subCheckIds->isEmpty() && $subApproveIds->isNotEmpty()) {
+            $subCheckIds = $subApproveIds;
         }
 
         // Kalau nggak punya bawahan di level itu, ya kosong

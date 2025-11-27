@@ -807,7 +807,7 @@
 
                                 // kalau status sudah masuk flow approval → ke halaman approval
                                 $href = in_array($ippTasks['status'], ['checked', 'submitted'])
-                                    ? route('ipp.approval')
+                                    ? route('ipp.index')
                                     : route('ipp.index', [
                                         'company' => $ippTasks['employee_company'],
                                         'npk' => $ippTasks['employee_npk'],
