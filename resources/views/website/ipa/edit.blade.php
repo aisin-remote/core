@@ -475,14 +475,15 @@
             function toast(msg, type = 'success') {
                 const id = 'toast-' + Date.now();
                 const $t = $(`
-<div class="toast align-items-center badge-${type} border-0" id="${id}"
-    role="status" aria-live="polite" aria-atomic="true"
-    style="position:fixed;top:1rem;right:1rem;z-index:1080;">
-  <div class="d-flex">
-    <div class="toast-body">${esc(msg)}</div>
-    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
-  </div>
-</div>`);
+                                <div class="toast align-items-center badge-${type} border-0" id="${id}"
+                                    role="status" aria-live="polite" aria-atomic="true"
+                                    style="position:fixed;top:1rem;right:1rem;z-index:1080;">
+                                <div class="d-flex">
+                                    <div class="toast-body">${esc(msg)}</div>
+                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
+                                </div>
+                                </div>
+                            `);
                 $('body').append($t);
                 const t = new bootstrap.Toast($t[0], {
                     delay: 2200

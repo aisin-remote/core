@@ -9,6 +9,7 @@ use App\Models\Hav;
 use App\Models\Icp;
 use App\Models\IcpApprovalStep;
 use App\Models\Idp;
+use App\Models\IpaHeader;
 use App\Models\Ipp;
 use App\Models\Rtc;
 use Illuminate\Http\Request;
@@ -40,6 +41,7 @@ class ToDoListController extends Controller
         $allHavTasks = $this->getHavTasks($subCheck);
         $allRtcTasks = $this->getRtcTasks($subCheck, $subApprove);
         $allIppTasks = $this->getIppTasks($employee, $user);
+        $allIpaTasks = $this->getIpaTasks($employee, $user);
         $allIcpTasks = $this->getIcpTasks();
 
         return view('website.todolist.index', compact(
@@ -47,6 +49,7 @@ class ToDoListController extends Controller
             'allHavTasks',
             'allRtcTasks',
             'allIppTasks',
+            'allIpaTasks',
             'allIcpTasks'
         ));
     }
@@ -532,6 +535,123 @@ class ToDoListController extends Controller
                 ],
                 'message'         => 'Terjadi kesalahan saat mengambil data IPP.',
                 'subordinateIpps' => [],
+            ];
+        }
+    }
+
+    private function getIpaTasks($employee = null, $user = null)
+    {
+        try {
+            $authUser = auth()->user();
+            $user = $user ?? $authUser;
+            $employee = $employee ?? $user->employee;
+            $year = now()->year + 1;
+
+            // ==================
+            // 1. IPA SAYA (USER LOGIN)
+            // ==================
+            if (!$employee) {
+                $ipaTasks = [
+                    'status' => 'Not Created',
+                    'year' => null,
+                    'employee_name' => optional($user)->name ?? '',
+                ];
+
+                return [
+                    'ipaTasks' => $ipaTasks,
+                    'message' => 'Employee untuk user login tidak ditemukan,',
+                    'subordinateIpas' => []
+                ];
+            }
+
+            $ipaHeader = IpaHeader::with('employee')
+                ->where('employee_id', $employee->id)
+                ->latest("created_at")
+                ->first();
+            if (!$ipaHeader) {
+                $message = "IPA belum dibuat.";
+
+                $ipaTasks = [
+                    'status' => 'Not Created',
+                    'year' => null,
+                    'employee_name' => $employee->name ?? ''
+                ];
+            } else {
+                $message = null;
+
+                $ipaTasks = [
+                    'status' => $ipaHeader->status ?? 'draft',
+                    'year' => $ipaHeader->year ?? null,
+                    'employee_name' => optional($ipaHeader->employee)->name ?? ''
+                ];
+            }
+
+            // ==================
+            // 2. IPA BAWAHAN (QUEUE SAYA)
+            // ==================
+            $subordinateIpas = [];
+            if ($employee) {
+                $empId = $employee->id;
+                $q = IpaHeader::with([
+                    'employee:id,npk,name,company_name,position,grade',
+                    'checkedBy:id,name',
+                    'approvedBy:id,name',
+                ])
+                    ->where(function ($qq) use ($empId) {
+                        $qq->where(function ($w) use ($empId) {
+                            $w->where('status', 'submitted')
+                                ->where('checked_by', $empId);
+                        })->orWhere(function ($w) use ($empId) {
+                            $w->where('status', 'checked')
+                                ->where('approved_by', $empId);
+                        });
+                    });
+
+                $rows = $q->orderBy('id', 'desc')->get();
+
+                $subordinateIpas = $rows->map(function (IpaHeader $h) use ($empId) {
+                    $e = $h->employee;
+
+                    $stage = $h->status === 'submitted'
+                        ? 'check'
+                        : ($h->status === 'checked' ? 'approve' : $h->status);
+
+                    $canApprove = ($h->status === 'submitted' && (int) $h->checked_by  === (int) $empId)
+                        || ($h->status === 'checked'   && (int) $h->approved_by === (int) $empId);
+
+                    return [
+                        'id'          => $h->id,
+                        'status'      => $h->status,
+                        'stage'       => $stage,
+                        'can_approve' => $canApprove,
+                        'employee'    => [
+                            'npk'        => optional($e)->npk,
+                            'name'       => optional($e)->name,
+                            'company'    => optional($e)->company_name,
+                            'position'   => optional($e)->position,
+                            'department' => optional($e)->department_name ?? null,
+                            'grade'      => optional($e)->grade,
+                        ],
+                    ];
+                })->values()->all();
+            }
+
+            return [
+                'ipaTasks' => $ipaTasks,
+                'message' => $message,
+                'subordinateIpas' => $subordinateIpas
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [
+                'ipaTasks'        => [
+                    'status'           => 'Error',
+                    'year'             => null,
+                    'employee_name'    => optional(optional(auth()->user())->employee)->name ?? '',
+                ],
+                'message'         => 'Terjadi kesalahan saat mengambil data IPA.',
+                'subordinateIpas' => [],
             ];
         }
     }

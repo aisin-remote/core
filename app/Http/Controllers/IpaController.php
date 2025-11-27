@@ -15,7 +15,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 class IpaController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
         $user = auth()->user();
         $emp  = $user->employee;
@@ -23,7 +23,7 @@ class IpaController extends Controller
             abort(403, 'Employee profile not found.');
         }
 
-        $year = now()->format('Y');
+        $year = now()->format('Y') + 1;
 
         $ipp = Ipp::where('employee_id', $emp->id)
             ->where('on_year', $year)
