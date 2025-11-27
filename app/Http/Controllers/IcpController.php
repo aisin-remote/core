@@ -298,7 +298,7 @@ class IcpController extends Controller
             ->get();
 
         $rows = $employees->map(function ($e) {
-            $icp = $e->latestIcp; // bisa null
+            $icp = $e->latestIcp;
             $steps = $icp?->steps?->sortBy('step_order') ?? collect();
 
             $done = $steps->where('status', 'done')
@@ -312,7 +312,7 @@ class IcpController extends Controller
                 ->sortByDesc('acted_at')->first();
             $approvedAt = $lastApprovedStep?->acted_at;
 
-            $anchor = $icp?->last_evaluated_at ?: $approvedAt; // Carbon|string|null
+            $anchor = $icp?->last_evaluated_at ?: $approvedAt;
             $anchorDate = $anchor ? Carbon::parse($anchor) : null;
 
             $isDue = $icp && $icp->status === Icp::STATUS_APPROVED

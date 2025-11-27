@@ -250,8 +250,11 @@
                                 <td>
                                     @php
                                         $historyLines = [];
+                                        $next = null;
+
                                         if ($icp && $icp->relationLoaded('steps')) {
                                             $sorted = $icp->steps->sortBy('step_order');
+
                                             foreach ($sorted as $s) {
                                                 if ($s->status === 'done') {
                                                     $line = '✓ ' . $s->label;
@@ -264,13 +267,34 @@
                                                             ')';
                                                     }
                                                     $historyLines[] = $line;
+                                                } elseif ($s->status === 'revised') {
+                                                    $displayLabel = preg_replace(
+                                                        '/^Checking by /i',
+                                                        'Revised by ',
+                                                        $s->label,
+                                                    );
+
+                                                    $line = '⚠ ' . $displayLabel;
+                                                    if ($s->actor) {
+                                                        $acted = optional($s->acted_at)->format('d/m/Y H:i');
+                                                        $line .=
+                                                            ' (' .
+                                                            $s->actor->name .
+                                                            ($acted ? ', ' . $acted : '') .
+                                                            ')';
+                                                    }
+                                                    $historyLines[] = $line;
                                                 }
                                             }
-                                            $next = $sorted->firstWhere('status', 'pending');
-                                            if ($next) {
-                                                $historyLines[] = '⏳ Waiting: ' . $next->label;
+
+                                            if (!$sorted->contains(fn($step) => $step->status === 'revised')) {
+                                                $next = $sorted->firstWhere('status', 'pending');
+                                                if ($next) {
+                                                    $historyLines[] = '⏳ Waiting: ' . $next->label;
+                                                }
                                             }
                                         }
+
                                         $tooltip = $historyLines
                                             ? implode('<br>', array_map('e', $historyLines))
                                             : e('No history yet');
@@ -278,12 +302,14 @@
                                         $chipStatus = 'unknown';
                                         $chipIcon = 'fa-regular fa-stack-exchange';
                                         $chipText = '-';
+
                                         if (!$icp) {
                                             $chipStatus = 'not_created';
                                             $chipText = 'Not created';
                                         } else {
                                             $expired =
                                                 $icp->status === 3 && optional($icp->created_at)->addYear()->isPast();
+
                                             if ($icp->status === 4) {
                                                 $chipStatus = 'draft';
                                                 $chipIcon = 'fa-regular fa-file-lines';
@@ -303,21 +329,23 @@
                                             } elseif ($icp->status === 3) {
                                                 $chipStatus = $expired ? 'draft' : 'approved';
                                                 $chipIcon = 'fa-solid fa-check-circle';
+
                                                 $apprDone = $icp->steps
                                                     ->where('type', 'approve')
                                                     ->where('status', 'done')
                                                     ->sortBy('step_order')
                                                     ->last();
+
                                                 $chipText = $apprDone?->label
                                                     ? str_replace('Approve', 'Approved', $apprDone->label)
                                                     : 'Approved';
+
                                                 if ($expired) {
                                                     $chipText .= ' (Expired)';
                                                 }
                                             }
                                         }
                                     @endphp
-
                                     <span class="status-chip w-100 justify-content-center"
                                         data-status="{{ $chipStatus }}" data-bs-toggle="tooltip" data-bs-html="true"
                                         title="{!! $tooltip !!}">
