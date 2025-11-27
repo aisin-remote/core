@@ -796,6 +796,12 @@
                                         'icon' => 'fa-rotate-left',
                                         'label' => 'Need Revise',
                                     ],
+                                    'approved' => [
+                                        'tone' => 'ok',
+                                        'status' => 'status-ok',
+                                        'icon' => 'fa-circle-check',
+                                        'label' => 'Clear',
+                                    ],
                                 ];
 
                                 $cfg = $statusMap[$ippTasks['status']] ?? [
@@ -835,16 +841,6 @@
                                         <h5 class="task-title mb-1">
                                             {{ $ownerName }}
                                         </h5>
-                                        <div class="task-sub">
-                                            {{ $ownerCompany ?? '-' }}
-                                        </div>
-                                        {{-- breakdown poin kecil di bawah nama --}}
-                                        <div class="task-sub mt-1">
-                                            AM: {{ $ippTasks['activity_management'] ?? 0 }} •
-                                            CRP: {{ $ippTasks['crp'] ?? 0 }} •
-                                            PD: {{ $ippTasks['people_development'] ?? 0 }} •
-                                            SA: {{ $ippTasks['special_assignment'] ?? 0 }}
-                                        </div>
                                     </div>
 
                                     <span class="status-chip {{ $cfg['status'] }}">
