@@ -378,7 +378,7 @@
                     // HRD/Top2 bisa pegang dua company; kalau mau satu default, pakai company login
                     $id = strtoupper((string) $employee->company_name); // fallback AII
                 } elseif ($isDir) {
-                    $level = 'plant';
+                    $level = 'direksi';
                     $id = optional($employee->plant)->id; // aman kalau null
                 } elseif ($isGM) {
                     $level = 'division';
