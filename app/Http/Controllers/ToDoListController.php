@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Helpers\ApprovalHelper;
 use App\Helpers\IppApprovalHelper;
+use App\Models\Department;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Hav;
 use App\Models\Icp;
@@ -11,7 +13,10 @@ use App\Models\IcpApprovalStep;
 use App\Models\Idp;
 use App\Models\IpaHeader;
 use App\Models\Ipp;
+use App\Models\Plant;
 use App\Models\Rtc;
+use App\Models\Section;
+use App\Models\SubSection;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -404,17 +409,90 @@ class ToDoListController extends Controller
      */
     private function getRtcTasks(array $subCheck, array $subApprove)
     {
-        return Rtc::with('employee')
-            ->where(function ($query) use ($subCheck, $subApprove) {
-                $query->where(function ($q) use ($subCheck) {
-                    $q->whereIn('employee_id', $subCheck)
-                        ->where('status', 0);
-                })->orWhere(function ($q) use ($subApprove) {
-                    $q->whereIn('employee_id', $subApprove)
-                        ->where('status', 1);
-                });
+        $user = auth()->user();
+        $employee = $user?->employee;
+
+        if (!$employee) {
+            return collect();
+        }
+
+        $norm = strtolower($employee->getNormalizedPosition());
+        $queue = collect();
+
+        if ($norm === 'gm') {
+            $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
+            $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
+            $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
+            $subIds     = SubSection::whereIn('section_id', $sectionIds)->pluck('id');
+
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->where(function ($q) use ($deptIds, $sectionIds, $subIds) {
+                    $q->where(fn($qq) => $qq->where('area', 'department')->whereIn('area_id', $deptIds))
+                        ->orWhere(fn($qq) => $qq->where('area', 'section')->whereIn('area_id', $sectionIds))
+                        ->orWhere(fn($qq) => $qq->where('area', 'sub_section')->whereIn('area_id', $subIds));
+                })
+                ->get();
+        } elseif (in_array($norm, ['direktur', 'director', 'act direktur'], true)) {
+            $plantId = optional($employee->plant)->id;
+            $divIds  = Division::where('plant_id', $plantId)->pluck('id');
+
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->whereIn('area', ['division', 'Division'])
+                ->whereIn('area_id', $divIds)
+                ->get();
+        } elseif (in_array($norm, ['vpd', 'vice president director'], true)) {
+            $plantIds = Plant::pluck('id');
+
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->whereIn('area', ['direksi', 'plant'])
+                ->whereIn('area_id', $plantIds)
+                ->get();
+        } elseif ($norm === 'president') {
+            $plantIds = Plant::pluck('id');
+
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->whereIn('area', ['direksi', 'plant'])
+                ->whereIn('area_id', $plantIds)
+                ->get();
+        }
+
+        $grouped = $queue
+            ->groupBy(fn($rtc) => strtolower($rtc->area) . '#' . $rtc->area_id)
+            ->map(function ($items) {
+                $first   = $items->first();
+                $areaKey = strtolower($first->area);
+
+                $statusMap = [
+                    -1 => 'Revised',
+                    0  => 'Draft',
+                    1  => 'Submitted',
+                    2  => 'Approved',
+                ];
+
+                $statusCounts = $items->groupBy('status')
+                    ->map(fn($col) => $col->count())
+                    ->mapWithKeys(fn($count, $code) => [($statusMap[$code] ?? 'Unknown') => $count]);
+
+                return [
+                    'area'       => $areaKey,
+                    'area_id'    => $first->area_id,
+                    'area_name'  => $first->area_name,
+                    'total_rtc'  => $items->count(),
+                    'terms'      => $items->pluck('term')->unique()->values()->all(),
+                    'status_info' => $statusCounts,
+                ];
             })
-            ->get();
+            ->values();
+
+        return $grouped;
     }
 
     private function getIppTasks(

@@ -670,29 +670,18 @@
                     <div class="panel-body panel-scroll">
                         @forelse ($allRtcTasks as $i => $item)
                             @php
-                                $raw = (int) $item->getRawOriginal('status');
-                                // 1 → Need Approve, 0 → Need Check (sesuai kode lama)
-                                $cfg =
-                                    $raw === 1
-                                        ? [
-                                            'tone' => 'info',
-                                            'status' => 'status-info',
-                                            'icon' => 'fa-hourglass-half',
-                                            'label' => 'Need Approve',
-                                        ]
-                                        : ($raw === 0
-                                            ? [
-                                                'tone' => 'warn',
-                                                'status' => 'status-warn',
-                                                'icon' => 'fa-clipboard-check',
-                                                'label' => 'Need Check',
-                                            ]
-                                            : [
-                                                'tone' => 'muted',
-                                                'status' => 'status-muted',
-                                                'icon' => 'fa-circle-question',
-                                                'label' => 'Unknown',
-                                            ]);
+                                $statusInfo = $item['status_info'] ?? [];
+                                $submittedCount = $statusInfo['Submitted'] ?? 0;
+
+                                $cfg = [
+                                    'tone' => 'info',
+                                    'status' => 'status-info',
+                                    'icon' => 'fa-hourglass-half',
+                                    'label' => 'Need Approve',
+                                ];
+
+                                $areaName = $item['area_name'] ?? '-';
+                                $areaType = ucfirst(str_replace('_', ' ', $item['area'] ?? ''));
                             @endphp
 
                             @if ($isHRD)
@@ -701,8 +690,11 @@
                                         <div class="tone tone-{{ $cfg['tone'] }}"></div>
 
                                         <div>
-                                            <h5 class="task-title mb-1">{{ $item->employee->name }}</h5>
-                                            <div class="task-sub">{{ $item->employee->company_name ?? '-' }}</div>
+                                            <h5 class="task-title mb-1">{{ $areaName }}</h5>
+                                            <div class="task-sub">
+                                                {{ $areaType }} &mdash;
+                                                {{ $submittedCount }} RTC Submitted
+                                            </div>
                                         </div>
 
                                         <span class="status-chip {{ $cfg['status'] }}">
@@ -716,8 +708,11 @@
                                         <div class="tone tone-{{ $cfg['tone'] }}"></div>
 
                                         <div>
-                                            <h5 class="task-title mb-1">{{ $item->employee->name }}</h5>
-                                            <div class="task-sub">{{ $item->employee->company_name ?? '-' }}</div>
+                                            <h5 class="task-title mb-1">{{ $areaName }}</h5>
+                                            <div class="task-sub">
+                                                {{ $areaType }} &mdash;
+                                                {{ $submittedCount }} RTC Submitted
+                                            </div>
                                         </div>
 
                                         <span class="status-chip {{ $cfg['status'] }}">
@@ -736,6 +731,7 @@
                             </div>
                         @endforelse
                     </div>
+
                 </div>
             </div>
 
