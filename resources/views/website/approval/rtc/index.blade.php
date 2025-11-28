@@ -43,7 +43,6 @@
                             <th>Area</th>
                             <th>Type</th>
                             <th>Current PIC</th>
-                            <th class="text-center">Status</th>
                             <th class="text-center" style="width:140px;">Detail</th>
                             <th class="text-center" style="width:160px;">Action</th>
                         </tr>
@@ -51,12 +50,6 @@
                     <tbody>
                         @forelse ($rtcs as $item)
                             @php
-                                // ringkasan status untuk kolom Status
-                                $statusSummary = collect($item['status_info'] ?? [])
-                                    ->map(fn($cnt, $lbl) => $lbl . ': ' . $cnt)
-                                    ->implode(' | ');
-
-                                // optional: current pic (kalau controller kirim), kalau tidak ada tampilkan '-'
                                 $currentPic = $item['current_pic'] ?? '-';
                             @endphp
 
@@ -67,15 +60,6 @@
 
                                 {{-- Current PIC (fallback '-') --}}
                                 <td>{{ $currentPic }}</td>
-
-                                {{-- Status Summary dipindah ke kolom Status (sesuai header) --}}
-                                <td class="text-center">
-                                    @if ($statusSummary)
-                                        <span class="badge bg-light text-muted border">{{ $statusSummary }}</span>
-                                    @else
-                                        <span class="text-muted">-</span>
-                                    @endif
-                                </td>
 
                                 {{-- Detail --}}
                                 <td class="text-center">
@@ -88,17 +72,19 @@
 
                                 {{-- Action --}}
                                 <td class="text-center">
-                                    <button type="button" class="btn btn-sm btn-success btn-approve mb-1"
-                                        onclick="confirmApproveArea('{{ $item['area'] }}', '{{ $item['area_id'] }}')">
-                                        <i class="fas fa-check-circle"></i>
-                                        {{ $stage === 'check' ? 'Check' : 'Approve' }}
-                                    </button>
+                                    <div class="d-flex flex-column">
+                                        <button type="button" class="btn btn-sm btn-success btn-approve mb-1"
+                                            onclick="confirmApproveArea('{{ $item['area'] }}', '{{ $item['area_id'] }}')">
+                                            <i class="fas fa-check-circle"></i>
+                                            {{ $stage === 'check' ? 'Check' : 'Approve' }}
+                                        </button>
 
-                                    <button type="button" class="btn btn-sm btn-danger btn-revise"
-                                        onclick="confirmReviseArea('{{ $item['area'] }}', '{{ $item['area_id'] }}')">
-                                        <i class="fas fa-rotate-left"></i>
-                                        Revise
-                                    </button>
+                                        <button type="button" class="btn btn-sm btn-danger btn-revise"
+                                            onclick="confirmReviseArea('{{ $item['area'] }}', '{{ $item['area_id'] }}')">
+                                            <i class="fas fa-rotate-left"></i>
+                                            Revise
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
