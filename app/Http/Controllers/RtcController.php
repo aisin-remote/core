@@ -821,7 +821,7 @@ class RtcController extends Controller
 
                     $p = Plant::with('director')->findOrFail($id);
                     $title = $p->name ?? 'Plant';
-                    $hideMainPlans = true;
+                    // $hideMainPlans = true;
 
                     $main = [
                         'title'      => $p->name ?? '-',
@@ -916,7 +916,7 @@ class RtcController extends Controller
             case 'division': {
                     $id = (int) $rawId;
 
-                    $hideMainPlans = $isGM;
+                    // $hideMainPlans = $isGM;
 
                     $div   = Division::with(['gm'])->findOrFail($id);
                     $title = $div->name ?? 'Division';
