@@ -232,7 +232,7 @@
                                                     class="btn btn-sm btn-primary" title="Detail">Detail</a>
                                             @elseif ($table === 'Plant')
                                                 <a class="btn btn-sm btn-info"
-                                                    href="{{ route('rtc.list', ['id' => $division->id]) }}?filter=plant"
+                                                    href="{{ route('rtc.list', ['id' => $division->id]) }}?filter=direksi"
                                                     title="RTC Summary" target="_blank">Preview</a>
                                                 <a href="{{ route('rtc.list', ['level' => 'plant', 'id' => $division->id]) }}"
                                                     class="btn btn-sm btn-primary" title="Detail">Detail</a>
