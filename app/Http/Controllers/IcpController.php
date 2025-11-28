@@ -614,11 +614,11 @@ class IcpController extends Controller
         if (!$icp) {
             return back()->with('error', 'Data ICP tidak ditemukan untuk employee ini.');
         }
-
+        $pos = $employee->position;
         $edu  = $employee->educations->first();
         $prom = $employee->promotionHistory->first();
         $ais  = $employee->aisin_entry_date
-            ? \Carbon\Carbon::parse($employee->aisin_entry_date)->format('d/m/Y')
+            ? Carbon::parse($employee->aisin_entry_date)->format('d/m/Y')
             : '';
 
         // Ambil appraisal terakhir per tahun (max 3 tahun)
@@ -634,12 +634,19 @@ class IcpController extends Controller
 
         // Load template
         $filePath = public_path('assets/file/Template_ICP.xlsx');
-        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($filePath);
+        $filePathManager = public_path('assets/file/Template_ICP_manager.xlsx');
+        if ($pos === 'Manager') {
+            $spreadsheet = IOFactory::load($filePathManager);
+        } else {
+            $spreadsheet = IOFactory::load($filePath);
+        }
+
+
         $sheet = $spreadsheet->getActiveSheet();
 
         /* =====================================================
-       1) HEADER TAHUN / RANGE PLAN YEAR
-    ======================================================*/
+            1) HEADER TAHUN / RANGE PLAN YEAR
+        ======================================================*/
         $years = $icp->details->pluck('plan_year')->filter()->map(fn($y) => (int) $y);
         $minYear = $years->min();
         $maxYear = $years->max();
@@ -652,12 +659,12 @@ class IcpController extends Controller
         );
         $sheet->getStyle('G2')->applyFromArray([
             'font' => ['bold' => true],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER],
+            'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
         ]);
 
         /* =====================================================
-       2) PERFORMANCE APPRAISAL (R5/T5/V5)
-    ======================================================*/
+            2) PERFORMANCE APPRAISAL (R5/T5/V5)
+        ======================================================*/
         $cols = ['R', 'T', 'V'];
         $i = 0;
         foreach ($performanceData as $yr => $score) {
@@ -671,8 +678,8 @@ class IcpController extends Controller
         }
 
         /* =====================================================
-       3) DATA KARYAWAN / ICP HEADER
-    ======================================================*/
+            3) DATA KARYAWAN / ICP HEADER
+        ======================================================*/
         $sheet->setCellValue('G5', $employee->name);
         $sheet->setCellValue('G6', $employee->company_name);
         $sheet->setCellValue('G7', $employee->position);
@@ -692,13 +699,13 @@ class IcpController extends Controller
         }
 
         /* =====================================================
-   4) DEVELOPMENT STAGE BLOK PER TAHUN
-        Tiap blok: 10 rows
-        1st year   -> row 26..35
-        2nd year   -> row 36..45
-        ...
-        5th year   -> row 66..75
-    ======================================================*/
+            4) DEVELOPMENT STAGE BLOK PER TAHUN
+            Tiap blok: 10 rows
+            1st year   -> row 26..35
+            2nd year   -> row 36..45
+            ...
+            5th year   -> row 66..75
+        ======================================================*/
         $YEAR_TOP = [26, 36, 46, 56, 66];
         $BLOCK_SPAN = 10; // row tinggi 10
 
@@ -786,33 +793,26 @@ class IcpController extends Controller
         }
 
         /* =====================================================
-       5) APPROVAL STAMP & TANGGAL (ROW 78 AREA)
-          - blok O..T  = APPROVE
-          - blok U..Z  = CHECK
-    ======================================================*/
+            5) APPROVAL STAMP & TANGGAL (ROW 78 AREA)
+            Template NON-manager:
+            - blok O..T = APPROVE
+            - blok U..Z = CHECK
+
+            Template MANAGER:
+            - blok J..N = CHECK #1 (Director)
+            - blok O..T = CHECK #2 (VPD)
+            - blok U..Z = APPROVE (President)
+        ====================================================== */
 
         // pastikan steps sudah ada di $icp (karena kita with('steps') di query)
         $steps = $icp->steps ?? collect();
 
-        // ambil step done terakhir bertipe approve
-        $doneApprove = $steps
-            ->where('type', 'approve')
-            ->where('status', 'done')
-            ->sortByDesc('step_order')
-            ->first();
-
-        // ambil step done terakhir bertipe check
-        $doneCheck = $steps
-            ->where('type', 'check')
-            ->where('status', 'done')
-            ->sortByDesc('step_order')
-            ->first();
-
-        // mapping role -> file stamp
         $stampMap = [
             'director'          => public_path('assets/media/stamp/DIR.jpg'),
             'gm'                => public_path('assets/media/stamp/GM.png'),
             'mgr'               => public_path('assets/media/stamp/MGR.jpg'),
+            'vpd'               => public_path('assets/media/stamp/USR.png'),
+            'president'         => public_path('assets/media/stamp/MGR.png')
         ];
 
         // helper untuk pasang stamp
@@ -866,29 +866,87 @@ class IcpController extends Controller
             }
         };
 
+        if ($pos === 'Manager') {
+            $checkSteps = $steps
+                ->where('type', 'check')
+                ->where('status', 'done')
+                ->sortBy('step_order')
+                ->values();
 
-        $placeStamp(
-            $doneApprove,
-            'P78',
-            'S80',
-            'O87',
-            'O87:T87'
-        );
-        $placeStamp(
-            $doneCheck,
-            'V78',
-            'W80',
-            'U87',
-            'U87:Z87'
-        );
+            $approveSteps = $steps
+                ->where('type', 'approve')
+                ->where('status', 'done')
+                ->sortBy('step_order')
+                ->values();
+
+            $check1 = $checkSteps->get(0);
+            $check2 = $checkSteps->get(1);
+            $approve = $approveSteps->last();
+
+            // blok 1: J..N
+            $placeStamp(
+                $approve,
+                'K78',      // tanggal di tengah J..N (silakan sesuaikan)
+                'M80',      // posisi gambar stempel
+                'J87',      // sel nama
+                'J87:N87'   // merge area nama
+            );
+
+            // blok 2: O..T
+            $placeStamp(
+                $check2,
+                'P78',
+                'S80',
+                'O87',
+                'O87:T87'
+            );
+
+            // blok 3: U..Z
+            $placeStamp(
+                $check1,
+                'V78',
+                'W80',
+                'U87',
+                'U87:Z87'
+            );
+        } else {
+            // ambil step done terakhir bertipe approve
+            $doneApprove = $steps
+                ->where('type', 'approve')
+                ->where('status', 'done')
+                ->sortByDesc('step_order')
+                ->first();
+
+            // ambil step done terakhir bertipe check
+            $doneCheck = $steps
+                ->where('type', 'check')
+                ->where('status', 'done')
+                ->sortByDesc('step_order')
+                ->first();
+
+            $placeStamp(
+                $doneApprove,
+                'P78',
+                'S80',
+                'O87',
+                'O87:T87'
+            );
+            $placeStamp(
+                $doneCheck,
+                'V78',
+                'W80',
+                'U87',
+                'U87:Z87'
+            );
+        }
 
         /* =====================================================
-       6) SAVE & DOWNLOAD
-    ======================================================*/
+            6) SAVE & DOWNLOAD
+        ======================================================*/
         $filename = 'ICP_' . preg_replace('/[^\w\-]+/u', '_', $employee->name) . '.xlsx';
         $path = storage_path('app/' . $filename);
 
-        (new \PhpOffice\PhpSpreadsheet\Writer\Xlsx($spreadsheet))->save($path);
+        (new Xlsx($spreadsheet))->save($path);
 
         return response()->download($path)->deleteFileAfterSend(true);
     }
