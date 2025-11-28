@@ -34,13 +34,28 @@
             <div class="menu-item">
                 <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
                     <span class="menu-icon"><i class="fas fa-clipboard-check"></i></span>
-                    <span class="menu-title position-relative d-inline-block" style="padding-right:16px;">
+                    <span class="menu-title position-relative d-inline-block" style="padding-right:28px;">
                         To Do List
-                        @if ($allIdpTasks->count() > 0 || $allHavTasks->count() > 0 || $allRtcTasks->count() > 0)
-                            <span
-                                class="blinking-dot position-absolute top-50 end-0 translate-middle-y bg-danger rounded-circle"
-                                style="width:8px; height:8px;"></span>
-                        @endif
+
+                        {{-- DOT kedap-kedip --}}
+                        <span id="todo-dot"
+                            class="blinking-dot position-absolute top-50 end-0 translate-middle-y bg-danger rounded-circle d-none"
+                            style="width:8px; height:8px;">
+                        </span>
+
+                        {{-- BADGE angka --}}
+                        <span id="todo-badge" class="position-absolute top-50 end-0 translate-middle-y d-none"
+                            style="
+                    transform: translateY(-50%);
+                    background:#ef4444;
+                    color:#fff;
+                    border-radius:999px;
+                    padding:0 6px;
+                    font-size:10px;
+                    line-height:16px;
+                    min-width:16px;
+                    text-align:center;
+                ">0</span>
                     </span>
                 </a>
             </div>
@@ -577,7 +592,22 @@
             <div class="menu-item">
                 <a class="menu-link {{ $currentPath === 'todolist' ? 'active' : '' }}" href="/todolist">
                     <span class="menu-icon"><i class="fas fa-clipboard-check"></i></span>
-                    <span class="menu-title">To Do List</span>
+                    <span class="menu-title position-relative d-inline-block" style="padding-right:20px;">
+                        To Do List
+
+                        <span id="todo-badge-flyout" class="position-absolute top-50 end-0 translate-middle-y d-none"
+                            style="
+                    transform: translateY(-50%);
+                    background:#ef4444;
+                    color:#fff;
+                    border-radius:999px;
+                    padding:0 5px;
+                    font-size:9px;
+                    line-height:14px;
+                    min-width:14px;
+                    text-align:center;
+                ">0</span>
+                    </span>
                 </a>
             </div>
 

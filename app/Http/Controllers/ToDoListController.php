@@ -62,6 +62,70 @@ class ToDoListController extends Controller
     /**
      * Tentukan normalized position dan scope karyawan yang boleh dibuat/check/approve.
      */
+    public function status()
+    {
+        $user     = auth()->user();
+        $employee = $user->employee;
+
+        if (! $employee) {
+            return response()->json([
+                'show_todo_dot' => false,
+                'total_pending' => 0,
+                'counts'        => [
+                    'idp'  => 0,
+                    'hav'  => 0,
+                    'rtc'  => 0,
+                    'icp'  => 0,
+                    'ipp'  => 0, // subordinate only
+                    'ipa'  => 0, // subordinate only
+                ],
+            ]);
+        }
+
+        [$normalized, $subCreate, $subCheck, $subApprove] = $this->resolveScopes($user, $employee);
+
+        $assessments    = $this->getLatestHavAssessments($subCreate);
+        $unassignedIdps = $this->buildUnassignedIdps($assessments);
+        $draftIdps      = $this->getDraftIdps($subCreate);
+        $reviseIdps     = $this->getReviseIdps($subCreate);
+        $pendingIdps    = $this->getPendingIdps($subCheck, $subApprove, $normalized);
+
+        $allIdpTasks = $this->mergeAllIdpTasks(
+            $unassignedIdps,
+            $draftIdps,
+            $reviseIdps,
+            $pendingIdps
+        );
+
+        $allHavTasks = $this->getHavTasks($subCheck);
+        $allRtcTasks = $this->getRtcTasks($subCheck, $subApprove);
+        $allIcpTasks = $this->getIcpTasks();
+        $allIppTasks = $this->getIppTasks($employee, $user);
+        $allIpaTasks = $this->getIpaTasks($employee, $user);
+
+        $subsIpps = $allIppTasks['subordinateIpps'] ?? [];
+        $subsIpas = $allIpaTasks['subordinateIpas'] ?? [];
+
+        $counts = [
+            'idp' => $allIdpTasks->count(),
+            'hav' => $allHavTasks->count(),
+            'rtc' => $allRtcTasks->count(),
+            'icp' => $allIcpTasks->count(),
+            'ipp' => is_countable($subsIpps) ? count($subsIpps) : 0,
+            'ipa' => is_countable($subsIpas) ? count($subsIpas) : 0,
+        ];
+
+        $totalPending = array_sum($counts);
+
+        $showTodoDot = $totalPending > 0;
+
+        return response()->json([
+            'show_todo_dot' => $showTodoDot,
+            'total_pending' => $totalPending,
+            'counts'        => $counts,
+        ]);
+    }
+
     private function resolveScopes($user, $employee): array
     {
         $role = $user->role;

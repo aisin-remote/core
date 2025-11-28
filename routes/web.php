@@ -122,6 +122,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     Route::prefix('todolist')->group(function () {
         Route::get('/', [ToDoListController::class, 'index'])->name('todolist.index');
+        Route::get('/status', [ToDoListController::class, 'status'])->name('todolist.status');
     });
 
     Route::prefix('icp')->group(function () {
