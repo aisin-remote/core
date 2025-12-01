@@ -810,9 +810,9 @@ class IcpController extends Controller
         $stampMap = [
             'director'          => public_path('assets/media/stamp/DIR.jpg'),
             'gm'                => public_path('assets/media/stamp/GM.png'),
-            'mgr'               => public_path('assets/media/stamp/MGR.jpg'),
-            'vpd'               => public_path('assets/media/stamp/USR.png'),
-            'president'         => public_path('assets/media/stamp/MGR.png')
+            'mgr'               => public_path('assets/media/stamp/MGR.png'),
+            'vpd'               => public_path('assets/media/stamp/VPD.png'),
+            'president'         => public_path('assets/media/stamp/PD.png')
         ];
 
         // helper untuk pasang stamp
