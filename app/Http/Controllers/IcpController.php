@@ -808,7 +808,7 @@ class IcpController extends Controller
         $steps = $icp->steps ?? collect();
 
         $stampMap = [
-            'director'          => public_path('assets/media/stamp/DIR.jpg'),
+            'director'          => public_path('assets/media/stamp/DIR.png'),
             'gm'                => public_path('assets/media/stamp/GM.png'),
             'mgr'               => public_path('assets/media/stamp/MGR.png'),
             'vpd'               => public_path('assets/media/stamp/VPD.png'),
