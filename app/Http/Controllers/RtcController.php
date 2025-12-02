@@ -1670,6 +1670,17 @@ class RtcController extends Controller
                     default       => null,
                 };
 
+                $positionTarget = match ($areaKey) {
+                    'division'    => $first->division ?? 'GM',
+                    'department'  => $first->department ?? 'Manager',
+                    'section'     => $first->section ?? 'Section Head',
+                    'sub_section' => $first->subsection ?? 'Leader',
+                    'plant'       => $first->plan ?? 'Direktur',
+                    default       => null
+                };
+
+                // dd($positionTarget);
+
                 $picEmp = $areaModel ? $this->currentPicFor($areaKey, $areaModel) : null;
                 $currentPic = $picEmp
                     ? trim($picEmp->name . ($picEmp->position ? ' (' . $picEmp->position . ')' : ''))

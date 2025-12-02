@@ -361,7 +361,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
 
         Route::get('/approval/json', [IpaApprovalController::class, 'approvalJson'])->name('approval.json');
-        Route::get('/{ipa?}/export', [IpaExportController::class, 'export'])->name('export');
+        Route::get('/{ipa?}/export', [IpaExportController::class, 'exportWorkbook'])->name('export');
     });
 
     Route::prefix('reviews')->name('reviews.')->group(function () {

@@ -432,6 +432,7 @@ class ToDoListController extends Controller
     {
         $me   = auth()->user()->employee;
         $role = ApprovalHelper::roleKeyFor($me);
+        $company = $me->company_name;
 
         // role utama
         $rolesToMatch = [$role];
@@ -454,6 +455,9 @@ class ToDoListController extends Controller
             ->where('status', 'pending')
             ->whereHas('icp', function ($q) {
                 $q->where('status', '!=', 4);
+            })
+            ->whereHas('icp.employee', function ($q) use ($company) {
+                $q->where('company_name', $company);
             })
             ->orderBy('step_order')
             ->get()
