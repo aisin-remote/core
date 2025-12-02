@@ -21,7 +21,10 @@ use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Alc;
+use App\Models\IdpApproval;
 use App\Models\IdpBackup;
+use App\Services\Excel\IdpExportService;
+use Exception;
 use Illuminate\Support\Facades\Storage;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -459,7 +462,7 @@ class IdpController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Development updated successfully.',
-                    'idp' => $idp, // opsional: kirim data IDP terbaru
+                    'idp' => $idp,
                 ]);
             } else {
                 $newIdp = Idp::create([
@@ -908,62 +911,65 @@ class IdpController extends Controller
     public function approve($id)
     {
         $idp = Idp::findOrFail($id);
+        $employee = auth()->user()->employee;
 
-        if ($idp->status == 1) {
-            $idp->status = 2;
-            $idp->save();
+        $currentStatus = $idp->status;
 
+        if (!in_array($currentStatus, [1, 2, 3])) {
             return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
+                'message' => 'Something went wrong!'
+            ], 400);
         }
 
-        if ($idp->status == 2) {
-            $idp->status = 3;
+        DB::transaction(function () use ($idp, $employee, $currentStatus) {
+            if ($employee) {
+                IdpApproval::updateOrCreate(
+                    [
+                        'assessment_id' => $idp->assessment_id,
+                        'level'         => $currentStatus,
+                    ],
+                    [
+                        'idp_id'      => $idp->id,
+                        'approve_by'  => $employee->id,
+                        'approved_at' => now(),
+                    ]
+                );
+            }
+
+            $idp->status = $currentStatus + 1;
             $idp->save();
-
-            return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
-        }
-
-        if ($idp->status == 3) {
-            $idp->status = 4;
-            $idp->save();
-
-            return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
-        }
+        });
 
         return response()->json([
-            'message' => 'Something went wrong!'
-        ], 400);
+            'message' => 'IDP has been approved!'
+        ]);
     }
+
+
     public function revise(Request $request)
     {
         $idp = Idp::findOrFail($request->id);
-
-        // Menyimpan status HAV sebagai disetujui
-        $idp->status = -1;
-
-        // Ambil komentar dari input request
-        $comment = $request->input('comment');
         $employee = auth()->user()->employee;
-        // Menyimpan komentar ke dalam tabel hav_comment_history
-        if ($employee) {
-            $idp->commentHistory()->create([
-                'comment' => $comment,
-                'employee_id' => $employee->id  // Menyimpan siapa yang memberikan komentar
-            ]);
-        }
+        $comment = $request->input('comment');
 
-        // Simpan perubahan status HAV
-        $idp->save();
+        DB::transaction(function () use ($idp, $employee, $comment) {
+            $idp->status = -1;
 
-        // Kembalikan respons JSON
+            if ($employee && $comment) {
+                $idp->commentHistory()->create([
+                    'comment'      => $comment,
+                    'employee_id'  => $employee->id,
+                ]);
+            }
+
+            $idp->save();
+
+            IdpApproval::where('assessment_id', $idp->assessment_id)->delete();
+        });
+
         return response()->json(['message' => 'Data berhasil direvisi.']);
     }
+
 
     public function destroy($id)
     {
