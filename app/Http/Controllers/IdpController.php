@@ -499,7 +499,7 @@ class IdpController extends Controller
         ]);
 
         foreach ($request->development_program as $key => $program) {
-            Development::create([
+            Development::create(attributes: [
                 'employee_id' => $employee_id,
                 'idp_id' => $request->idp_id[$key] ?? '',
                 'development_program' => $program,
@@ -543,186 +543,17 @@ class IdpController extends Controller
         return view('website.idp.index', compact('mid'));
     }
 
-    public function exportTemplate($employee_id)
+    public function exportTemplate(Request $request, $employee_id, IdpExportService $idpExportService)
     {
-        $filePath = public_path('assets/file/idp_template.xlsx');
-
-
-        if (!file_exists($filePath)) {
-            return back()->with('error', 'File template tidak ditemukan.');
+        try {
+            $tempPath = $idpExportService->exportTemplate(
+                (int) $employee_id,
+                $request->assessment_id ?? null
+            );
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        $employee = Employee::find($employee_id);
-        if (!$employee) {
-            return back()->with('error', 'Employee tidak ditemukan.');
-        }
-
-        $assessment = Assessment::where('employee_id', $employee_id)->latest()->first();
-        if (!$assessment) {
-            return back()->with('error', 'Assessment tidak ditemukan.');
-        }
-
-
-        $assessmentDetails = DB::table('detail_assessments')
-            ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
-            ->select('detail_assessments.*', 'alc.name as alc_name')
-            ->where('detail_assessments.assessment_id', $assessment->id)
-            ->get();
-
-
-        $spreadsheet = IOFactory::load($filePath);
-        $sheet = $spreadsheet->getActiveSheet();
-
-        $sheet->setCellValue('H3', $employee->name);
-        $sheet->setCellValue('K3', $employee->npk);
-        $sheet->setCellValue('R3', $employee->position);
-        $sheet->setCellValue('R4', $employee->position);
-        $sheet->setCellValue('R5', $employee->birthday_date);
-        $sheet->setCellValue('R6', $employee->aisin_entry_date);
-        $sheet->setCellValue('R7', $assessment->date);
-        $sheet->setCellValue('H6', $employee->grade);
-        $sheet->setCellValue('H5', $employee->department_id);
-
-
-        $startRow = 13;
-
-        $latestAssessment = DB::table('assessments')
-            ->where('employee_id', $employee_id)
-            ->latest('created_at')
-            ->first();
-
-        if (!$latestAssessment) {
-            return back()->with('error', 'Assessment tidak ditemukan untuk employee ini.');
-        }
-
-        $assessmentDetails = DB::table('detail_assessments')
-            ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
-            ->where('detail_assessments.assessment_id', $latestAssessment->id)
-            ->select('detail_assessments.*', 'alc.name as alc_name')
-            ->get();
-
-        $strengths = [];
-        $weaknesses = [];
-
-        foreach ($assessmentDetails as $detail) {
-            if (!empty($detail->strength)) {
-                $strengths[] = " - " . $detail->alc_name;
-            }
-            if (!empty($detail->weakness)) {
-                $weaknesses[] = " - " . $detail->alc_name;
-            }
-        }
-
-        $strengthText = implode("\n", $strengths);
-        $weaknessText = implode("\n", $weaknesses);
-
-        $sheet->setCellValue('B' . $startRow, $strengthText);
-        $sheet->setCellValue('F' . $startRow, $weaknessText);
-
-
-
-        $startRow = 33;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-        $assessmentDetails = DB::table('detail_assessments')
-            ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
-            ->where('detail_assessments.assessment_id', $latestAssessment->id)
-            ->select('detail_assessments.*', 'alc.name as alc_name')
-            ->get();
-
-        foreach ($assessmentDetails as $detail) {
-            if (!empty($detail->weakness)) {
-                $sheet->setCellValue('C' . $startRow, $detail->alc_name . " - " . $detail->weakness);
-            }
-
-            if (!empty($detail->weakness)) {
-                $startRow += 2;
-            }
-        }
-
-        $startRow = 33;
-
-        foreach ($assessmentDetails as $detail) {
-            if (!empty($detail->weakness)) {
-                $sheet->setCellValue('C' . $startRow, $detail->alc_name);
-                $startRow += 2;
-            }
-        }
-
-
-        $startRow = 33;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-
-        $idpRecords = Idp::where('assessment_id', $assessment_id)->get();
-
-        foreach ($idpRecords as $idp) {
-            $sheet->setCellValue('E' . $startRow, $idp->development_program ?? "-");
-            $sheet->setCellValue('D' . $startRow, $idp->category ?? "-");
-            $sheet->setCellValue('H' . $startRow, $idp->development_target ?? "-");
-            $sheet->setCellValue('K' . $startRow, $idp->date ?? "-");
-
-            $startRow += 2;
-        }
-
-        $startRow = 13;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-        $midYearRecords = Development::where('employee_id', $employee_id)->get();
-
-        foreach ($midYearRecords as $record) {
-            $sheet->setCellValue('O' . $startRow, $record->development_program ?? "-");
-            $sheet->setCellValue('R' . $startRow, $record->development_achievement ?? "-");
-            $sheet->setCellValue('U' . $startRow, $record->next_action ?? "-");
-
-            $startRow++;
-        }
-
-        $startRow = 33;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-        $oneYearRecords = DevelopmentOne::where('employee_id', $employee_id)->get();
-
-        foreach ($oneYearRecords as $record) {
-            $sheet->setCellValue('O' . $startRow, $record->development_program ?? "-");
-            $sheet->setCellValue('R' . $startRow, $record->evaluation_result ?? "-");
-
-            $startRow += 2;
-        }
-
-
-        $tempDir = storage_path('app/public/temp');
-        if (!file_exists($tempDir)) {
-            mkdir($tempDir, 0777, true);
-        }
-
-        // Simpan file sementara
-        $fileName = 'IDP_' . str_replace(' ', '_', $employee->name) . '.xlsx';
-        $tempPath = storage_path('app/public/temp/' . $fileName);
-        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        $writer->save($tempPath);
-
-        // Download file
         return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 
