@@ -1863,17 +1863,16 @@ class RtcController extends Controller
     public function singleNode(Request $request)
     {
         try {
-            $area   = strtolower($request->query('area'));
-            $areaId = (int) $request->query('area_id');
+            $area   = strtolower($request->query('area', ''));
+            $areaId = (int) $request->query('area_id', 0);
 
             if (!$area || !$areaId) {
                 abort(400, 'Invalid area or area_id');
             }
 
-            [$main, $title] = $this->buildSingleAreaNode($area, $areaId);
+            [$main, $managers, $title] = $this->buildSingleAreaNode($area, $areaId);
 
-            $managers      = [];
-            $hideMainPlans = false;
+            $hideMainPlans = false; 
             $noRoot        = false;
             $groupTop      = false;
 
@@ -1936,6 +1935,61 @@ class RtcController extends Controller
 
         switch ($area) {
 
+            /**
+             * ===================== DIREKSI / PLANT =====================
+             * Root  : Direktur Plant
+             * Child : GM / Division di plant tsb
+             */
+            case 'direksi':
+            case 'plant': {
+                    $plant = Plant::with(['director'])->findOrFail($id);
+
+                    $title     = $plant->name ?? 'Plant';
+                    $mainColor = $pickColor("plant-single-{$plant->id}");
+
+                    RtcHelper::setAreaContext('plant', $plant->id);
+
+                    // root: direktur plant (tidak pakai S/T M/T L/T di level ini)
+                    $main = [
+                        'title'      => $plant->name ?? '-',
+                        'person'     => RtcHelper::formatPerson($plant->director),
+                        'shortTerm'  => RtcHelper::formatCandidate(null, 'short'),
+                        'midTerm'    => RtcHelper::formatCandidate(null, 'mid'),
+                        'longTerm'   => RtcHelper::formatCandidate(null, 'long'),
+                        'colorClass' => $mainColor,
+                    ];
+
+                    $managers = [];
+
+                    // child = GM division di plant tsb (plus kandidat mereka kalau ada)
+                    $divs = Division::with(['gm', 'short', 'mid', 'long'])
+                        ->where('plant_id', $plant->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    foreach ($divs as $div) {
+                        RtcHelper::setAreaContext('division', $div->id);
+
+                        $managers[] = [
+                            'title'           => $div->name,
+                            'person'          => RtcHelper::formatPerson($div->gm),
+                            'shortTerm'       => RtcHelper::formatCandidate($div->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($div->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($div->long,  'long'),
+                            'colorClass'      => $mainColor,
+                            'supervisors'     => [],
+                            'skipManagerNode' => false,
+                        ];
+                    }
+
+                    return [$main, $managers, $title];
+                }
+
+            /**
+             * ===================== DIVISION =====================
+             * Root  : GM Division
+             * Child : Manager Department
+             */
             case 'division': {
                     $div = Division::with(['gm', 'short', 'mid', 'long'])->findOrFail($id);
 
@@ -1944,6 +1998,7 @@ class RtcController extends Controller
 
                     RtcHelper::setAreaContext('division', $div->id);
 
+                    // root = GM
                     $main = [
                         'title'      => $div->name ?? '-',
                         'person'     => RtcHelper::formatPerson($div->gm),
@@ -1953,9 +2008,37 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    return [$main, $title];
+                    $managers = [];
+
+                    // child = Manager Department di division ini
+                    $depts = Department::with(['manager', 'short', 'mid', 'long'])
+                        ->where('division_id', $div->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    foreach ($depts as $dept) {
+                        RtcHelper::setAreaContext('department', $dept->id);
+
+                        $managers[] = [
+                            'title'           => $dept->name,
+                            'person'          => RtcHelper::formatPerson($dept->manager),
+                            'shortTerm'       => RtcHelper::formatCandidate($dept->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($dept->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($dept->long,  'long'),
+                            'colorClass'      => $mainColor,
+                            'supervisors'     => [],
+                            'skipManagerNode' => false,
+                        ];
+                    }
+
+                    return [$main, $managers, $title];
                 }
 
+            /**
+             * ===================== DEPARTMENT =====================
+             * Root  : Manager Department
+             * Child : Supervisor Section
+             */
             case 'department': {
                     $dept = Department::with(['manager', 'short', 'mid', 'long'])->findOrFail($id);
 
@@ -1964,6 +2047,7 @@ class RtcController extends Controller
 
                     RtcHelper::setAreaContext('department', $dept->id);
 
+                    // root = Manager Dept
                     $main = [
                         'title'      => $dept->name ?? '-',
                         'person'     => RtcHelper::formatPerson($dept->manager),
@@ -1973,9 +2057,37 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    return [$main, $title];
+                    $managers = [];
+
+                    // child = Supervisor Section di department ini
+                    $secs = Section::with(['supervisor', 'short', 'mid', 'long'])
+                        ->where('department_id', $dept->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    foreach ($secs as $sec) {
+                        RtcHelper::setAreaContext('section', $sec->id);
+
+                        $managers[] = [
+                            'title'           => $sec->name,
+                            'person'          => RtcHelper::formatPerson($sec->supervisor),
+                            'shortTerm'       => RtcHelper::formatCandidate($sec->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($sec->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($sec->long,  'long'),
+                            'colorClass'      => $mainColor,
+                            'supervisors'     => [],
+                            'skipManagerNode' => false,
+                        ];
+                    }
+
+                    return [$main, $managers, $title];
                 }
 
+            /**
+             * ===================== SECTION =====================
+             * Root  : Supervisor Section
+             * Child : Leader Sub Section
+             */
             case 'section': {
                     $sec = Section::with(['supervisor', 'short', 'mid', 'long'])->findOrFail($id);
 
@@ -1984,6 +2096,7 @@ class RtcController extends Controller
 
                     RtcHelper::setAreaContext('section', $sec->id);
 
+                    // root = Supervisor Section
                     $main = [
                         'title'      => $sec->name ?? '-',
                         'person'     => RtcHelper::formatPerson($sec->supervisor),
@@ -1993,9 +2106,37 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    return [$main, $title];
+                    $managers = [];
+
+                    // child = Leader Sub Section
+                    $subs = SubSection::with(['leader', 'short', 'mid', 'long'])
+                        ->where('section_id', $sec->id)
+                        ->orderBy('name')
+                        ->get();
+
+                    foreach ($subs as $sub) {
+                        RtcHelper::setAreaContext('sub_section', $sub->id);
+
+                        $managers[] = [
+                            'title'           => $sub->name,
+                            'person'          => RtcHelper::formatPerson($sub->leader),
+                            'shortTerm'       => RtcHelper::formatCandidate($sub->short, 'short'),
+                            'midTerm'         => RtcHelper::formatCandidate($sub->mid,   'mid'),
+                            'longTerm'        => RtcHelper::formatCandidate($sub->long,  'long'),
+                            'colorClass'      => $mainColor,
+                            'supervisors'     => [],
+                            'skipManagerNode' => false,
+                        ];
+                    }
+
+                    return [$main, $managers, $title];
                 }
 
+            /**
+             * ===================== SUB SECTION =====================
+             * Root  : Leader
+             * Child : (tidak ada level di bawah)
+             */
             case 'sub_section': {
                     $sub = SubSection::with(['leader', 'short', 'mid', 'long'])->findOrFail($id);
 
@@ -2013,29 +2154,9 @@ class RtcController extends Controller
                         'colorClass' => $mainColor,
                     ];
 
-                    return [$main, $title];
-                }
+                    $managers = [];
 
-            case 'plant':
-            case 'direksi': {
-                    // dipakai untuk approval level direktur / VPD / presdir
-                    $plant = Plant::with(['director'])->findOrFail($id);
-
-                    $title     = $plant->name ?? 'Plant';
-                    $mainColor = $pickColor("plant-single-{$plant->id}");
-
-                    RtcHelper::setAreaContext('plant', $plant->id);
-
-                    $main = [
-                        'title'      => $plant->name ?? '-',
-                        'person'     => RtcHelper::formatPerson($plant->director),
-                        'shortTerm'  => null, // kalau nanti Plant punya relasi short/mid/long tinggal diisi
-                        'midTerm'    => null,
-                        'longTerm'   => null,
-                        'colorClass' => $mainColor,
-                    ];
-
-                    return [$main, $title];
+                    return [$main, $managers, $title];
                 }
 
             default:

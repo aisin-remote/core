@@ -144,7 +144,7 @@
 
             <div class="modal-footer">
                 {{-- tombol baru: buka chart 1-node di tab baru --}}
-                <a href="#" id="rtcDetailViewChart" class="btn btn-outline-primary" target="_blank">
+                <a href="#" id="rtcDetailViewChart" class="btn btn-primary" target="_blank">
                     <i class="fas fa-sitemap"></i> View Chart
                 </a>
 
