@@ -289,12 +289,18 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/save', [RtcController::class, 'save'])->name('rtc.save');
         Route::post('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::post('/submit', [RtcController::class, 'submit'])->name('rtc.submit');
+
         Route::get('/candidates', [RtcCandidateController::class, 'index'])->name('rtc.candidates');
         Route::get('/summary/{id?}', [RtcController::class, 'summary'])->name('rtc.summary');
         Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/list/{id?}', [RtcController::class, 'list'])->name('rtc.list');
+
+        Route::get('/single-node', [RtcController::class, 'singleNode'])
+            ->name('rtc.single-node');
+
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
     });
+
 
     Route::prefix('idp')->group(function () {
         // Manager all IDP for President
