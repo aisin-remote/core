@@ -756,7 +756,7 @@ class IdpController extends Controller
             if ($employee) {
                 IdpApproval::updateOrCreate(
                     [
-                        'assessment_id' => $idp->assessment_id,
+                        'assessment_id' => $idp->assessment_id ?? null,
                         'level'         => $currentStatus,
                     ],
                     [
