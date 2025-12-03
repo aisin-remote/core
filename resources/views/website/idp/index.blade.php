@@ -342,13 +342,6 @@
                                                                 data-bs-target="#notes_{{ $assessment->employee->id }}">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
-                                                            {{-- @if (in_array($position, $exportablePositions)) --}}
-                                                            <button type="button" class="btn btn-sm btn-success"
-                                                                onclick="window.location.href='{{ route('idp.exportTemplate', ['employee_id' => $assessment->employee->id]) }}'">
-                                                                <i class="fas fa-file-export"></i>
-                                                            </button>
-                                                            {{-- @endif --}}
-
                                                             @if (!$isHRDorDireksi)
                                                                 <button type="button" class="btn btn-sm btn-warning"
                                                                     onclick="sendDataConfirmation({{ $assessment->employee->id }})"
