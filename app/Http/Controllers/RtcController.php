@@ -9,6 +9,7 @@ use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Department;
 use App\Models\Plant;
+use App\Models\RtcApproval;
 use App\Models\RtcComment;
 use App\Models\SubSection;
 use App\Services\RtcService;
@@ -1531,10 +1532,21 @@ class RtcController extends Controller
             return response()->json(['message' => 'No matching RTCs to update.'], 404);
         }
 
-        DB::transaction(function () use ($rtcs, $toStatus, $area, $areaId) {
+        DB::transaction(function () use ($rtcs, $toStatus, $area, $areaId, $employee) {
             foreach ($rtcs as $rtc) {
                 $rtc->status = $toStatus; // 2
                 $rtc->save();
+
+                RtcApproval::updateOrCreate(
+                    [
+                        'rtc_id' => $rtc->id,
+                        'level' => 1
+                    ],
+                    [
+                        'approve_by' => $employee->id,
+                        'approved_at' => now(),
+                    ]
+                );
 
                 // Copy kandidat ke struktur saat APPROVED (2)
                 if (
@@ -1633,6 +1645,8 @@ class RtcController extends Controller
                     'status_to'   => -1,
                     'comment'     => $comment
                 ]);
+
+                RtcApproval::where('rtc_id', $rtc->id)->delete();
             }
         });
 
@@ -1901,11 +1915,13 @@ class RtcController extends Controller
             return response()->json(['message' => 'Not allowed.'], 403);
         }
 
-        // set back to Submitted (0)
-        $rtc->status = 0;
-        $rtc->save();
+        DB::transaction(function () use ($rtc, $employee) {
+            // set back to Submitted (0)
+            $rtc->status = 0;
+            $rtc->save();
 
-        // (opsional) simpan comment revisi ke table audit/log terpisah
+            RtcApproval::where('rtc_id', $rtc->id)->delete();
+        });
 
         return response()->json(['message' => 'Revised back to submitter.']);
     }
