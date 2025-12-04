@@ -445,7 +445,6 @@
                     1: {
                         ds: 'waiting',
                         icon: '<i class="fas fa-paper-plane"></i>',
-                        // NEW LABEL
                         label: 'Pending Approval'
                     },
                     2: {

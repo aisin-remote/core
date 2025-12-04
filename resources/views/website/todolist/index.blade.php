@@ -709,10 +709,6 @@
 
                                         <div>
                                             <h5 class="task-title mb-1">{{ $areaName }}</h5>
-                                            <div class="task-sub">
-                                                {{ $areaType }} &mdash;
-                                                {{ $submittedCount }} RTC Submitted
-                                            </div>
                                         </div>
 
                                         <span class="status-chip {{ $cfg['status'] }}">
