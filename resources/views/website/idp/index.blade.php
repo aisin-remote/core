@@ -328,13 +328,12 @@
                                                                 ];
                                                             @endphp
 
-                                                            @if (!$isHRDorDireksi)
-                                                                <button type="button" class="btn btn-sm btn-primary"
-                                                                    style="display: {{ $assessment->overall_status == 'approved' ? '' : 'none' }}"
-                                                                    data-bs-toggle="modal"
-                                                                    data-bs-target="#addEntryModal-{{ $assessment->employee->id }}">
+                                                           @if (!$isHRDorDireksi)
+                                                                <a href="{{ route('idp.development', $assessment->employee->id) }}"
+                                                                class="btn btn-sm btn-primary"
+                                                                style="display: {{ $assessment->overall_status == 'approved' ? '' : 'none' }}">
                                                                     <i class="fas fa-pencil-alt"></i>
-                                                                </button>
+                                                                </a>
                                                             @endif
 
                                                             <button type="button" class="btn btn-sm btn-info"
@@ -403,17 +402,10 @@
                 ])
             @endforeach
 
-            {{-- 2. Modal Add Development (Mid Year & One Year) per employee --}}
-            @foreach ($filteredEmployees as $assessment)
-               @include('website.idp.partials.modal-add-entry', [
-                'assessment' => $assessment,
-               ])
-            @endforeach
-
-            {{-- 3. Modal global Comment History (dummy) --}}
+            {{-- 2. Modal global Comment History (dummy) --}}
             @include('website.idp.partials.modal-notes-history')
 
-            {{-- 4. Modal Summary / Notes per employee --}}
+            {{-- 3. Modal Summary / Notes per employee --}}
             @foreach ($filteredEmployees as $assessment)
                @include('website.idp.partials.modal-summary', [
                 'assessment' => $assessment,

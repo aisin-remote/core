@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
 use App\Models\Hav;
 use App\Models\Idp;
 use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
-use App\Models\HavDetail;
-use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
 use App\Models\Development;
@@ -17,18 +14,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\DevelopmentOne;
-use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Alc;
+use App\Models\Assessment;
 use App\Models\IdpApproval;
 use App\Models\IdpBackup;
 use App\Services\Excel\IdpExportService;
 use Exception;
-use Illuminate\Support\Facades\Storage;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class IdpController extends Controller
 {
@@ -776,7 +769,6 @@ class IdpController extends Controller
         ]);
     }
 
-
     public function revise(Request $request)
     {
         $idp = Idp::findOrFail($request->id);
@@ -1029,6 +1021,57 @@ class IdpController extends Controller
         }
     }
 
+    public function developmentForm($employee_id)
+    {
+        $assessment = Assessment::with([
+            'employee',
+            'details' => function ($q) {
+                $q->where(function ($q2) {
+                    $q2->where('score', '<', 3)
+                        ->orWhere(function ($q3) {
+                            $q3->where('score', '>=', 3)
+                                ->whereNotNull('suggestion_development')
+                                ->where('suggestion_development', '!=', '');
+                        })
+                        ->orWhere(function ($q4) {
+                            $q4->where('score', '<', 3)
+                                ->whereNotNull('suggestion_development')
+                                ->where('suggestion_development', '!=', '');
+                        });
+                })->with('alc');
+            },
+        ])
+            ->where('employee_id', $employee_id)
+            ->whereHas('details', function ($q) {
+                $q->where(function ($q2) {
+                    $q2->where('score', '<', 3)
+                        ->orWhere(function ($q3) {
+                            $q3->where('score', '>=', 3)
+                                ->whereNotNull('suggestion_development')
+                                ->where('suggestion_development', '!=', '');
+                        })
+                        ->orWhere(function ($q4) {
+                            $q4->where('score', '<', 3)
+                                ->whereNotNull('suggestion_development')
+                                ->where('suggestion_development', '!=', '');
+                        });
+                });
+            })
+            ->latest('date')
+            ->firstOrFail();
+
+        $relevantAlcIds = $assessment->details->pluck('alc_id')->unique()->values();
+
+        $idps = Idp::with('alc')
+            ->where('assessment_id', $assessment->id)
+            ->whereIn('alc_id', $relevantAlcIds)
+            ->get()
+            ->groupBy('alc_id'); 
+
+        $title = 'IDP Development - ' . ($assessment->employee->name ?? '-');
+
+        return view('website.idp.development', compact('assessment', 'title', 'idps'));
+    }
 
     // PRIVATE FUNCTION
     private function getAssessments($user, $company, $npk, $search)

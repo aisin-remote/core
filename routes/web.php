@@ -305,6 +305,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('idp')->group(function () {
         // Manager all IDP for President
         Route::get('/manage-all', [IdpController::class, 'manage'])->name('idp.manage.all');
+        Route::get('/development/{employee_id}', [IdpController::class, 'developmentForm'])->name('idp.development');
         Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
         Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
