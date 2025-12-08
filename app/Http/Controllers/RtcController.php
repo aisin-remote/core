@@ -1977,32 +1977,164 @@ class RtcController extends Controller
     }
 
     /**
-     * Ambil kandidat S/T, M/T, L/T berdasarkan RTC yang sudah APPROVED (status = 2)
-     * untuk 1 area tertentu.
+     * Return short/mid/long candidate for an area — but allow visibility
+     * for the user who created the RTC or the owner of the area even if not approved.
      */
     private function approvedCandidatesForArea(string $area, int $areaId): array
     {
         $areaKey = strtolower($area);
+        $user = auth()->user();
+        $employee = $user->employee ?? null;
+        $currentEmpId = $employee->id ?? null;
 
+        $approvedStatus = defined('self::RTC_STATUS') && isset(self::RTC_STATUS['approved'])
+            ? self::RTC_STATUS['approved'] : 2;
+
+        // ambil semua rtc terbaru per term (tidak filter status)
         $rtcs = Rtc::with('employee')
             ->whereRaw('LOWER(area) = ?', [$areaKey])
             ->where('area_id', $areaId)
-            ->where('status', self::RTC_STATUS['approved']) // status = 2
             ->whereIn('term', ['short', 'mid', 'long'])
+            ->orderByDesc('created_at')
             ->get()
-            ->keyBy('term');
+            ->groupBy('term');
 
-        return [
-            'short' => isset($rtcs['short'])
-                ? RtcHelper::formatCandidate($rtcs['short']->employee ?? null, 'short')
-                : null,
-            'mid'   => isset($rtcs['mid'])
-                ? RtcHelper::formatCandidate($rtcs['mid']->employee ?? null, 'mid')
-                : null,
-            'long'  => isset($rtcs['long'])
-                ? RtcHelper::formatCandidate($rtcs['long']->employee ?? null, 'long')
-                : null,
-        ];
+        $terms = ['short', 'mid', 'long'];
+        $out = ['short' => null, 'mid' => null, 'long' => null];
+
+        foreach ($terms as $term) {
+            $group = $rtcs->get($term) ?? collect();
+
+            if ($group->isEmpty()) {
+                $out[$term] = null;
+                continue;
+            }
+
+            // prefer approved pertama
+            $approved = $group->first(fn($r) => ((int)($r->status ?? null)) === (int)$approvedStatus);
+            if ($approved) {
+                $out[$term] = RtcHelper::formatCandidate($approved->employee ?? null, $term);
+                continue;
+            }
+
+            // jika tidak ada approved, cek visibility:
+            //  - HRD/Admin (handled inside isAreaOwnerForEmployee)
+            //  - pembuat rtc (created_by)
+            //  - kandidat itu sendiri (employee_id)
+            //  - owner area (isAreaOwnerForEmployee)
+
+            $visibleRtc = null;
+
+            // a) created_by jika ada
+            $manualBy = $group->first(function ($r) use ($currentEmpId) {
+                if (is_null($currentEmpId)) return false;
+                if (isset($r->created_by) && !is_null($r->created_by)) {
+                    return ((int)$r->created_by === (int)$currentEmpId);
+                }
+                return false;
+            });
+
+            if ($manualBy) $visibleRtc = $manualBy;
+
+            // b) kandidat adalah current user
+            if (!$visibleRtc && $currentEmpId) {
+                $selfCand = $group->first(fn($r) => isset($r->employee_id) && ((int)$r->employee_id === (int)$currentEmpId));
+                if ($selfCand) $visibleRtc = $selfCand;
+            }
+
+            // c) area owner OR HRD/Admin (isAreaOwnerForEmployee handles HRD/Admin)
+            if (!$visibleRtc && $currentEmpId) {
+                if ($this->isAreaOwnerForEmployee($areaKey, $areaId, $currentEmpId)) {
+                    $visibleRtc = $group->first();
+                }
+            }
+
+            if ($visibleRtc) {
+                $out[$term] = RtcHelper::formatCandidate($visibleRtc->employee ?? null, $term);
+            } else {
+                $out[$term] = null;
+            }
+        }
+
+        return $out;
+    }
+
+    /**
+     * Check whether $employeeId is the owner/leader of the given area.
+     * Also treats HRD/Admin users as area owners (so they can see all candidates).
+     */
+    private function isAreaOwnerForEmployee(string $areaKey, int $areaId, ?int $employeeId): bool
+    {
+        if (empty($employeeId)) return false;
+
+        // 1) HRD / Admin always allowed
+        $user = auth()->user();
+        if ($user) {
+            $role = strtolower((string)($user->role ?? ''));
+            if (in_array($role, ['hrd', 'admin', 'hr'])) {
+                return true;
+            }
+        }
+
+        try {
+            switch ($areaKey) {
+                case 'direksi':
+                case 'plant':
+                    $p = Plant::find($areaId);
+                    if ($p) {
+                        if (isset($p->director_id) && (int)$p->director_id === (int)$employeeId) return true;
+                        if (isset($p->director) && $p->director && ((int)$p->director->id === (int)$employeeId)) return true;
+                    }
+                    break;
+
+                case 'division':
+                    $d = Division::find($areaId);
+                    if ($d) {
+                        if (isset($d->gm_id) && (int)$d->gm_id === (int)$employeeId) return true;
+                        if (isset($d->gm) && $d->gm && ((int)$d->gm->id === (int)$employeeId)) return true;
+                    }
+                    break;
+
+                case 'department':
+                    $dept = Department::find($areaId);
+                    if ($dept) {
+                        if (isset($dept->manager_id) && (int)$dept->manager_id === (int)$employeeId) return true;
+                        if (isset($dept->manager) && $dept->manager && ((int)$dept->manager->id === (int)$employeeId)) return true;
+                    }
+                    break;
+
+                case 'section':
+                    $s = Section::find($areaId);
+                    if ($s) {
+                        if (isset($s->supervisor_id) && (int)$s->supervisor_id === (int)$employeeId) return true;
+                        if (isset($s->supervisor) && $s->supervisor && ((int)$s->supervisor->id === (int)$employeeId)) return true;
+                    }
+                    break;
+
+                case 'sub_section':
+                    $sub = SubSection::find($areaId);
+                    if ($sub) {
+                        if (isset($sub->leader_id) && (int)$sub->leader_id === (int)$employeeId) return true;
+                        if (isset($sub->leader) && $sub->leader && ((int)$sub->leader->id === (int)$employeeId)) return true;
+                    }
+                    break;
+
+                default:
+                    // fallback: coba resolve model via area_model
+                    $rtc = Rtc::find($areaId);
+                    if ($rtc && $rtc->area_model) {
+                        $m = $rtc->area_model;
+                        foreach (['director_id', 'gm_id', 'manager_id', 'supervisor_id', 'leader_id', 'head_id'] as $col) {
+                            if (isset($m->{$col}) && (int)$m->{$col} === (int)$employeeId) return true;
+                        }
+                    }
+                    break;
+            }
+        } catch (\Throwable $e) {
+            // ignore exceptions and treat as not owner
+        }
+
+        return false;
     }
 
     private function buildSingleAreaNode(string $area, int $id): array
