@@ -49,6 +49,16 @@
             background: #fff;
         }
 
+        .invalid-feedback {
+            display: none;
+            font-size: 0.875em;
+            color: #dc3545;
+        }
+
+        .is-invalid~.invalid-feedback {
+            display: block;
+        }
+
         @media (max-width: 768px) {
             .flex-wrap-sm {
                 flex-wrap: wrap;
@@ -67,87 +77,48 @@
 
 @section('main')
     @php
-        use App\Models\Development;
-        use App\Models\DevelopmentOne;
-
-        /**
-         * 1. Bangun rows IDP berdasarkan:
-         *    - ALC yang punya weakness (sudah difilter di controller)
-         *    - IDP yang dikirim dari controller, sudah di-groupBy('alc_id') => $idps
-         */
+        // Persiapan data IDP
         $idpRows = [];
-        $alcByIdp = []; // map idp_id => alc_name (buat history table)
+        $alcByIdp = [];
 
         foreach ($assessment->details as $detail) {
-            $alcName = $detail->alc->name
-                ?? $detail->alc->title
-                ?? ('ALC ' . $detail->alc_id);
-
+            $alcName = $detail->alc->name ?? ($detail->alc->title ?? 'ALC ' . $detail->alc_id);
             $alcId = $detail->alc_id;
 
-            // IDP untuk ALC ini (dari controller, grouped by alc_id)
-            /** @var \Illuminate\Support\Collection $detailIdps */
             $detailIdps = $idps[$alcId] ?? collect();
 
-            // Kalau belum ada IDP sama sekali untuk ALC ini, lewati (karena Mid/One-Year butuh idp_id)
             if ($detailIdps->isEmpty()) {
                 continue;
             }
 
-            // IDP terbaru sebagai "utama" untuk tabel utama
             $latestIdp = $detailIdps->sortByDesc('updated_at')->first();
 
             if ($latestIdp) {
                 $idpRows[] = [
                     'alc_name' => $alcName,
-                    'alc_id'   => $alcId,
-                    'idp'      => $latestIdp,
+                    'alc_id' => $alcId,
+                    'idp' => $latestIdp,
                 ];
             }
 
-            // isi map idp_id => alc_name untuk history
             foreach ($detailIdps as $idp) {
                 $alcByIdp[$idp->id] = $alcName;
             }
         }
 
-        // 2. Ambil data development yang sudah pernah disimpan (optional, untuk history)
-        $midDevs = Development::where('employee_id', $assessment->employee_id ?? null)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy('idp_id');
+        // Cek status keseluruhan untuk menampilkan tombol submit
+        $midDrafts = $midDevs->flatten()->where('status', 'draft');
+        $hasMidDraft = $midDrafts->isNotEmpty();
+        $oneDrafts = $oneDevs->flatten()->where('status', 'draft');
+        $hasOneDraft = $oneDrafts->isNotEmpty();
 
-        $oneDevs = DevelopmentOne::where('employee_id', $assessment->employee_id ?? null)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy('idp_id');
+        // Ambil array IDP ID yang statusnya masih draft (digunakan untuk submit AJAX)
+        $midDraftIdpIds = $midDrafts->pluck('idp_id')->toArray();
+        $oneDraftIdpIds = $oneDrafts->pluck('idp_id')->toArray();
     @endphp
 
-    {{-- Notifikasi sukses --}}
-    @if (session()->has('success'))
-        <script>
-            document.addEventListener("DOMContentLoaded", function() {
-                Swal.fire({
-                    title: "Sukses!",
-                    text: @json(session('success')),
-                    icon: "success",
-                    confirmButtonText: "OK"
-                });
-            });
-        </script>
-    @endif
-
-    {{-- Notifikasi error validasi --}}
-    @if ($errors->any())
-        <div class="alert alert-danger mb-4">
-            <div class="fw-bold mb-1">Terjadi kesalahan:</div>
-            <ul class="mb-0 ps-4">
-                @foreach ($errors->all() as $err)
-                    <li>{{ $err }}</li>
-                @endforeach
-            </ul>
-        </div>
-    @endif
+    {{-- Meta CSRF untuk AJAX --}}
+    <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <div id="kt_app_content_container" class="app-container container-fluid">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap-sm gap-3">
@@ -157,10 +128,9 @@
             </a>
         </div>
 
-        {{-- CARD: Employee & Assessment Info --}}
+        {{-- CARD: Employee Info (Tidak Berubah) --}}
         <div class="card mb-5">
             <div class="card-body d-flex flex-wrap gap-4 align-items-center">
-                {{-- Kiri: Employee Info --}}
                 <div class="d-flex align-items-center gap-3">
                     <div class="symbol symbol-50px symbol-circle bg-light-primary text-primary fw-bold">
                         {{ Str::substr($assessment->employee->name ?? '?', 0, 1) }}
@@ -169,24 +139,20 @@
                         <div class="fw-bold fs-4">{{ $assessment->employee->name ?? '-' }}</div>
                         <div class="text-muted">
                             {{ $assessment->employee->position ?? '-' }}<br>
-                            {{ $assessment->employee->department_name ?? $assessment->employee->department ?? '-' }}
+                            {{ $assessment->employee->department_name ?? ($assessment->employee->department ?? '-') }}
                         </div>
                     </div>
                 </div>
-
-                {{-- Kanan: Assessment Info --}}
                 <div class="border-start ps-4 ms-2">
                     <div><strong>Assessment Purpose:</strong> {{ $assessment->purpose ?? '-' }}</div>
                     <div><strong>Assessor:</strong> {{ $assessment->lembaga ?? '-' }}</div>
-                    <div><strong>Target Position:</strong> {{ $assessment->target_position ?? '-' }}</div>
-                    <div><strong>Assessment Date:</strong>
-                        {{ optional($assessment->created_at)->timezone('Asia/Jakarta')->format('d M Y') ?? '-' }}
-                    </div>
+                    <div><strong>Date:</strong>
+                        {{ optional($assessment->created_at)->timezone('Asia/Jakarta')->format('d M Y') ?? '-' }}</div>
                 </div>
             </div>
         </div>
 
-        {{-- CARD: IDP List (Read Only) --}}
+        {{-- CARD: IDP List (Read Only - Tidak Berubah) --}}
         <div class="card mb-5">
             <div class="card-header card-header-sticky">
                 <h4 class="card-title mb-0">Individual Development Program (IDP)</h4>
@@ -207,68 +173,49 @@
                             </thead>
                             <tbody>
                                 @foreach ($idpRows as $idx => $row)
-                                    @php
-                                        /** @var \App\Models\Idp $idp */
-                                        $idp = $row['idp'];
-                                    @endphp
+                                    @php $idp = $row['idp']; @endphp
                                     <tr>
                                         <td>{{ $idx + 1 }}</td>
                                         <td>{{ $row['alc_name'] }}</td>
                                         <td>{{ $idp->category ?? '-' }}</td>
                                         <td>{{ $idp->development_program ?? '-' }}</td>
                                         <td>{{ $idp->development_target ?? '-' }}</td>
-                                        <td>
-                                            @if (!empty($idp->date))
-                                                {{ \Illuminate\Support\Carbon::parse($idp->date)->timezone('Asia/Jakarta')->format('d-m-Y') }}
-                                            @else
-                                                -
-                                            @endif
+                                        <td>{{ !empty($idp->date) ? \Illuminate\Support\Carbon::parse($idp->date)->timezone('Asia/Jakarta')->format('d-m-Y') : '-' }}
                                         </td>
                                     </tr>
                                 @endforeach
                             </tbody>
                         </table>
-                        <p class="text-muted-small mt-2">
-                            *Data di atas adalah program IDP yang menjadi dasar pengisian Mid-Year & One-Year Development.
-                        </p>
                     </div>
                 @else
-                    <p class="text-muted mb-0">Belum ada IDP yang dibuat untuk assessment ini.</p>
+                    <p class="text-muted mb-0">Belum ada IDP.</p>
                 @endif
             </div>
         </div>
 
-        {{-- CARD: Development Progress (Mid-Year & One-Year) --}}
+        {{-- CARD: Development Progress --}}
         <div class="card">
             <div class="card-header card-header-sticky">
                 <ul class="nav nav-tabs card-header-tabs" role="tablist" style="cursor:pointer">
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#tab-mid" role="tab"
-                           aria-selected="true">
-                            Mid-Year Review
-                        </a>
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#tab-mid" role="tab">Mid-Year Review</a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link" data-bs-toggle="tab" href="#tab-one" role="tab"
-                           aria-selected="false">
-                            One-Year Review
-                        </a>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-one" role="tab">One-Year Review</a>
                     </li>
                 </ul>
             </div>
 
             <div class="card-body">
                 <div class="tab-content">
-
-                    {{-- TAB: Mid-Year Review --}}
+                    {{-- ================= TAB: Mid-Year Review ================= --}}
                     <div class="tab-pane fade show active" id="tab-mid" role="tabpanel">
                         @if (!count($idpRows))
-                            <p class="text-muted">Tidak ada IDP yang bisa di-review. Buat IDP terlebih dahulu.</p>
+                            <p class="text-muted">Tidak ada IDP.</p>
                         @else
-                            <form method="POST"
-                                  action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee_id]) }}">
+                            <form id="form-mid-year" method="POST"
+                                action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee_id]) }}">
                                 @csrf
-
                                 <div class="table-responsive mb-3">
                                     <table class="table table-bordered table-hover table-sm-custom align-middle">
                                         <thead class="table-light">
@@ -276,16 +223,16 @@
                                                 <th style="width: 5%;">No</th>
                                                 <th style="width: 20%;">ALC</th>
                                                 <th style="width: 25%;">Development Program</th>
-                                                <th style="width: 20%;">Achievement (Mid-Year)</th>
-                                                <th style="width: 20%;">Next Action</th>
+                                                <th style="width: 25%;">Achievement (Mid-Year)</th>
+                                                <th style="width: 25%;">Next Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach ($idpRows as $idx => $row)
                                                 @php
-                                                    /** @var \App\Models\Idp $idp */
                                                     $idp = $row['idp'];
                                                     $idpId = $idp->id;
+
                                                     $midList = $midDevs[$idpId] ?? collect();
                                                     $lastMid = $midList->first();
                                                 @endphp
@@ -296,32 +243,19 @@
                                                         {{ $idp->development_program ?? '-' }}
                                                         <input type="hidden" name="idp_id[]" value="{{ $idpId }}">
                                                         <input type="hidden" name="development_program[]"
-                                                               value="{{ $idp->development_program }}">
+                                                            value="{{ $idp->development_program }}">
                                                     </td>
                                                     <td>
-                                                        <textarea name="development_achievement[]"
-                                                                  class="form-control form-control-sm"
-                                                                  rows="2"
-                                                                  placeholder="Tuliskan capaian pengembangan">{{ old("development_achievement.$idx") }}</textarea>
-                                                        @if ($lastMid)
-                                                            <div class="text-muted-small mt-1">
-                                                                <i class="fas fa-clock me-1"></i>
-                                                                Last: {{ $lastMid->development_achievement ?? '-' }}
-                                                                ({{ optional($lastMid->created_at)->timezone('Asia/Jakarta')->format('d-m-Y') }})
-                                                            </div>
-                                                        @endif
+                                                        <textarea name="development_achievement[]" data-index="{{ $idx }}" class="form-control form-control-sm"
+                                                            rows="3" placeholder="Tuliskan capaian pengembangan">{{ old("development_achievement.$idx", $lastMid->development_achievement ?? '') }}</textarea>
+                                                        <div class="invalid-feedback"
+                                                            id="error-development_achievement-{{ $idx }}"></div>
                                                     </td>
                                                     <td>
-                                                        <textarea name="next_action[]"
-                                                                  class="form-control form-control-sm"
-                                                                  rows="2"
-                                                                  placeholder="Next action setelah mid-year">{{ old("next_action.$idx") }}</textarea>
-                                                        @if ($lastMid && $lastMid->next_action)
-                                                            <div class="text-muted-small mt-1">
-                                                                <i class="fas fa-list me-1"></i>
-                                                                Last: {{ $lastMid->next_action }}
-                                                            </div>
-                                                        @endif
+                                                        <textarea name="next_action[]" data-index="{{ $idx }}" class="form-control form-control-sm" rows="3"
+                                                            placeholder="Next action">{{ old("next_action.$idx", $lastMid->next_action ?? '') }}</textarea>
+                                                        <div class="invalid-feedback"
+                                                            id="error-next_action-{{ $idx }}"></div>
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -329,78 +263,86 @@
                                     </table>
                                 </div>
 
-                                <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i>Save Mid-Year Development
+                                {{-- Tombol Save/Update Draft --}}
+                                <div class="d-flex justify-content-end gap-2 mb-4">
+                                    <button type="submit" class="btn btn-primary" id="btn-save-mid">
+                                        <i class="fas fa-save me-2"></i>
+                                        {{ $hasMidDraft ? 'Update Draft' : 'Save Draft' }}
                                     </button>
                                 </div>
                             </form>
                         @endif
 
+                        {{-- History Table Mid Year --}}
                         @if ($midDevs->isNotEmpty())
                             <hr class="my-4">
-                            <div class="section-title">
-                                <i class="bi bi-bar-chart-line-fill"></i>
-                                Mid-Year Development History
-                            </div>
-
-                            <div class="table-responsive">
+                            <div class="section-title mb-0"><i class="bi bi-bar-chart-line-fill"></i> Mid-Year History</div>
+                            <div class="table-responsive mt-3">
                                 <table class="table table-sm table-bordered table-hover table-sm-custom">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 20%;">Development Program</th>
-                                            <th style="width: 20%;">ALC</th>
-                                            <th style="width: 25%;">Achievement</th>
-                                            <th style="width: 25%;">Next Action</th>
-                                            <th style="width: 10%;">Created At</th>
+                                            <th>Program</th>
+                                            <th>ALC</th>
+                                            <th>Achievement</th>
+                                            <th>Status</th>
+                                            <th style="width: 120px;">Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($midDevs as $idpId => $devList)
                                             @foreach ($devList as $dev)
-                                                @php
-                                                    $alcName = $alcByIdp[$dev->idp_id] ?? '-';
-                                                @endphp
                                                 <tr>
                                                     <td>{{ $dev->development_program ?? '-' }}</td>
-                                                    <td>{{ $alcName }}</td>
+                                                    <td>{{ $alcByIdp[$dev->idp_id] ?? '-' }}</td>
                                                     <td>{{ $dev->development_achievement ?? '-' }}</td>
-                                                    <td>{{ $dev->next_action ?? '-' }}</td>
-                                                    <td>{{ optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y') }}</td>
+                                                    <td>
+                                                        <span
+                                                            class="badge badge-{{ $dev->status == 'draft' ? 'warning' : ($dev->status == 'submitted' ? 'info' : 'success') }}">
+                                                            {{ ucfirst($dev->status) }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i') }}
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                         @endforeach
                                     </tbody>
                                 </table>
+                                <div class="d-flex justify-content-end align-items-center">
+                                    @if ($hasMidDraft)
+                                        <button type="button" class="btn btn-success" id="btn-submit-mid">
+                                            <i class="fas fa-paper-plane me-2"></i> Submit Draft
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
                         @endif
                     </div>
 
-                    {{-- TAB: One-Year Review --}}
+                    {{-- ================= TAB: One-Year Review ================= --}}
                     <div class="tab-pane fade" id="tab-one" role="tabpanel">
                         @if (!count($idpRows))
-                            <p class="text-muted">Tidak ada IDP yang bisa di-review. Buat IDP terlebih dahulu.</p>
+                            <p class="text-muted">Tidak ada IDP.</p>
                         @else
-                            <form method="POST"
-                                  action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee_id]) }}">
+                            <form id="form-one-year" method="POST"
+                                action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee_id]) }}">
                                 @csrf
-
                                 <div class="table-responsive mb-3">
                                     <table class="table table-bordered table-hover table-sm-custom align-middle">
                                         <thead class="table-light">
                                             <tr>
                                                 <th style="width: 5%;">No</th>
                                                 <th style="width: 20%;">ALC</th>
-                                                <th style="width: 25%;">Development Program</th>
-                                                <th style="width: 20%;">Evaluation Result (One-Year)</th>
+                                                <th style="width: 30%;">Development Program</th>
+                                                <th style="width: 45%;">Evaluation Result (One-Year)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach ($idpRows as $idx => $row)
                                                 @php
-                                                    /** @var \App\Models\Idp $idp */
                                                     $idp = $row['idp'];
                                                     $idpId = $idp->id;
+
                                                     $oneList = $oneDevs[$idpId] ?? collect();
                                                     $lastOne = $oneList->first();
                                                 @endphp
@@ -409,22 +351,16 @@
                                                     <td>{{ $row['alc_name'] }}</td>
                                                     <td>
                                                         {{ $idp->development_program ?? '-' }}
-                                                        <input type="hidden" name="idp_id[]" value="{{ $idpId }}">
+                                                        <input type="hidden" name="idp_id[]"
+                                                            value="{{ $idpId }}">
                                                         <input type="hidden" name="development_program[]"
-                                                               value="{{ $idp->development_program }}">
+                                                            value="{{ $idp->development_program }}">
                                                     </td>
                                                     <td>
-                                                        <textarea name="evaluation_result[]"
-                                                                  class="form-control form-control-sm"
-                                                                  rows="2"
-                                                                  placeholder="Tuliskan hasil evaluasi akhir tahun">{{ old("evaluation_result.$idx") }}</textarea>
-                                                        @if ($lastOne)
-                                                            <div class="text-muted-small mt-1">
-                                                                <i class="fas fa-clock me-1"></i>
-                                                                Last: {{ $lastOne->evaluation_result ?? '-' }}
-                                                                ({{ optional($lastOne->created_at)->timezone('Asia/Jakarta')->format('d-m-Y') }})
-                                                            </div>
-                                                        @endif
+                                                        <textarea name="evaluation_result[]" data-index="{{ $idx }}" class="form-control form-control-sm"
+                                                            rows="3" placeholder="Tuliskan hasil evaluasi">{{ old("evaluation_result.$idx", $lastOne->evaluation_result ?? '') }}</textarea>
+                                                        <div class="invalid-feedback"
+                                                            id="error-evaluation_result-{{ $idx }}"></div>
                                                     </td>
                                                 </tr>
                                             @endforeach
@@ -432,53 +368,241 @@
                                     </table>
                                 </div>
 
-                                <div class="d-flex justify-content-end">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="fas fa-save me-2"></i>Save One-Year Development
+                                {{-- Tombol Save/Update Draft --}}
+                                <div class="d-flex justify-content-end gap-2 mb-4">
+                                    <button type="submit" class="btn btn-primary" id="btn-save-one">
+                                        <i class="fas fa-save me-2"></i>
+                                        {{ $hasOneDraft ? 'Update Draft' : 'Save Draft' }}
                                     </button>
                                 </div>
                             </form>
                         @endif
 
+                        {{-- History Table One Year --}}
                         @if ($oneDevs->isNotEmpty())
                             <hr class="my-4">
-                            <div class="section-title">
-                                <i class="bi bi-calendar-check-fill"></i>
-                                One-Year Development History
+                            <div class="section-title mb-0"><i class="bi bi-calendar-check-fill"></i> One-Year History
                             </div>
 
-                            <div class="table-responsive">
+                            <div class="table-responsive mt-3">
                                 <table class="table table-sm table-bordered table-hover table-sm-custom">
                                     <thead class="table-light">
                                         <tr>
-                                            <th style="width: 25%;">Development Program</th>
-                                            <th style="width: 20%;">ALC</th>
-                                            <th style="width: 35%;">Evaluation Result</th>
-                                            <th style="width: 10%;">Created At</th>
+                                            <th>Program</th>
+                                            <th>ALC</th>
+                                            <th>Evaluation Result</th>
+                                            <th>Status</th>
+                                            <th style="width: 120px;">Date</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         @foreach ($oneDevs as $idpId => $devList)
                                             @foreach ($devList as $dev)
-                                                @php
-                                                    $alcName = $alcByIdp[$dev->idp_id] ?? '-';
-                                                @endphp
                                                 <tr>
                                                     <td>{{ $dev->development_program ?? '-' }}</td>
-                                                    <td>{{ $alcName }}</td>
+                                                    <td>{{ $alcByIdp[$dev->idp_id] ?? '-' }}</td>
                                                     <td>{{ $dev->evaluation_result ?? '-' }}</td>
-                                                    <td>{{ optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y') }}</td>
+                                                    <td>
+                                                        <span
+                                                            class="badge badge-{{ $dev->status == 'draft' ? 'warning' : ($dev->status == 'submitted' ? 'info' : 'success') }}">
+                                                            {{ ucfirst($dev->status) }}
+                                                        </span>
+                                                    </td>
+                                                    <td>{{ optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i') }}
+                                                    </td>
                                                 </tr>
                                             @endforeach
                                         @endforeach
                                     </tbody>
                                 </table>
+                                <div class="d-flex justify-content-end align-items-center">
+                                    @if ($hasOneDraft)
+                                        <button type="button" class="btn btn-success" id="btn-submit-one">
+                                            <i class="fas fa-paper-plane me-2"></i> Submit {{ $oneDrafts->count() }} Draft
+                                        </button>
+                                    @endif
+                                </div>
                             </div>
                         @endif
                     </div>
-
                 </div>
             </div>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        $(document).ready(function() {
+
+            // Array IDP ID Draft yang sudah diambil di PHP (digunakan untuk submit)
+            const midDraftIdpIds = @json($midDraftIdpIds);
+            const oneDraftIdpIds = @json($oneDraftIdpIds);
+
+
+            // =========================================================
+            // HANDLER 1: SAVE / UPDATE DRAFT (POST ke storeMidYear/storeOneYear)
+            // =========================================================
+            function handleFormSave(formId, btnId, successTitle) {
+                $(formId).on('submit', function(e) {
+                    e.preventDefault();
+
+                    let form = $(this);
+                    let btn = $(btnId);
+                    let originalBtnText = btn.html();
+
+                    // 1. Reset Error States
+                    form.find('.form-control').removeClass('is-invalid');
+                    form.find('.invalid-feedback').text('');
+
+                    // 2. Button Loading State
+                    btn.prop('disabled', true).html(
+                        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
+                    );
+
+                    // 3. Collect Data
+                    let formData = new FormData(this);
+
+                    // 4. AJAX Call
+                    $.ajax({
+                        url: form.attr('action'),
+                        method: 'POST',
+                        data: formData,
+                        processData: false,
+                        contentType: false,
+                        success: function(response) {
+                            Swal.fire({
+                                title: successTitle || "Success!",
+                                text: response.message,
+                                icon: "success",
+                                confirmButtonText: "OK"
+                            }).then((result) => {
+                                location.reload();
+                            });
+                        },
+                        error: function(xhr) {
+                            btn.prop('disabled', false).html(originalBtnText);
+
+                            if (xhr.status === 422) {
+                                let errors = xhr.responseJSON.errors;
+
+                                $.each(errors, function(key, messages) {
+                                    let parts = key.split('.');
+                                    let fieldName = parts[0];
+                                    let index = parts[1];
+
+                                    let inputField = form.find(
+                                        `[name="${fieldName}[]"][data-index="${index}"]`
+                                    );
+
+                                    if (inputField.length > 0) {
+                                        inputField.addClass('is-invalid');
+                                        $(`#error-${fieldName}-${index}`).text(messages[
+                                            0]);
+                                    }
+                                });
+
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Validasi Gagal',
+                                    text: 'Mohon periksa kembali isian form Anda.'
+                                });
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Error!',
+                                    text: 'Terjadi kesalahan pada server. Silakan coba lagi.'
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+
+            // =========================================================
+            // HANDLER 2: SUBMIT FINAL (POST ke submitMidYear/submitOneYear)
+            // =========================================================
+            function handleSubmission(btnId, submitUrl, draftIdpIds) {
+                $(btnId).on('click', function() {
+                    let btn = $(this);
+                    let originalBtnText = btn.html();
+
+                    // Gunakan array IDP ID Draft yang sudah diambil di PHP
+                    let idpIds = draftIdpIds;
+
+                    if (idpIds.length === 0) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Perhatian',
+                            text: 'Tidak ada Draft baru untuk disubmit.'
+                        });
+                        return;
+                    }
+
+                    Swal.fire({
+                        title: 'Konfirmasi Submit?',
+                        text: `Anda akan mengirim ${idpIds.length} item Draft. Pastikan semua data sudah benar!`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Submit!',
+                        cancelButtonText: 'Batal'
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            btn.prop('disabled', true).html(
+                                '<span class="spinner-border spinner-border-sm"></span> Submitting...'
+                            );
+
+                            // Kirim array idp_id dan token CSRF
+                            $.ajax({
+                                url: submitUrl,
+                                method: 'POST',
+                                data: {
+                                    _token: $('meta[name="csrf-token"]').attr('content'),
+                                    idp_id: idpIds
+                                },
+                                success: function(response) {
+                                    Swal.fire({
+                                        title: 'Success!',
+                                        text: response.message,
+                                        icon: 'success',
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+                                },
+                                error: function(xhr) {
+                                    btn.prop('disabled', false).html(originalBtnText);
+                                    let msg = xhr.responseJSON.message ||
+                                        'Terjadi kesalahan saat submit.';
+                                    Swal.fire({
+                                        icon: 'error',
+                                        title: 'Error!',
+                                        text: msg
+                                    });
+                                }
+                            });
+                        }
+                    });
+                });
+            }
+
+
+            // --- INISIALISASI ---
+
+            // Mid-Year
+            handleFormSave('#form-mid-year', '#btn-save-mid', 'Mid-Year Development Saved!');
+            if (midDraftIdpIds.length > 0) {
+                handleSubmission('#btn-submit-mid',
+                    '{{ route('idp.submitMidYear', ['employee_id' => $assessment->employee_id]) }}',
+                    midDraftIdpIds);
+            }
+
+            // One-Year
+            handleFormSave('#form-one-year', '#btn-save-one', 'One-Year Development Saved!');
+            if (oneDraftIdpIds.length > 0) {
+                handleSubmission('#btn-submit-one',
+                    '{{ route('idp.submitOneYear', ['employee_id' => $assessment->employee_id]) }}',
+                    oneDraftIdpIds);
+            }
+        });
+    </script>
+@endpush

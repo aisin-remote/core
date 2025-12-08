@@ -22,6 +22,8 @@ use App\Models\IdpApproval;
 use App\Models\IdpBackup;
 use App\Services\Excel\IdpExportService;
 use Exception;
+use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 class IdpController extends Controller
 {
@@ -484,44 +486,234 @@ class IdpController extends Controller
 
     public function storeMidYear(Request $request, $employee_id)
     {
-        $request->validate([
-            'idp_id' => 'required|array',
-            'development_program' => 'required|array',
-            'development_achievement' => 'required|array',
-            'next_action' => 'required|array',
+        $validator = Validator::make($request->all(), [
+            'idp_id'                    => 'required|array',
+            'idp_id.*'                  => 'required|integer|exists:idp,id',
+            'development_program'       => 'required|array',
+            'development_program.*'     => 'nullable|string',
+            'development_achievement'   => 'required|array',
+            'development_achievement.*' => 'nullable|string',
+            'next_action'               => 'required|array',
+            'next_action.*'             => 'nullable|string',
         ]);
 
-        foreach ($request->development_program as $key => $program) {
-            Development::create(attributes: [
-                'employee_id' => $employee_id,
-                'idp_id' => $request->idp_id[$key] ?? '',
-                'development_program' => $program,
-                'development_achievement' => $request->development_achievement[$key] ?? '',
-                'next_action' => $request->next_action[$key] ?? '',
-            ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        return redirect()->route('idp.index')->with('success', 'Mid-Year Development added successfully.');
+        $createdOrUpdated = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($request->development_program as $key => $program) {
+                $idpId = $request->idp_id[$key] ?? null;
+
+                $attributes = [
+                    'employee_id' => $employee_id,
+                    'idp_id'      => $idpId,
+                ];
+
+                $values = [
+                    'development_program'     => $program,
+                    'development_achievement' => $request->development_achievement[$key] ?? null,
+                    'next_action'             => $request->next_action[$key] ?? null,
+                    'status'                  => 'draft',
+                ];
+
+                $dev = Development::updateOrCreate($attributes, $values);
+
+                $createdOrUpdated[] = [
+                    'id'                      => $dev->id,
+                    'idp_id'                  => $dev->idp_id,
+                    'development_program'     => $dev->development_program,
+                    'development_achievement' => $dev->development_achievement,
+                    'next_action'             => $dev->next_action,
+                    'created_at'              => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y'),
+                ];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Mid-Year Development berhasil disimpan.',
+                'data'    => $createdOrUpdated,
+            ], 201);
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Gagal menyimpan mid-year development', [
+                'employee_id' => $employee_id,
+                'input' => $request->all(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat menyimpan Mid-Year Development.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function storeOneYear(Request $request, $employee_id)
     {
-        $request->validate([
-            'development_program' => 'required|array',
-            'evaluation_result' => 'required|array',
-            'idp_id' => 'required|array',
+        $validator = Validator::make($request->all(), [
+            'idp_id'                => 'required|array',
+            'idp_id.*'              => 'required|integer|exists:idp,id',
+            'development_program'   => 'required|array',
+            'development_program.*' => 'nullable|string',
+            'evaluation_result'     => 'required|array',
+            'evaluation_result.*'   => 'nullable|string',
         ]);
 
-        foreach ($request->development_program as $index => $program) {
-            DevelopmentOne::create([
-                'employee_id' => $employee_id,
-                'idp_id' => $request->idp_id[$index] ?? '',
-                'development_program' => $program,
-                'evaluation_result' => $request->evaluation_result[$index] ?? '',
-            ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validasi gagal',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
-        return redirect()->route('idp.index')->with('success', 'One-Year Development added successfully.');
+        $createdOrUpdated = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($request->development_program as $index => $program) {
+                $idpId = $request->idp_id[$index] ?? null;
+
+                $attributes = [
+                    'employee_id' => $employee_id,
+                    'idp_id'      => $idpId,
+                ];
+
+                $values = [
+                    'development_program' => $program,
+                    'evaluation_result'   => $request->evaluation_result[$index] ?? null,
+                    'status'              => 'draft',
+                ];
+
+                $dev = DevelopmentOne::updateOrCreate($attributes, $values);
+
+                $createdOrUpdated[] = [
+                    'id'                  => $dev->id,
+                    'idp_id'              => $dev->idp_id,
+                    'development_program' => $dev->development_program,
+                    'evaluation_result'   => $dev->evaluation_result,
+                    'created_at'          => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y'),
+                ];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'One-Year Development berhasil disimpan.',
+                'data'    => $createdOrUpdated,
+            ], 201);
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Gagal menyimpan one-year development', [
+                'employee_id' => $employee_id,
+                'input' => $request->all(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat menyimpan One-Year Development.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function submitMidYear(Request $request, $employee_id)
+    {
+        $validator= Validator::make($request->all(), [
+            'idp_id' => 'required|array',
+            'idp_id.*' => 'required|integer|exists:idp,id'
+        ]);
+
+        if($validator->fails()){
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validasi gagal : IDP ID harus dikirim.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $idpIds = $request->input('idp_id');
+
+        DB::beginTransaction();
+
+        try {
+            $updatedCount = Development::where('employee_id', $employee_id)
+            ->where('status', 'draft')
+            ->whereIn('idp_id', $idpIds)
+            ->update(['status' => 'submitted']);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'successs',
+                'message' => "$updatedCount data Mid-Year Development berhasil disubmit."
+            ], 200);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Gagal submit mid-year development', ['employee_id' => $employee_id, 'exception' => $e->getMessage()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat submit Mid-Year Development.',
+            ], 500);
+        }
+    }
+
+    public function submitOneYear(Request $request, $employee_id)
+    {
+        $validator = Validator::make($request->all(), [
+            'idp_id' => 'required|array',
+            'idp_id.*' => 'required|integer|exists:idp,id'
+        ]);
+
+        if($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validasi gagal : IDP ID harus dikirim.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $idpIds = $request->input('idp_id');
+
+        DB::beginTransaction();
+
+        try {
+            $updatedCount = DevelopmentOne::where('employee_id', $employee_id)
+            ->where('status', 'draft')
+            ->whereIn('idp_id', $idpIds)
+            ->update(['status' => 'submitted']);
+
+            DB::commit();
+
+            return response()->json([
+                'status' => 'successs',
+                'message' => "$updatedCount data One-Year Development berhasil disubmit."
+            ], 200);    
+        } catch (\Throwable $e) {
+            DB::rollBack();
+            Log::error('Gagal submit one-year development', ['employee_id' => $employee_id, 'exception' => $e->getMessage()]);
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat submit One-Year Development.',
+            ], 500);
+        }
     }
 
     public function showDevelopmentData($employeeId)
@@ -1066,11 +1258,21 @@ class IdpController extends Controller
             ->where('assessment_id', $assessment->id)
             ->whereIn('alc_id', $relevantAlcIds)
             ->get()
-            ->groupBy('alc_id'); 
+            ->groupBy('alc_id');
+
+        $midDevs = Development::where('employee_id', $employee_id)
+            ->orderBy('created_at', 'desc') 
+            ->get()
+            ->groupBy('idp_id');
+
+        $oneDevs = DevelopmentOne::where('employee_id', $employee_id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->groupBy('idp_id');
 
         $title = 'IDP Development - ' . ($assessment->employee->name ?? '-');
 
-        return view('website.idp.development', compact('assessment', 'title', 'idps'));
+        return view('website.idp.development', compact('assessment', 'title', 'idps', 'midDevs', 'oneDevs'));
     }
 
     // PRIVATE FUNCTION

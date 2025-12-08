@@ -312,6 +312,8 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
         Route::post('/send-idp', [IdpController::class, 'sendIdpToSupervisor'])->name('send.idp');
         Route::post('/idp/store-one-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('idp.storeMidYear');
+        Route::post('/development/{employee_id}/mid-year/submit', [IdpController::class, 'submitMidYear'])->name('idp.submitMidYear');
+        Route::post('/development/{employee_id}/one-year/submit', [IdpController::class, 'submitOneYear'])->name('idp.submitOneYear');
         Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
         Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
         Route::post('/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
