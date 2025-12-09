@@ -7,8 +7,10 @@ use App\Models\Development;
 use App\Models\DevelopmentOne;
 use App\Models\Employee;
 use App\Models\Idp;
+use App\Models\IdpApproval;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class IdpExportService
 {
@@ -41,7 +43,7 @@ class IdpExportService
         }
 
         $spreadsheet = IOFactory::load($filePath);
-        $sheet = $spreadsheet->getActiveSheet();
+        $sheet       = $spreadsheet->getActiveSheet();
 
         // Header data karyawan & assessment
         $sheet->setCellValue('H3', $employee->name);
@@ -74,7 +76,7 @@ class IdpExportService
             ->select('detail_assessments.*', 'alc.name as alc_name')
             ->get();
 
-        $strengths = [];
+        $strengths  = [];
         $weaknesses = [];
 
         foreach ($assessmentDetails as $detail) {
@@ -86,8 +88,8 @@ class IdpExportService
             }
         }
 
-        $strengthText  = implode("\n", $strengths);
-        $weaknessText  = implode("\n", $weaknesses);
+        $strengthText = implode("\n", $strengths);
+        $weaknessText = implode("\n", $weaknesses);
 
         $sheet->setCellValue('B' . $startRow, $strengthText);
         $sheet->setCellValue('F' . $startRow, $weaknessText);
@@ -109,9 +111,6 @@ class IdpExportService
             ->where('detail_assessments.assessment_id', $latestAssessment->id)
             ->select('detail_assessments.*', 'alc.name as alc_name')
             ->get();
-
-        // Versi original kodenya dua kali isi kolom C dengan pola yang mirip.
-        // Di sini tetap kita ikuti struktur aslinya.
 
         foreach ($assessmentDetails as $detail) {
             if (!empty($detail->weakness)) {
@@ -192,6 +191,169 @@ class IdpExportService
 
             $startRow += 2;
         }
+
+        /*
+         * PASANG STAMP (signature images) KE TEMPLATE
+         *
+         * Posisi sel yang diminta:
+         *  - Pemilik IDP -> B48
+         *  - Atasan 1 (pembuat/penyetuju) -> D48  (IdpApproval level 1)
+         *  - Atasan 2 -> F48 (IdpApproval level 2)
+         */
+
+        $stampMap = [
+            'director'  => public_path('assets/media/stamp/DIR.png'),
+            'gm'        => public_path('assets/media/stamp/GM.png'),
+            'mgr'       => public_path('assets/media/stamp/MGR.png'),
+            'vpd'       => public_path('assets/media/stamp/VPD.png'),
+            'president' => public_path('assets/media/stamp/PD.png'),
+        ];
+
+        $defaultOwnerStamp = public_path('assets/media/stamp/EMP.png');
+
+        // Cari stamp berdasarkan posisi (untuk ATASAN, bukan owner)
+        $findStampByPosition = function (?string $position) use ($stampMap) {
+            if (!$position) return null;
+
+            $pos = strtolower($position);
+
+            $keywords = [
+                'president' => ['president', 'pd'],
+                'director'  => ['director', 'dir'],
+                'gm'        => ['gm', 'general manager'],
+                'vpd'       => ['vpd', 'vice president'],
+                'mgr'       => ['manager', 'mgr', 'supervisor', 'spv', 'coordinator'],
+            ];
+
+            foreach ($keywords as $key => $aliases) {
+                foreach ($aliases as $alias) {
+                    if (strpos($pos, $alias) !== false && isset($stampMap[$key]) && file_exists($stampMap[$key])) {
+                        return $stampMap[$key];
+                    }
+                }
+            }
+
+            return null;
+        };
+
+        // Ambil 1 IDP utama (kalau ada) untuk tahu status & assessment_id
+        $idpForStamp = $idpRecords->first();
+        $statusIdp   = null;
+
+        if ($idpForStamp) {
+            $statusIdp = $idpForStamp->status ?? null;
+        }
+
+        // ========== OWNER STAMP (B48) ==========
+        // Owner SELALU pakai EMP.png (fallback default)
+        $ownerStampPath = null;
+        if (file_exists($defaultOwnerStamp)) {
+            $ownerStampPath = $defaultOwnerStamp;
+        }
+
+        // ========== APPROVER LEVEL 1 & 2 ==========
+        $approver1StampPath = null;
+        $approver2StampPath = null;
+
+        $approvalLevel1 = null;
+        $approvalLevel2 = null;
+
+        if ($idpForStamp) {
+            $approvalLevel1 = IdpApproval::where('level', 1)
+                ->where(function ($q) use ($idpForStamp) {
+                    $q->where('assessment_id', $idpForStamp->assessment_id)
+                        ->orWhere('idp_id', $idpForStamp->id);
+                })
+                ->latest('approved_at')
+                ->first();
+
+            $approvalLevel2 = IdpApproval::where('level', 2)
+                ->where(function ($q) use ($idpForStamp) {
+                    $q->where('assessment_id', $idpForStamp->assessment_id)
+                        ->orWhere('idp_id', $idpForStamp->id);
+                })
+                ->latest('approved_at')
+                ->first();
+
+            if ($approvalLevel1 && $approvalLevel1->approver) {
+                $approver1StampPath = $findStampByPosition($approvalLevel1->approver->position ?? null);
+            }
+
+            if ($approvalLevel2 && $approvalLevel2->approver) {
+                $approver2StampPath = $findStampByPosition($approvalLevel2->approver->position ?? null);
+            }
+        }
+
+        // Helper untuk memasang gambar pada koordinat sel
+        $placeStamp = function (?string $imagePath, string $cellCoordinate, $worksheet) {
+            if (!$imagePath || !file_exists($imagePath)) {
+                return;
+            }
+
+            $drawing = new Drawing();
+            $drawing->setPath($imagePath);
+            $drawing->setCoordinates($cellCoordinate);
+
+            // Ukuran & offset bisa disesuaikan dengan template
+            $drawing->setHeight(190);
+            $drawing->setOffsetX(50);
+            $drawing->setOffsetY(20);
+
+            $drawing->setWorksheet($worksheet);
+        };
+
+        /*
+         * LOGIKA STATUS → STAMP
+         * (Silakan sesuaikan kalau mapping status kamu beda)
+         *
+         * Asumsi:
+         *  - status >= 1 : tampilkan stamp pemilik (B48)
+         *  - status >= 2 : tampilkan stamp atasan 1 (D48)
+         *  - status >= 3 : tampilkan stamp atasan 2 (F48)
+         */
+
+        if ($statusIdp === null) {
+            // Tidak ada IDP → minimal pasang owner kalau ada
+            $placeStamp($ownerStampPath, 'C48', $sheet);
+        } else {
+            if ($statusIdp >= 1) {
+                $placeStamp($ownerStampPath, 'C48', $sheet);
+            }
+
+            if ($statusIdp >= 2 && $approver1StampPath) {
+                $placeStamp($approver1StampPath, 'F48', $sheet);
+            }
+
+            if ($statusIdp >= 3 && $approver2StampPath) {
+                $placeStamp($approver2StampPath, 'K48', $sheet);
+            }
+        }
+
+        /*
+         * -------------------------------------------------------
+         * TULISKAN NAMA DI BAWAH SETIAP STAMP (sesuai permintaan)
+         *  - Owner -> B52
+         *  - Atasan tingkat 1 -> E52
+         *  - Atasan tingkat 2 -> I52
+         * -------------------------------------------------------
+         */
+
+        // Owner name (selalu dari $employee)
+        $sheet->setCellValue('B52', $employee->name ?? '-');
+
+        // Approver level 1 name (jika ada), tulis '-' jika tidak ada
+        $approver1Name = '-';
+        if (!empty($approvalLevel1) && !empty($approvalLevel1->approver)) {
+            $approver1Name = $approvalLevel1->approver->name ?? '-';
+        }
+        $sheet->setCellValue('E52', $approver1Name);
+
+        // Approver level 2 name (jika ada), tulis '-' jika tidak ada
+        $approver2Name = '-';
+        if (!empty($approvalLevel2) && !empty($approvalLevel2->approver)) {
+            $approver2Name = $approvalLevel2->approver->name ?? '-';
+        }
+        $sheet->setCellValue('I52', $approver2Name);
 
         /*
          * SIMPAN FILE SEMENTARA & RETURN PATH
