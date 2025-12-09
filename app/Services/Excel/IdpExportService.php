@@ -10,6 +10,7 @@ use App\Models\Idp;
 use App\Models\IdpApproval;
 use Illuminate\Support\Facades\DB;
 use PhpOffice\PhpSpreadsheet\IOFactory;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use PhpOffice\PhpSpreadsheet\Worksheet\Drawing;
 
 class IdpExportService
@@ -81,18 +82,31 @@ class IdpExportService
 
         foreach ($assessmentDetails as $detail) {
             if (!empty($detail->strength)) {
-                $strengths[] = " - " . $detail->alc_name;
+                // baris 1: nama ALC, baris 2: isi strength
+                $strengths[] = " - " . $detail->alc_name . "\n  "; //. $detail->strength;
             }
+
             if (!empty($detail->weakness)) {
-                $weaknesses[] = " - " . $detail->alc_name;
+                // baris 1: nama ALC, baris 2: isi weakness
+                $weaknesses[] = " - " . $detail->alc_name . "\n  "; //. $detail->weakness;
             }
         }
 
-        $strengthText = implode("\n", $strengths);
-        $weaknessText = implode("\n", $weaknesses);
+        $strengthText = implode("\n\n", $strengths);  // \n\n biar ada jarak antar ALC
+        $weaknessText = implode("\n\n", $weaknesses);
 
         $sheet->setCellValue('B' . $startRow, $strengthText);
         $sheet->setCellValue('F' . $startRow, $weaknessText);
+
+        // rata kiri + wrap text
+        $sheet->getStyle('B' . $startRow)->getAlignment()->setWrapText(true);
+        $sheet->getStyle('B' . $startRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('B' . $startRow)->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+
+        $sheet->getStyle('F' . $startRow)->getAlignment()->setWrapText(true);
+        $sheet->getStyle('F' . $startRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('F' . $startRow)->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+
 
         /*
          * DEVELOPMENT NEED BASED ON WEAKNESS (col C, start row 33)
@@ -114,7 +128,15 @@ class IdpExportService
 
         foreach ($assessmentDetails as $detail) {
             if (!empty($detail->weakness)) {
-                $sheet->setCellValue('C' . $startRow, $detail->alc_name . " - " . $detail->weakness);
+                // baris 1: nama ALC, baris 2: detail weakness (development area)
+                $cellText = $detail->alc_name . "\n" . $detail->weakness;
+
+                $sheet->setCellValue('C' . $startRow, $cellText);
+
+                $sheet->getStyle('C' . $startRow)->getAlignment()->setWrapText(true);
+                $sheet->getStyle('C' . $startRow)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
+                $sheet->getStyle('C' . $startRow)->getAlignment()->setVertical(Alignment::VERTICAL_TOP);
+
                 $startRow += 2;
             }
         }
