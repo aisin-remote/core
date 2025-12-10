@@ -25,6 +25,7 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DevelopmentController;
 use App\Http\Controllers\IpaApprovalController;
 use App\Http\Controllers\IpaExportController;
 use App\Http\Controllers\IppController;
@@ -305,15 +306,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     Route::prefix('idp')->group(function () {
         // Manager all IDP for President
         Route::get('/manage-all', [IdpController::class, 'manage'])->name('idp.manage.all');
-        Route::get('/development/{employee_id}', [IdpController::class, 'developmentForm'])->name('idp.development');
         Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
         Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
         Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
         Route::post('/send-idp', [IdpController::class, 'sendIdpToSupervisor'])->name('send.idp');
         Route::post('/idp/store-one-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('idp.storeMidYear');
-        Route::post('/development/{employee_id}/mid-year/submit', [IdpController::class, 'submitMidYear'])->name('idp.submitMidYear');
-        Route::post('/development/{employee_id}/one-year/submit', [IdpController::class, 'submitOneYear'])->name('idp.submitOneYear');
         Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
         Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
         Route::post('/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
@@ -330,6 +328,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/edit/{id}', [IdpController::class, 'edit'])->name('idp.edit');
         Route::put('/update/{idp}', [IdpController::class, 'update'])->name('idp.update');
         Route::delete('/delete/{idp}', [IdpController::class, 'deleteIdp'])->name('idp.delete');
+    });
+
+    Route::prefix('development')->group(function () {
+        Route::get('/{employee_id}', [DevelopmentController::class, 'developmentForm'])->name('development.index');
+        Route::post('/{employee_id}/mid-year/submit', [DevelopmentController::class, 'submitMidYear'])->name('development.submitMidYear');
+        Route::post('/{employee_id}/one-year/submit', [DevelopmentController::class, 'submitOneYear'])->name('development.submitOneYear');
     });
 
     Route::prefix('ipp')->group(function () {

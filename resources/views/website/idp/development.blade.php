@@ -592,7 +592,7 @@
             handleFormSave('#form-mid-year', '#btn-save-mid', 'Mid-Year Development Saved!');
             if (midDraftIdpIds.length > 0) {
                 handleSubmission('#btn-submit-mid',
-                    '{{ route('idp.submitMidYear', ['employee_id' => $assessment->employee_id]) }}',
+                    '{{ route('development.submitMidYear', ['employee_id' => $assessment->employee_id]) }}',
                     midDraftIdpIds);
             }
 
@@ -600,7 +600,7 @@
             handleFormSave('#form-one-year', '#btn-save-one', 'One-Year Development Saved!');
             if (oneDraftIdpIds.length > 0) {
                 handleSubmission('#btn-submit-one',
-                    '{{ route('idp.submitOneYear', ['employee_id' => $assessment->employee_id]) }}',
+                    '{{ route('development.submitOneYear', ['employee_id' => $assessment->employee_id]) }}',
                     oneDraftIdpIds);
             }
         });
