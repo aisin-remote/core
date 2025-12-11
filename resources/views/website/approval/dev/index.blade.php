@@ -385,7 +385,16 @@
                     const devId = approveBtn.getAttribute('data-development-id');
                     if (!devId) return;
 
-                    if (!confirm('Yakin ingin APPROVE Development ini?')) return;
+                    const result = await Swal.fire({
+                        title: 'Approve Development?',
+                        text: 'Yakin ingin APPROVE Development ini?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Approve',
+                        cancelButtonText: 'Batal',
+                    });
+
+                    if (!result.isConfirmed) return;
 
                     approveBtn.disabled = true;
                     approveBtn.classList.add('disabled');
@@ -393,10 +402,19 @@
                     try {
                         const approveBase = @json(route('development.approve', ['id' => '___ID___']));
                         await postJSON(approveBase.replace('___ID___', devId));
+
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Approved',
+                            text: 'Development berhasil di-approve.',
+                            timer: 1500,
+                            showConfirmButton: false,
+                        });
+
                         dt.ajax.reload(null, false);
                     } catch (err) {
                         console.error(err);
-                        alert('Gagal memproses APPROVE.');
+                        Swal.fire('Error', 'Gagal memproses APPROVE.', 'error');
                     } finally {
                         approveBtn.disabled = false;
                         approveBtn.classList.remove('disabled');
@@ -432,16 +450,37 @@
                         return;
                     }
 
-                    const reviseBase = @json(route('development.revise', ['id' => '___ID___']));
+                    const result = await Swal.fire({
+                        title: 'Kirim Revisi?',
+                        text: 'Yakin ingin mengirim revisi untuk development ini?',
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonText: 'Ya, Kirim',
+                        cancelButtonText: 'Batal',
+                    });
+
+                    if (!result.isConfirmed) return;
+
                     reviseSubmit.disabled = true;
 
                     try {
+                        const reviseBase = @json(route('development.revise', ['id' => '___ID___']));
                         await postJSON(reviseBase.replace('___ID___', devId), { note });
+
                         reviseModal.hide();
+
+                        await Swal.fire({
+                            icon: 'success',
+                            title: 'Revisi terkirim',
+                            text: 'Revisi berhasil dikirim.',
+                            timer: 1500,
+                            showConfirmButton: false,
+                        });
+
                         dt.ajax.reload(null, false);
                     } catch (err) {
                         console.error(err);
-                        alert('Gagal mengirim revisi.');
+                        Swal.fire('Error', 'Gagal mengirim revisi.', 'error');
                     } finally {
                         reviseSubmit.disabled = false;
                     }
