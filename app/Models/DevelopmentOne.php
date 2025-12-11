@@ -22,7 +22,7 @@ class DevelopmentOne extends Model
     }
     public function steps()
     {
-        return $this->hasMany(DevelopmentApprovalStep::class, 'development_mid_id');
+        return $this->hasMany(DevelopmentApprovalStep::class, 'development_one_id');
     }
 
 }

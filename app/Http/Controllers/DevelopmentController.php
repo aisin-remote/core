@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
+use RuntimeException;
 
 class DevelopmentController extends Controller
 {
@@ -223,9 +224,6 @@ class DevelopmentController extends Controller
 
         $query = DevelopmentApprovalStep::query()
             ->with([
-                'midDevelopment.employee.department',
-                'midDevelopment.steps',
-                'midDevelopment.idp',
                 'oneDevelopment.employee.department',
                 'oneDevelopment.steps',
                 'oneDevelopment.idp',
@@ -234,9 +232,7 @@ class DevelopmentController extends Controller
             ->where('status', 'pending')
             ->where(function ($q) {
                 // Hanya ambil development yang belum final approve
-                $q->whereHas('midDevelopment', function ($q2) {
-                    $q2->where('status', '!=', 'approved');
-                })->orWhereHas('oneDevelopment', function ($q2) {
+                $q->whereHas('oneDevelopment', function ($q2) {
                     $q2->where('status', '!=', 'approved');
                 });
             });
@@ -314,27 +310,6 @@ class DevelopmentController extends Controller
                 continue;
             }
 
-            // Kumpulkan unique Development Mid
-            $midDevs = $group
-                ->filter(function ($s) {
-                    return !is_null($s->development_mid_id) && $s->midDevelopment;
-                })
-                ->map(function ($s) {
-                    $dev = $s->midDevelopment;
-                    return [
-                        'id'        => $dev->id,
-                        'idp_id' => $dev->idp_id,
-                        'development_program'    => $dev->development_program,
-                        'development_achievement'    => $dev->development_achievement,
-                        'next_action'    => $dev->next_action,
-                        'status'    => $dev->status,
-                    ];
-                })
-                ->unique('id')
-                ->values()
-                ->all();
-
-
             // Kumpulkan unique Development One-Year
             $oneDevs = $group
                 ->filter(function ($s) {
@@ -369,7 +344,6 @@ class DevelopmentController extends Controller
                     'department' => $emp->department->name ?? null,
                     'grade'      => $emp->grade,
                 ],
-                'mid_devs'    => $midDevs,   // untuk accordion Mid-Year
                 'one_devs'    => $oneDevs,   // untuk accordion One-Year
             ];
         }
@@ -380,6 +354,77 @@ class DevelopmentController extends Controller
                 'total' => count($rows),
             ],
         ]);
+    }
+
+    public function approve($id)
+    {
+        $user = auth()->user();
+        $me = $user->employee;
+
+        if(!$me){
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Employee tidak ditemukan untuk user ini.',
+            ], 403);
+        }
+
+        $role         = ApprovalHelper::roleKeyFor($me);
+        $rolesToMatch = ApprovalHelper::synonymsForSearch($role);
+
+        $step = DevelopmentApprovalStep::where('status', 'pending')
+        ->whereIn('role', $rolesToMatch)
+        ->where(function ($q) use ($id) {
+            $q->where('development_mid_id', $id)
+            ->orWhere('development_one_id', $id);
+        })
+        ->orderBy('step_order')
+        ->first();
+
+        if(!$step){
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Approval step tidak ditemukan atau sudah diproses.'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+        try {
+            $step->status = 'done';
+            $step->actor_id = $me->id;
+            $step->acted_at = now();
+            $step->save();
+
+            $dev = $step->midDevelopment ?? $step->oneDevelopment;
+            if(!$dev) {
+                throw new RuntimeException('Development terkait tidak ditemukan.');
+            }
+            
+            $pendingCount = $dev->steps()
+            ->where('status', 'pending')
+            ->count();
+
+            if($pendingCount === 0){
+                $dev->status = 'approved';
+            } else {
+                $dev->status = 'checked';
+            }
+
+            $dev->save();
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Development berhasil di-approve.',
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollback();
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Gagal memproses approve: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     private function seedStepsForIcp($model): void

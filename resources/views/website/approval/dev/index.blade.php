@@ -144,43 +144,6 @@
                 return `<span class="badge ${cls}">${(s || '').toUpperCase()}</span>`;
             }
 
-            // ===== Mid-Year rows (development_program, development_achievement, next_action) =====
-            function buildMidRows(items) {
-                if (!items || !items.length) {
-                    return `<tr>
-                        <td colspan="5" class="text-center text-muted py-4">No data.</td>
-                    </tr>`;
-                }
-
-                return items.map(dev => {
-                    const developmentProgram     = dev.development_program || '-';
-                    const developmentAchievement = dev.development_achievement || '-';
-                    const nextAction             = dev.next_action || '-';
-                    const statusBadge            = badgeStatus(dev.status || '-');
-
-                    return `
-                        <tr>
-                            <td class="fw-semibold">${developmentProgram}</td>
-                            <td>${developmentAchievement}</td>
-                            <td>${nextAction}</td>
-                            <td>${statusBadge}</td>
-                            <td class="text-end">
-                                <button type="button"
-                                        class="btn btn-sm btn-danger btn-revise-dev me-2"
-                                        data-development-id="${dev.id}">
-                                    <i class="fas fa-times me-1 fs-7"></i> Revise
-                                </button>
-                                <button type="button"
-                                        class="btn btn-sm btn-success btn-approve-dev"
-                                        data-development-id="${dev.id}">
-                                    <i class="fas fa-check me-1 fs-7"></i> Approve
-                                </button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
             // ===== One-Year rows (development_program, evaluation_result) =====
             function buildOneRows(items) {
                 if (!items || !items.length) {
@@ -217,31 +180,10 @@
             }
 
             function buildDetailHtml(row) {
-                const midTableRows = buildMidRows(row.mid_devs || []);
                 const oneTableRows = buildOneRows(row.one_devs || []);
 
                 return `
                     <div class="p-5 bg-light rounded">
-                        <div class="mb-5">
-                            <h6 class="fw-bold mb-3">Mid-Year Development</h6>
-                            <div class="table-responsive">
-                                <table class="table table-rounded table-row-dashed fs-7 gy-3">
-                                    <thead>
-                                        <tr class="text-muted fw-bold text-uppercase">
-                                            <th>Development Program</th>
-                                            <th>Development Achievement</th>
-                                            <th>Next Action</th>
-                                            <th>Status</th>
-                                            <th class="text-end">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${midTableRows}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-
                         <div>
                             <h6 class="fw-bold mb-3">One-Year Development</h6>
                             <div class="table-responsive">
