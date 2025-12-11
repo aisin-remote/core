@@ -329,7 +329,7 @@
                                                             @endphp
 
                                                            @if (!$isHRDorDireksi)
-                                                                <a href="{{ route('idp.development', $assessment->employee->id) }}"
+                                                                <a href="{{ route('development.index', $assessment->employee->id) }}"
                                                                 class="btn btn-sm btn-primary"
                                                                 style="display: {{ $assessment->overall_status == 'approved' ? '' : 'none' }}">
                                                                     <i class="fas fa-pencil-alt"></i>

@@ -104,7 +104,7 @@ class DevelopmentController extends Controller
                 ->get();
 
             foreach ($midDevs as $mid) {
-                $mid->status = 'submitted'; 
+                $mid->status = 'submitted';
                 $mid->save();
 
                 $this->seedStepsForIcp($mid);
@@ -187,6 +187,199 @@ class DevelopmentController extends Controller
                 'message' => 'Terjadi kesalahan saat submit One-Year Development.',
             ], 500);
         }
+    }
+
+    public function approval(Request $request, $company = null)
+    {
+        $title  = 'Approval';
+        $filter = (string) $request->query('filter', 'all');
+
+        return view('website.approval.dev.index', [
+            'title'   => $title,
+            'company' => $company,
+            'filter'  => $filter,
+        ]);
+    }
+
+    public function approvalJson(Request $request)
+    {
+        $user = auth()->user();
+        $me   = $user?->employee;
+
+        if (!$me) {
+            return response()->json([
+                'data' => [],
+                'meta' => ['total' => 0],
+            ]);
+        }
+
+        $role = ApprovalHelper::roleKeyFor($me);
+
+        $rolesToMatch = ApprovalHelper::synonymsForSearch($role);
+
+        $filter  = (string) $request->query('filter', 'all');
+        $search  = trim((string) $request->query('search', ''));
+        $company = $request->query('company');
+
+        $query = DevelopmentApprovalStep::query()
+            ->with([
+                'midDevelopment.employee.department',
+                'midDevelopment.steps',
+                'midDevelopment.idp',
+                'oneDevelopment.employee.department',
+                'oneDevelopment.steps',
+                'oneDevelopment.idp',
+            ])
+            ->whereIn('role', $rolesToMatch)
+            ->where('status', 'pending')
+            ->where(function ($q) {
+                // Hanya ambil development yang belum final approve
+                $q->whereHas('midDevelopment', function ($q2) {
+                    $q2->where('status', '!=', 'approved');
+                })->orWhereHas('oneDevelopment', function ($q2) {
+                    $q2->where('status', '!=', 'approved');
+                });
+            });
+
+        if ($company) {
+            $query->where(function ($q) use ($company) {
+                $q->whereHas('midDevelopment.employee', function ($q2) use ($company) {
+                    $q2->where('company', $company);
+                })->orWhereHas('oneDevelopment.employee', function ($q2) use ($company) {
+                    $q2->where('company', $company);
+                });
+            });
+        }
+
+        if ($filter !== 'all') {
+            $query->where(function ($q) use ($filter) {
+                $q->whereHas('midDevelopment.employee', function ($q2) use ($filter) {
+                    $q2->where('position', $filter);
+                })->orWhereHas('oneDevelopment.employee', function ($q2) use ($filter) {
+                    $q2->where('position', $filter);
+                });
+            });
+        }
+
+        if ($search !== '') {
+            $query->where(function ($q) use ($search) {
+                $q->whereHas('midDevelopment.employee', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%")
+                        ->orWhere('npk', 'like', "%{$search}%");
+                })->orWhereHas('oneDevelopment.employee', function ($q2) use ($search) {
+                    $q2->where('name', 'like', "%{$search}%")
+                        ->orWhere('npk', 'like', "%{$search}%");
+                });
+            });
+        }
+
+        $steps = $query
+            ->orderBy('step_order')
+            ->get();
+
+        $steps = $steps->filter(function ($step) {
+            $dev = $step->midDevelopment ?: $step->oneDevelopment;
+            if (!$dev) {
+                return false;
+            }
+
+            $allSteps = $dev->steps;
+
+            return $allSteps->every(function ($x) use ($step) {
+                if ($x->step_order < $step->step_order && $x->status !== 'done') {
+                    return false;
+                }
+                return true;
+            });
+        });
+
+        // ====== GROUP BY EMPLOYEE ======
+        $grouped = $steps
+            ->groupBy(function ($step) {
+                $dev = $step->midDevelopment ?: $step->oneDevelopment;
+                return $dev?->employee_id;
+            })
+            ->filter(function ($group, $employeeId) {
+                return !is_null($employeeId);
+            })
+            ->values();
+
+        $rows = [];
+        foreach ($grouped as $index => $group) {
+            $firstStep = $group->first();
+            $sampleDev = $firstStep->midDevelopment ?: $firstStep->oneDevelopment;
+            $emp       = $sampleDev?->employee;
+
+            if (!$emp) {
+                continue;
+            }
+
+            // Kumpulkan unique Development Mid
+            $midDevs = $group
+                ->filter(function ($s) {
+                    return !is_null($s->development_mid_id) && $s->midDevelopment;
+                })
+                ->map(function ($s) {
+                    $dev = $s->midDevelopment;
+                    return [
+                        'id'        => $dev->id,
+                        'idp_id' => $dev->idp_id,
+                        'development_program'    => $dev->development_program,
+                        'development_achievement'    => $dev->development_achievement,
+                        'next_action'    => $dev->next_action,
+                        'status'    => $dev->status,
+                    ];
+                })
+                ->unique('id')
+                ->values()
+                ->all();
+
+
+            // Kumpulkan unique Development One-Year
+            $oneDevs = $group
+                ->filter(function ($s) {
+                    return !is_null($s->development_one_id) && $s->oneDevelopment;
+                })
+                ->map(function ($s) {
+                    $dev = $s->oneDevelopment;
+                    return [
+                        'id'                  => $dev->id,
+                        'idp_id'              => $dev->idp_id,
+                        'development_program' => $dev->development_program,
+                        'evaluation_result'   => $dev->evaluation_result,
+                        'status'              => $dev->status,
+                    ];
+                })
+                ->unique('id')
+                ->values()
+                ->all();
+
+            // Status "headline" employee di-list ini boleh ambil dari salah satu dev
+            $headlineStatus = $sampleDev?->status ?? 'submitted';
+
+            $rows[] = [
+                'no'          => $index + 1,
+                'employee_id' => $emp->id,
+                'status'      => $headlineStatus,
+                'employee'    => [
+                    'npk'        => $emp->npk,
+                    'name'       => $emp->name,
+                    'company'    => $emp->company,
+                    'position'   => $emp->position,
+                    'department' => $emp->department->name ?? null,
+                    'grade'      => $emp->grade,
+                ],
+                'mid_devs'    => $midDevs,   // untuk accordion Mid-Year
+                'one_devs'    => $oneDevs,   // untuk accordion One-Year
+            ];
+        }
+
+        return response()->json([
+            'data' => $rows,
+            'meta' => [
+                'total' => count($rows),
+            ],
+        ]);
     }
 
     private function seedStepsForIcp($model): void

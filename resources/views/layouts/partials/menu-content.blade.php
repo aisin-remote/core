@@ -1281,6 +1281,12 @@
                     <span class="menu-title">IPA</span>
                 </a>
             </div>
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/development') ? 'active' : '' }}"
+                    href="{{ route('development.approval') }}">
+                    <span class="menu-title">Development</span>
+                </a>
+            </div>
         </div>
 
         {{-- FLYOUT --}}
