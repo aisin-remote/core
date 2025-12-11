@@ -158,31 +158,6 @@
             </a>
         </div>
 
-        {{-- CARD: Employee Info --}}
-        <div class="card mb-5">
-            <div class="card-body d-flex flex-wrap gap-4 align-items-center">
-                <div class="d-flex align-items-center gap-3">
-                    <div class="symbol symbol-50px symbol-circle bg-light-primary text-primary fw-bold">
-                        {{ Str::substr($assessment->employee->name ?? '?', 0, 1) }}
-                    </div>
-                    <div>
-                        <div class="fw-bold fs-4">{{ $assessment->employee->name ?? '-' }}</div>
-                        <div class="text-muted">
-                            {{ $assessment->employee->position ?? '-' }}<br>
-                            {{ $assessment->employee->department_name ?? ($assessment->employee->department ?? '-') }}
-                        </div>
-                    </div>
-                </div>
-                <div class="border-start ps-4 ms-2">
-                    <div><strong>Assessment Purpose:</strong> {{ $assessment->purpose ?? '-' }}</div>
-                    <div><strong>Assessor:</strong> {{ $assessment->lembaga ?? '-' }}</div>
-                    <div><strong>Date:</strong>
-                        {{ optional($assessment->created_at)->timezone('Asia/Jakarta')->format('d M Y') ?? '-' }}
-                    </div>
-                </div>
-            </div>
-        </div>
-
         {{-- CARD: IDP List (Read Only) --}}
         <div class="card mb-5">
             <div class="card-header card-header-sticky">

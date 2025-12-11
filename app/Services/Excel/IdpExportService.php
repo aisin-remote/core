@@ -5,6 +5,7 @@ namespace App\Services\Excel;
 use App\Models\Assessment;
 use App\Models\Development;
 use App\Models\DevelopmentOne;
+use App\Models\DevelopmentApprovalStep;
 use App\Models\Employee;
 use App\Models\Idp;
 use App\Models\IdpApproval;
@@ -83,12 +84,12 @@ class IdpExportService
         foreach ($assessmentDetails as $detail) {
             if (!empty($detail->strength)) {
                 // baris 1: nama ALC, baris 2: isi strength
-                $strengths[] = " - " . $detail->alc_name . "\n  "; //. $detail->strength;
+                $strengths[] = " - " . $detail->alc_name . "\n  ";
             }
 
             if (!empty($detail->weakness)) {
                 // baris 1: nama ALC, baris 2: isi weakness
-                $weaknesses[] = " - " . $detail->alc_name . "\n  "; //. $detail->weakness;
+                $weaknesses[] = " - " . $detail->alc_name . "\n  ";
             }
         }
 
@@ -215,12 +216,12 @@ class IdpExportService
         }
 
         /*
-         * PASANG STAMP (signature images) KE TEMPLATE
+         * PASANG STAMP (signature images) KE TEMPLATE - BAGIAN IDP (kiri)
          *
-         * Posisi sel yang diminta:
-         *  - Pemilik IDP -> B48
-         *  - Atasan 1 (pembuat/penyetuju) -> D48  (IdpApproval level 1)
-         *  - Atasan 2 -> F48 (IdpApproval level 2)
+         * Posisi sel IDP:
+         *  - Pemilik IDP -> C48
+         *  - Atasan 1     -> F48
+         *  - Atasan 2     -> K48
          */
 
         $stampMap = [
@@ -266,14 +267,13 @@ class IdpExportService
             $statusIdp = $idpForStamp->status ?? null;
         }
 
-        // ========== OWNER STAMP (B48) ==========
-        // Owner SELALU pakai EMP.png (fallback default)
+        // ========== OWNER STAMP (IDP) ==========
         $ownerStampPath = null;
         if (file_exists($defaultOwnerStamp)) {
             $ownerStampPath = $defaultOwnerStamp;
         }
 
-        // ========== APPROVER LEVEL 1 & 2 ==========
+        // ========== APPROVER LEVEL 1 & 2 (IDP) ==========
         $approver1StampPath = null;
         $approver2StampPath = null;
 
@@ -325,13 +325,11 @@ class IdpExportService
         };
 
         /*
-         * LOGIKA STATUS → STAMP
-         * (Silakan sesuaikan kalau mapping status kamu beda)
-         *
+         * LOGIKA STATUS → STAMP (IDP)
          * Asumsi:
-         *  - status >= 1 : tampilkan stamp pemilik (B48)
-         *  - status >= 2 : tampilkan stamp atasan 1 (D48)
-         *  - status >= 3 : tampilkan stamp atasan 2 (F48)
+         *  - status >= 1 : tampilkan stamp pemilik (C48)
+         *  - status >= 2 : tampilkan stamp atasan 1 (F48)
+         *  - status >= 3 : tampilkan stamp atasan 2 (K48)
          */
 
         if ($statusIdp === null) {
@@ -352,12 +350,10 @@ class IdpExportService
         }
 
         /*
-         * -------------------------------------------------------
-         * TULISKAN NAMA DI BAWAH SETIAP STAMP (sesuai permintaan)
-         *  - Owner -> B52
-         *  - Atasan tingkat 1 -> E52
-         *  - Atasan tingkat 2 -> I52
-         * -------------------------------------------------------
+         * NAMA DI BAWAH STAMP BAGIAN IDP
+         *  - Owner  -> B52
+         *  - Level1 -> E52
+         *  - Level2 -> I52
          */
 
         // Owner name (selalu dari $employee)
@@ -376,6 +372,93 @@ class IdpExportService
             $approver2Name = $approvalLevel2->approver->name ?? '-';
         }
         $sheet->setCellValue('I52', $approver2Name);
+
+        /*
+         * =========================================================
+         *  STAMP BAGIAN DEVELOPMENT (KANAN)
+         *  Posisi:
+         *    - Owner (employee)      -> O48
+         *    - Approver tingkat 1    -> R48
+         *    - Approver tingkat 2    -> U48
+         *  Nama di bawah stamp:
+         *    - Owner   -> O52
+         *    - Level1  -> R52
+         *    - Level2  -> U52
+         * =========================================================
+         */
+
+        // Ambil 1 record ONE-YEAR terbaru untuk dasar status & approval
+        $devOneForStamp = DevelopmentOne::where('employee_id', $employeeId)->latest()->first();
+        $statusDev      = $devOneForStamp->status ?? null;
+
+        // Ambil step approval untuk development (pakai DevelopmentApprovalStep)
+        $devSteps = collect();
+        if ($devOneForStamp) {
+            $devSteps = DevelopmentApprovalStep::with('actor')
+                ->where('development_one_id', $devOneForStamp->id)
+                ->where('status', 'done')        // hanya step yang sudah selesai
+                ->orderBy('step_order')
+                ->get();
+        }
+
+        // Tentukan approver level 1 & 2 dari step yang "done"
+        $devApprover1   = $devSteps->get(0); // step done pertama
+        $devApprover2   = $devSteps->get(1); // step done kedua
+        $devApprover1StampPath = $devApprover1 && $devApprover1->actor
+            ? $findStampByPosition($devApprover1->actor->position ?? null)
+            : null;
+        $devApprover2StampPath = $devApprover2 && $devApprover2->actor
+            ? $findStampByPosition($devApprover2->actor->position ?? null)
+            : null;
+
+        // Mapping status DevelopmentOne → level stamp
+        // Silakan adjust kalau di DB-mu beda.
+        $devLevel = 0;
+        if ($statusDev) {
+            switch (strtolower($statusDev)) {
+                case 'draft':
+                case 'submitted':
+                    $devLevel = 1; // hanya owner
+                    break;
+                case 'checked':
+                    $devLevel = 2; // owner + approver1
+                    break;
+                case 'approved':
+                    $devLevel = 3; // owner + approver1 + approver2
+                    break;
+                default:
+                    $devLevel = 0;
+                    break;
+            }
+        }
+
+        // Pasang stamp development
+        if ($devLevel >= 1 && $ownerStampPath) {
+            $placeStamp($ownerStampPath, 'O48', $sheet);
+        }
+
+        if ($devLevel >= 2 && $devApprover1StampPath) {
+            $placeStamp($devApprover1StampPath, 'R48', $sheet);
+        }
+
+        if ($devLevel >= 3 && $devApprover2StampPath) {
+            $placeStamp($devApprover2StampPath, 'U48', $sheet);
+        }
+
+        // Nama di bawah stamp development
+        $sheet->setCellValue('O52', $employee->name ?? '-');
+
+        $devApprover1Name = '-';
+        if ($devApprover1 && $devApprover1->actor) {
+            $devApprover1Name = $devApprover1->actor->name ?? '-';
+        }
+        $sheet->setCellValue('R52', $devApprover1Name);
+
+        $devApprover2Name = '-';
+        if ($devApprover2 && $devApprover2->actor) {
+            $devApprover2Name = $devApprover2->actor->name ?? '-';
+        }
+        $sheet->setCellValue('U52', $devApprover2Name);
 
         /*
          * SIMPAN FILE SEMENTARA & RETURN PATH
