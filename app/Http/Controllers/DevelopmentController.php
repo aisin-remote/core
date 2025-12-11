@@ -427,6 +427,73 @@ class DevelopmentController extends Controller
         }
     }
 
+    public function revise(Request $request, $id)
+    {
+        $request->validate([
+            'note' => 'required|string|max:2000',
+        ]);
+
+        $user= auth()->user();
+        $me = $user?->employee;
+
+        if(!$me){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Employee tidak ditemukan untuk user ini.'
+            ], 403);
+        }
+
+        $role = ApprovalHelper::roleKeyFor($me);
+        $rolesToMatch = ApprovalHelper::synonymsForSearch($role);
+
+        $step = DevelopmentApprovalStep::where('status', 'pending')
+        ->whereIn('role', $rolesToMatch)
+        ->where(function ($q) use ($id) {
+            $q->where('development_mid_id', $id)
+            ->orWhere('development_one_id', $id);
+        })
+        ->orderBy('step_order')
+        ->first();
+
+        if(!$step){
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Approval step tidak ditemukan atau sudah diproses.'
+            ], 404);
+        }
+
+        DB::beginTransaction();
+        try {
+            $step->status = 'revised';
+            $step->actor_id = $me->id;
+            $step->acted_at = now();
+            $step->note = $request->note;
+            $step->save();
+
+            $dev = $step->oneDevelopment;
+            if(!$dev){
+                throw new  RuntimeException('Development terkait tidak ditemukan.');
+            }
+
+            $dev->status = 'revised';
+            $dev->save();
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Revisi berhasil dikirim.',
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal mengirim revisi: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
     private function seedStepsForIcp($model): void
     {
         if (!($model instanceof Development) && !($model instanceof DevelopmentOne)) {
