@@ -335,11 +335,12 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
     });
 
     Route::prefix('development')->group(function () {
+        Route::get('/approval/json', [DevelopmentController::class, 'approvalJson'])->name('development.approval.json');
+        
         Route::get('/{employee_id}', [DevelopmentController::class, 'developmentForm'])->name('development.index');
         Route::get('/{employee_id}/json', [DevelopmentController::class, 'developmentJson'])->name('development.json');
         Route::post('/{employee_id}/mid-year/submit', [DevelopmentController::class, 'submitMidYear'])->name('development.submitMidYear');
         Route::post('/{employee_id}/one-year/submit', [DevelopmentController::class, 'submitOneYear'])->name('development.submitOneYear');
-        Route::get('/approval/json', [DevelopmentController::class, 'approvalJson'])->name('development.approval.json');
     });
 
     Route::prefix('ipp')->group(function () {
