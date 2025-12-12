@@ -641,9 +641,9 @@ class DevelopmentController extends Controller
     public function approve($id)
     {
         $user = auth()->user();
-        $me = $user->employee;
+        $me   = $user?->employee;
 
-        if(!$me){
+        if (!$me) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Employee tidak ditemukan untuk user ini.',
@@ -653,57 +653,85 @@ class DevelopmentController extends Controller
         $role         = ApprovalHelper::roleKeyFor($me);
         $rolesToMatch = ApprovalHelper::synonymsForSearch($role);
 
-        $step = DevelopmentApprovalStep::where('status', 'pending')
-        ->whereIn('role', $rolesToMatch)
-        ->where(function ($q) use ($id) {
-            $q->where('development_mid_id', $id)
-            ->orWhere('development_one_id', $id);
-        })
-        ->orderBy('step_order')
-        ->first();
+        /**
+         * Ambil semua step pending untuk role approver ini,
+         * khusus untuk development milik employee target ($id).
+         *
+         * Kita ambil step pending TERAWAL per development (mid/one)
+         * dengan grouping manual via key "mid:{id}" / "one:{id}".
+         */
+        $steps = DevelopmentApprovalStep::query()
+            ->where('status', 'pending')
+            ->whereIn('role', $rolesToMatch)
+            ->where(function ($q) use ($id) {
+                $q->whereHas('midDevelopment', function ($m) use ($id) {
+                    $m->where('employee_id', $id);
+                })->orWhereHas('oneDevelopment', function ($o) use ($id) {
+                    $o->where('employee_id', $id);
+                });
+            })
+            ->orderBy('step_order', 'asc')
+            ->get();
 
-        if(!$step){
+        if ($steps->isEmpty()) {
             return response()->json([
                 'status'  => 'error',
-                'message' => 'Approval step tidak ditemukan atau sudah diproses.'
+                'message' => 'Approval step tidak ditemukan atau sudah diproses.',
             ], 404);
+        }
+
+        // Ambil hanya step TERAWAL per development
+        $firstStepsByDev = [];
+        foreach ($steps as $st) {
+            $key = $st->development_mid_id
+                ? 'mid:' . $st->development_mid_id
+                : 'one:' . $st->development_one_id;
+
+            if (!isset($firstStepsByDev[$key])) {
+                $firstStepsByDev[$key] = $st;
+            }
         }
 
         DB::beginTransaction();
         try {
-            $step->status = 'done';
-            $step->actor_id = $me->id;
-            $step->acted_at = now();
-            $step->save();
+            $processed = 0;
 
-            $dev = $step->midDevelopment ?? $step->oneDevelopment;
-            if(!$dev) {
-                throw new RuntimeException('Development terkait tidak ditemukan.');
+            foreach ($firstStepsByDev as $step) {
+                // mark step done
+                $step->status   = 'done';
+                $step->actor_id = $me->id;
+                $step->acted_at = now();
+                $step->save();
+
+                // dev terkait
+                $dev = $step->midDevelopment ?? $step->oneDevelopment;
+                if (!$dev) {
+                    throw new \RuntimeException('Development terkait tidak ditemukan.');
+                }
+
+                // cek sisa pending step untuk development ini
+                $pendingCount = $dev->steps()
+                    ->where('status', 'pending')
+                    ->count();
+
+                $dev->status = ($pendingCount === 0) ? 'approved' : 'checked';
+                $dev->save();
+
+                $processed++;
             }
-            
-            $pendingCount = $dev->steps()
-            ->where('status', 'pending')
-            ->count();
-
-            if($pendingCount === 0){
-                $dev->status = 'approved';
-            } else {
-                $dev->status = 'checked';
-            }
-
-            $dev->save();
 
             DB::commit();
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Development berhasil di-approve.',
+                'message' => "Development berhasil di-approve. Terproses: {$processed} item.",
+                'processed' => $processed,
             ]);
         } catch (\Throwable $e) {
-            DB::rollback();
+            DB::rollBack();
 
             return response()->json([
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => 'Gagal memproses approve: ' . $e->getMessage(),
             ], 500);
         }
@@ -715,56 +743,80 @@ class DevelopmentController extends Controller
             'note' => 'required|string|max:2000',
         ]);
 
-        $user= auth()->user();
-        $me = $user?->employee;
+        $user = auth()->user();
+        $me   = $user?->employee;
 
-        if(!$me){
+        if (!$me) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Employee tidak ditemukan untuk user ini.'
+                'status'  => 'error',
+                'message' => 'Employee tidak ditemukan untuk user ini.',
             ], 403);
         }
 
-        $role = ApprovalHelper::roleKeyFor($me);
+        $role         = ApprovalHelper::roleKeyFor($me);
         $rolesToMatch = ApprovalHelper::synonymsForSearch($role);
 
-        $step = DevelopmentApprovalStep::where('status', 'pending')
-        ->whereIn('role', $rolesToMatch)
-        ->where(function ($q) use ($id) {
-            $q->where('development_mid_id', $id)
-            ->orWhere('development_one_id', $id);
-        })
-        ->orderBy('step_order')
-        ->first();
+        $steps = DevelopmentApprovalStep::query()
+            ->where('status', 'pending')
+            ->whereIn('role', $rolesToMatch)
+            ->where(function ($q) use ($id) {
+                $q->whereHas('midDevelopment', function ($m) use ($id) {
+                    $m->where('employee_id', $id);
+                })->orWhereHas('oneDevelopment', function ($o) use ($id) {
+                    $o->where('employee_id', $id);
+                });
+            })
+            ->orderBy('step_order', 'asc')
+            ->get();
 
-        if(!$step){
+        if ($steps->isEmpty()) {
             return response()->json([
-                'status' => 'error',
-                'message' => 'Approval step tidak ditemukan atau sudah diproses.'
+                'status'  => 'error',
+                'message' => 'Approval step tidak ditemukan atau sudah diproses.',
             ], 404);
+        }
+
+        // Ambil hanya step TERAWAL per development
+        $firstStepsByDev = [];
+        foreach ($steps as $st) {
+            $key = $st->development_mid_id
+                ? 'mid:' . $st->development_mid_id
+                : 'one:' . $st->development_one_id;
+
+            if (!isset($firstStepsByDev[$key])) {
+                $firstStepsByDev[$key] = $st;
+            }
         }
 
         DB::beginTransaction();
         try {
-            $step->status = 'revised';
-            $step->actor_id = $me->id;
-            $step->acted_at = now();
-            $step->note = $request->note;
-            $step->save();
+            $processed = 0;
 
-            $dev = $step->oneDevelopment;
-            if(!$dev){
-                throw new  RuntimeException('Development terkait tidak ditemukan.');
+            foreach ($firstStepsByDev as $step) {
+                $step->status   = 'revised';
+                $step->actor_id = $me->id;
+                $step->acted_at = now();
+                $step->note     = $request->note;
+                $step->save();
+
+                $dev = $step->midDevelopment ?? $step->oneDevelopment;
+                if (!$dev) {
+                    throw new \RuntimeException('Development terkait tidak ditemukan.');
+                }
+
+                // konsistenkan status dev kamu: 'revised' atau 'revise'
+                $dev->status = 'revised';
+                $dev->save();
+
+                $processed++;
             }
-
-            $dev->status = 'revised';
-            $dev->save();
 
             DB::commit();
 
             return response()->json([
                 'status'  => 'success',
-                'message' => 'Revisi berhasil dikirim.',
+                'message' => "Revisi berhasil dikirim. Terproses: {$processed} item.",
+                'processed' => $processed,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();

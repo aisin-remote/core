@@ -600,7 +600,6 @@ class IdpController extends Controller
                 ];
 
                 $dev = DevelopmentOne::updateOrCreate($attributes, $values);
-
                 $createdOrUpdated[] = [
                     'id'                  => $dev->id,
                     'idp_id'              => $dev->idp_id,

@@ -204,8 +204,11 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/ipa/{ipa?}/revise',  [IpaApprovalController::class, 'revise'])->name('ipa.revise');
 
         Route::get('/development', [DevelopmentController::class, 'approval'])->name('development.approval');
-        Route::post('/development/{id}/approve', [DevelopmentController::class, 'approve'])->name('development.approve');
-        Route::post('/development/{id}/revise', [DevelopmentController::class, 'revise'])->name('development.revise');
+        Route::post('/development/{id}/approve', [DevelopmentController::class, 'approve'])
+            ->name('development.approveByEmployee');
+
+        Route::post('/development/{id}/revise', [DevelopmentController::class, 'revise'])
+            ->name('development.reviseByEmployee');
     });
 
     Route::prefix('employee')->group(function () {
@@ -313,9 +316,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/list/{company?}', [IdpController::class, 'list'])->name('idp.list');
         Route::get('/{company?}', [IdpController::class, 'index'])->name('idp.index');
         Route::post('/idp/store', [IdpController::class, 'store'])->name('idp.store');
-        Route::post('/idp/store-mid-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('idp.storeOneYear');
         Route::post('/send-idp', [IdpController::class, 'sendIdpToSupervisor'])->name('send.idp');
-        Route::post('/idp/store-one-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('idp.storeMidYear');
         Route::get('/development-data/{employee_id}', [IdpController::class, 'showDevelopmentData'])->name('development.data');
         Route::get('/development-mid-data/{employee_id}', [IdpController::class, 'showDevelopmentMidData'])->name('development.mid.data');
         Route::post('/delete/{id}', [IdpController::class, 'destroy'])->name('idp.destroy');
@@ -336,7 +337,10 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     Route::prefix('development')->group(function () {
         Route::get('/approval/json', [DevelopmentController::class, 'approvalJson'])->name('development.approval.json');
-        
+
+        Route::post('/store-mid-year/{employee_id}', [IdpController::class, 'storeMidYear'])->name('development.storeMidYear');
+        Route::post('/store-one-year/{employee_id}', [IdpController::class, 'storeOneYear'])->name('development.storeOneYear');
+
         Route::get('/{employee_id}', [DevelopmentController::class, 'developmentForm'])->name('development.index');
         Route::get('/{employee_id}/json', [DevelopmentController::class, 'developmentJson'])->name('development.json');
         Route::post('/{employee_id}/mid-year/submit', [DevelopmentController::class, 'submitMidYear'])->name('development.submitMidYear');

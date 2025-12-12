@@ -107,15 +107,15 @@
                 <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable"
                        id="development_approval">
                     <thead>
-                        <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                            <th>No</th>
-                            <th>NPK</th>
-                            <th>Employee Name</th>
-                            <th>Department</th>
-                            <th>Position</th>
-                            <th>Status</th>
-                            <th class="text-center">Action</th>
-                        </tr>
+                    <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                        <th>No</th>
+                        <th>NPK</th>
+                        <th>Employee Name</th>
+                        <th>Department</th>
+                        <th>Position</th>
+                        <th>Status</th>
+                        <th class="text-center">Action</th>
+                    </tr>
                     </thead>
                     <tbody></tbody>
                 </table>
@@ -144,11 +144,11 @@
                 return `<span class="badge ${cls}">${(s || '').toUpperCase()}</span>`;
             }
 
-            // ===== One-Year rows (development_program, evaluation_result) =====
+            // ===== One-Year rows (tanpa action per baris) =====
             function buildOneRows(items) {
                 if (!items || !items.length) {
                     return `<tr>
-                        <td colspan="4" class="text-center text-muted py-4">No data.</td>
+                        <td colspan="3" class="text-center text-muted py-4">No data.</td>
                     </tr>`;
                 }
 
@@ -162,45 +162,53 @@
                             <td class="fw-semibold">${developmentProgram}</td>
                             <td>${evaluationResult}</td>
                             <td>${statusBadge}</td>
-                            <td class="text-end">
-                                <button type="button"
-                                        class="btn btn-sm btn-danger btn-revise-dev me-2"
-                                        data-development-id="${dev.id}">
-                                    <i class="fas fa-times me-1 fs-7"></i> Revise
-                                </button>
-                                <button type="button"
-                                        class="btn btn-sm btn-success btn-approve-dev"
-                                        data-development-id="${dev.id}">
-                                    <i class="fas fa-check me-1 fs-7"></i> Approve
-                                </button>
-                            </td>
                         </tr>
                     `;
                 }).join('');
             }
 
+            // ===== Detail accordion: action 1x per employee =====
             function buildDetailHtml(row) {
                 const oneTableRows = buildOneRows(row.one_devs || []);
 
                 return `
                     <div class="p-5 bg-light rounded">
-                        <div>
-                            <h6 class="fw-bold mb-3">One-Year Development</h6>
-                            <div class="table-responsive">
-                                <table class="table table-rounded table-row-dashed fs-7 gy-3">
-                                    <thead>
-                                        <tr class="text-muted fw-bold text-uppercase">
-                                            <th>Development Program</th>
-                                            <th>Evaluation Result</th>
-                                            <th>Status</th>
-                                            <th class="text-end">Action</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        ${oneTableRows}
-                                    </tbody>
-                                </table>
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <div>
+                                <h6 class="fw-bold mb-0">One-Year Development</h6>
+                                <div class="text-muted fs-8 mt-1">
+                                    Action berlaku untuk <span class="fw-semibold">semua</span> development milik employee ini.
+                                </div>
                             </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="button"
+                                        class="btn btn-sm btn-danger btn-revise-employee"
+                                        data-employee-id="${row.employee_id}">
+                                    <i class="fas fa-times me-1 fs-7"></i> Revise
+                                </button>
+
+                                <button type="button"
+                                        class="btn btn-sm btn-success btn-approve-employee"
+                                        data-employee-id="${row.employee_id}">
+                                    <i class="fas fa-check me-1 fs-7"></i> Approve
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-rounded table-row-dashed fs-7 gy-3">
+                                <thead>
+                                    <tr class="text-muted fw-bold text-uppercase">
+                                        <th>Development Program</th>
+                                        <th>Evaluation Result</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${oneTableRows}
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 `;
@@ -307,7 +315,7 @@
             const reviseModalEl = document.getElementById('reviseModal');
             const reviseModal   = reviseModalEl ? bootstrap.Modal.getOrCreateInstance(reviseModalEl) : null;
             const reviseForm    = document.getElementById('reviseForm');
-            const reviseIppIdEl = document.getElementById('reviseIppId'); // kita pakai utk development_id
+            const reviseIppIdEl = document.getElementById('reviseIppId'); // sekarang employee_id
             const reviseNoteEl  = document.getElementById('reviseNote');
             const reviseErrEl   = document.getElementById('reviseError');
             const reviseSubmit  = document.getElementById('reviseSubmitBtn');
@@ -319,17 +327,17 @@
                 });
             }
 
-            // ====== Delegated click: Approve / Revise di dalam accordion ======
+            // ====== Delegated click: Approve / Revise PER EMPLOYEE ======
             document.addEventListener('click', async (ev) => {
-                // Approve development
-                const approveBtn = ev.target.closest('.btn-approve-dev');
+                // Approve all development by employee
+                const approveBtn = ev.target.closest('.btn-approve-employee');
                 if (approveBtn) {
-                    const devId = approveBtn.getAttribute('data-development-id');
-                    if (!devId) return;
+                    const employeeId = approveBtn.getAttribute('data-employee-id');
+                    if (!employeeId) return;
 
                     const result = await Swal.fire({
                         title: 'Approve Development?',
-                        text: 'Yakin ingin APPROVE Development ini?',
+                        text: 'Yakin ingin APPROVE semua development employee ini?',
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'Ya, Approve',
@@ -342,13 +350,15 @@
                     approveBtn.classList.add('disabled');
 
                     try {
-                        const approveBase = @json(route('development.approve', ['id' => '___ID___']));
-                        await postJSON(approveBase.replace('___ID___', devId));
+                        const approveUrl = @json(route('development.approveByEmployee', ['id' => '___ID___']))
+                            .replace('___ID___', employeeId);
+
+                        await postJSON(approveUrl);
 
                         await Swal.fire({
                             icon: 'success',
                             title: 'Approved',
-                            text: 'Development berhasil di-approve.',
+                            text: 'Semua development berhasil di-approve.',
                             timer: 1500,
                             showConfirmButton: false,
                         });
@@ -364,37 +374,41 @@
                     return;
                 }
 
-                // Buka modal revise
-                const reviseBtn = ev.target.closest('.btn-revise-dev');
+                // Open revise modal by employee
+                const reviseBtn = ev.target.closest('.btn-revise-employee');
                 if (reviseBtn && reviseModal) {
-                    const devId = reviseBtn.getAttribute('data-development-id');
-                    if (!devId) return;
+                    const employeeId = reviseBtn.getAttribute('data-employee-id');
+                    if (!employeeId) return;
 
-                    reviseIppIdEl.value = devId; // isi hidden input dengan development_id
-                    reviseNoteEl.value  = '';
+                    reviseIppIdEl.value = employeeId; // isi hidden input dengan employee_id
+                    if (reviseNoteEl) reviseNoteEl.value = '';
                     if (reviseCount) reviseCount.textContent = '0';
-                    reviseErrEl.classList.add('d-none');
+                    if (reviseErrEl) reviseErrEl.classList.add('d-none');
+
                     reviseModal.show();
                 }
             });
 
-            // Submit revise
+            // Submit revise all development by employee
             if (reviseForm && reviseModal) {
                 reviseForm.addEventListener('submit', async (e) => {
                     e.preventDefault();
-                    const devId = reviseIppIdEl.value;
-                    const note  = (reviseNoteEl.value || '').trim();
+
+                    const employeeId = reviseIppIdEl?.value;
+                    const note  = (reviseNoteEl?.value || '').trim();
 
                     if (!note) {
-                        reviseErrEl.textContent = 'Please write a comment.';
-                        reviseErrEl.classList.remove('d-none');
-                        reviseNoteEl.focus();
+                        if (reviseErrEl) {
+                            reviseErrEl.textContent = 'Please write a comment.';
+                            reviseErrEl.classList.remove('d-none');
+                        }
+                        reviseNoteEl?.focus();
                         return;
                     }
 
                     const result = await Swal.fire({
                         title: 'Kirim Revisi?',
-                        text: 'Yakin ingin mengirim revisi untuk development ini?',
+                        text: 'Yakin ingin mengirim revisi untuk semua development employee ini?',
                         icon: 'warning',
                         showCancelButton: true,
                         confirmButtonText: 'Ya, Kirim',
@@ -403,11 +417,13 @@
 
                     if (!result.isConfirmed) return;
 
-                    reviseSubmit.disabled = true;
+                    if (reviseSubmit) reviseSubmit.disabled = true;
 
                     try {
-                        const reviseBase = @json(route('development.revise', ['id' => '___ID___']));
-                        await postJSON(reviseBase.replace('___ID___', devId), { note });
+                        const reviseUrl = @json(route('development.reviseByEmployee', ['id' => '___ID___']))
+                            .replace('___ID___', employeeId);
+
+                        await postJSON(reviseUrl, { note });
 
                         reviseModal.hide();
 
@@ -424,7 +440,7 @@
                         console.error(err);
                         Swal.fire('Error', 'Gagal mengirim revisi.', 'error');
                     } finally {
-                        reviseSubmit.disabled = false;
+                        if (reviseSubmit) reviseSubmit.disabled = false;
                     }
                 });
             }

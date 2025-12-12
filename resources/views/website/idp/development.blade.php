@@ -127,8 +127,8 @@ $(document).ready(function () {
     const EMPLOYEE_ID = @json($employee_id);
 
     const URL_JSON = @json(route('development.json', ['employee_id' => $employee_id]));
-    const URL_SAVE_MID = @json(route('idp.storeMidYear', ['employee_id' => $employee_id]));
-    const URL_SAVE_ONE = @json(route('idp.storeOneYear', ['employee_id' => $employee_id]));
+    const URL_SAVE_MID = @json(route('development.storeMidYear', ['employee_id' => $employee_id]));
+    const URL_SAVE_ONE = @json(route('development.storeOneYear', ['employee_id' => $employee_id]));
     const URL_SUBMIT_MID = @json(route('development.submitMidYear', ['employee_id' => $employee_id]));
     const URL_SUBMIT_ONE = @json(route('development.submitOneYear', ['employee_id' => $employee_id]));
 
@@ -138,8 +138,8 @@ $(document).ready(function () {
         idpRows: [],
         midHistory: [],
         oneHistory: [],
-        latestMidByIdp: {},     // ✅ NEW
-        latestOneByIdp: {},     // ✅ NEW
+        latestMidByIdp: {},
+        latestOneByIdp: {},
         flags: {},
         draftIds: { midDraftIdpIds: [], oneDraftIdpIds: [] }
     };
@@ -253,7 +253,7 @@ $(document).ready(function () {
         `);
     }
 
-    // ✅ NEW: ambil latest per idp_id, prioritas draft
+    // ambil latest per idp_id, prioritas draft
     function buildLatestByIdp(historyList) {
         const mapDraft = {};
         const mapAny = {};
@@ -262,16 +262,13 @@ $(document).ready(function () {
             const idpId = item?.idp_id;
             if (!idpId) return;
 
-            // simpan first-any (anggap history dari backend sudah order by created_at desc)
             if (!mapAny[idpId]) mapAny[idpId] = item;
 
-            // simpan first-draft
             if (item.status === 'draft' && !mapDraft[idpId]) {
                 mapDraft[idpId] = item;
             }
         });
 
-        // final: kalau ada draft pakai draft, kalau tidak ada pakai latest any
         const final = {};
         Object.keys(mapAny).forEach(idpId => {
             final[idpId] = mapDraft[idpId] || mapAny[idpId];
@@ -280,10 +277,23 @@ $(document).ready(function () {
         return final;
     }
 
+    // ✅ NEW: cek apakah ada item latest yang statusnya revised
+    function hasAnyRevised(latestMap) {
+        try {
+            return Object.values(latestMap || {}).some(it => (it?.status || '') === 'revised');
+        } catch (e) {
+            return false;
+        }
+    }
+
     function renderMid() {
         const idpRows = STATE.idpRows || [];
         const flags = STATE.flags || {};
-        const midLocked = !!flags.midLocked;
+
+        // ✅ revised => UNLOCK
+        const hasMidRevised = hasAnyRevised(STATE.latestMidByIdp);
+        const midLocked = (!!flags.midLocked) && !hasMidRevised;
+
         const hasMidDraft = !!flags.hasMidDraft;
 
         let formHtml = '';
@@ -416,8 +426,22 @@ $(document).ready(function () {
     function renderOne() {
         const idpRows = STATE.idpRows || [];
         const flags = STATE.flags || {};
-        const canAccessOne = !!flags.canAccessOne;
-        const oneLocked = !!flags.oneLocked;
+
+        /**
+         * RULE BARU:
+         * - Kalau Mid-Year ada revised => One-Year HARUS LOCK lagi
+         *   (meskipun flags.canAccessOne true dari backend).
+         */
+        const hasMidRevised = hasAnyRevised(STATE.latestMidByIdp);
+        const forceLockOneBecauseMidRevised = hasMidRevised;
+
+        // canAccessOne final
+        const canAccessOne = (!!flags.canAccessOne) && !forceLockOneBecauseMidRevised;
+
+        // ✅ revised => UNLOCK (untuk form One-Year) jika memang bisa akses tab
+        const hasOneRevised = hasAnyRevised(STATE.latestOneByIdp);
+        const oneLocked = (!!flags.oneLocked) && !hasOneRevised;
+
         const hasOneDraft = !!flags.hasOneDraft;
 
         // nav state
@@ -430,16 +454,17 @@ $(document).ready(function () {
         }
 
         if (!canAccessOne) {
+            const reason = forceLockOneBecauseMidRevised
+                ? `Mid-Year direvisi. Silakan perbaiki dan <strong>submit ulang Mid-Year</strong> terlebih dahulu sebelum akses One-Year.`
+                : `Silakan lengkapi dan <strong>submit Mid-Year Development</strong> terlebih dahulu sebelum mengisi <strong>One-Year Development</strong>.`;
+
             $('#one-wrapper').html(`
                 <div class="locked-wrapper">
                     <div class="locked-blur"><div style="height:220px;"></div></div>
                     <div class="locked-overlay">
                         <i class="bi bi-lock-fill fs-1 mb-3 text-primary"></i>
                         <h5 class="fw-bold mb-2">One-Year Review Locked</h5>
-                        <p class="text-muted mb-0">
-                            Silakan lengkapi dan <strong>submit Mid-Year Development</strong> terlebih dahulu
-                            sebelum mengisi <strong>One-Year Development</strong>.
-                        </p>
+                        <p class="text-muted mb-0">${reason}</p>
                     </div>
                 </div>
             `);
@@ -573,7 +598,7 @@ $(document).ready(function () {
         STATE.flags = payload.flags || {};
         STATE.draftIds = payload.draftIds || { midDraftIdpIds: [], oneDraftIdpIds: [] };
 
-        // ✅ NEW: bikin latest map, supaya textarea terisi
+        // bikin latest map supaya textarea terisi
         STATE.latestMidByIdp = buildLatestByIdp(STATE.midHistory);
         STATE.latestOneByIdp = buildLatestByIdp(STATE.oneHistory);
 
@@ -697,7 +722,7 @@ $(document).ready(function () {
                     });
                     Swal.fire({ icon:'error', title:'Validasi Gagal', text:'Mohon periksa kembali isian form Anda.' });
                 } else {
-                    Swal.fire({ icon:'error', title:'Error!', text:'Terjadi kesalahan pada server. Silakan coba lagi.' });
+                    Swal.fire({ icon:'error', title:'Error!', text:'Terjadi kesalahan saat submit.' });
                 }
             }
         });

@@ -10,7 +10,7 @@ class DevelopmentOne extends Model
     use HasFactory;
 
 
-    protected $fillable = [  'employee_id','idp_id','development_program', 'evaluation_result'];
+    protected $fillable = [  'employee_id','idp_id','development_program', 'evaluation_result', 'status'];
 
     public function employee()
     {
