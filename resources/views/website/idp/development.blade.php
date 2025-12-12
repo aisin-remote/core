@@ -364,9 +364,10 @@ $(document).ready(function () {
             hist.forEach(d => {
                 histRows += `
                     <tr data-mid-idp-id="${escapeHtml(d.idp_id)}">
-                        <td>${escapeHtml(d.development_program || '-')}</td>
                         <td>${escapeHtml(d.alc || '-')}</td>
+                        <td>${escapeHtml(d.development_program || '-')}</td>
                         <td>${escapeHtml(d.development_achievement || '-')}</td>
+                        <td>${escapeHtml(d.next_action || '-')}</td>
                         <td>
                             <span class="badge status-badge ${badgeClass(d.status)}" data-status="${escapeHtml(d.status)}">
                                 ${escapeHtml(titleCase(d.status))}
@@ -390,9 +391,10 @@ $(document).ready(function () {
                 <table class="table table-sm table-bordered table-hover table-sm-custom">
                     <thead class="table-light">
                         <tr>
-                            <th>Program</th>
                             <th>ALC</th>
+                            <th>Development Program</th>
                             <th>Achievement</th>
+                            <th>Next Action</th>
                             <th>Status</th>
                             <th style="width:120px;">Date</th>
                         </tr>
@@ -515,8 +517,8 @@ $(document).ready(function () {
             hist.forEach(d => {
                 histRows += `
                     <tr data-one-idp-id="${escapeHtml(d.idp_id)}">
-                        <td>${escapeHtml(d.development_program || '-')}</td>
                         <td>${escapeHtml(d.alc || '-')}</td>
+                        <td>${escapeHtml(d.development_program || '-')}</td>
                         <td>${escapeHtml(d.evaluation_result || '-')}</td>
                         <td>
                             <span class="badge status-badge ${badgeClass(d.status)}" data-status="${escapeHtml(d.status)}">
@@ -541,8 +543,8 @@ $(document).ready(function () {
                 <table class="table table-sm table-bordered table-hover table-sm-custom">
                     <thead class="table-light">
                         <tr>
-                            <th>Program</th>
                             <th>ALC</th>
+                            <th>Development Program</th>
                             <th>Evaluation Result</th>
                             <th>Status</th>
                             <th style="width:120px;">Date</th>
