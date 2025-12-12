@@ -16,7 +16,15 @@ use RuntimeException;
 
 class DevelopmentController extends Controller
 {
+
     public function developmentForm($employee_id)
+    {
+        $title = 'IDP Development - ' . ($assessment->employee->name ?? '-');
+
+        return view('website.idp.development', compact('title', 'employee_id'));
+    }
+
+    public function developmentJson($employee_id)
     {
         $assessment = Assessment::with([
             'employee',
@@ -57,25 +65,299 @@ class DevelopmentController extends Controller
 
         $relevantAlcIds = $assessment->details->pluck('alc_id')->unique()->values();
 
+        // ambil IDP by alc
         $idps = Idp::with('alc')
             ->where('assessment_id', $assessment->id)
             ->whereIn('alc_id', $relevantAlcIds)
             ->get()
             ->groupBy('alc_id');
 
+        /**
+         * Susun idpRows seperti yang kamu lakukan di blade sebelumnya
+         */
+        $idpRows = [];
+        $alcByIdp = [];
+
+        foreach ($assessment->details as $detail) {
+            $alcName = $detail->alc->name ?? ($detail->alc->title ?? ('ALC ' . $detail->alc_id));
+            $alcId   = $detail->alc_id;
+
+            $detailIdps = $idps[$alcId] ?? collect();
+            if ($detailIdps->isEmpty()) continue;
+
+            $latestIdp = $detailIdps->sortByDesc('updated_at')->first();
+            if (!$latestIdp) continue;
+
+            $idpRows[] = [
+                'alc_name' => $alcName,
+                'alc_id'   => $alcId,
+                'idp'      => [
+                    'id'                  => $latestIdp->id,
+                    'category'            => $latestIdp->category,
+                    'development_program' => $latestIdp->development_program,
+                    'development_target'  => $latestIdp->development_target,
+                    'date'                => $latestIdp->date,
+                ],
+            ];
+
+            foreach ($detailIdps as $idp) {
+                $alcByIdp[$idp->id] = $alcName;
+            }
+        }
+
+        // Mid history
         $midDevs = Development::where('employee_id', $employee_id)
             ->orderBy('created_at', 'desc')
             ->get()
             ->groupBy('idp_id');
 
+        // One history
         $oneDevs = DevelopmentOne::where('employee_id', $employee_id)
             ->orderBy('created_at', 'desc')
             ->get()
             ->groupBy('idp_id');
 
+        // Flags lock
+        $midDrafts   = $midDevs->flatten()->where('status', 'draft');
+        $hasMidDraft = $midDrafts->isNotEmpty();
+
+        $oneDrafts   = $oneDevs->flatten()->where('status', 'draft');
+        $hasOneDraft = $oneDrafts->isNotEmpty();
+
+        $midDraftIdpIds = $midDrafts->pluck('idp_id')->values()->all();
+        $oneDraftIdpIds = $oneDrafts->pluck('idp_id')->values()->all();
+
+        $hasMidSubmitted = $midDevs->flatten()->where('status', 'submitted')->isNotEmpty();
+
+        // Mid dikunci kalau sudah ada data & tidak ada draft
+        $midLocked = $midDevs->flatten()->isNotEmpty() && !$hasMidDraft;
+        // One dikunci kalau sudah ada data & tidak ada draft
+        $oneLocked = $oneDevs->flatten()->isNotEmpty() && !$hasOneDraft;
+
+        // One-Year boleh diisi hanya kalau Mid submitted & tidak ada Mid draft
+        $canAccessOne = $hasMidSubmitted && !$hasMidDraft;
+
+        /**
+         * Ubah history ke format array siap render (tanpa HTML)
+         */
+        $midHistory = [];
+        foreach ($midDevs as $idpId => $list) {
+            foreach ($list as $dev) {
+                $midHistory[] = [
+                    'id'                     => $dev->id,
+                    'idp_id'                 => $dev->idp_id,
+                    'alc'                    => $alcByIdp[$dev->idp_id] ?? '-',
+                    'development_program'    => $dev->development_program,
+                    'development_achievement' => $dev->development_achievement,
+                    'next_action'            => $dev->next_action,
+                    'status'                 => $dev->status,
+                    'created_at'             => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                ];
+            }
+        }
+
+        $oneHistory = [];
+        foreach ($oneDevs as $idpId => $list) {
+            foreach ($list as $dev) {
+                $oneHistory[] = [
+                    'id'                  => $dev->id,
+                    'idp_id'              => $dev->idp_id,
+                    'alc'                 => $alcByIdp[$dev->idp_id] ?? '-',
+                    'development_program' => $dev->development_program,
+                    'evaluation_result'   => $dev->evaluation_result,
+                    'status'              => $dev->status,
+                    'created_at'          => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                ];
+            }
+        }
+
         $title = 'IDP Development - ' . ($assessment->employee->name ?? '-');
 
-        return view('website.idp.development', compact('assessment', 'title', 'idps', 'midDevs', 'oneDevs'));
+        return response()->json([
+            'status' => 'success',
+            'title'  => $title,
+            'assessment' => [
+                'id'       => $assessment->id,
+                'date'     => $assessment->date,
+                'purpose'  => $assessment->purpose,
+                'lembaga'  => $assessment->lembaga,
+            ],
+            'employee' => [
+                'id'         => $assessment->employee->id,
+                'name'       => $assessment->employee->name,
+                'npk'        => $assessment->employee->npk,
+                'position'   => $assessment->employee->position,
+                'department' => $assessment->employee->department_name ?? ($assessment->employee->department ?? null),
+                'grade'      => $assessment->employee->grade ?? null,
+            ],
+            'idpRows'     => $idpRows,
+            'midHistory'  => $midHistory,
+            'oneHistory'  => $oneHistory,
+            'flags' => [
+                'hasMidDraft'     => $hasMidDraft,
+                'hasOneDraft'     => $hasOneDraft,
+                'midLocked'       => $midLocked,
+                'oneLocked'       => $oneLocked,
+                'canAccessOne'    => $canAccessOne,
+                'hasMidSubmitted' => $hasMidSubmitted,
+            ],
+            'draftIds' => [
+                'midDraftIdpIds' => $midDraftIdpIds,
+                'oneDraftIdpIds' => $oneDraftIdpIds,
+            ],
+        ]);
+    }
+
+    public function storeMidYear(Request $request, $employee_id)
+    {
+        $validator = Validator::make($request->all(), [
+            'idp_id'                  => 'required|array',
+            'idp_id.*'                => 'nullable|integer|exists:idp,id',
+            'development_program'     => 'required|array',
+            'development_program.*'   => 'nullable|string|max:255',
+            'development_achievement' => 'required|array',
+            'development_achievement.*' => 'nullable|string',
+            'next_action'             => 'required|array',
+            'next_action.*'           => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validasi gagal.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $idpIds      = $request->input('idp_id', []);
+        $programs    = $request->input('development_program', []);
+        $achievements = $request->input('development_achievement', []);
+        $nextActions = $request->input('next_action', []);
+
+        $created = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($idpIds as $idx => $idpId) {
+                $idpId   = $idpId ?: null;
+                $program = $programs[$idx] ?? null;
+                $ach     = trim($achievements[$idx] ?? '');
+                $next    = trim($nextActions[$idx] ?? '');
+
+                // Kalau semua kosong, skip
+                if ($ach === '' && $next === '') {
+                    continue;
+                }
+
+                $dev = Development::create([
+                    'employee_id'             => $employee_id,
+                    'idp_id'                  => $idpId,
+                    'development_program'     => $program,
+                    'development_achievement' => $ach,
+                    'next_action'             => $next,
+                    'status'                  => 'draft',
+                ]);
+
+                $created[] = [
+                    'id'                     => $dev->id,
+                    'idp_id'                 => $dev->idp_id,
+                    'development_program'    => $dev->development_program,
+                    'development_achievement' => $dev->development_achievement,
+                    'status'                 => $dev->status,
+                    'created_at'             => $dev->created_at
+                        ? $dev->created_at->timezone('Asia/Jakarta')->format('d-m-Y H:i')
+                        : now()->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                ];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Mid-Year Development berhasil disimpan.',
+                'data'    => $created, 
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menyimpan Mid-Year Development.',
+            ], 500);
+        }
+    }
+
+    public function storeOneYear(Request $request, $employee_id)
+    {
+        $validator = Validator::make($request->all(), [
+            'idp_id'                => 'required|array',
+            'idp_id.*'              => 'nullable|integer|exists:idp,id',
+            'development_program'   => 'required|array',
+            'development_program.*' => 'nullable|string|max:255',
+            'evaluation_result'     => 'required|array',
+            'evaluation_result.*'   => 'nullable|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validasi gagal.',
+                'errors'  => $validator->errors(),
+            ], 422);
+        }
+
+        $idpIds    = $request->input('idp_id', []);
+        $programs  = $request->input('development_program', []);
+        $results   = $request->input('evaluation_result', []);
+
+        $created = [];
+
+        DB::beginTransaction();
+        try {
+            foreach ($idpIds as $idx => $idpId) {
+                $idpId  = $idpId ?: null;
+                $program = $programs[$idx] ?? null;
+                $result  = trim($results[$idx] ?? '');
+
+                if ($result === '') {
+                    continue;
+                }
+
+                $dev = DevelopmentOne::create([
+                    'employee_id'        => $employee_id,
+                    'idp_id'             => $idpId,
+                    'development_program' => $program,
+                    'evaluation_result'  => $result,
+                    'status'             => 'draft',
+                ]);
+
+                $created[] = [
+                    'id'                 => $dev->id,
+                    'idp_id'             => $dev->idp_id,
+                    'development_program' => $dev->development_program,
+                    'evaluation_result'  => $dev->evaluation_result,
+                    'status'             => $dev->status,
+                    'created_at'         => $dev->created_at
+                        ? $dev->created_at->timezone('Asia/Jakarta')->format('d-m-Y H:i')
+                        : now()->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                ];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'One-Year Development berhasil disimpan.',
+                'data'    => $created,
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Gagal menyimpan One-Year Development.',
+            ], 500);
+        }
     }
 
     public function submitMidYear(Request $request, $employee_id)
