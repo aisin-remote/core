@@ -2,96 +2,31 @@
 
 @push('custom-css')
     <style>
-        .legend-circle {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
+        .legend-circle { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
         .section-title {
-            font-weight: 600;
-            font-size: 1.1rem;
-            border-left: 4px solid #0d6efd;
-            padding-left: 10px;
-            margin-top: 1.5rem;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
+            font-weight: 600; font-size: 1.1rem; border-left: 4px solid #0d6efd;
+            padding-left: 10px; margin-top: 1.5rem; margin-bottom: 1rem;
+            display: flex; align-items: center; gap: 0.5rem;
         }
+        .section-title i { color: #0d6efd; font-size: 1.1rem; }
+        .table-sm-custom th, .table-sm-custom td { padding: 0.5rem 0.75rem; vertical-align: top; }
+        .badge-pill { border-radius: 999px; padding-inline: 0.7rem; }
+        .text-muted-small { font-size: 0.8rem; color: #6b7280; }
+        .card-header-sticky { position: sticky; top: 0; z-index: 5; background: #fff; }
 
-        .section-title i {
-            color: #0d6efd;
-            font-size: 1.1rem;
-        }
+        .invalid-feedback { display: none; font-size: 0.875em; color: #dc3545; }
+        .is-invalid ~ .invalid-feedback { display: block; }
 
-        .table-sm-custom th,
-        .table-sm-custom td {
-            padding: 0.5rem 0.75rem;
-            vertical-align: top;
-        }
-
-        .badge-pill {
-            border-radius: 999px;
-            padding-inline: 0.7rem;
-        }
-
-        .text-muted-small {
-            font-size: 0.8rem;
-            color: #6b7280;
-        }
-
-        .card-header-sticky {
-            position: sticky;
-            top: 0;
-            z-index: 5;
-            background: #fff;
-        }
-
-        .invalid-feedback {
-            display: none;
-            font-size: 0.875em;
-            color: #dc3545;
-        }
-
-        .is-invalid~.invalid-feedback {
-            display: block;
-        }
-
-        @media (max-width: 768px) {
-            .flex-wrap-sm {
-                flex-wrap: wrap;
-            }
-        }
+        @media (max-width: 768px) { .flex-wrap-sm { flex-wrap: wrap; } }
 
         /* ====== LOCKED ONE-YEAR TAB ====== */
-        .nav-link-one-locked {
-            opacity: 0.6;
-        }
-
-        .locked-wrapper {
-            position: relative;
-            min-height: 220px;
-        }
-
-        .locked-blur {
-            filter: blur(2px);
-            pointer-events: none;
-            user-select: none;
-            min-height: 220px;
-        }
-
+        .nav-link-one-locked { opacity: 0.6; }
+        .locked-wrapper { position: relative; min-height: 220px; }
+        .locked-blur { filter: blur(2px); pointer-events: none; user-select: none; min-height: 220px; }
         .locked-overlay {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            background: rgba(255, 255, 255, 0.85);
-            z-index: 2;
-            text-align: center;
+            position: absolute; inset: 0; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; background: rgba(255,255,255,0.85);
+            z-index: 2; text-align: center;
         }
     </style>
 @endpush
@@ -101,61 +36,38 @@
 @endsection
 
 @section('breadcrumbs')
-    IDP / {{ $assessment->employee->name ?? '-' }} / Development
+    <span id="bc-text">IDP / Development</span>
 @endsection
 
 @section('main')
-    @php
-        // Persiapan data IDP
-        $idpRows = [];
-        $alcByIdp = [];
-
-        foreach ($assessment->details as $detail) {
-            $alcName = $detail->alc->name ?? ($detail->alc->title ?? 'ALC ' . $detail->alc_id);
-            $alcId = $detail->alc_id;
-
-            $detailIdps = $idps[$alcId] ?? collect();
-
-            if ($detailIdps->isEmpty()) {
-                continue;
-            }
-
-            $latestIdp = $detailIdps->sortByDesc('updated_at')->first();
-
-            if ($latestIdp) {
-                $idpRows[] = [
-                    'alc_name' => $alcName,
-                    'alc_id'   => $alcId,
-                    'idp'      => $latestIdp,
-                ];
-            }
-
-            foreach ($detailIdps as $idp) {
-                $alcByIdp[$idp->id] = $alcName;
-            }
-        }
-
-        $midDrafts    = $midDevs->flatten()->where('status', 'draft');
-        $hasMidDraft  = $midDrafts->isNotEmpty();
-        $oneDrafts    = $oneDevs->flatten()->where('status', 'draft');
-        $hasOneDraft  = $oneDrafts->isNotEmpty();
-
-        $midDraftIdpIds = $midDrafts->pluck('idp_id')->toArray();
-        $oneDraftIdpIds = $oneDrafts->pluck('idp_id')->toArray();
-
-        $hasMidSubmitted = $midDevs->flatten()->where('status', 'submitted')->isNotEmpty();
-        $canAccessOne    = $hasMidSubmitted && !$hasMidDraft;
-    @endphp
-
     {{-- Meta CSRF untuk AJAX --}}
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <div id="kt_app_content_container" class="app-container container-fluid">
+
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap-sm gap-3">
-            <h3 class="mb-0">{{ $title ?? 'IDP Development' }}</h3>
+            <h3 class="mb-0" id="page-title">{{ $title ?? 'IDP Development' }}</h3>
             <a href="{{ route('idp.index') }}" class="btn btn-light">
                 <i class="fas fa-arrow-left me-2"></i> Back to IDP List
             </a>
+        </div>
+
+        {{-- CARD: Employee Info (diisi dari JSON) --}}
+        <div class="card mb-5" id="card-employee" style="display:none;">
+            <div class="card-body d-flex flex-wrap gap-4 align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="symbol symbol-50px symbol-circle bg-light-primary text-primary fw-bold" id="emp-initial">?</div>
+                    <div>
+                        <div class="fw-bold fs-4" id="emp-name">-</div>
+                        <div class="text-muted" id="emp-meta">-</div>
+                    </div>
+                </div>
+                <div class="border-start ps-4 ms-2" id="assessment-meta">
+                    <div><strong>Assessment Purpose:</strong> <span id="ass-purpose">-</span></div>
+                    <div><strong>Assessor:</strong> <span id="ass-lembaga">-</span></div>
+                    <div><strong>Date:</strong> <span id="ass-date">-</span></div>
+                </div>
+            </div>
         </div>
 
         {{-- CARD: IDP List (Read Only) --}}
@@ -163,40 +75,8 @@
             <div class="card-header card-header-sticky">
                 <h4 class="card-title mb-0">Individual Development Program (IDP)</h4>
             </div>
-            <div class="card-body">
-                @if (count($idpRows))
-                    <div class="table-responsive">
-                        <table class="table table-bordered table-hover table-sm-custom">
-                            <thead class="table-light">
-                                <tr>
-                                    <th style="width: 5%;">No</th>
-                                    <th style="width: 20%;">ALC</th>
-                                    <th style="width: 15%;">Category</th>
-                                    <th>Development Program</th>
-                                    <th style="width: 20%;">Development Target</th>
-                                    <th style="width: 12%;">Due Date</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach ($idpRows as $idx => $row)
-                                    @php $idp = $row['idp']; @endphp
-                                    <tr>
-                                        <td>{{ $idx + 1 }}</td>
-                                        <td>{{ $row['alc_name'] }}</td>
-                                        <td>{{ $idp->category ?? '-' }}</td>
-                                        <td>{{ $idp->development_program ?? '-' }}</td>
-                                        <td>{{ $idp->development_target ?? '-' }}</td>
-                                        <td>
-                                            {{ !empty($idp->date) ? \Illuminate\Support\Carbon::parse($idp->date)->timezone('Asia/Jakarta')->format('d-m-Y') : '-' }}
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @else
-                    <p class="text-muted mb-0">Belum ada IDP.</p>
-                @endif
+            <div class="card-body" id="idp-list-wrapper">
+                <div class="text-muted">Loading...</div>
             </div>
         </div>
 
@@ -205,19 +85,13 @@
             <div class="card-header card-header-sticky">
                 <ul class="nav nav-tabs card-header-tabs" role="tablist" style="cursor:pointer">
                     <li class="nav-item">
-                        <a class="nav-link active" data-bs-toggle="tab" href="#tab-mid" role="tab">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#tab-mid" role="tab" id="tab-mid-link">
                             Mid-Year Review
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link {{ $canAccessOne ? '' : 'nav-link-one-locked' }}"
-                           data-bs-toggle="tab"
-                           href="#tab-one"
-                           role="tab">
-                            One-Year Review
-                            @unless($canAccessOne)
-                                <i class="bi bi-lock-fill ms-1 small"></i>
-                            @endunless
+                        <a class="nav-link" data-bs-toggle="tab" href="#tab-one" role="tab" id="tab-one-link">
+                            One-Year Review <i class="bi bi-lock-fill ms-1 small d-none" id="one-lock-icon"></i>
                         </a>
                     </li>
                 </ul>
@@ -225,418 +99,696 @@
 
             <div class="card-body">
                 <div class="tab-content">
-                    {{-- ================= TAB: Mid-Year Review ================= --}}
+
+                    {{-- TAB MID --}}
                     <div class="tab-pane fade show active" id="tab-mid" role="tabpanel">
-                        @if (!count($idpRows))
-                            <p class="text-muted">Tidak ada IDP.</p>
-                        @else
-                            <form id="form-mid-year" method="POST"
-                                  action="{{ route('idp.storeMidYear', ['employee_id' => $assessment->employee_id]) }}">
-                                @csrf
-                                <div class="table-responsive mb-3">
-                                    <table class="table table-bordered table-hover table-sm-custom align-middle">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th style="width: 5%;">No</th>
-                                                <th style="width: 20%;">ALC</th>
-                                                <th style="width: 25%;">Development Program</th>
-                                                <th style="width: 25%;">Achievement (Mid-Year)</th>
-                                                <th style="width: 25%;">Next Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($idpRows as $idx => $row)
-                                                @php
-                                                    $idp   = $row['idp'];
-                                                    $idpId = $idp->id;
-
-                                                    $midList = $midDevs[$idpId] ?? collect();
-                                                    $lastMid = $midList->first();
-                                                @endphp
-                                                <tr>
-                                                    <td>{{ $idx + 1 }}</td>
-                                                    <td>{{ $row['alc_name'] }}</td>
-                                                    <td>
-                                                        {{ $idp->development_program ?? '-' }}
-                                                        <input type="hidden" name="idp_id[]" value="{{ $idpId }}">
-                                                        <input type="hidden" name="development_program[]"
-                                                               value="{{ $idp->development_program }}">
-                                                    </td>
-                                                    <td>
-                                                        <textarea name="development_achievement[]" data-index="{{ $idx }}" class="form-control form-control-sm"
-                                                                  rows="3" placeholder="Tuliskan capaian pengembangan">{{ old("development_achievement.$idx", $lastMid->development_achievement ?? '') }}</textarea>
-                                                        <div class="invalid-feedback"
-                                                             id="error-development_achievement-{{ $idx }}"></div>
-                                                    </td>
-                                                    <td>
-                                                        <textarea name="next_action[]" data-index="{{ $idx }}" class="form-control form-control-sm" rows="3"
-                                                                  placeholder="Next action">{{ old("next_action.$idx", $lastMid->next_action ?? '') }}</textarea>
-                                                        <div class="invalid-feedback"
-                                                             id="error-next_action-{{ $idx }}"></div>
-                                                    </td>
-                                                </tr>
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                {{-- Tombol Save/Update Draft --}}
-                                <div class="d-flex justify-content-end gap-2 mb-4">
-                                    <button type="submit" class="btn btn-primary" id="btn-save-mid">
-                                        <i class="fas fa-save me-2"></i>
-                                        {{ $hasMidDraft ? 'Update Draft' : 'Save Draft' }}
-                                    </button>
-                                </div>
-                            </form>
-                        @endif
-
-                        {{-- History Table Mid Year --}}
-                        @if ($midDevs->isNotEmpty())
-                            <hr class="my-4">
-                            <div class="section-title mb-0">
-                                <i class="bi bi-bar-chart-line-fill"></i> Mid-Year History
-                            </div>
-                            <div class="table-responsive mt-3">
-                                <table class="table table-sm table-bordered table-hover table-sm-custom">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th>Program</th>
-                                            <th>ALC</th>
-                                            <th>Achievement</th>
-                                            <th>Status</th>
-                                            <th style="width: 120px;">Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @foreach ($midDevs as $idpId => $devList)
-                                            @foreach ($devList as $dev)
-                                                <tr>
-                                                    <td>{{ $dev->development_program ?? '-' }}</td>
-                                                    <td>{{ $alcByIdp[$dev->idp_id] ?? '-' }}</td>
-                                                    <td>{{ $dev->development_achievement ?? '-' }}</td>
-                                                    <td>
-                                                        <span
-                                                            class="badge badge-{{ $dev->status == 'draft' ? 'warning' : ($dev->status == 'submitted' ? 'info' : 'success') }}">
-                                                            {{ ucfirst($dev->status) }}
-                                                        </span>
-                                                    </td>
-                                                    <td>{{ optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i') }}</td>
-                                                </tr>
-                                            @endforeach
-                                        @endforeach
-                                    </tbody>
-                                </table>
-                                <div class="d-flex justify-content-end align-items-center">
-                                    @if ($hasMidDraft)
-                                        <button type="button" class="btn btn-success" id="btn-submit-mid">
-                                            <i class="fas fa-paper-plane me-2"></i> Submit Draft
-                                        </button>
-                                    @endif
-                                </div>
-                            </div>
-                        @endif
+                        <div id="mid-wrapper">
+                            <div class="text-muted">Loading...</div>
+                        </div>
                     </div>
 
-                    {{-- ================= TAB: One-Year Review ================= --}}
+                    {{-- TAB ONE --}}
                     <div class="tab-pane fade" id="tab-one" role="tabpanel">
-                        @if (!$canAccessOne)
-                            {{-- One-Year locked sampai Mid-Year submitted & tidak ada draft --}}
-                            <div class="locked-wrapper">
-                                <div class="locked-blur">
-                                    {{-- hanya placeholder tinggi supaya ada area yang di-blur --}}
-                                    <div style="height:220px;"></div>
-                                </div>
-                                <div class="locked-overlay">
-                                    <i class="bi bi-lock-fill fs-1 mb-3 text-primary"></i>
-                                    <h5 class="fw-bold mb-2">One-Year Review Locked</h5>
-                                    <p class="text-muted mb-0">
-                                        Silakan lengkapi dan <strong>submit Mid-Year Development</strong> terlebih dahulu
-                                        sebelum mengisi <strong>One-Year Development</strong>.
-                                    </p>
-                                </div>
-                            </div>
-                        @else
-                            {{-- ====== One-Year form & history hanya muncul kalau sudah boleh diakses ====== --}}
-                            @if (!count($idpRows))
-                                <p class="text-muted">Tidak ada IDP.</p>
-                            @else
-                                <form id="form-one-year" method="POST"
-                                      action="{{ route('idp.storeOneYear', ['employee_id' => $assessment->employee_id]) }}">
-                                    @csrf
-                                    <div class="table-responsive mb-3">
-                                        <table class="table table-bordered table-hover table-sm-custom align-middle">
-                                            <thead class="table-light">
-                                                <tr>
-                                                    <th style="width: 5%;">No</th>
-                                                    <th style="width: 20%;">ALC</th>
-                                                    <th style="width: 30%;">Development Program</th>
-                                                    <th style="width: 45%;">Evaluation Result (One-Year)</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                @foreach ($idpRows as $idx => $row)
-                                                    @php
-                                                        $idp   = $row['idp'];
-                                                        $idpId = $idp->id;
-
-                                                        $oneList = $oneDevs[$idpId] ?? collect();
-                                                        $lastOne = $oneList->first();
-                                                    @endphp
-                                                    <tr>
-                                                        <td>{{ $idx + 1 }}</td>
-                                                        <td>{{ $row['alc_name'] }}</td>
-                                                        <td>
-                                                            {{ $idp->development_program ?? '-' }}
-                                                            <input type="hidden" name="idp_id[]" value="{{ $idpId }}">
-                                                            <input type="hidden" name="development_program[]"
-                                                                   value="{{ $idp->development_program }}">
-                                                        </td>
-                                                        <td>
-                                                            <textarea name="evaluation_result[]" data-index="{{ $idx }}" class="form-control form-control-sm"
-                                                                      rows="3" placeholder="Tuliskan hasil evaluasi">{{ old("evaluation_result.$idx", $lastOne->evaluation_result ?? '') }}</textarea>
-                                                            <div class="invalid-feedback"
-                                                                 id="error-evaluation_result-{{ $idx }}"></div>
-                                                        </td>
-                                                    </tr>
-                                                @endforeach
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    {{-- Tombol Save/Update Draft --}}
-                                    <div class="d-flex justify-content-end gap-2 mb-4">
-                                        <button type="submit" class="btn btn-primary" id="btn-save-one">
-                                            <i class="fas fa-save me-2"></i>
-                                            {{ $hasOneDraft ? 'Update Draft' : 'Save Draft' }}
-                                        </button>
-                                    </div>
-                                </form>
-                            @endif
-
-                            {{-- History Table One Year --}}
-                            @if ($oneDevs->isNotEmpty())
-                                <hr class="my-4">
-                                <div class="section-title mb-0">
-                                    <i class="bi bi-calendar-check-fill"></i> One-Year History
-                                </div>
-
-                                <div class="table-responsive mt-3">
-                                    <table class="table table-sm table-bordered table-hover table-sm-custom">
-                                        <thead class="table-light">
-                                            <tr>
-                                                <th>Program</th>
-                                                <th>ALC</th>
-                                                <th>Evaluation Result</th>
-                                                <th>Status</th>
-                                                <th style="width: 120px;">Date</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($oneDevs as $idpId => $devList)
-                                                @foreach ($devList as $dev)
-                                                    <tr>
-                                                        <td>{{ $dev->development_program ?? '-' }}</td>
-                                                        <td>{{ $alcByIdp[$dev->idp_id] ?? '-' }}</td>
-                                                        <td>{{ $dev->evaluation_result ?? '-' }}</td>
-                                                        <td>
-                                                            <span
-                                                                class="badge badge-{{ $dev->status == 'draft' ? 'warning' : ($dev->status == 'submitted' ? 'info' : 'success') }}">
-                                                                {{ ucfirst($dev->status) }}
-                                                            </span>
-                                                        </td>
-                                                        <td>{{ optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i') }}</td>
-                                                    </tr>
-                                                @endforeach
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                    <div class="d-flex justify-content-end align-items-center">
-                                        @if ($hasOneDraft)
-                                            <button type="button" class="btn btn-success" id="btn-submit-one">
-                                                <i class="fas fa-paper-plane me-2"></i>
-                                                Submit {{ $oneDrafts->count() }} Draft
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
-                            @endif
-                        @endif
+                        <div id="one-wrapper">
+                            <div class="text-muted">Loading...</div>
+                        </div>
                     </div>
+
                 </div>
             </div>
         </div>
+
     </div>
 @endsection
 
 @push('scripts')
-    <script>
-        $(document).ready(function() {
+<script>
+$(document).ready(function () {
+    const EMPLOYEE_ID = @json($employee_id);
 
-            // Array IDP ID Draft yang sudah diambil di PHP (digunakan untuk submit)
-            const midDraftIdpIds = @json($midDraftIdpIds);
-            const oneDraftIdpIds = @json($oneDraftIdpIds);
+    const URL_JSON = @json(route('development.json', ['employee_id' => $employee_id]));
+    const URL_SAVE_MID = @json(route('idp.storeMidYear', ['employee_id' => $employee_id]));
+    const URL_SAVE_ONE = @json(route('idp.storeOneYear', ['employee_id' => $employee_id]));
+    const URL_SUBMIT_MID = @json(route('development.submitMidYear', ['employee_id' => $employee_id]));
+    const URL_SUBMIT_ONE = @json(route('development.submitOneYear', ['employee_id' => $employee_id]));
 
-            // =========================================================
-            // HANDLER 1: SAVE / UPDATE DRAFT (POST ke storeMidYear/storeOneYear)
-            // =========================================================
-            function handleFormSave(formId, btnId, successTitle) {
-                $(formId).on('submit', function(e) {
-                    e.preventDefault();
+    const TAB_STORE_KEY = `dev_active_tab_${EMPLOYEE_ID}`;
 
-                    let form = $(this);
-                    let btn = $(btnId);
-                    let originalBtnText = btn.html();
+    let STATE = {
+        idpRows: [],
+        midHistory: [],
+        oneHistory: [],
+        latestMidByIdp: {},     // ✅ NEW
+        latestOneByIdp: {},     // ✅ NEW
+        flags: {},
+        draftIds: { midDraftIdpIds: [], oneDraftIdpIds: [] }
+    };
 
-                    // Reset Error States
-                    form.find('.form-control').removeClass('is-invalid');
-                    form.find('.invalid-feedback').text('');
+    function csrfToken() {
+        return $('meta[name="csrf-token"]').attr('content');
+    }
 
-                    // Button Loading State
-                    btn.prop('disabled', true).html(
-                        '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...'
-                    );
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;')
+            .replaceAll('`', '&#96;');
+    }
 
-                    let formData = new FormData(this);
+    function titleCase(s) {
+        if (!s) return '-';
+        return s.charAt(0).toUpperCase() + s.slice(1);
+    }
 
-                    $.ajax({
-                        url: form.attr('action'),
-                        method: 'POST',
-                        data: formData,
-                        processData: false,
-                        contentType: false,
-                        success: function(response) {
-                            Swal.fire({
-                                title: successTitle || "Success!",
-                                text: response.message,
-                                icon: "success",
-                                confirmButtonText: "OK"
-                            }).then(() => {
-                                location.reload();
-                            });
-                        },
-                        error: function(xhr) {
-                            btn.prop('disabled', false).html(originalBtnText);
+    function badgeClass(status) {
+        if (status === 'draft') return 'badge-warning';
+        if (status === 'submitted') return 'badge-info';
+        if (status === 'approved') return 'badge-success';
+        if (status === 'checked') return 'badge-primary';
+        if (status === 'revised') return 'badge-danger';
+        return 'badge-secondary';
+    }
 
-                            if (xhr.status === 422) {
-                                let errors = xhr.responseJSON.errors;
+    function getActiveTabId() {
+        const active = $('.nav-tabs .nav-link.active').attr('href');
+        return active || '#tab-mid';
+    }
 
-                                $.each(errors, function(key, messages) {
-                                    let parts = key.split('.');
-                                    let fieldName = parts[0];
-                                    let index = parts[1];
+    function activateTab(tabId) {
+        const el = document.querySelector(`.nav-tabs a[href="${tabId}"]`);
+        if (!el) return;
+        const tab = new bootstrap.Tab(el);
+        tab.show();
+    }
 
-                                    let inputField = form.find(
-                                        `[name="${fieldName}[]"][data-index="${index}"]`
-                                    );
+    // simpan tab aktif
+    $(document).on('shown.bs.tab', '.nav-tabs a[data-bs-toggle="tab"]', function (e) {
+        const href = $(e.target).attr('href');
+        if (href) localStorage.setItem(TAB_STORE_KEY, href);
+    });
 
-                                    if (inputField.length > 0) {
-                                        inputField.addClass('is-invalid');
-                                        $(`#error-${fieldName}-${index}`).text(messages[0]);
-                                    }
-                                });
+    function renderEmployee(emp, assessment, pageTitle) {
+        $('#page-title').text(pageTitle || 'IDP Development');
+        document.title = pageTitle || document.title;
 
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Validasi Gagal',
-                                    text: 'Mohon periksa kembali isian form Anda.'
-                                });
-                            } else {
-                                Swal.fire({
-                                    icon: 'error',
-                                    title: 'Error!',
-                                    text: 'Terjadi kesalahan pada server. Silakan coba lagi.'
-                                });
-                            }
-                        }
-                    });
-                });
-            }
+        const name = emp?.name || '-';
+        const initial = (name && name !== '-') ? name.substring(0,1).toUpperCase() : '?';
 
-            // =========================================================
-            // HANDLER 2: SUBMIT FINAL (POST ke submitMidYear/submitOneYear)
-            // =========================================================
-            function handleSubmission(btnId, submitUrl, draftIdpIds) {
-                $(btnId).on('click', function() {
-                    let btn = $(this);
-                    let originalBtnText = btn.html();
+        $('#emp-initial').text(initial);
+        $('#emp-name').text(name);
+        $('#emp-meta').html(`
+            ${escapeHtml(emp?.position || '-')}<br>
+            ${escapeHtml(emp?.department || '-')}
+        `);
 
-                    let idpIds = draftIdpIds;
+        $('#ass-purpose').text(assessment?.purpose || '-');
+        $('#ass-lembaga').text(assessment?.lembaga || '-');
+        $('#ass-date').text(assessment?.date || '-');
 
-                    if (idpIds.length === 0) {
-                        Swal.fire({
-                            icon: 'warning',
-                            title: 'Perhatian',
-                            text: 'Tidak ada Draft baru untuk disubmit.'
-                        });
-                        return;
-                    }
+        $('#card-employee').show();
+        $('#bc-text').text(`IDP / ${name} / Development`);
+    }
 
-                    Swal.fire({
-                        title: 'Konfirmasi Submit?',
-                        text: `Anda akan mengirim ${idpIds.length} item Draft. Pastikan semua data sudah benar!`,
-                        icon: 'warning',
-                        showCancelButton: true,
-                        confirmButtonText: 'Ya, Submit!',
-                        cancelButtonText: 'Batal'
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            btn.prop('disabled', true).html(
-                                '<span class="spinner-border spinner-border-sm"></span> Submitting...'
-                            );
+    function renderIdpList(idpRows) {
+        if (!Array.isArray(idpRows) || !idpRows.length) {
+            $('#idp-list-wrapper').html(`<p class="text-muted mb-0">Belum ada IDP.</p>`);
+            return;
+        }
 
-                            $.ajax({
-                                url: submitUrl,
-                                method: 'POST',
-                                data: {
-                                    _token: $('meta[name="csrf-token"]').attr('content'),
-                                    idp_id: idpIds
-                                },
-                                success: function(response) {
-                                    Swal.fire({
-                                        title: 'Success!',
-                                        text: response.message,
-                                        icon: 'success',
-                                    }).then(() => {
-                                        location.reload();
-                                    });
-                                },
-                                error: function(xhr) {
-                                    btn.prop('disabled', false).html(originalBtnText);
-                                    let msg = xhr.responseJSON.message || 'Terjadi kesalahan saat submit.';
-                                    Swal.fire({
-                                        icon: 'error',
-                                        title: 'Error!',
-                                        text: msg
-                                    });
-                                }
-                            });
-                        }
-                    });
-                });
-            }
+        let rowsHtml = '';
+        idpRows.forEach((row, idx) => {
+            const idp = row.idp || {};
+            rowsHtml += `
+                <tr>
+                    <td>${idx + 1}</td>
+                    <td>${escapeHtml(row.alc_name || '-')}</td>
+                    <td>${escapeHtml(idp.category || '-')}</td>
+                    <td>${escapeHtml(idp.development_program || '-')}</td>
+                    <td>${escapeHtml(idp.development_target || '-')}</td>
+                    <td>${escapeHtml(idp.date || '-')}</td>
+                </tr>
+            `;
+        });
 
-            // --- INISIALISASI ---
+        $('#idp-list-wrapper').html(`
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover table-sm-custom">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width:5%;">No</th>
+                            <th style="width:20%;">ALC</th>
+                            <th style="width:15%;">Category</th>
+                            <th>Development Program</th>
+                            <th style="width:20%;">Development Target</th>
+                            <th style="width:12%;">Due Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            </div>
+        `);
+    }
 
-            // Mid-Year
-            handleFormSave('#form-mid-year', '#btn-save-mid', 'Mid-Year Development Saved!');
-            if (midDraftIdpIds.length > 0) {
-                handleSubmission(
-                    '#btn-submit-mid',
-                    '{{ route('development.submitMidYear', ['employee_id' => $assessment->employee_id]) }}',
-                    midDraftIdpIds
-                );
-            }
+    // ✅ NEW: ambil latest per idp_id, prioritas draft
+    function buildLatestByIdp(historyList) {
+        const mapDraft = {};
+        const mapAny = {};
 
-            // One-Year
-            // (Submission One-Year hanya di-init kalau memang ada draft; kalau One-Year masih locked, oneDraftIdpIds akan kosong)
-            handleFormSave('#form-one-year', '#btn-save-one', 'One-Year Development Saved!');
-            if (oneDraftIdpIds.length > 0) {
-                handleSubmission(
-                    '#btn-submit-one',
-                    '{{ route('development.submitOneYear', ['employee_id' => $assessment->employee_id]) }}',
-                    oneDraftIdpIds
-                );
+        (historyList || []).forEach(item => {
+            const idpId = item?.idp_id;
+            if (!idpId) return;
+
+            // simpan first-any (anggap history dari backend sudah order by created_at desc)
+            if (!mapAny[idpId]) mapAny[idpId] = item;
+
+            // simpan first-draft
+            if (item.status === 'draft' && !mapDraft[idpId]) {
+                mapDraft[idpId] = item;
             }
         });
-    </script>
+
+        // final: kalau ada draft pakai draft, kalau tidak ada pakai latest any
+        const final = {};
+        Object.keys(mapAny).forEach(idpId => {
+            final[idpId] = mapDraft[idpId] || mapAny[idpId];
+        });
+
+        return final;
+    }
+
+    function renderMid() {
+        const idpRows = STATE.idpRows || [];
+        const flags = STATE.flags || {};
+        const midLocked = !!flags.midLocked;
+        const hasMidDraft = !!flags.hasMidDraft;
+
+        let formHtml = '';
+        if (!idpRows.length) {
+            formHtml = `<p class="text-muted">Tidak ada IDP.</p>`;
+        } else {
+            let body = '';
+            idpRows.forEach((row, idx) => {
+                const idp = row.idp || {};
+                const idpId = String(idp.id || '');
+                const latest = STATE.latestMidByIdp[idpId] || null;
+
+                const valAch = latest?.development_achievement ?? '';
+                const valNext = latest?.next_action ?? '';
+
+                body += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>${escapeHtml(row.alc_name || '-')}</td>
+                        <td>
+                            ${escapeHtml(idp.development_program || '-')}
+                            <input type="hidden" name="idp_id[]" value="${escapeHtml(idpId)}">
+                            <input type="hidden" name="development_program[]" value="${escapeHtml(idp.development_program || '')}">
+                        </td>
+                        <td>
+                            <textarea name="development_achievement[]" data-index="${idx}" class="form-control form-control-sm"
+                                rows="3" placeholder="Tuliskan capaian pengembangan" ${midLocked ? 'disabled' : ''}>${escapeHtml(valAch)}</textarea>
+                            <div class="invalid-feedback" id="error-development_achievement-${idx}"></div>
+                        </td>
+                        <td>
+                            <textarea name="next_action[]" data-index="${idx}" class="form-control form-control-sm"
+                                rows="3" placeholder="Next action" ${midLocked ? 'disabled' : ''}>${escapeHtml(valNext)}</textarea>
+                            <div class="invalid-feedback" id="error-next_action-${idx}"></div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            formHtml = `
+                <form id="form-mid-year" method="POST" action="${URL_SAVE_MID}">
+                    <input type="hidden" name="_token" value="${csrfToken()}">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-hover table-sm-custom align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:5%;">No</th>
+                                    <th style="width:20%;">ALC</th>
+                                    <th style="width:25%;">Development Program</th>
+                                    <th style="width:25%;">Achievement (Mid-Year)</th>
+                                    <th style="width:25%;">Next Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>${body}</tbody>
+                        </table>
+                    </div>
+
+                    ${midLocked ? '' : `
+                        <div class="d-flex justify-content-end gap-2 mb-4" id="mid-save-wrapper">
+                            <button type="submit" class="btn btn-primary" id="btn-save-mid">
+                                <i class="fas fa-save me-2"></i> ${hasMidDraft ? 'Update Draft' : 'Save Draft'}
+                            </button>
+                        </div>
+                    `}
+                </form>
+            `;
+        }
+
+        // History selalu tampil
+        const hist = STATE.midHistory || [];
+        let histRows = '';
+        if (!hist.length) {
+            histRows = `
+                <tr class="mid-empty-row">
+                    <td colspan="5" class="text-center text-muted">Belum ada history Mid-Year Development.</td>
+                </tr>
+            `;
+        } else {
+            hist.forEach(d => {
+                histRows += `
+                    <tr data-mid-idp-id="${escapeHtml(d.idp_id)}">
+                        <td>${escapeHtml(d.development_program || '-')}</td>
+                        <td>${escapeHtml(d.alc || '-')}</td>
+                        <td>${escapeHtml(d.development_achievement || '-')}</td>
+                        <td>
+                            <span class="badge status-badge ${badgeClass(d.status)}" data-status="${escapeHtml(d.status)}">
+                                ${escapeHtml(titleCase(d.status))}
+                            </span>
+                        </td>
+                        <td>${escapeHtml(d.created_at || '-')}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        const showSubmit = (STATE.draftIds?.midDraftIdpIds || []).length > 0;
+
+        $('#mid-wrapper').html(`
+            ${formHtml}
+
+            <hr class="my-4">
+            <div class="section-title mb-0"><i class="bi bi-bar-chart-line-fill"></i> Mid-Year History</div>
+
+            <div class="table-responsive mt-3">
+                <table class="table table-sm table-bordered table-hover table-sm-custom">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Program</th>
+                            <th>ALC</th>
+                            <th>Achievement</th>
+                            <th>Status</th>
+                            <th style="width:120px;">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="mid-history-body">${histRows}</tbody>
+                </table>
+
+                <div class="d-flex justify-content-end align-items-center">
+                    ${showSubmit ? `
+                        <button type="button" class="btn btn-success" id="btn-submit-mid">
+                            <i class="fas fa-paper-plane me-2"></i> Submit Draft
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `);
+    }
+
+    function renderOne() {
+        const idpRows = STATE.idpRows || [];
+        const flags = STATE.flags || {};
+        const canAccessOne = !!flags.canAccessOne;
+        const oneLocked = !!flags.oneLocked;
+        const hasOneDraft = !!flags.hasOneDraft;
+
+        // nav state
+        if (!canAccessOne) {
+            $('#tab-one-link').addClass('nav-link-one-locked');
+            $('#one-lock-icon').removeClass('d-none');
+        } else {
+            $('#tab-one-link').removeClass('nav-link-one-locked');
+            $('#one-lock-icon').addClass('d-none');
+        }
+
+        if (!canAccessOne) {
+            $('#one-wrapper').html(`
+                <div class="locked-wrapper">
+                    <div class="locked-blur"><div style="height:220px;"></div></div>
+                    <div class="locked-overlay">
+                        <i class="bi bi-lock-fill fs-1 mb-3 text-primary"></i>
+                        <h5 class="fw-bold mb-2">One-Year Review Locked</h5>
+                        <p class="text-muted mb-0">
+                            Silakan lengkapi dan <strong>submit Mid-Year Development</strong> terlebih dahulu
+                            sebelum mengisi <strong>One-Year Development</strong>.
+                        </p>
+                    </div>
+                </div>
+            `);
+            return;
+        }
+
+        let formHtml = '';
+        if (!idpRows.length) {
+            formHtml = `<p class="text-muted">Tidak ada IDP.</p>`;
+        } else {
+            let body = '';
+            idpRows.forEach((row, idx) => {
+                const idp = row.idp || {};
+                const idpId = String(idp.id || '');
+                const latest = STATE.latestOneByIdp[idpId] || null;
+
+                const valEval = latest?.evaluation_result ?? '';
+
+                body += `
+                    <tr>
+                        <td>${idx + 1}</td>
+                        <td>${escapeHtml(row.alc_name || '-')}</td>
+                        <td>
+                            ${escapeHtml(idp.development_program || '-')}
+                            <input type="hidden" name="idp_id[]" value="${escapeHtml(idpId)}">
+                            <input type="hidden" name="development_program[]" value="${escapeHtml(idp.development_program || '')}">
+                        </td>
+                        <td>
+                            <textarea name="evaluation_result[]" data-index="${idx}" class="form-control form-control-sm"
+                                rows="3" placeholder="Tuliskan hasil evaluasi" ${oneLocked ? 'disabled' : ''}>${escapeHtml(valEval)}</textarea>
+                            <div class="invalid-feedback" id="error-evaluation_result-${idx}"></div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            formHtml = `
+                <form id="form-one-year" method="POST" action="${URL_SAVE_ONE}">
+                    <input type="hidden" name="_token" value="${csrfToken()}">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered table-hover table-sm-custom align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:5%;">No</th>
+                                    <th style="width:20%;">ALC</th>
+                                    <th style="width:30%;">Development Program</th>
+                                    <th style="width:45%;">Evaluation Result (One-Year)</th>
+                                </tr>
+                            </thead>
+                            <tbody>${body}</tbody>
+                        </table>
+                    </div>
+
+                    ${oneLocked ? '' : `
+                        <div class="d-flex justify-content-end gap-2 mb-4" id="one-save-wrapper">
+                            <button type="submit" class="btn btn-primary" id="btn-save-one">
+                                <i class="fas fa-save me-2"></i> ${hasOneDraft ? 'Update Draft' : 'Save Draft'}
+                            </button>
+                        </div>
+                    `}
+                </form>
+            `;
+        }
+
+        // History selalu tampil (saat boleh akses)
+        const hist = STATE.oneHistory || [];
+        let histRows = '';
+        if (!hist.length) {
+            histRows = `
+                <tr class="one-empty-row">
+                    <td colspan="5" class="text-center text-muted">Belum ada history One-Year Development.</td>
+                </tr>
+            `;
+        } else {
+            hist.forEach(d => {
+                histRows += `
+                    <tr data-one-idp-id="${escapeHtml(d.idp_id)}">
+                        <td>${escapeHtml(d.development_program || '-')}</td>
+                        <td>${escapeHtml(d.alc || '-')}</td>
+                        <td>${escapeHtml(d.evaluation_result || '-')}</td>
+                        <td>
+                            <span class="badge status-badge ${badgeClass(d.status)}" data-status="${escapeHtml(d.status)}">
+                                ${escapeHtml(titleCase(d.status))}
+                            </span>
+                        </td>
+                        <td>${escapeHtml(d.created_at || '-')}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        const showSubmit = (STATE.draftIds?.oneDraftIdpIds || []).length > 0;
+
+        $('#one-wrapper').html(`
+            ${formHtml}
+
+            <hr class="my-4">
+            <div class="section-title mb-0"><i class="bi bi-calendar-check-fill"></i> One-Year History</div>
+
+            <div class="table-responsive mt-3">
+                <table class="table table-sm table-bordered table-hover table-sm-custom">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Program</th>
+                            <th>ALC</th>
+                            <th>Evaluation Result</th>
+                            <th>Status</th>
+                            <th style="width:120px;">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="one-history-body">${histRows}</tbody>
+                </table>
+
+                <div class="d-flex justify-content-end align-items-center">
+                    ${showSubmit ? `
+                        <button type="button" class="btn btn-success" id="btn-submit-one">
+                            <i class="fas fa-paper-plane me-2"></i> Submit Draft
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `);
+    }
+
+    function renderAll(payload) {
+        renderEmployee(payload.employee, payload.assessment, payload.title);
+
+        STATE.idpRows = payload.idpRows || [];
+        STATE.midHistory = payload.midHistory || [];
+        STATE.oneHistory = payload.oneHistory || [];
+        STATE.flags = payload.flags || {};
+        STATE.draftIds = payload.draftIds || { midDraftIdpIds: [], oneDraftIdpIds: [] };
+
+        // ✅ NEW: bikin latest map, supaya textarea terisi
+        STATE.latestMidByIdp = buildLatestByIdp(STATE.midHistory);
+        STATE.latestOneByIdp = buildLatestByIdp(STATE.oneHistory);
+
+        renderIdpList(STATE.idpRows);
+        renderMid();
+        renderOne();
+    }
+
+    function refreshData(keepTabId) {
+        const tabToRestore = keepTabId || getActiveTabId() || localStorage.getItem(TAB_STORE_KEY) || '#tab-mid';
+
+        $.ajax({
+            url: URL_JSON,
+            method: 'GET',
+            success: function (res) {
+                if (!res || res.status !== 'success') {
+                    $('#idp-list-wrapper').html(`<div class="text-danger">Gagal load data.</div>`);
+                    return;
+                }
+                renderAll(res);
+                activateTab(tabToRestore);
+            },
+            error: function () {
+                $('#idp-list-wrapper').html(`<div class="text-danger">Gagal load data (server error).</div>`);
+            }
+        });
+    }
+
+    // =========================
+    // SAVE DRAFT (delegated)
+    // =========================
+    $(document).on('submit', '#form-mid-year', function (e) {
+        e.preventDefault();
+        const tabId = '#tab-mid';
+
+        const $form = $(this);
+        const $btn = $('#btn-save-mid');
+        const original = $btn.html();
+
+        $form.find('.form-control').removeClass('is-invalid');
+        $form.find('.invalid-feedback').text('');
+
+        $btn.prop('disabled', true).html(`<span class="spinner-border spinner-border-sm"></span> Saving...`);
+
+        const fd = new FormData(this);
+
+        $.ajax({
+            url: URL_SAVE_MID,
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                $btn.prop('disabled', false).html(original);
+                Swal.fire({ icon:'success', title:'Success!', text: res.message || 'Mid-Year Development berhasil disimpan.' });
+                refreshData(tabId);
+            },
+            error: function (xhr) {
+                $btn.prop('disabled', false).html(original);
+
+                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                    const errors = xhr.responseJSON.errors;
+                    $.each(errors, function (key, messages) {
+                        const parts = key.split('.');
+                        const fieldName = parts[0];
+                        const index = parts[1];
+                        const $input = $form.find(`[name="${fieldName}[]"][data-index="${index}"]`);
+                        if ($input.length) {
+                            $input.addClass('is-invalid');
+                            $(`#error-${fieldName}-${index}`).text(messages[0] || '');
+                        }
+                    });
+                    Swal.fire({ icon:'error', title:'Validasi Gagal', text:'Mohon periksa kembali isian form Anda.' });
+                } else {
+                    Swal.fire({ icon:'error', title:'Error!', text:'Terjadi kesalahan pada server. Silakan coba lagi.' });
+                }
+            }
+        });
+    });
+
+    $(document).on('submit', '#form-one-year', function (e) {
+        e.preventDefault();
+        const tabId = '#tab-one';
+
+        const $form = $(this);
+        const $btn = $('#btn-save-one');
+        const original = $btn.html();
+
+        $form.find('.form-control').removeClass('is-invalid');
+        $form.find('.invalid-feedback').text('');
+
+        $btn.prop('disabled', true).html(`<span class="spinner-border spinner-border-sm"></span> Saving...`);
+
+        const fd = new FormData(this);
+
+        $.ajax({
+            url: URL_SAVE_ONE,
+            method: 'POST',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function (res) {
+                $btn.prop('disabled', false).html(original);
+                Swal.fire({ icon:'success', title:'Success!', text: res.message || 'One-Year Development berhasil disimpan.' });
+                refreshData(tabId);
+            },
+            error: function (xhr) {
+                $btn.prop('disabled', false).html(original);
+
+                if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                    const errors = xhr.responseJSON.errors;
+                    $.each(errors, function (key, messages) {
+                        const parts = key.split('.');
+                        const fieldName = parts[0];
+                        const index = parts[1];
+                        const $input = $form.find(`[name="${fieldName}[]"][data-index="${index}"]`);
+                        if ($input.length) {
+                            $input.addClass('is-invalid');
+                            $(`#error-${fieldName}-${index}`).text(messages[0] || '');
+                        }
+                    });
+                    Swal.fire({ icon:'error', title:'Validasi Gagal', text:'Mohon periksa kembali isian form Anda.' });
+                } else {
+                    Swal.fire({ icon:'error', title:'Error!', text:'Terjadi kesalahan pada server. Silakan coba lagi.' });
+                }
+            }
+        });
+    });
+
+    // =========================
+    // SUBMIT (delegated)
+    // =========================
+    $(document).on('click', '#btn-submit-mid', function () {
+        const tabId = '#tab-mid';
+        const ids = (STATE.draftIds?.midDraftIdpIds || []);
+
+        if (!ids.length) {
+            Swal.fire({ icon:'warning', title:'Perhatian', text:'Tidak ada Draft baru untuk disubmit.' });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Konfirmasi Submit?',
+            text: `Anda akan mengirim ${ids.length} item Draft. Pastikan semua data sudah benar!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Submit!',
+            cancelButtonText: 'Batal'
+        }).then((r) => {
+            if (!r.isConfirmed) return;
+
+            const $btn = $('#btn-submit-mid');
+            const original = $btn.html();
+            $btn.prop('disabled', true).html(`<span class="spinner-border spinner-border-sm"></span> Submitting...`);
+
+            $.ajax({
+                url: URL_SUBMIT_MID,
+                method: 'POST',
+                data: { _token: csrfToken(), idp_id: ids },
+                success: function (res) {
+                    $btn.prop('disabled', false).html(original);
+                    Swal.fire({ icon:'success', title:'Success!', text: res.message || 'Draft Mid-Year berhasil disubmit.' });
+                    refreshData(tabId);
+                },
+                error: function (xhr) {
+                    $btn.prop('disabled', false).html(original);
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Terjadi kesalahan saat submit.';
+                    Swal.fire({ icon:'error', title:'Error!', text: msg });
+                }
+            });
+        });
+    });
+
+    $(document).on('click', '#btn-submit-one', function () {
+        const tabId = '#tab-one';
+        const ids = (STATE.draftIds?.oneDraftIdpIds || []);
+
+        if (!ids.length) {
+            Swal.fire({ icon:'warning', title:'Perhatian', text:'Tidak ada Draft baru untuk disubmit.' });
+            return;
+        }
+
+        Swal.fire({
+            title: 'Konfirmasi Submit?',
+            text: `Anda akan mengirim ${ids.length} item Draft. Pastikan semua data sudah benar!`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Submit!',
+            cancelButtonText: 'Batal'
+        }).then((r) => {
+            if (!r.isConfirmed) return;
+
+            const $btn = $('#btn-submit-one');
+            const original = $btn.html();
+            $btn.prop('disabled', true).html(`<span class="spinner-border spinner-border-sm"></span> Submitting...`);
+
+            $.ajax({
+                url: URL_SUBMIT_ONE,
+                method: 'POST',
+                data: { _token: csrfToken(), idp_id: ids },
+                success: function (res) {
+                    $btn.prop('disabled', false).html(original);
+                    Swal.fire({ icon:'success', title:'Success!', text: res.message || 'Draft One-Year berhasil disubmit.' });
+                    refreshData(tabId);
+                },
+                error: function (xhr) {
+                    $btn.prop('disabled', false).html(original);
+                    const msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Terjadi kesalahan saat submit.';
+                    Swal.fire({ icon:'error', title:'Error!', text: msg });
+                }
+            });
+        });
+    });
+
+    // ============= INIT load ============
+    const savedTab = localStorage.getItem(TAB_STORE_KEY) || '#tab-mid';
+    refreshData(savedTab);
+});
+</script>
 @endpush
