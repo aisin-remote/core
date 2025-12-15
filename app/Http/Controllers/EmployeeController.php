@@ -178,6 +178,7 @@ class EmployeeController extends Controller
 
         $allPositions = [
             'President',
+            'VPD',
             'Direktur',
             'GM',
             'Manager',

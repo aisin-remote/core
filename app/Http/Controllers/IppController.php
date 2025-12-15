@@ -2,12 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApprovalHelper;
+use App\Helpers\IppApprovalHelper;
 use App\Models\ActivityPlan;
 use App\Models\ActivityPlanItem;
 use App\Models\Department;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Ipp;
+use App\Models\IppApprovalStep;
 use App\Models\IppComment;
 use App\Models\IppPoint;
 use App\Models\Section;
@@ -536,7 +539,9 @@ class IppController
         }
 
         $mode   = $payload['mode'];
-        $status = 'draft';
+        $statusInput = $payload['status'];
+        $status = $statusInput === 'submitted' ? 'submitted' : 'draft';
+
         $cat    = $payload['cat'];
         $rowId  = $payload['row_id'] ?? null;
         $p      = $payload['point'];
@@ -615,6 +620,7 @@ class IppController
 
             if (!$ipp->pic_review_id && $picReviewId) {
                 $ipp->pic_review_id = $picReviewId;
+                $ipp->pic_review = $picReviewName;
                 $ipp->save();
             }
 
@@ -661,14 +667,19 @@ class IppController
             $summary['total'] = array_sum($summary);
 
             $ipp->summary = $summary;
+
+            if ($status === 'submitted') {
+                $ipp->status = 'submitted';
+                $ipp->submitted_at = now();
+            }
             $ipp->status  = 'draft';
             $ipp->save();
 
             DB::commit();
-
             return response()->json([
                 'message' => 'Draft tersimpan',
                 'row_id'  => $point->id,
+                'ipp_id' => $ipp->id,
                 'summary' => $summary,
             ]);
         } catch (\Throwable $e) {
@@ -685,7 +696,9 @@ class IppController
         $year  = (string) $this->planOnYear();
         $empId = (int)($emp->id ?? 0);
 
-        $ipp = Ipp::where('employee_id', $empId)->where('on_year', $year)->first();
+        $ipp = Ipp::where('employee_id', $empId)
+            ->where('on_year', $year)
+            ->first();
 
         if (!$ipp) {
             return response()->json(['message' => 'Belum ada data IPP untuk disubmit.'], 422);
@@ -804,111 +817,25 @@ class IppController
                 ]);
             }
 
-            // Query params
             $year    = (string) $request->query('filter_year', 'all');
             $search  = trim((string) $request->query('search', ''));
             $page    = max(1, (int) $request->query('page', 1));
             $perPage = min(100, max(5, (int) $request->query('per_page', 10)));
 
-            // Levels (guard if null / methods not exist)
-            $checkLevel   = method_exists($me, 'getCreateAuth') ? $me->getCreateAuth() : null;
-            $approveLevel = method_exists($me, 'getFirstApproval') ? $me->getFirstApproval() : null;
-            $subCheckIds = collect();
-            $subApproveIds = collect();
+            // Pakai helper -> semua IPP bawahan (tanpa pagination dulu)
+            $allRows = IppApprovalHelper::getApprovalRows($me, $year, $search);
 
-            if ($checkLevel && method_exists($me, 'getSubordinatesByLevel')) {
-                $subCheckIds = $me->getSubordinatesByLevel($checkLevel)->pluck('id');
-            }
-            if ($approveLevel && method_exists($me, 'getSubordinatesByLevel')) {
-                $subApproveIds = $me->getSubordinatesByLevel($approveLevel)->pluck('id');
-            }
+            $total = $allRows->count();
 
+            $paged = $allRows->forPage($page, $perPage)->values();
 
-            // Helpers: common constraints
-            $baseIPP = Ipp::with(['employee.user'])
-                ->when(strtolower($year) !== 'all', fn($q) => $q->where('on_year', $year))
-                ->where('employee_id', '!=', $me->id) // jangan tampilkan milik saya sendiri
-                // skip owner role HRD
-                ->whereHas('employee.user', function ($q) {
-                    $q->whereRaw('UPPER(role) != ?', ['HRD']);
-                })
-                // optional search by owner
-                ->when($search !== '', function ($q) use ($search) {
-                    $q->whereHas('employee', function ($qq) use ($search) {
-                        $qq->where('name', 'like', "%{$search}%")
-                            ->orWhere('npk', 'like', "%{$search}%")
-                            ->orWhere('position', 'like', "%{$search}%")
-                            ->orWhere('company_name', 'like', "%{$search}%");
-                    });
-                });
-
-            // === Stage 1: CHECK (subordinates at check level) ===
-            $checkIpps = collect();
-            if ($subCheckIds->isNotEmpty()) {
-                $checkIpps = (clone $baseIPP)
-                    ->where('status', 'submitted')
-                    ->whereHas('employee', function ($q) use ($subCheckIds) {
-                        $q->whereIn('id', $subCheckIds->all());
-                    })
-                    ->get()
-                    ->map(function (Ipp $ipp) {
-                        $ipp->stage = 'check';
-                        return $ipp;
-                    });
-            }
-
-            // === Stage 2: APPROVE (subordinates at final approval level), excluding ones already in CHECK ===
-            $approveIpps = collect();
-            if ($subApproveIds->isNotEmpty()) {
-                $approveIpps = (clone $baseIPP)
-                    ->where('status', 'checked')
-                    ->whereHas('employee', function ($q) use ($subApproveIds) {
-                        $q->whereIn('id', $subApproveIds->all());
-                    })
-                    ->whereNotIn('id', $checkIpps->pluck('id')->all())
-                    ->get()
-                    ->map(function (Ipp $ipp) {
-                        $ipp->stage = 'approve';
-                        return $ipp;
-                    });
-            }
-
-
-            // Merge both stages, latest updated first
-            $all = $checkIpps->merge($approveIpps)
-                ->sortByDesc(fn(Ipp $x) => $x->updated_at ?? $x->created_at)
-                ->values();
-
-            $total = $all->count();
-
-            // Pagination on collection
-            $paged = $all->forPage($page, $perPage)->values();
-
-            // Map to rows
-            $rows = $paged->map(function (Ipp $ipp, $idx) use ($page, $perPage) {
-                $e = $ipp->employee;
-                return [
-                    'no'        => ($page - 1) * $perPage + $idx + 1,
-                    'id'        => $ipp->id,
-                    'stage'     => $ipp->stage,            // 'check' or 'approve'
-                    'status'    => (string) $ipp->status,  // 'submitted' or 'checked'
-                    'on_year'   => (string) $ipp->on_year,
-                    'updated_at' => optional($ipp->updated_at)->toDateTimeString(),
-                    'employee'  => [
-                        'id'        => $e->id,
-                        'npk'       => (string) $e->npk,
-                        'name'      => (string) $e->name,
-                        'company'   => (string) $e->company_name,
-                        'position'  => (string) $e->position,
-                        'department' => (string) ($e->bagian ?? ''),
-                        'grade'     => (string) ($e->grade ?? ''),
-                        'role'      => optional($e->user)->role, // for reference (already filtered != HRD)
-                    ],
-                ];
+            $rowsWithNo = $paged->map(function (array $row, int $idx) use ($page, $perPage) {
+                $row['no'] = ($page - 1) * $perPage + $idx + 1;
+                return $row;
             });
 
             return response()->json([
-                'data' => $rows,
+                'data' => $rowsWithNo,
                 'meta' => [
                     'total'     => (int) $total,
                     'page'      => (int) $page,
@@ -929,62 +856,136 @@ class IppController
     public function approve(int $id): JsonResponse
     {
         try {
-            $ipp  = Ipp::findOrFail($id);
-            $from = strtolower((string) $ipp->status);
-            $to   = null;
+            $user = auth()->user();
+            $me   = $user->employee;
 
-            if ($from === 'submitted') {
-                $to = 'checked';
-            } elseif ($from === 'checked') {
-                $to = 'approved';
-            } elseif ($from === 'approved') {
+            if (! $me) {
+                return response()->json(['message' => 'Employee not found.'], 422);
+            }
+
+            $ipp = Ipp::with('steps')->findOrFail($id);
+
+            $fromStatus = strtolower((string) $ipp->status);
+
+            // final state → tidak bisa di-approve lagi
+            if (in_array($fromStatus, ['approved', 'revised'], true)) {
                 return response()->json([
-                    'message' => 'IPP already approved (final state).',
+                    'message' => "IPP already in final state '{$ipp->status}'.",
                     'id'      => $ipp->id,
                     'status'  => $ipp->status,
                 ], 409);
-            } else {
-                return response()->json([
-                    'message' => "Current status '{$ipp->status}' is not eligible for approval.",
-                    'id'      => $ipp->id,
-                    'status'  => $ipp->status,
-                ], 422);
+            }
+
+            // role kanonik saya
+            $role = ApprovalHelper::roleKeyFor($me);
+
+            $rolesToMatch = [$role];
+            // toleransi label lama
+            if ($role === 'director') {
+                $rolesToMatch[] = 'direktur';
+            }
+            if ($role === 'president') {
+                $rolesToMatch[] = 'presiden';
+            }
+            if ($role === 'gm') {
+                $rolesToMatch[] = 'general manager';
             }
 
             $updatePoints = 0;
+            $toStatus     = null;
+            $stepType     = null;
+            $stepId       = null;
 
-            DB::transaction(function () use ($ipp, $to, &$updatePoints) {
-                // siapkan payload update status + cap waktu sesuai transisi
-                $updates = ['status' => $to];
+            DB::transaction(function () use (
+                $ipp,
+                $me,
+                $rolesToMatch,
+                &$updatePoints,
+                &$toStatus,
+                &$stepType,
+                &$stepId
+            ) {
+            // AMBIL STEP PENDING PALING AWAL UNTUK IPP INI
+                /** @var IppApprovalStep|null $nextStep */
+                $nextStep = IppApprovalStep::where('ipp_id', $ipp->id)
+                    ->where('status', 'pending')
+                    ->orderBy('step_order')
+                    ->lockForUpdate()
+                    ->first();
 
-                if ($to === 'checked' && is_null($ipp->checked_at)) {
+                if (! $nextStep) {
+                    // tidak ada step pending lagi
+                    throw new \RuntimeException('No pending approval step for this IPP.');
+                }
+
+                // cek: apakah step ini memang jatahnya role saya?
+                if (! in_array($nextStep->role, $rolesToMatch, true)) {
+                    throw new \Illuminate\Auth\Access\AuthorizationException(
+                        'You are not allowed to approve this step.'
+                    );
+                }
+
+                $stepId   = $nextStep->id;
+                $stepType = $nextStep->type;
+
+                // tentukan status IPP berikutnya
+                if ($nextStep->type === 'check') {
+                    $toStatus = 'checked';
+                } elseif ($nextStep->type === 'approve') {
+                    $toStatus = 'approved';
+                } else {
+                    throw new \RuntimeException("Unknown step type '{$nextStep->type}'.");
+                }
+
+                // mark step as done
+                $nextStep->update([
+                    'status'   => 'done',
+                    'actor_id' => $me->id,
+                    'acted_at' => now(),
+                ]);
+
+                // update header IPP
+                $updates = ['status' => $toStatus];
+
+                if ($toStatus === 'checked' && is_null($ipp->checked_at)) {
                     $updates['checked_at'] = now();
-                    $updates['checked_by'] = auth()->user()->employee->id ?? null;
-                } elseif ($to === 'approved' && is_null($ipp->approved_at)) {
+                    $updates['checked_by'] = $me->id;
+                } elseif ($toStatus === 'approved' && is_null($ipp->approved_at)) {
                     $updates['approved_at'] = now();
-                    $updates['approved_by'] = auth()->user()->employee->id ?? null;
+                    $updates['approved_by'] = $me->id;
                 }
 
                 $ipp->update($updates);
 
-                // sinkronkan status semua point
+                // sinkron status semua IPP point
                 $updatePoints = IppPoint::where('ipp_id', $ipp->id)
-                    ->update(['status' => $to]);
+                    ->update(['status' => $toStatus]);
             });
+
+            $ipp->refresh();
 
             return response()->json([
                 'message'        => 'IPP status updated.',
                 'id'             => $ipp->id,
-                'from'           => $from,
-                'to'             => $to,
+                'from'           => $fromStatus,
+                'to'             => $toStatus,
                 'points_updated' => $updatePoints,
+                'step_id'        => $stepId,
+                'step_type'      => $stepType,
+                'status'         => $ipp->status,
                 'updated_at'     => optional($ipp->updated_at)->toDateTimeString(),
                 'submitted_at'   => optional($ipp->submitted_at)->toDateTimeString(),
                 'checked_at'     => optional($ipp->checked_at)->toDateTimeString(),
                 'approved_at'    => optional($ipp->approved_at)->toDateTimeString(),
             ]);
-        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+        } catch (ModelNotFoundException $e) {
             return response()->json(['message' => 'IPP not found.'], 404);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            // bukan giliran / bukan role yang tepat
+            return response()->json(['message' => $e->getMessage()], 403);
+        } catch (\RuntimeException $e) {
+            // misalnya tidak ada step pending
+            return response()->json(['message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
             report($e);
             return response()->json(['message' => 'Failed to approve IPP. Please try again.'], 500);
@@ -1038,6 +1039,9 @@ class IppController
                     $planItemsUpdated = ActivityPlanItem::where('activity_plan_id', $activityPlan->id)
                         ->update(['status' => $to]);
                 }
+
+                // hapus semua approval step lama (supaya submit ulang bikin chain baru)
+                $ipp->steps()->delete();
             });
 
             $ipp->refresh();
@@ -1265,32 +1269,6 @@ class IppController
     }
 
     /** ===== Helpers ===== */
-    private function xlText(?string $s): string
-    {
-        $s = (string)$s;
-        return str_replace(["\r\n", "\r"], "\n", $s);
-    }
-
-    private function countLines(string $s): int
-    {
-        return max(1, substr_count($s, "\n") + 1);
-    }
-
-    private function calcRowHeight(int $lines, float $perLine = 18.0, float $padding = 4.0): float
-    {
-        return max($perLine, $lines * $perLine + $padding);
-    }
-
-    private function colIndex(string $letters): int
-    {
-        $letters = strtoupper($letters);
-        $n = 0;
-        for ($i = 0; $i < strlen($letters); $i++) {
-            $n = $n * 26 + (ord($letters[$i]) - 64);
-        }
-        return $n;
-    }
-
     private function getSubordinatesFromStructure(Employee $employee)
     {
         $subordinateIds = collect();
@@ -1513,5 +1491,35 @@ class IppController
         $d = $date ?: now();
         $y = (int) $d->year;
         return $d->month >= 4 ? $y + 1 : $y;
+    }
+
+    public function seedStepForIpp(Ipp $ipp): void
+    {
+        $owner = $ipp->employee()->first();
+        if (! $owner) {
+            return;
+        }
+
+        $chain = ApprovalHelper::expectedIppChainForEmployee($owner);
+
+        // bersihkan step lama kalau ada
+        $ipp->steps()->delete();
+
+        foreach ($chain as $i => $s) {
+            IppApprovalStep::create([
+                'ipp_id'     => $ipp->id,
+                'step_order' => $i + 1,
+                'type'       => $s['type'],
+                'role'       => $s['role'],
+                'label'      => $s['label'],
+            ]);
+        }
+
+        // kalau nggak ada chain (misal owner = vpd/president) → auto approve
+        if (empty($chain)) {
+            $ipp->status      = 'approved';
+            $ipp->approved_at = now();
+            $ipp->save();
+        }
     }
 }

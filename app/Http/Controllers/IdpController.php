@@ -2,14 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use Carbon\Carbon;
 use App\Models\Hav;
 use App\Models\Idp;
 use App\Models\Section;
 use App\Models\Division;
 use App\Models\Employee;
-use App\Models\HavDetail;
-use App\Models\Assessment;
 use App\Models\Department;
 use App\Models\SubSection;
 use App\Models\Development;
@@ -17,15 +14,16 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Models\DevelopmentOne;
-use App\Models\DetailAssessment;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use App\Models\Alc;
+use App\Models\Assessment;
+use App\Models\IdpApproval;
 use App\Models\IdpBackup;
-use Illuminate\Support\Facades\Storage;
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\Excel\IdpExportService;
+use Exception;
+use Illuminate\Support\Facades\Validator;
+use Throwable;
 
 class IdpController extends Controller
 {
@@ -459,7 +457,7 @@ class IdpController extends Controller
                 return response()->json([
                     'status' => 'success',
                     'message' => 'Development updated successfully.',
-                    'idp' => $idp, // opsional: kirim data IDP terbaru
+                    'idp' => $idp,
                 ]);
             } else {
                 $newIdp = Idp::create([
@@ -488,44 +486,152 @@ class IdpController extends Controller
 
     public function storeMidYear(Request $request, $employee_id)
     {
-        $request->validate([
-            'idp_id' => 'required|array',
-            'development_program' => 'required|array',
-            'development_achievement' => 'required|array',
-            'next_action' => 'required|array',
+        $validator = Validator::make($request->all(), [
+            'idp_id'                    => 'required|array',
+            'idp_id.*'                  => 'required|integer|exists:idp,id',
+            'development_program'       => 'required|array',
+            'development_program.*'     => 'nullable|string',
+            'development_achievement'   => 'required|array',
+            'development_achievement.*' => 'nullable|string',
+            'next_action'               => 'required|array',
+            'next_action.*'             => 'nullable|string',
         ]);
 
-        foreach ($request->development_program as $key => $program) {
-            Development::create([
-                'employee_id' => $employee_id,
-                'idp_id' => $request->idp_id[$key] ?? '',
-                'development_program' => $program,
-                'development_achievement' => $request->development_achievement[$key] ?? '',
-                'next_action' => $request->next_action[$key] ?? '',
-            ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validasi gagal',
+                'errors' => $validator->errors(),
+            ], 422);
         }
 
-        return redirect()->route('idp.index')->with('success', 'Mid-Year Development added successfully.');
+        $createdOrUpdated = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($request->development_program as $key => $program) {
+                $idpId = $request->idp_id[$key] ?? null;
+
+                $attributes = [
+                    'employee_id' => $employee_id,
+                    'idp_id'      => $idpId,
+                ];
+
+                $values = [
+                    'development_program'     => $program,
+                    'development_achievement' => $request->development_achievement[$key] ?? null,
+                    'next_action'             => $request->next_action[$key] ?? null,
+                    'status'                  => 'draft',
+                ];
+
+                $dev = Development::updateOrCreate($attributes, $values);
+
+                $createdOrUpdated[] = [
+                    'id'                      => $dev->id,
+                    'idp_id'                  => $dev->idp_id,
+                    'development_program'     => $dev->development_program,
+                    'development_achievement' => $dev->development_achievement,
+                    'next_action'             => $dev->next_action,
+                    'created_at'              => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y'),
+                ];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'Mid-Year Development berhasil disimpan.',
+                'data'    => $createdOrUpdated,
+            ], 201);
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Gagal menyimpan mid-year development', [
+                'employee_id' => $employee_id,
+                'input' => $request->all(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat menyimpan Mid-Year Development.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function storeOneYear(Request $request, $employee_id)
     {
-        $request->validate([
-            'development_program' => 'required|array',
-            'evaluation_result' => 'required|array',
-            'idp_id' => 'required|array',
+        $validator = Validator::make($request->all(), [
+            'idp_id'                => 'required|array',
+            'idp_id.*'              => 'required|integer|exists:idp,id',
+            'development_program'   => 'required|array',
+            'development_program.*' => 'nullable|string',
+            'evaluation_result'     => 'required|array',
+            'evaluation_result.*'   => 'nullable|string',
         ]);
 
-        foreach ($request->development_program as $index => $program) {
-            DevelopmentOne::create([
-                'employee_id' => $employee_id,
-                'idp_id' => $request->idp_id[$index] ?? '',
-                'development_program' => $program,
-                'evaluation_result' => $request->evaluation_result[$index] ?? '',
-            ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Validasi gagal',
+                'errors'  => $validator->errors(),
+            ], 422);
         }
 
-        return redirect()->route('idp.index')->with('success', 'One-Year Development added successfully.');
+        $createdOrUpdated = [];
+
+        DB::beginTransaction();
+
+        try {
+            foreach ($request->development_program as $index => $program) {
+                $idpId = $request->idp_id[$index] ?? null;
+
+                $attributes = [
+                    'employee_id' => $employee_id,
+                    'idp_id'      => $idpId,
+                ];
+
+                $values = [
+                    'development_program' => $program,
+                    'evaluation_result'   => $request->evaluation_result[$index] ?? null,
+                    'status'              => 'draft',
+                ];
+
+                $dev = DevelopmentOne::updateOrCreate($attributes, $values);
+
+                $createdOrUpdated[] = [
+                    'id'                  => $dev->id,
+                    'idp_id'              => $dev->idp_id,
+                    'development_program' => $dev->development_program,
+                    'evaluation_result'   => $dev->evaluation_result,
+                    'created_at'          => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y'),
+                ];
+            }
+
+            DB::commit();
+
+            return response()->json([
+                'status'  => 'success',
+                'message' => 'One-Year Development berhasil disimpan.',
+                'data'    => $createdOrUpdated,
+            ], 201);
+        } catch (Throwable $e) {
+            DB::rollBack();
+
+            Log::error('Gagal menyimpan one-year development', [
+                'employee_id' => $employee_id,
+                'input' => $request->all(),
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Terjadi kesalahan saat menyimpan One-Year Development.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 
     public function showDevelopmentData($employeeId)
@@ -540,186 +646,17 @@ class IdpController extends Controller
         return view('website.idp.index', compact('mid'));
     }
 
-    public function exportTemplate($employee_id)
+    public function exportTemplate(Request $request, $employee_id, IdpExportService $idpExportService)
     {
-        $filePath = public_path('assets/file/idp_template.xlsx');
-
-
-        if (!file_exists($filePath)) {
-            return back()->with('error', 'File template tidak ditemukan.');
+        try {
+            $tempPath = $idpExportService->exportTemplate(
+                (int) $employee_id,
+                $request->assessment_id ?? null
+            );
+        } catch (Exception $e) {
+            return back()->with('error', $e->getMessage());
         }
 
-        $employee = Employee::find($employee_id);
-        if (!$employee) {
-            return back()->with('error', 'Employee tidak ditemukan.');
-        }
-
-        $assessment = Assessment::where('employee_id', $employee_id)->latest()->first();
-        if (!$assessment) {
-            return back()->with('error', 'Assessment tidak ditemukan.');
-        }
-
-
-        $assessmentDetails = DB::table('detail_assessments')
-            ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
-            ->select('detail_assessments.*', 'alc.name as alc_name')
-            ->where('detail_assessments.assessment_id', $assessment->id)
-            ->get();
-
-
-        $spreadsheet = IOFactory::load($filePath);
-        $sheet = $spreadsheet->getActiveSheet();
-
-        $sheet->setCellValue('H3', $employee->name);
-        $sheet->setCellValue('K3', $employee->npk);
-        $sheet->setCellValue('R3', $employee->position);
-        $sheet->setCellValue('R4', $employee->position);
-        $sheet->setCellValue('R5', $employee->birthday_date);
-        $sheet->setCellValue('R6', $employee->aisin_entry_date);
-        $sheet->setCellValue('R7', $assessment->date);
-        $sheet->setCellValue('H6', $employee->grade);
-        $sheet->setCellValue('H5', $employee->department_id);
-
-
-        $startRow = 13;
-
-        $latestAssessment = DB::table('assessments')
-            ->where('employee_id', $employee_id)
-            ->latest('created_at')
-            ->first();
-
-        if (!$latestAssessment) {
-            return back()->with('error', 'Assessment tidak ditemukan untuk employee ini.');
-        }
-
-        $assessmentDetails = DB::table('detail_assessments')
-            ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
-            ->where('detail_assessments.assessment_id', $latestAssessment->id)
-            ->select('detail_assessments.*', 'alc.name as alc_name')
-            ->get();
-
-        $strengths = [];
-        $weaknesses = [];
-
-        foreach ($assessmentDetails as $detail) {
-            if (!empty($detail->strength)) {
-                $strengths[] = " - " . $detail->alc_name;
-            }
-            if (!empty($detail->weakness)) {
-                $weaknesses[] = " - " . $detail->alc_name;
-            }
-        }
-
-        $strengthText = implode("\n", $strengths);
-        $weaknessText = implode("\n", $weaknesses);
-
-        $sheet->setCellValue('B' . $startRow, $strengthText);
-        $sheet->setCellValue('F' . $startRow, $weaknessText);
-
-
-
-        $startRow = 33;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-        $assessmentDetails = DB::table('detail_assessments')
-            ->join('alc', 'detail_assessments.alc_id', '=', 'alc.id')
-            ->where('detail_assessments.assessment_id', $latestAssessment->id)
-            ->select('detail_assessments.*', 'alc.name as alc_name')
-            ->get();
-
-        foreach ($assessmentDetails as $detail) {
-            if (!empty($detail->weakness)) {
-                $sheet->setCellValue('C' . $startRow, $detail->alc_name . " - " . $detail->weakness);
-            }
-
-            if (!empty($detail->weakness)) {
-                $startRow += 2;
-            }
-        }
-
-        $startRow = 33;
-
-        foreach ($assessmentDetails as $detail) {
-            if (!empty($detail->weakness)) {
-                $sheet->setCellValue('C' . $startRow, $detail->alc_name);
-                $startRow += 2;
-            }
-        }
-
-
-        $startRow = 33;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-
-        $idpRecords = Idp::where('assessment_id', $assessment_id)->get();
-
-        foreach ($idpRecords as $idp) {
-            $sheet->setCellValue('E' . $startRow, $idp->development_program ?? "-");
-            $sheet->setCellValue('D' . $startRow, $idp->category ?? "-");
-            $sheet->setCellValue('H' . $startRow, $idp->development_target ?? "-");
-            $sheet->setCellValue('K' . $startRow, $idp->date ?? "-");
-
-            $startRow += 2;
-        }
-
-        $startRow = 13;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-        $midYearRecords = Development::where('employee_id', $employee_id)->get();
-
-        foreach ($midYearRecords as $record) {
-            $sheet->setCellValue('O' . $startRow, $record->development_program ?? "-");
-            $sheet->setCellValue('R' . $startRow, $record->development_achievement ?? "-");
-            $sheet->setCellValue('U' . $startRow, $record->next_action ?? "-");
-
-            $startRow++;
-        }
-
-        $startRow = 33;
-
-        $assessment_id = $request->assessment_id ?? Assessment::where('employee_id', $employee_id)->latest()->value('id');
-
-        if (!$assessment_id) {
-            return back()->with('error', 'Assessment ID tidak ditemukan.');
-        }
-
-        $oneYearRecords = DevelopmentOne::where('employee_id', $employee_id)->get();
-
-        foreach ($oneYearRecords as $record) {
-            $sheet->setCellValue('O' . $startRow, $record->development_program ?? "-");
-            $sheet->setCellValue('R' . $startRow, $record->evaluation_result ?? "-");
-
-            $startRow += 2;
-        }
-
-
-        $tempDir = storage_path('app/public/temp');
-        if (!file_exists($tempDir)) {
-            mkdir($tempDir, 0777, true);
-        }
-
-        // Simpan file sementara
-        $fileName = 'IDP_' . str_replace(' ', '_', $employee->name) . '.xlsx';
-        $tempPath = storage_path('app/public/temp/' . $fileName);
-        $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        $writer->save($tempPath);
-
-        // Download file
         return response()->download($tempPath)->deleteFileAfterSend(true);
     }
 
@@ -908,62 +845,64 @@ class IdpController extends Controller
     public function approve($id)
     {
         $idp = Idp::findOrFail($id);
+        $employee = auth()->user()->employee;
 
-        if ($idp->status == 1) {
-            $idp->status = 2;
-            $idp->save();
+        $currentStatus = $idp->status;
 
+        if (!in_array($currentStatus, [1, 2, 3])) {
             return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
+                'message' => 'Something went wrong!'
+            ], 400);
         }
 
-        if ($idp->status == 2) {
-            $idp->status = 3;
+        DB::transaction(function () use ($idp, $employee, $currentStatus) {
+            if ($employee) {
+                IdpApproval::updateOrCreate(
+                    [
+                        'assessment_id' => $idp->assessment_id ?? null,
+                        'level'         => $currentStatus,
+                    ],
+                    [
+                        'idp_id'      => $idp->id,
+                        'approve_by'  => $employee->id,
+                        'approved_at' => now(),
+                    ]
+                );
+            }
+
+            $idp->status = $currentStatus + 1;
             $idp->save();
-
-            return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
-        }
-
-        if ($idp->status == 3) {
-            $idp->status = 4;
-            $idp->save();
-
-            return response()->json([
-                'message' => 'IDP has been approved!'
-            ]);
-        }
+        });
 
         return response()->json([
-            'message' => 'Something went wrong!'
-        ], 400);
+            'message' => 'IDP has been approved!'
+        ]);
     }
+
     public function revise(Request $request)
     {
         $idp = Idp::findOrFail($request->id);
-
-        // Menyimpan status HAV sebagai disetujui
-        $idp->status = -1;
-
-        // Ambil komentar dari input request
-        $comment = $request->input('comment');
         $employee = auth()->user()->employee;
-        // Menyimpan komentar ke dalam tabel hav_comment_history
-        if ($employee) {
-            $idp->commentHistory()->create([
-                'comment' => $comment,
-                'employee_id' => $employee->id  // Menyimpan siapa yang memberikan komentar
-            ]);
-        }
+        $comment = $request->input('comment');
 
-        // Simpan perubahan status HAV
-        $idp->save();
+        DB::transaction(function () use ($idp, $employee, $comment) {
+            $idp->status = -1;
 
-        // Kembalikan respons JSON
+            if ($employee && $comment) {
+                $idp->commentHistory()->create([
+                    'comment'      => $comment,
+                    'employee_id'  => $employee->id,
+                ]);
+            }
+
+            $idp->save();
+
+            IdpApproval::where('assessment_id', $idp->assessment_id)->delete();
+        });
+
         return response()->json(['message' => 'Data berhasil direvisi.']);
     }
+
 
     public function destroy($id)
     {
@@ -1191,7 +1130,6 @@ class IdpController extends Controller
                 ->with('warning', 'Failed to delete IDP. Please try again.');
         }
     }
-
 
     // PRIVATE FUNCTION
     private function getAssessments($user, $company, $npk, $search)

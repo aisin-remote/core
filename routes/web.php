@@ -25,6 +25,7 @@ use App\Http\Controllers\GroupCompetencyController;
 use App\Http\Controllers\EmployeeCompetencyController;
 use App\Http\Controllers\ChecksheetAssessmentController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DevelopmentController;
 use App\Http\Controllers\IpaApprovalController;
 use App\Http\Controllers\IpaExportController;
 use App\Http\Controllers\IppController;
@@ -122,6 +123,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
 
     Route::prefix('todolist')->group(function () {
         Route::get('/', [ToDoListController::class, 'index'])->name('todolist.index');
+        Route::get('/status', [ToDoListController::class, 'status'])->name('todolist.status');
     });
 
     Route::prefix('icp')->group(function () {
@@ -192,14 +194,18 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/icp', [IcpController::class, 'approval'])->name('icp.approval');
         Route::get('/icp/{id}', [IcpController::class, 'approve'])->name('icp.approve');
         Route::post('icp/revise', [IcpController::class, 'revise'])->name('icp.revise');
-
+        
         Route::get('/ipp', [IppController::class, 'approval'])->name('ipp.approval');
         Route::post('/ipp/{id}', [IppController::class, 'approve'])->name('ipp.approve');
         Route::post('/ipp/revise/{id}', [IppController::class, 'revise'])->name('ipp.revise');
-
+        
         Route::get('/ipa', [IpaApprovalController::class, 'approval'])->name('ipa.approval');
         Route::post('/ipa/{ipa?}/approve', [IpaApprovalController::class, 'approve'])->name('ipa.approve');
         Route::post('/ipa/{ipa?}/revise',  [IpaApprovalController::class, 'revise'])->name('ipa.revise');
+
+        Route::get('/development', [DevelopmentController::class, 'approval'])->name('development.approval');
+        Route::post('/development/{id}/approve', [DevelopmentController::class, 'approve'])->name('development.approve');
+        Route::post('/development/{id}/revise', [DevelopmentController::class, 'revise'])->name('development.revise');
     });
 
     Route::prefix('employee')->group(function () {
@@ -288,12 +294,18 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/save', [RtcController::class, 'save'])->name('rtc.save');
         Route::post('/update', [RtcController::class, 'update'])->name('rtc.update');
         Route::post('/submit', [RtcController::class, 'submit'])->name('rtc.submit');
+
         Route::get('/candidates', [RtcCandidateController::class, 'index'])->name('rtc.candidates');
         Route::get('/summary/{id?}', [RtcController::class, 'summary'])->name('rtc.summary');
         Route::get('/detail', [RtcController::class, 'detail'])->name('rtc.detail');
         Route::get('/list/{id?}', [RtcController::class, 'list'])->name('rtc.list');
+
+        Route::get('/single-node', [RtcController::class, 'singleNode'])
+            ->name('rtc.single-node');
+
         Route::get('/{company?}', [RtcController::class, 'index'])->name('rtc.index');
     });
+
 
     Route::prefix('idp')->group(function () {
         // Manager all IDP for President
@@ -320,6 +332,13 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::get('/edit/{id}', [IdpController::class, 'edit'])->name('idp.edit');
         Route::put('/update/{idp}', [IdpController::class, 'update'])->name('idp.update');
         Route::delete('/delete/{idp}', [IdpController::class, 'deleteIdp'])->name('idp.delete');
+    });
+
+    Route::prefix('development')->group(function () {
+        Route::get('/{employee_id}', [DevelopmentController::class, 'developmentForm'])->name('development.index');
+        Route::post('/{employee_id}/mid-year/submit', [DevelopmentController::class, 'submitMidYear'])->name('development.submitMidYear');
+        Route::post('/{employee_id}/one-year/submit', [DevelopmentController::class, 'submitOneYear'])->name('development.submitOneYear');
+        Route::get('/approval/json', [DevelopmentController::class, 'approvalJson'])->name('development.approval.json');
     });
 
     Route::prefix('ipp')->group(function () {
@@ -360,7 +379,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/create-from-ipp', [IpaController::class, 'createFromIpp'])->name('createFromIpp');
 
         Route::get('/approval/json', [IpaApprovalController::class, 'approvalJson'])->name('approval.json');
-        Route::get('/{ipa?}/export', [IpaExportController::class, 'export'])->name('export');
+        Route::get('/{ipa?}/export', [IpaExportController::class, 'exportWorkbook'])->name('export');
     });
 
     Route::prefix('reviews')->name('reviews.')->group(function () {

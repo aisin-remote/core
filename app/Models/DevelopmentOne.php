@@ -20,5 +20,9 @@ class DevelopmentOne extends Model
     {
         return $this->belongsTo(Idp::class, 'idp_id');
     }
+    public function steps()
+    {
+        return $this->hasMany(DevelopmentApprovalStep::class, 'development_one_id');
+    }
 
 }

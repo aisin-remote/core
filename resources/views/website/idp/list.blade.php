@@ -943,12 +943,17 @@
                                     <td class="text-center">${year}</td>
                                     <td class="text-center">${statusHtml}</td>
                                     <td class="text-center">
-                                    <button class="btn btn-info btn-sm btn-idp-detail"
-                                            data-modal-id="notes_${emp.id}"
-                                            data-employee-id="${emp.id}">
-                                        Detail
-                                    </button>
-                                    ${deleteButton}
+                                        <button class="btn btn-info btn-sm btn-idp-detail"
+                                                data-modal-id="notes_${emp.id}"
+                                                data-employee-id="${emp.id}">
+                                            Detail
+                                        </button>
+                                        ${deleteButton}
+                                        <button type="button" 
+                                                class="btn btn-success btn-sm btn-export-template" 
+                                                data-employee-id="${emp.id}">
+                                            Export
+                                        </button>
                                     </td>
                                 </tr>
                                 `;
@@ -1151,6 +1156,11 @@
                     });
                 });
             }
+            $(document).on("click", ".btn-export-template", function() {
+                const employeeId = $(this).data("employee-id");
+                window.location.href = `/idp/export-template/${employeeId}`;
+            });
+
 
             // Handle detail button click
             $(document).on("click", ".btn-idp-detail", function(e) {

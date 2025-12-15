@@ -70,6 +70,7 @@ class MasterController extends Controller
 
         $allPositions = [
             'President',
+            'VPD',
             'Direktur',
             'GM',
             'Manager',
@@ -717,12 +718,12 @@ class MasterController extends Controller
                 } elseif (!$anyFilled) {
                 } elseif ($allApproved) {
                     $overallStatus = self::RTC_STATUS['approved'];
-                    $label = 'Approved';
+                    $label = 'Approved';                                                                                                                                                                                                                                                                                                          
                     $class = 'badge badge-success';
                     $code  = 'approved';
                 } elseif ($hasSubmitted || ($hasApproved && ($hasDraft || $hasRevised))) {
                     $overallStatus = self::RTC_STATUS['submitted'];
-                    $label = 'Submitted';
+                    $label = 'Pending Approval';
                     $class = 'badge badge-warning';
                     $code  = 'submitted';
                 } else {

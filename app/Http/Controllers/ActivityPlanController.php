@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Helpers\ApprovalHelper;
 use App\Models\ActivityPlan;
 use App\Models\ActivityPlanItem;
 use App\Models\Employee;
 use App\Models\Ipp;
+use App\Models\IppApprovalStep;
 use App\Models\IppPoint;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -22,7 +24,7 @@ class ActivityPlanController extends Controller
     public function init(Request $request)
     {
         $ippId   = (int) $request->query('ipp_id');
-        $pointId = (int) $request->query('point_id');  // <<— fokus point
+        $pointId = (int) $request->query('point_id');
         $user    = $request->user();
         $emp     = $user?->employee;
 
@@ -417,9 +419,20 @@ class ActivityPlanController extends Controller
         try {
             DB::transaction(function () use ($ipp, $plan) {
                 IppPoint::where('ipp_id', $ipp->id)->update(['status' => 'submitted']);
-                $ipp->update(['status' => 'submitted', 'submitted_at' => now()]);
+                $ipp->update([
+                    'status' => 'submitted',
+                    'submitted_at' => now()
+                ]);
                 ActivityPlanItem::where('activity_plan_id', $plan->id)->update(['status' => 'submitted']);
-                $plan->update(['status' => 'submitted', 'submitted_at' => now()]);
+                $plan->update([
+                    'status' => 'submitted',
+                    'submitted_at' => now()
+                ]);
+
+                // Seed Step IPP (first submitted)
+                if (!$ipp->steps()->exists()) {
+                    $this->seedStepForIpp($ipp);
+                }
             });
 
             return response()->json(['message' => 'IPP + Activity Plan berhasil disubmit.']);
@@ -798,5 +811,35 @@ class ActivityPlanController extends Controller
             ->get();
 
         return $employees;
+    }
+
+    private function seedStepForIpp(Ipp $ipp): void
+    {
+        $owner = $ipp->employee()->first();
+        if (! $owner) {
+            return;
+        }
+
+        $chain = ApprovalHelper::expectedIppChainForEmployee($owner);
+
+        // bersihkan step lama kalau ada
+        $ipp->steps()->delete();
+
+        foreach ($chain as $i => $s) {
+            IppApprovalStep::create([
+                'ipp_id'     => $ipp->id,
+                'step_order' => $i + 1,
+                'type'       => $s['type'],   // 'check' / 'approve'
+                'role'       => $s['role'],   // 'jp','leader','manager','gm','director','vpd','president', dll
+                'label'      => $s['label'],
+            ]);
+        }
+
+        // kalau nggak ada chain (misal owner = vpd/president) → auto approve
+        if (empty($chain)) {
+            $ipp->status      = 'approved';
+            $ipp->approved_at = now();
+            $ipp->save();
+        }
     }
 }

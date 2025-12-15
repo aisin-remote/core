@@ -293,7 +293,7 @@ class Employee extends Model
 
         // Jika tidak diberikan posisi yang diizinkan, gunakan default lama
         if (empty($allowedPositions)) {
-            $allowedPositions = ['manager', 'supervisor', 'leader', 'jp', 'operator', 'gm'];
+            $allowedPositions = ['manager', 'supervisor', 'leader', 'jp', 'operator', 'gm', 'direktur'];
         }
 
         return $currentEmployees->filter(function ($employee) use ($allowedPositions) {
@@ -312,15 +312,22 @@ class Employee extends Model
         if ($normalizedPosition === 'vpd') {
             $managerIds = Department::pluck('manager_id')->filter();
             $gmIds = Division::pluck('gm_id')->filter();
-
-            $subordinateIds = $managerIds->merge($gmIds)->unique();
+            $drIds = Plant::pluck('director_id')->filter();
+            $subordinateIds = $managerIds
+                ->merge($gmIds)
+                ->merge($drIds)
+                ->unique();
         } elseif ($normalizedPosition === 'president') {
             $managerIds = Department::pluck('manager_id')->filter()->unique();
             $divisionGmIds = Division::pluck('gm_id')->filter()->unique();
+            $drIds = Plant::pluck('director_id')->filter();
 
-            $subordinateIds = $managerIds->isNotEmpty()
-                ? $managerIds->merge($divisionGmIds)->unique()
-                : $divisionGmIds;
+            $base = $managerIds->isNotEmpty() ? $managerIds : collect();
+
+            $subordinateIds = $base
+                ->merge($divisionGmIds)
+                ->merge($drIds)
+                ->unique();
         }
 
 
@@ -494,7 +501,7 @@ class Employee extends Model
         return match ($this->getNormalizedPosition()) {
             'jp', 'operator', 'leader', 'manager' => 3,
             'supervisor', 'gm', 'direktur' => 2,
-            'vpd' => 1,
+            'vpd', 'president' => 1,
             default => 0,
         };
     }

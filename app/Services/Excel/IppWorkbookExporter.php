@@ -45,10 +45,10 @@ class IppWorkbookExporter
             $this->apRenderer->render($apSheet, $ippId);
 
             logger('Sheet details before rendering Activity Plan:', [
-                'sheet_title' => $apSheet->getTitle(),
-                'sheet_index' => $wb->getIndex($apSheet),
-                'total_sheets' => $wb->getSheetCount(),
-                'highest_row' => $apSheet->getHighestRow(),
+                'sheet_title'    => $apSheet->getTitle(),
+                'sheet_index'    => $wb->getIndex($apSheet),
+                'total_sheets'   => $wb->getSheetCount(),
+                'highest_row'    => $apSheet->getHighestRow(),
                 'highest_column' => $apSheet->getHighestColumn(),
             ]);
 

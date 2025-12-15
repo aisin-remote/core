@@ -3,14 +3,22 @@
 namespace App\Http\Controllers;
 
 use App\Helpers\ApprovalHelper;
+use App\Helpers\IppApprovalHelper;
+use App\Models\Department;
+use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Hav;
 use App\Models\Icp;
 use App\Models\IcpApprovalStep;
 use App\Models\Idp;
+use App\Models\IpaHeader;
 use App\Models\Ipp;
+use App\Models\Plant;
 use App\Models\Rtc;
+use App\Models\Section;
+use App\Models\SubSection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class ToDoListController extends Controller
 {
@@ -38,6 +46,7 @@ class ToDoListController extends Controller
         $allHavTasks = $this->getHavTasks($subCheck);
         $allRtcTasks = $this->getRtcTasks($subCheck, $subApprove);
         $allIppTasks = $this->getIppTasks($employee, $user);
+        $allIpaTasks = $this->getIpaTasks($employee, $user);
         $allIcpTasks = $this->getIcpTasks();
 
         return view('website.todolist.index', compact(
@@ -45,6 +54,7 @@ class ToDoListController extends Controller
             'allHavTasks',
             'allRtcTasks',
             'allIppTasks',
+            'allIpaTasks',
             'allIcpTasks'
         ));
     }
@@ -52,6 +62,70 @@ class ToDoListController extends Controller
     /**
      * Tentukan normalized position dan scope karyawan yang boleh dibuat/check/approve.
      */
+    public function status()
+    {
+        $user     = auth()->user();
+        $employee = $user->employee;
+
+        if (! $employee) {
+            return response()->json([
+                'show_todo_dot' => false,
+                'total_pending' => 0,
+                'counts'        => [
+                    'idp'  => 0,
+                    'hav'  => 0,
+                    'rtc'  => 0,
+                    'icp'  => 0,
+                    'ipp'  => 0, // subordinate only
+                    'ipa'  => 0, // subordinate only
+                ],
+            ]);
+        }
+
+        [$normalized, $subCreate, $subCheck, $subApprove] = $this->resolveScopes($user, $employee);
+
+        $assessments    = $this->getLatestHavAssessments($subCreate);
+        $unassignedIdps = $this->buildUnassignedIdps($assessments);
+        $draftIdps      = $this->getDraftIdps($subCreate);
+        $reviseIdps     = $this->getReviseIdps($subCreate);
+        $pendingIdps    = $this->getPendingIdps($subCheck, $subApprove, $normalized);
+
+        $allIdpTasks = $this->mergeAllIdpTasks(
+            $unassignedIdps,
+            $draftIdps,
+            $reviseIdps,
+            $pendingIdps
+        );
+
+        $allHavTasks = $this->getHavTasks($subCheck);
+        $allRtcTasks = $this->getRtcTasks($subCheck, $subApprove);
+        $allIcpTasks = $this->getIcpTasks();
+        $allIppTasks = $this->getIppTasks($employee, $user);
+        $allIpaTasks = $this->getIpaTasks($employee, $user);
+
+        $subsIpps = $allIppTasks['subordinateIpps'] ?? [];
+        $subsIpas = $allIpaTasks['subordinateIpas'] ?? [];
+
+        $counts = [
+            'idp' => $allIdpTasks->count(),
+            'hav' => $allHavTasks->count(),
+            'rtc' => $allRtcTasks->count(),
+            'icp' => $allIcpTasks->count(),
+            'ipp' => is_countable($subsIpps) ? count($subsIpps) : 0,
+            'ipa' => is_countable($subsIpas) ? count($subsIpas) : 0,
+        ];
+
+        $totalPending = array_sum($counts);
+
+        $showTodoDot = $totalPending > 0;
+
+        return response()->json([
+            'show_todo_dot' => $showTodoDot,
+            'total_pending' => $totalPending,
+            'counts'        => $counts,
+        ]);
+    }
+
     private function resolveScopes($user, $employee): array
     {
         $role = $user->role;
@@ -358,6 +432,7 @@ class ToDoListController extends Controller
     {
         $me   = auth()->user()->employee;
         $role = ApprovalHelper::roleKeyFor($me);
+        $company = $me->company_name;
 
         // role utama
         $rolesToMatch = [$role];
@@ -381,6 +456,9 @@ class ToDoListController extends Controller
             ->whereHas('icp', function ($q) {
                 $q->where('status', '!=', 4);
             })
+            ->whereHas('icp.employee', function ($q) use ($company) {
+                $q->where('company_name', $company);
+            })
             ->orderBy('step_order')
             ->get()
             ->filter(function ($s) {
@@ -399,66 +477,328 @@ class ToDoListController extends Controller
      */
     private function getRtcTasks(array $subCheck, array $subApprove)
     {
-        return Rtc::with('employee')
-            ->where(function ($query) use ($subCheck, $subApprove) {
-                $query->where(function ($q) use ($subCheck) {
-                    $q->whereIn('employee_id', $subCheck)
-                        ->where('status', 0);
-                })->orWhere(function ($q) use ($subApprove) {
-                    $q->whereIn('employee_id', $subApprove)
-                        ->where('status', 1);
-                });
-            })
-            ->get();
-    }
+        $user = auth()->user();
+        $employee = $user?->employee;
 
-    /**
-     * IPP tasks untuk karyawan yang login di tahun berjalan.
-     */
-    private function getIppTasks($employee, $user): array
-    {
-        $year       = now()->year;
-        $allIppTasks = [];
-        $message    = null;
-
-        $employeeId = $employee->id ?? $user->employee_id ?? null;
-
-        $ipp = Ipp::with('employee')
-            ->where('employee_id', $employeeId)
-            ->where('on_year', $year)
-            ->latest('created_at')
-            ->first();
-
-        if (! $ipp) {
-            $summary = [];
-            $message = "The {$year} IPP has not yet been created.";
-        } else {
-            $summary = is_array($ipp->summary)
-                ? $ipp->summary
-                : (json_decode($ipp->summary, true) ?? []);
-            $message = null;
+        if (!$employee) {
+            return collect();
         }
 
-        $ippTasks = [
-            'activity_management' => $summary['activity_management'] ?? 0,
-            'crp'                 => $summary['crp'] ?? 0,
-            'people_development'  => $summary['people_development'] ?? 0,
-            'special_assignment'  => $summary['special_assignment'] ?? 0,
-            'total'               => $summary['total'] ?? array_sum([
-                $summary['activity_management'] ?? 0,
-                $summary['crp'] ?? 0,
-                $summary['people_development'] ?? 0,
-                $summary['special_assignment'] ?? 0,
-            ]),
-            'status'              => $ipp->status ?? 'Not Created',
-            'employee_name'       => $ipp->employee->name ?? '',
-            'employee_company'    => $ipp->employee->company_name ?? '',
-            'employee_npk'        => $ipp->employee->npk ?? '',
-        ];
+        $norm = strtolower($employee->getNormalizedPosition());
+        $queue = collect();
 
-        $allIppTasks['ippTasks'] = $ippTasks;
-        $allIppTasks['message']  = $message;
+        if ($norm === 'gm') {
+            $divIds     = Division::where('gm_id', $employee->id)->pluck('id');
+            $deptIds    = Department::whereIn('division_id', $divIds)->pluck('id');
+            $sectionIds = Section::whereIn('department_id', $deptIds)->pluck('id');
+            $subIds     = SubSection::whereIn('section_id', $sectionIds)->pluck('id');
 
-        return $allIppTasks;
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->where(function ($q) use ($deptIds, $sectionIds, $subIds) {
+                    $q->where(fn($qq) => $qq->where('area', 'department')->whereIn('area_id', $deptIds))
+                        ->orWhere(fn($qq) => $qq->where('area', 'section')->whereIn('area_id', $sectionIds))
+                        ->orWhere(fn($qq) => $qq->where('area', 'sub_section')->whereIn('area_id', $subIds));
+                })
+                ->get();
+        } elseif (in_array($norm, ['direktur', 'director', 'act direktur'], true)) {
+            $plantId = optional($employee->plant)->id;
+            $divIds  = Division::where('plant_id', $plantId)->pluck('id');
+
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->whereIn('area', ['division', 'Division'])
+                ->whereIn('area_id', $divIds)
+                ->get();
+        } elseif (in_array($norm, ['vpd', 'vice president director'], true)) {
+            $plantIds = Plant::pluck('id');
+
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->whereIn('area', ['direksi', 'plant'])
+                ->whereIn('area_id', $plantIds)
+                ->get();
+        } elseif ($norm === 'president') {
+            $plantIds = Plant::pluck('id');
+
+            $queue = Rtc::with(['employee', 'department', 'section', 'subsection', 'division', 'plant'])
+                ->where('status', 1)
+                ->whereNotNull('term')
+                ->whereIn('area', ['direksi', 'plant'])
+                ->whereIn('area_id', $plantIds)
+                ->get();
+        }
+
+        $grouped = $queue
+            ->groupBy(fn($rtc) => strtolower($rtc->area) . '#' . $rtc->area_id)
+            ->map(function ($items) {
+                $first   = $items->first();
+                $areaKey = strtolower($first->area);
+
+                $statusMap = [
+                    -1 => 'Revised',
+                    0  => 'Draft',
+                    1  => 'Submitted',
+                    2  => 'Approved',
+                ];
+
+                $statusCounts = $items->groupBy('status')
+                    ->map(fn($col) => $col->count())
+                    ->mapWithKeys(fn($count, $code) => [($statusMap[$code] ?? 'Unknown') => $count]);
+
+                return [
+                    'area'       => $areaKey,
+                    'area_id'    => $first->area_id,
+                    'area_name'  => $first->area_name,
+                    'total_rtc'  => $items->count(),
+                    'terms'      => $items->pluck('term')->unique()->values()->all(),
+                    'status_info' => $statusCounts,
+                ];
+            })
+            ->values();
+
+        return $grouped;
+    }
+
+    private function getIppTasks(
+        $employee = null,
+        $user = null
+    ): array {
+        try {
+            // ==== Ambil user & employee dari auth sebagai default ====
+            $authUser = auth()->user();
+
+            $user     = $user ?? $authUser;
+            $employee = $employee ?? $user->employee;
+            $year     = now()->year + 1; // hanya untuk pesan, kalau mau, boleh dihapus/diganti
+
+            // =========================
+            // 1. IPP SAYA (USER LOGIN)
+            // =========================
+
+            if (! $employee) {
+                $ippTasks = [
+                    'activity_management' => 0,
+                    'crp'                 => 0,
+                    'people_development'  => 0,
+                    'special_assignment'  => 0,
+                    'total'               => 0,
+                    'status'              => 'Not Created',
+                    'employee_name'       => optional($user)->name ?? '',
+                    'employee_company'    => '',
+                    'employee_npk'        => '',
+                ];
+
+                return [
+                    'ippTasks'        => $ippTasks,
+                    'message'         => 'Employee untuk user login tidak ditemukan.',
+                    'subordinateIpps' => [],
+                ];
+            }
+
+            // Ambil IPP milik employee login (tanpa filter tahun, latest)
+            $ipp = Ipp::with('employee')
+                ->where('employee_id', $employee->id)
+                ->latest('created_at')
+                ->first();
+
+            if (! $ipp) {
+                $message = "The {$year} IPP has not yet been created.";
+
+                $ippTasks = [
+                    'activity_management' => 0,
+                    'crp'                 => 0,
+                    'people_development'  => 0,
+                    'special_assignment'  => 0,
+                    'total'               => 0,
+                    'status'              => 'Not Created',
+                    'employee_name'       => $employee->name ?? '',
+                    'employee_company'    => $employee->company_name ?? '',
+                    'employee_npk'        => $employee->npk ?? '',
+                ];
+            } else {
+                $summary = is_array($ipp->summary)
+                    ? $ipp->summary
+                    : (json_decode($ipp->summary, true) ?? []);
+
+                $activityManagement = $summary['activity_management'] ?? 0;
+                $crp                = $summary['crp'] ?? 0;
+                $peopleDevelopment  = $summary['people_development'] ?? 0;
+                $specialAssignment  = $summary['special_assignment'] ?? 0;
+
+                $message = null;
+
+                $ippTasks = [
+                    'activity_management' => $activityManagement,
+                    'crp'                 => $crp,
+                    'people_development'  => $peopleDevelopment,
+                    'special_assignment'  => $specialAssignment,
+                    'total'               => $summary['total'] ?? array_sum([
+                        $activityManagement,
+                        $crp,
+                        $peopleDevelopment,
+                        $specialAssignment,
+                    ]),
+                    'status'              => $ipp->status ?? 'Not Created',
+                    'employee_name'       => optional($ipp->employee)->name ?? '',
+                    'employee_company'    => optional($ipp->employee)->company_name ?? '',
+                    'employee_npk'        => optional($ipp->employee)->npk ?? '',
+                ];
+            }
+
+            // =======================================
+            // 2. IPP BAWAHAN (CHECK / APPROVE)
+            // =======================================
+
+            $subordinateRows = [];
+
+            if ($employee) {
+                $subordinateRows = IppApprovalHelper::getApprovalRows($employee, 'all', '')->all();
+            }
+
+            return [
+                'ippTasks'        => $ippTasks,       // IPP milik user login
+                'message'         => $message,        // pesan kalau belum ada IPP
+                'subordinateIpps' => $subordinateRows // daftar IPP bawahan butuh check/approve
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [
+                'ippTasks'        => [
+                    'activity_management' => 0,
+                    'crp'                 => 0,
+                    'people_development'  => 0,
+                    'special_assignment'  => 0,
+                    'total'               => 0,
+                    'status'              => 'Error',
+                    'employee_name'       => optional(optional(auth()->user())->employee)->name ?? '',
+                    'employee_company'    => optional(optional(auth()->user())->employee)->company_name ?? '',
+                    'employee_npk'        => optional(optional(auth()->user())->employee)->npk ?? '',
+                ],
+                'message'         => 'Terjadi kesalahan saat mengambil data IPP.',
+                'subordinateIpps' => [],
+            ];
+        }
+    }
+
+    private function getIpaTasks($employee = null, $user = null)
+    {
+        try {
+            $authUser = auth()->user();
+            $user = $user ?? $authUser;
+            $employee = $employee ?? $user->employee;
+            $year = now()->year + 1;
+
+            // ==================
+            // 1. IPA SAYA (USER LOGIN)
+            // ==================
+            if (!$employee) {
+                $ipaTasks = [
+                    'status' => 'Not Created',
+                    'year' => null,
+                    'employee_name' => optional($user)->name ?? '',
+                ];
+
+                return [
+                    'ipaTasks' => $ipaTasks,
+                    'message' => 'Employee untuk user login tidak ditemukan,',
+                    'subordinateIpas' => []
+                ];
+            }
+
+            $ipaHeader = IpaHeader::with('employee')
+                ->where('employee_id', $employee->id)
+                ->latest("created_at")
+                ->first();
+            if (!$ipaHeader) {
+                $message = "IPA belum dibuat.";
+
+                $ipaTasks = [
+                    'status' => 'Not Created',
+                    'year' => null,
+                    'employee_name' => $employee->name ?? ''
+                ];
+            } else {
+                $message = null;
+
+                $ipaTasks = [
+                    'status' => $ipaHeader->status ?? 'draft',
+                    'year' => $ipaHeader->year ?? null,
+                    'employee_name' => optional($ipaHeader->employee)->name ?? ''
+                ];
+            }
+
+            // ==================
+            // 2. IPA BAWAHAN (QUEUE SAYA)
+            // ==================
+            $subordinateIpas = [];
+            if ($employee) {
+                $empId = $employee->id;
+                $q = IpaHeader::with([
+                    'employee:id,npk,name,company_name,position,grade',
+                    'checkedBy:id,name',
+                    'approvedBy:id,name',
+                ])
+                    ->where(function ($qq) use ($empId) {
+                        $qq->where(function ($w) use ($empId) {
+                            $w->where('status', 'submitted')
+                                ->where('checked_by', $empId);
+                        })->orWhere(function ($w) use ($empId) {
+                            $w->where('status', 'checked')
+                                ->where('approved_by', $empId);
+                        });
+                    });
+
+                $rows = $q->orderBy('id', 'desc')->get();
+
+                $subordinateIpas = $rows->map(function (IpaHeader $h) use ($empId) {
+                    $e = $h->employee;
+
+                    $stage = $h->status === 'submitted'
+                        ? 'check'
+                        : ($h->status === 'checked' ? 'approve' : $h->status);
+
+                    $canApprove = ($h->status === 'submitted' && (int) $h->checked_by  === (int) $empId)
+                        || ($h->status === 'checked'   && (int) $h->approved_by === (int) $empId);
+
+                    return [
+                        'id'          => $h->id,
+                        'status'      => $h->status,
+                        'stage'       => $stage,
+                        'can_approve' => $canApprove,
+                        'employee'    => [
+                            'npk'        => optional($e)->npk,
+                            'name'       => optional($e)->name,
+                            'company'    => optional($e)->company_name,
+                            'position'   => optional($e)->position,
+                            'department' => optional($e)->department_name ?? null,
+                            'grade'      => optional($e)->grade,
+                        ],
+                    ];
+                })->values()->all();
+            }
+
+            return [
+                'ipaTasks' => $ipaTasks,
+                'message' => $message,
+                'subordinateIpas' => $subordinateIpas
+            ];
+        } catch (\Throwable $e) {
+            report($e);
+
+            return [
+                'ipaTasks'        => [
+                    'status'           => 'Error',
+                    'year'             => null,
+                    'employee_name'    => optional(optional(auth()->user())->employee)->name ?? '',
+                ],
+                'message'         => 'Terjadi kesalahan saat mengambil data IPA.',
+                'subordinateIpas' => [],
+            ];
+        }
     }
 }

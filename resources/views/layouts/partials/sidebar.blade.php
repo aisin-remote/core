@@ -1,4 +1,3 @@
-{{-- resources/views/layouts/partials/sidebar.blade.php --}}
 <style>
     :root {
         --sb-bg: #0f172a;
@@ -327,7 +326,7 @@
     }
 
     .blinking-dot {
-        animation: blink 1s infinite
+        animation: blink 1s infinite;
     }
 
     @keyframes blink {
@@ -618,6 +617,47 @@
                     hideFlyout);
             }
         });
+
+        // === CEK TODO DOT VIA AJAX ===
+        if (window.jQuery) {
+            $.ajax({
+                url: '{{ route('todolist.status') }}',
+                method: 'GET',
+                dataType: 'json',
+                success: function(res) {
+                    var counts = (res && res.counts) || {};
+                    var total = (res && typeof res.total_pending !== 'undefined') ?
+                        res.total_pending :
+                        (
+                            (counts.idp || 0) +
+                            (counts.hav || 0) +
+                            (counts.rtc || 0) +
+                            (counts.icp || 0) +
+                            (counts.ipp || 0) +
+                            (counts.ipa || 0)
+                        );
+
+                    var hasPending = total > 0;
+
+                    var $dotMain = $('#todo-dot');
+                    var $badgeMain = $('#todo-badge');
+                    var $badgeFlyout = $('#todo-badge-flyout');
+
+                    if (hasPending) {
+                        $dotMain.removeClass('d-none');
+
+                        // BADGE angka
+                        $badgeMain.text(total).removeClass('d-none');
+                        $badgeFlyout.text(total).removeClass('d-none');
+                    } else {
+                        $dotMain.addClass('d-none');
+                        $badgeMain.addClass('d-none');
+                        $badgeFlyout.addClass('d-none');
+                    }
+                },
+                error: function(xhr) {}
+            });
+        }
 
         // init
         updateToggleIcon();

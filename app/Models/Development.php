@@ -19,4 +19,8 @@ class Development extends Model
     {
         return $this->belongsTo(Idp::class);
     }
+    public function steps()
+    {
+        return $this->hasMany(DevelopmentApprovalStep::class, 'development_mid_id');
+    }
 }

@@ -31,7 +31,7 @@
             border-color: #a7f3d0;
         }
 
-        /* Submitted/Waiting (yellow) */
+        /* Pending Approval (yellow) — code: waiting/submitted */
         .status-chip[data-status="waiting"] {
             background: #fffbeb;
             color: #92400e;
@@ -52,7 +52,7 @@
             border-color: #e4e4e7;
         }
 
-        /* NEW: Ongoing (blue-ish) */
+        /* Ongoing (blue-ish) */
         .status-chip[data-status="ongoing"] {
             background: #eff6ff;
             color: #1e40af;
@@ -144,8 +144,8 @@
                                 @endphp
                                 <li class="nav-item">
                                     <a class="nav-link {{ ($activeTab ?? '') === $key ? 'active' : '' }}"
-                                        href="{{ route('rtc.list', ['level' => $key]) }}"
-                                        data-tab-key="{{ $key }}">
+                                       href="{{ route('rtc.list', ['level' => $key]) }}"
+                                       data-tab-key="{{ $key }}">
                                         {{ $t['label'] }}
                                         @if ($eligibleForBadge)
                                             <span
@@ -171,7 +171,7 @@
                         <h3 class="card-title">{{ $cardTitle ?? 'List' }}</h3>
                         <div class="d-flex align-items-center">
                             <input type="text" id="searchInput" class="form-control me-2" placeholder="Search ..."
-                                style="width:200px;">
+                                   style="width:200px;">
                             <button type="button" class="btn btn-primary" id="searchButton">
                                 <i class="fas fa-search"></i> Search
                             </button>
@@ -200,7 +200,7 @@
                                 <div class="col-md-6">
                                     <label class="form-label">Direksi</label>
                                     <select id="plantSelect" class="form-select"
-                                        {{ !empty($isCompanyScope) ? 'disabled' : '' }}>
+                                            {{ !empty($isCompanyScope) ? 'disabled' : '' }}>
                                         @if (empty($isCompanyScope))
                                             @foreach ($plants ?? collect() as $p)
                                                 <option value="{{ $p['id'] ?? $p->id }}"
@@ -246,18 +246,18 @@
                         {{-- TABLE --}}
                         <table class="table align-middle table-row-dashed fs-6 gy-5 dataTable" id="kt_table_users">
                             <thead>
-                                <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
-                                    <th>No</th>
-                                    <th class="text-start">Name</th>
-                                    @if ($showKpiCols)
-                                        <th class="text-start">Current</th>
-                                        <th class="text-start">ST</th>
-                                        <th class="text-start">MT</th>
-                                        <th class="text-start">LT</th>
-                                        <th class="text-center">Status</th>
-                                    @endif
-                                    <th class="text-center">Actions</th>
-                                </tr>
+                            <tr class="text-start text-muted fw-bold fs-7 text-uppercase gs-0">
+                                <th>No</th>
+                                <th class="text-start">Name</th>
+                                @if ($showKpiCols)
+                                    <th class="text-start">Current</th>
+                                    <th class="text-start">ST</th>
+                                    <th class="text-start">MT</th>
+                                    <th class="text-start">LT</th>
+                                    <th class="text-center">Status</th>
+                                @endif
+                                <th class="text-center">Actions</th>
+                            </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
@@ -277,7 +277,8 @@
                     <div class="modal-content">
                         <div class="modal-header">
                             <h5 class="modal-title" id="addPlanLabel">Add RTC</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
                         </div>
 
                         <div class="modal-body">
@@ -292,7 +293,7 @@
                             <div class="mb-3">
                                 <label for="short_term" class="form-label">Short Term</label>
                                 <select id="short_term" name="short_term" class="form-select rtc-s2"
-                                    data-placeholder="Kandidat untuk ST (≤ 1 tahun)">
+                                        data-placeholder="Kandidat untuk ST (≤ 1 tahun)">
                                     <option value="">-- Select --</option>
                                 </select>
                             </div>
@@ -300,7 +301,7 @@
                             <div class="mb-3">
                                 <label for="mid_term" class="form-label">Mid Term</label>
                                 <select id="mid_term" name="mid_term" class="form-select rtc-s2"
-                                    data-placeholder="Kandidat untuk MT (2–3 tahun)">
+                                        data-placeholder="Kandidat untuk MT (2–3 tahun)">
                                     <option value="">-- Select --</option>
                                 </select>
                             </div>
@@ -308,7 +309,7 @@
                             <div class="mb-3">
                                 <label for="long_term" class="form-label">Long Term</label>
                                 <select id="long_term" name="long_term" class="form-select rtc-s2"
-                                    data-placeholder="Kandidat untuk LT (≥ 3 tahun)">
+                                        data-placeholder="Kandidat untuk LT (≥ 3 tahun)">
                                     <option value="">-- Select --</option>
                                 </select>
                             </div>
@@ -368,7 +369,6 @@
             window.EDIT_MODE = false; // false: Add, true: Edit
             window.__RTC_SAVING__ = false; // in-flight request guard
 
-            // ===== Helpers =====
             function esc(s) {
                 return $('<div>').text(s ?? '').html();
             }
@@ -411,6 +411,7 @@
             function statusChip(overall) {
                 let statusNum = null,
                     label = '';
+
                 const codeToNum = {
                     draft: 0,
                     submitted: 1,
@@ -444,7 +445,7 @@
                     1: {
                         ds: 'waiting',
                         icon: '<i class="fas fa-paper-plane"></i>',
-                        label: 'Submitted'
+                        label: 'Pending Approval'
                     },
                     2: {
                         ds: 'approved',
@@ -459,12 +460,11 @@
                     label: 'Not Set'
                 };
 
-                // Default label dari map / server
                 let finalLabel = label || conf.label;
-                // NEW: jika code 'ongoing' / 'continue', pakai ds & label 'ongoing'
                 let ds = conf.ds;
-                if (overall && typeof overall === 'object' && (overall.code === 'ongoing' || overall.code ===
-                        'continue')) {
+
+                // Jika code 'ongoing' / 'continue' dari backend → gunakan style & label ongoing
+                if (overall && typeof overall === 'object' && (overall.code === 'ongoing' || overall.code === 'continue')) {
                     ds = 'ongoing';
                     finalLabel = 'Ongoing';
                 }
@@ -510,8 +510,9 @@
                     let overallNum = null;
                     if (overallForChip && typeof overallForChip === 'object') {
                         if (typeof overallForChip.status === 'number') overallNum = overallForChip.status;
-                        else if (overallForChip.code && (overallForChip.code in codeToNum)) overallNum =
-                            codeToNum[overallForChip.code];
+                        else if (overallForChip.code && (overallForChip.code in codeToNum)) {
+                            overallNum = codeToNum[overallForChip.code];
+                        }
                     } else if (typeof overallForChip === 'string' && (overallForChip in codeToNum)) {
                         overallNum = codeToNum[overallForChip];
                     }
@@ -520,8 +521,9 @@
 
                     const fullName = row.pic?.name || '-';
                     const showName = (fullName || '').trim().split(/\s+/).slice(0, 2).join(' ');
-                    const pic = row.pic ? `<span title="${esc(fullName)}">${esc(showName)}</span>` :
-                        `<span>-</span>`;
+                    const pic = row.pic
+                        ? `<span title="${esc(fullName)}">${esc(showName)}</span>`
+                        : `<span>-</span>`;
 
                     const previewBtn =
                         `<a href="${window.ROUTE_SUMMARY}?id=${row.id}&filter=${filter}" class="btn btn-sm btn-info" target="_blank" title="Preview">Preview</a>`;
@@ -616,7 +618,6 @@
                     .then(res => {
                         const items = res.items || [];
                         renderRows(items, filter);
-                        // === update badge untuk tab ini ===
                         updateTabBadge(filter, items);
                         return items;
                     })
@@ -627,11 +628,11 @@
             }
             window.fetchItems = fetchItems;
 
-            // ===== Direksi/Division helpers =====
             function loadDivisionsForCompany(companyCode) {
                 const code = (companyCode || '').toUpperCase();
-                const plants = (window.DIREKSI_BY_COMPANY && window.DIREKSI_BY_COMPANY[code]) ? window
-                    .DIREKSI_BY_COMPANY[code] : [];
+                const plants = (window.DIREKSI_BY_COMPANY && window.DIREKSI_BY_COMPANY[code])
+                    ? window.DIREKSI_BY_COMPANY[code]
+                    : [];
                 const reqs = plants.map(p => $.getJSON(window.ROUTE_FILTER, {
                         filter: 'division',
                         division_id: p.id
@@ -787,7 +788,6 @@
                     Promise.all(reqs).then(chunks => {
                         const data = chunks.flat();
 
-                        // Unik per employee saja
                         const uniq = {};
                         data.forEach(r => {
                             if (!r || !r.employee_id) return;
@@ -796,12 +796,10 @@
                             const existing = uniq[key];
 
                             if (!existing) {
-                                // belum ada: pakai yang ini dulu
                                 uniq[key] = r;
                                 return;
                             }
 
-                            // sudah ada: pilih yang plan_year lebih besar
                             const currentYear = parseInt(existing.plan_year, 10) || 0;
                             const newYear = parseInt(r.plan_year, 10) || 0;
 
@@ -829,12 +827,9 @@
                             else lt.push(opt);
                         });
 
-                        $('#short_term').html('<option value="">-- Select --</option>' + st.join(
-                            '')).trigger('change');
-                        $('#mid_term').html('<option value="">-- Select --</option>' + mt.join(''))
-                            .trigger('change');
-                        $('#long_term').html('<option value="">-- Select --</option>' + lt.join(''))
-                            .trigger('change');
+                        $('#short_term').html('<option value="">-- Select --</option>' + st.join('')).trigger('change');
+                        $('#mid_term').html('<option value="">-- Select --</option>' + mt.join('')).trigger('change');
+                        $('#long_term').html('<option value="">-- Select --</option>' + lt.join('')).trigger('change');
 
                         $('#cnt_st').text(st.length);
                         $('#cnt_mt').text(mt.length);
@@ -924,12 +919,10 @@
                     }).done(function() {
                         Swal.fire('Berhasil', 'RTC berhasil di-submit.', 'success');
                         const cid = window.CONTAINER_ID || null;
-                        if (typeof fetchItems === 'function') fetchItems(window
-                            .ACTIVE_FILTER, cid);
+                        if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
                         else location.reload();
                     }).fail(function(xhr) {
-                        const msg = xhr?.responseJSON?.message || xhr?.statusText ||
-                            'Gagal submit RTC';
+                        const msg = xhr?.responseJSON?.message || xhr?.statusText || 'Gagal submit RTC';
                         Swal.fire('Gagal', msg, 'error');
                     });
                 });
@@ -945,7 +938,7 @@
                 resetRtcModal();
             });
 
-            // ===== SAVE (Add & Update) — Satu-satunya handler submit =====
+            // ===== SAVE (Add & Update) =====
             $(document).off('click', '#btnSave').on('click', '#btnSave', function() {
                 $('#addPlanForm').trigger('submit');
             });
@@ -981,16 +974,16 @@
                     data: payload
                 }).done(function(res) {
                     $('#addPlanModal').modal('hide');
-                    const fallback = window.EDIT_MODE ? 'Perubahan RTC disimpan (draft).' :
-                        'RTC berhasil disimpan (draft).';
+                    const fallback = window.EDIT_MODE
+                        ? 'Perubahan RTC disimpan (draft).'
+                        : 'RTC berhasil disimpan (draft).';
                     Swal.fire('Berhasil', (res && res.message) ? res.message : fallback, 'success');
 
                     const cid = window.CONTAINER_ID || null;
                     if (typeof fetchItems === 'function') fetchItems(window.ACTIVE_FILTER, cid);
                     else location.reload();
                 }).fail(function(xhr) {
-                    const msg = xhr?.responseJSON?.message || xhr?.statusText ||
-                        'Gagal menyimpan RTC';
+                    const msg = xhr?.responseJSON?.message || xhr?.statusText || 'Gagal menyimpan RTC';
                     Swal.fire('Gagal', msg, 'error');
                 }).always(function() {
                     window.__RTC_SAVING__ = false;

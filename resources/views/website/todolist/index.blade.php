@@ -670,29 +670,18 @@
                     <div class="panel-body panel-scroll">
                         @forelse ($allRtcTasks as $i => $item)
                             @php
-                                $raw = (int) $item->getRawOriginal('status');
-                                // 1 → Need Approve, 0 → Need Check (sesuai kode lama)
-                                $cfg =
-                                    $raw === 1
-                                        ? [
-                                            'tone' => 'info',
-                                            'status' => 'status-info',
-                                            'icon' => 'fa-hourglass-half',
-                                            'label' => 'Need Approve',
-                                        ]
-                                        : ($raw === 0
-                                            ? [
-                                                'tone' => 'warn',
-                                                'status' => 'status-warn',
-                                                'icon' => 'fa-clipboard-check',
-                                                'label' => 'Need Check',
-                                            ]
-                                            : [
-                                                'tone' => 'muted',
-                                                'status' => 'status-muted',
-                                                'icon' => 'fa-circle-question',
-                                                'label' => 'Unknown',
-                                            ]);
+                                $statusInfo = $item['status_info'] ?? [];
+                                $submittedCount = $statusInfo['Submitted'] ?? 0;
+
+                                $cfg = [
+                                    'tone' => 'info',
+                                    'status' => 'status-info',
+                                    'icon' => 'fa-hourglass-half',
+                                    'label' => 'Need Approve',
+                                ];
+
+                                $areaName = $item['area_name'] ?? '-';
+                                $areaType = ucfirst(str_replace('_', ' ', $item['area'] ?? ''));
                             @endphp
 
                             @if ($isHRD)
@@ -701,8 +690,11 @@
                                         <div class="tone tone-{{ $cfg['tone'] }}"></div>
 
                                         <div>
-                                            <h5 class="task-title mb-1">{{ $item->employee->name }}</h5>
-                                            <div class="task-sub">{{ $item->employee->company_name ?? '-' }}</div>
+                                            <h5 class="task-title mb-1">{{ $areaName }}</h5>
+                                            <div class="task-sub">
+                                                {{ $areaType }} &mdash;
+                                                {{ $submittedCount }} RTC Submitted
+                                            </div>
                                         </div>
 
                                         <span class="status-chip {{ $cfg['status'] }}">
@@ -716,8 +708,7 @@
                                         <div class="tone tone-{{ $cfg['tone'] }}"></div>
 
                                         <div>
-                                            <h5 class="task-title mb-1">{{ $item->employee->name }}</h5>
-                                            <div class="task-sub">{{ $item->employee->company_name ?? '-' }}</div>
+                                            <h5 class="task-title mb-1">{{ $areaName }}</h5>
                                         </div>
 
                                         <span class="status-chip {{ $cfg['status'] }}">
@@ -736,25 +727,38 @@
                             </div>
                         @endforelse
                     </div>
+
                 </div>
             </div>
 
-            {{-- ===================== IPP ===================== --}}
-            @php $isUser = auth()->user()->role === 'User'; @endphp
-            @if ($isUser)
+            {{-- ===================== IPP (My IPP) ===================== --}}
+            @php
+                $role = auth()->user()->role;
+                $isHRD = $role === 'HRD' || auth()->user()->employee->isDireksi();
+                $ippTasks = $allIppTasks['ippTasks'] ?? null;
+                $message = $allIppTasks['message'] ?? null;
+                $subordinateIpps = $allIppTasks['subordinateIpps'] ?? [];
+            @endphp
+
+            @if ($ippTasks && !$isHRD)
                 <div class="col-12 col-xl-6 col-xxl-4">
                     <div class="panel shadow-sm">
                         <div class="panel-head">
-                            <h3 class="text-white"><i class="fas fa-user-check"></i><span class="fw-bold">IPP</span></h3>
+                            <h3 class="text-white">
+                                <i class="fas fa-user-check"></i>
+                                <span class="fw-bold">My IPP</span>
+                            </h3>
+
+                            {{-- kecil-kecilan: tampilkan total poin --}}
+                            <span class="counter">
+                                {{ $ippTasks['total'] ?? 0 }} pts
+                            </span>
                         </div>
 
                         <div class="panel-body panel-scroll">
                             @php
-                                $ippTasks = $allIppTasks['ippTasks'];
-                            @endphp
-                            @php
-                                $status = [
-                                    'unassigned' => [
+                                $statusMap = [
+                                    'Not Created' => [
                                         'tone' => 'err',
                                         'status' => 'status-err',
                                         'icon' => 'fa-exclamation-circle',
@@ -784,29 +788,49 @@
                                         'icon' => 'fa-rotate-left',
                                         'label' => 'Need Revise',
                                     ],
+                                    'approved' => [
+                                        'tone' => 'ok',
+                                        'status' => 'status-ok',
+                                        'icon' => 'fa-circle-check',
+                                        'label' => 'Clear',
+                                    ],
                                 ];
-                                $cfg = $status[$ippTasks['status']] ?? [
+
+                                $cfg = $statusMap[$ippTasks['status']] ?? [
                                     'tone' => 'muted',
                                     'status' => 'status-muted',
                                     'icon' => 'fa-circle-question',
                                     'label' => 'Unknown',
                                 ];
 
-                                $href = in_array($ippTasks['status'], ['submitted', 'checked'])
-                                    ? route('ipp.approval')
+                                // kalau status sudah masuk flow approval → ke halaman approval
+                                $href = in_array($ippTasks['status'], ['checked', 'submitted'])
+                                    ? route('ipp.index')
                                     : route('ipp.index', [
                                         'company' => $ippTasks['employee_company'],
                                         'npk' => $ippTasks['employee_npk'],
                                     ]);
+
+                                $ownerName = $ippTasks['employee_name'] ?: optional(auth()->user()->employee)->name;
+                                $ownerCompany =
+                                    $ippTasks['employee_company'] ?: optional(auth()->user()->employee)->company_name;
                             @endphp
+
+                            @if ($message)
+                                <div class="alert alert-warning py-1 px-2 mb-2">
+                                    {{ $message }}
+                                </div>
+                            @endif
+
 
                             <a class="link-plain" href="{{ $href }}">
                                 <div class="task-row hover-shadow stagger">
                                     <div class="tone tone-{{ $cfg['tone'] }}"></div>
 
                                     <div>
-                                        <h5 class="task-title mb-1">{{ $ippTasks['employee_name'] }}</h5>
-                                        <div class="task-sub">{{ $ippTasks['employee_company'] ?? '-' }}</div>
+                                        <h5 class="task-title mb-1">
+                                            {{ $ownerName }}
+                                        </h5>
                                     </div>
 
                                     <span class="status-chip {{ $cfg['status'] }}">
@@ -818,6 +842,242 @@
                     </div>
                 </div>
             @endif
+
+            {{-- ===================== IPP Subordinates ===================== --}}
+            @if (!empty($subordinateIpps))
+                <div class="col-12 col-xl-6 col-xxl-4">
+                    <div class="panel shadow-sm">
+                        <div class="panel-head">
+                            <h3 class="text-white">
+                                <i class="fas fa-users-gear"></i>
+                                <span class="fw-bold">IPP Subordinates</span>
+                            </h3>
+                            <span class="counter">{{ count($subordinateIpps) }} Items</span>
+                        </div>
+
+                        <div class="panel-body panel-scroll">
+                            @foreach ($subordinateIpps as $i => $task)
+                                @php
+                                    // stage: 'check' atau 'approve'
+                                    $cfg = match ($task['stage']) {
+                                        'check' => [
+                                            'tone' => 'warn',
+                                            'status' => 'status-warn',
+                                            'icon' => 'fa-clipboard-check',
+                                            'label' => 'Need Check',
+                                        ],
+                                        'approve' => [
+                                            'tone' => 'info',
+                                            'status' => 'status-info',
+                                            'icon' => 'fa-hourglass-half',
+                                            'label' => 'Need Approve',
+                                        ],
+                                        default => [
+                                            'tone' => 'muted',
+                                            'status' => 'status-muted',
+                                            'icon' => 'fa-circle-question',
+                                            'label' => 'Unknown',
+                                        ],
+                                    };
+
+                                    // satu route approval untuk semua
+                                    $href = route('ipp.approval');
+
+                                    $employee = $task['employee'] ?? [];
+                                @endphp
+
+                                {{-- HRD boleh lihat tapi tidak klik → pakai class disabled-link --}}
+                                @php $linkClass = $isHRD ? 'link-plain disabled-link' : 'link-plain'; @endphp
+
+                                <a class="{{ $linkClass }}" href="{{ $href }}">
+                                    <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
+                                        <div class="tone tone-{{ $cfg['tone'] }}"></div>
+
+                                        <div>
+                                            <h5 class="task-title mb-1">
+                                                {{ $employee['name'] ?? '-' }}
+                                            </h5>
+                                        </div>
+
+                                        <span class="status-chip {{ $cfg['status'] }}">
+                                            <i class="fas {{ $cfg['icon'] }}"></i>{{ $cfg['label'] }}
+                                        </span>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+
+            {{-- ===================== IPA (My IPA + Subordinates) ===================== --}}
+            @php
+                $ipaData = $allIpaTasks ?? [];
+                $ipaTasks = $ipaData['ipaTasks'] ?? null;
+                $ipaMessage = $ipaData['message'] ?? null;
+                $subordinateIpas = $ipaData['subordinateIpas'] ?? [];
+                $isHRD = $role === 'HRD' || auth()->user()->employee->isDireksi();
+            @endphp
+
+            @if ($ipaTasks && !$isHRD)
+                {{-- My IPA --}}
+                <div class="col-12 col-xl-6 col-xxl-4">
+                    <div class="panel shadow-sm">
+                        <div class="panel-head">
+                            <h3 class="text-white">
+                                <i class="fas fa-user-check"></i>
+                                <span class="fw-bold">My IPA</span>
+                            </h3>
+                            <span class="counter">
+                                {{ $ipaTasks['year'] ?? '-' }}
+                            </span>
+                        </div>
+
+                        <div class="panel-body panel-scroll">
+                            @php
+                                $ipaStatusMap = [
+                                    'Not Created' => [
+                                        'tone' => 'err',
+                                        'status' => 'status-err',
+                                        'icon' => 'fa-exclamation-circle',
+                                        'label' => 'To Be Assign',
+                                    ],
+                                    'submitted' => [
+                                        'tone' => 'warn',
+                                        'status' => 'status-warn',
+                                        'icon' => 'fa-clipboard-check',
+                                        'label' => 'Need Check',
+                                    ],
+                                    'draft' => [
+                                        'tone' => 'warn',
+                                        'status' => 'status-warn',
+                                        'icon' => 'fa-pen',
+                                        'label' => 'Need Submit',
+                                    ],
+                                    'checked' => [
+                                        'tone' => 'info',
+                                        'status' => 'status-info',
+                                        'icon' => 'fa-hourglass-half',
+                                        'label' => 'Need Approve',
+                                    ],
+                                    'revised' => [
+                                        'tone' => 'err',
+                                        'status' => 'status-err',
+                                        'icon' => 'fa-rotate-left',
+                                        'label' => 'Need Revise',
+                                    ],
+                                    'approved' => [
+                                        'tone' => 'ok',
+                                        'status' => 'status-ok',
+                                        'icon' => 'fa-circle-check',
+                                        'label' => 'Clear',
+                                    ],
+                                ];
+
+                                $ipaCfg = $ipaStatusMap[$ipaTasks['status'] ?? ''] ?? [
+                                    'tone' => 'muted',
+                                    'status' => 'status-muted',
+                                    'icon' => 'fa-circle-question',
+                                    'label' => 'Unknown',
+                                ];
+
+                                $ipaHref = route('ipa.index');
+
+                                $ipaOwnerName = $ipaTasks['employee_name'] ?? optional(auth()->user()->employee)->name;
+                            @endphp
+
+                            @if ($ipaMessage)
+                                <div class="alert alert-warning py-1 px-2 mb-2">
+                                    {{ $ipaMessage }}
+                                </div>
+                            @endif
+
+                            <a class="link-plain" href="{{ $ipaHref }}">
+                                <div class="task-row hover-shadow stagger">
+                                    <div class="tone tone-{{ $ipaCfg['tone'] }}"></div>
+
+                                    <div>
+                                        <h5 class="task-title mb-1">
+                                            {{ $ipaOwnerName }}
+                                        </h5>
+                                    </div>
+
+                                    <span class="status-chip {{ $ipaCfg['status'] }}">
+                                        <i class="fas {{ $ipaCfg['icon'] }}"></i>{{ $ipaCfg['label'] }}
+                                    </span>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            @endif
+
+            @if (!empty($subordinateIpas))
+                {{-- IPA Subordinates --}}
+                <div class="col-12 col-xl-6 col-xxl-4">
+                    <div class="panel shadow-sm">
+                        <div class="panel-head">
+                            <h3 class="text-white">
+                                <i class="fas fa-users-gear"></i>
+                                <span class="fw-bold">IPA Subordinates</span>
+                            </h3>
+                            <span class="counter">{{ count($subordinateIpas) }} Items</span>
+                        </div>
+
+                        <div class="panel-body panel-scroll">
+                            @foreach ($subordinateIpas as $i => $ipa)
+                                @php
+                                    $ipaCfg = match ($ipa['stage'] ?? '') {
+                                        'check' => [
+                                            'tone' => 'warn',
+                                            'status' => 'status-warn',
+                                            'icon' => 'fa-clipboard-check',
+                                            'label' => 'Need Check',
+                                        ],
+                                        'approve' => [
+                                            'tone' => 'info',
+                                            'status' => 'status-info',
+                                            'icon' => 'fa-hourglass-half',
+                                            'label' => 'Need Approve',
+                                        ],
+                                        default => [
+                                            'tone' => 'muted',
+                                            'status' => 'status-muted',
+                                            'icon' => 'fa-circle-question',
+                                            'label' => 'Unknown',
+                                        ],
+                                    };
+
+                                    $ipaEmp = $ipa['employee'] ?? [];
+                                    $ipaHrefSub = route('ipa.approval');
+                                    $ipaLinkClassSub = $isHRD ? 'link-plain disabled-link' : 'link-plain';
+                                @endphp
+
+                                <a class="{{ $ipaLinkClassSub }}" href="{{ $ipaHrefSub }}">
+                                    <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
+                                        <div class="tone tone-{{ $ipaCfg['tone'] }}"></div>
+
+                                        <div>
+                                            <h5 class="task-title mb-1">
+                                                {{ $ipaEmp['name'] ?? '-' }}
+                                            </h5>
+                                            <div class="task-sub">
+                                                {{ $ipaEmp['company'] ?? '-' }}
+                                            </div>
+                                        </div>
+
+                                        <span class="status-chip {{ $ipaCfg['status'] }}">
+                                            <i class="fas {{ $ipaCfg['icon'] }}"></i>{{ $ipaCfg['label'] }}
+                                        </span>
+                                    </div>
+                                </a>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+            @endif
+
             {{-- ================= Assessment (HRD only) ================= --}}
             @if (auth()->user()->role === 'HRD')
                 <div class="col-12 col-xl-6 col-xxl-4">
