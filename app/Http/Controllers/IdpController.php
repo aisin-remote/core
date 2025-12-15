@@ -902,7 +902,6 @@ class IdpController extends Controller
         return response()->json(['message' => 'Data berhasil direvisi.']);
     }
 
-
     public function destroy($id)
     {
         Idp::where('assessment_id', $id)->delete();
@@ -1128,6 +1127,17 @@ class IdpController extends Controller
                 ->withInput()
                 ->with('warning', 'Failed to delete IDP. Please try again.');
         }
+    }
+
+    public function approvalShow($employeeId){
+
+        $assessment = Assessment::with('details', 'idp','idp.alc', 'employee')
+        ->where('employee_id', $employeeId)
+        ->first();
+
+        $alcs = Alc::select('id','name')->get();
+
+        return view('website.approval.idp.show', compact('assessment', 'alcs'));
     }
 
     // PRIVATE FUNCTION

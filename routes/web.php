@@ -182,6 +182,7 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::patch('/hav/reject/{id}', [HavController::class, 'reject'])->name('hav.reject');
 
         Route::get('/idp', [IdpController::class, 'approval'])->name('idp.approval');
+        Route::get('/idp/show/{employee_id}', [IdpController::class, 'approvalShow'])->name('idp.approval.show');
         Route::get('/idp/{id}', [IdpController::class, 'approve'])->name('idp.approve');
         Route::post('idp/revise', [IdpController::class, 'revise'])->name('idp.revise');
 
