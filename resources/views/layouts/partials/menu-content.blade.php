@@ -146,6 +146,7 @@
                                 <span class="menu-title">HAV Quadran</span>
                             </a>
                         </div>
+
                         <div class="menu-item">
                             <a class="menu-link {{ $currentPath === 'hav/assign' ? 'active' : '' }}"
                                 href="/hav/assign">
@@ -1245,64 +1246,147 @@
 
         {{-- NORMAL --}}
         <div class="menu-sub menu-sub-accordion menu-active-bg">
-            <div class="menu-item">
-                <a class="menu-link {{ request()->is('approval/idp') ? 'active' : '' }}"
-                    href="{{ route('idp.approval') }}">
+
+            @php
+                $isIdpApprovalMenu = request()->is('approval/idp*') || request()->is('approval/development*');
+            @endphp
+
+            {{-- IDP (Accordion) --}}
+            <div class="menu-item menu-accordion {{ $isIdpApprovalMenu ? 'show' : '' }}"
+                data-kt-menu-trigger="click">
+
+                <span class="menu-link {{ $isIdpApprovalMenu ? 'active' : '' }}">
+                    <span class="menu-icon"><i class="fas fa-th-large"></i></span>
                     <span class="menu-title">IDP</span>
-                </a>
+                    <span class="menu-arrow"></span>
+                </span>
+
+                <div class="menu-sub menu-sub-accordion menu-active-bg">
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('approval/idp*') ? 'active' : '' }}"
+                            href="{{ route('idp.approval') }}">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                            <span class="menu-title">IDP Approval</span>
+                        </a>
+                    </div>
+
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('approval/development*') ? 'active' : '' }}"
+                            href="{{ route('development.approval') }}">
+                            <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
+                            <span class="menu-title">Development</span>
+                        </a>
+                    </div>
+                </div>
             </div>
+
+            {{-- menu approval lain tetap sama --}}
             <div class="menu-item">
-                <a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
+                <a class="menu-link {{ request()->is('approval/hav*') ? 'active' : '' }}"
                     href="{{ route('hav.approval') }}">
                     <span class="menu-title">HAV</span>
                 </a>
             </div>
+
             <div class="menu-item">
-                <a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
+                <a class="menu-link {{ request()->is('approval/rtc*') ? 'active' : '' }}"
                     href="{{ route('rtc.approval') }}">
                     <span class="menu-title">RTC</span>
                 </a>
             </div>
+
             <div class="menu-item">
-                <a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
+                <a class="menu-link {{ request()->is('approval/icp*') ? 'active' : '' }}"
                     href="{{ route('icp.approval') }}">
                     <span class="menu-title">ICP</span>
                 </a>
             </div>
+
             <div class="menu-item">
-                <a class="menu-link {{ request()->is('approval/ipp') ? 'active' : '' }}"
+                <a class="menu-link {{ request()->is('approval/ipp*') ? 'active' : '' }}"
                     href="{{ route('ipp.approval') }}">
                     <span class="menu-title">IPP</span>
                 </a>
             </div>
+
             <div class="menu-item">
-                <a class="menu-link {{ request()->is('approval/ipa') ? 'active' : '' }}"
+                <a class="menu-link {{ request()->is('approval/ipa*') ? 'active' : '' }}"
                     href="{{ route('ipa.approval') }}">
                     <span class="menu-title">IPA</span>
                 </a>
             </div>
-            <div class="menu-item">
-                <a class="menu-link {{ request()->is('approval/development') ? 'active' : '' }}"
-                    href="{{ route('development.approval') }}">
-                    <span class="menu-title">Development</span>
-                </a>
-            </div>
+
         </div>
 
         {{-- FLYOUT --}}
         <div class="menu-sub menu-sub-dropdown">
-            <div class="menu-item"><a class="menu-link {{ request()->is('approval/idp') ? 'active' : '' }}"
-                    href="{{ route('idp.approval') }}"><span class="menu-title">IDP</span></a></div>
-            <div class="menu-item"><a class="menu-link {{ request()->is('approval/hav') ? 'active' : '' }}"
-                    href="{{ route('hav.approval') }}"><span class="menu-title">HAV</span></a></div>
-            <div class="menu-item"><a class="menu-link {{ request()->is('approval/rtc') ? 'active' : '' }}"
-                    href="{{ route('rtc.approval') }}"><span class="menu-title">RTC</span></a></div>
-            <div class="menu-item"><a class="menu-link {{ request()->is('approval/icp') ? 'active' : '' }}"
-                    href="{{ route('icp.approval') }}"><span class="menu-title">ICP</span></a></div>
-            <div class="menu-item"><a class="menu-link {{ request()->is('approval/ipp') ? 'active' : '' }}"
-                    href="{{ route('ipp.approval') }}"><span class="menu-title">ICP</span></a></div>
-            <div class="menu-item"><a class="menu-link {{ request()->is('approval/ipa') ? 'active' : '' }}"
-                    href="{{ route('ipa.approval') }}"><span class="menu-title">ICP</span></a></div>
+
+            @php
+                $isIdpApprovalMenu = request()->is('approval/idp*') || request()->is('approval/development*');
+            @endphp
+
+            {{-- IDP (Flyout Accordion) --}}
+            <div class="menu-item menu-accordion {{ $isIdpApprovalMenu ? 'show' : '' }}"
+                data-kt-menu-trigger="click">
+                <span class="menu-link {{ $isIdpApprovalMenu ? 'active' : '' }}">
+                    <span class="menu-icon"><i class="fas fa-th-large"></i></span>
+                    <span class="menu-title">IDP</span>
+                    <span class="menu-arrow"></span>
+                </span>
+
+                <div class="menu-sub menu-sub-dropdown">
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('approval/idp*') ? 'active' : '' }}"
+                            href="{{ route('idp.approval') }}">
+                            <span class="menu-title">IDP Approval</span>
+                        </a>
+                    </div>
+
+                    <div class="menu-item">
+                        <a class="menu-link {{ request()->is('approval/development*') ? 'active' : '' }}"
+                            href="{{ route('development.approval') }}">
+                            <span class="menu-title">Development</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            {{-- menu approval lain (flyout) --}}
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/hav*') ? 'active' : '' }}"
+                    href="{{ route('hav.approval') }}">
+                    <span class="menu-title">HAV</span>
+                </a>
+            </div>
+
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/rtc*') ? 'active' : '' }}"
+                    href="{{ route('rtc.approval') }}">
+                    <span class="menu-title">RTC</span>
+                </a>
+            </div>
+
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/icp*') ? 'active' : '' }}"
+                    href="{{ route('icp.approval') }}">
+                    <span class="menu-title">ICP</span>
+                </a>
+            </div>
+
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/ipp*') ? 'active' : '' }}"
+                    href="{{ route('ipp.approval') }}">
+                    <span class="menu-title">IPP</span>
+                </a>
+            </div>
+
+            <div class="menu-item">
+                <a class="menu-link {{ request()->is('approval/ipa*') ? 'active' : '' }}"
+                    href="{{ route('ipa.approval') }}">
+                    <span class="menu-title">IPA</span>
+                </a>
+            </div>
+
         </div>
     </div>
     <!-- ===== END APPROVAL ===== -->
