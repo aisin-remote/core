@@ -128,15 +128,24 @@ class DevelopmentController extends Controller
         $midDraftIdpIds = $midDrafts->pluck('idp_id')->values()->all();
         $oneDraftIdpIds = $oneDrafts->pluck('idp_id')->values()->all();
 
-        $hasMidSubmitted = $midDevs->flatten()->where('status', 'submitted')->isNotEmpty();
+        /**
+         * ✅ MODIFIKASI DI SINI:
+         * One-Year boleh diisi kalau Mid status sudah submitted/checked/approved & tidak ada Mid draft.
+         */
+        $midReadyStatuses = ['submitted', 'checked', 'approved'];
+
+        $hasMidReady = $midDevs->flatten()
+            ->whereIn('status', $midReadyStatuses)
+            ->isNotEmpty();
 
         // Mid dikunci kalau sudah ada data & tidak ada draft
         $midLocked = $midDevs->flatten()->isNotEmpty() && !$hasMidDraft;
+
         // One dikunci kalau sudah ada data & tidak ada draft
         $oneLocked = $oneDevs->flatten()->isNotEmpty() && !$hasOneDraft;
 
-        // One-Year boleh diisi hanya kalau Mid submitted & tidak ada Mid draft
-        $canAccessOne = $hasMidSubmitted && !$hasMidDraft;
+        // ✅ One-Year akses (rule baru)
+        $canAccessOne = $hasMidReady && !$hasMidDraft;
 
         /**
          * Ubah history ke format array siap render (tanpa HTML)
@@ -145,14 +154,14 @@ class DevelopmentController extends Controller
         foreach ($midDevs as $idpId => $list) {
             foreach ($list as $dev) {
                 $midHistory[] = [
-                    'id'                     => $dev->id,
-                    'idp_id'                 => $dev->idp_id,
-                    'alc'                    => $alcByIdp[$dev->idp_id] ?? '-',
-                    'development_program'    => $dev->development_program,
+                    'id'                      => $dev->id,
+                    'idp_id'                  => $dev->idp_id,
+                    'alc'                     => $alcByIdp[$dev->idp_id] ?? '-',
+                    'development_program'     => $dev->development_program,
                     'development_achievement' => $dev->development_achievement,
-                    'next_action'            => $dev->next_action,
-                    'status'                 => $dev->status,
-                    'created_at'             => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                    'next_action'             => $dev->next_action,
+                    'status'                  => $dev->status,
+                    'created_at'              => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
                 ];
             }
         }
@@ -178,10 +187,10 @@ class DevelopmentController extends Controller
             'status' => 'success',
             'title'  => $title,
             'assessment' => [
-                'id'       => $assessment->id,
-                'date'     => $assessment->date,
-                'purpose'  => $assessment->purpose,
-                'lembaga'  => $assessment->lembaga,
+                'id'      => $assessment->id,
+                'date'    => $assessment->date,
+                'purpose' => $assessment->purpose,
+                'lembaga' => $assessment->lembaga,
             ],
             'employee' => [
                 'id'         => $assessment->employee->id,
@@ -191,16 +200,21 @@ class DevelopmentController extends Controller
                 'department' => $assessment->employee->department_name ?? ($assessment->employee->department ?? null),
                 'grade'      => $assessment->employee->grade ?? null,
             ],
-            'idpRows'     => $idpRows,
-            'midHistory'  => $midHistory,
-            'oneHistory'  => $oneHistory,
+            'idpRows'    => $idpRows,
+            'midHistory' => $midHistory,
+            'oneHistory' => $oneHistory,
             'flags' => [
                 'hasMidDraft'     => $hasMidDraft,
                 'hasOneDraft'     => $hasOneDraft,
                 'midLocked'       => $midLocked,
                 'oneLocked'       => $oneLocked,
                 'canAccessOne'    => $canAccessOne,
-                'hasMidSubmitted' => $hasMidSubmitted,
+
+                // biar tidak merusak FE lama yang baca hasMidSubmitted
+                'hasMidSubmitted' => $hasMidReady,
+
+                // opsional: key baru yang lebih jelas
+                'hasMidReady'     => $hasMidReady,
             ],
             'draftIds' => [
                 'midDraftIdpIds' => $midDraftIdpIds,
@@ -208,6 +222,7 @@ class DevelopmentController extends Controller
             ],
         ]);
     }
+
 
     public function storeMidYear(Request $request, $employee_id)
     {
