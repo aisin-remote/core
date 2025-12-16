@@ -279,11 +279,9 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
 
-            // ✅ route helpers (biar aman kalau ada prefix/group)
             const approveUrlTemplate = @json(route('idp.approve', ':id'));
             const reviseUrl = @json(route('idp.revise'));
 
-            // klik reference item => tampilkan full text (tanpa scroll)
             document.querySelectorAll('.ref-item').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const title = btn.dataset.title || 'Detail';
@@ -293,8 +291,7 @@
                         title: title,
                         html: `
                             <div style="
-                                text-align:left;
-                                white-space:pre-wrap;
+                                text-align:justify;
                                 line-height:1.7;
                                 font-size:15px;
                             ">

@@ -67,7 +67,6 @@
                                     <i class="fas fa-upload"></i>
                                 </button>
 
-                                {{-- ✅ langsung ke route baru --}}
                                 <a class="btn btn-sm btn-info"
                                     href="{{ route('idp.approval.show', ['employee_id' => $employee->id]) }}">
                                     <i class="fas fa-eye"></i>

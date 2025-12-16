@@ -7,6 +7,7 @@ use App\Models\Assessment;
 use App\Models\Development;
 use App\Models\DevelopmentApprovalStep;
 use App\Models\DevelopmentOne;
+use App\Models\Employee;
 use App\Models\Idp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -484,140 +485,109 @@ class DevelopmentController extends Controller
         ]);
     }
 
-    public function approvalJson(Request $request)
+    public function approvalShow($employeeId)
     {
-        $user = auth()->user();
-        $me   = $user?->employee;
-
-        if (!$me) {
-            return response()->json([
-                'data' => [],
-                'meta' => ['total' => 0],
-            ]);
+        $rolesToMatch = $this->currentApproverRoleKeys();
+        if (empty($rolesToMatch)) {
+            abort(403, 'Employee tidak ditemukan untuk user ini.');
         }
 
-        $role = ApprovalHelper::roleKeyFor($me);
+        $employee = Employee::with('department')->findOrFail($employeeId);
 
-        $rolesToMatch = ApprovalHelper::synonymsForSearch($role);
+        $steps = $this->basePendingStepsQuery($rolesToMatch)
+            ->whereHas('oneDevelopment', function ($q) use ($employeeId) {
+                $q->where('employee_id', $employeeId);
+            })
+            ->orderBy('step_order', 'asc')
+            ->get();
+
+        $steps = $steps->filter(function ($step) {
+            $dev = $step->oneDevelopment;
+            if (!$dev) return false;
+
+            return $dev->steps->every(function ($x) use ($step) {
+                if ($x->step_order < $step->step_order && $x->status !== 'done') return false;
+                return true;
+            });
+        });
+
+        $oneDevs = $steps->map(fn($s) => $s->oneDevelopment)
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        $oneDevs->loadMissing([
+            'idp.alc',
+            'idp.developments'
+        ]);
+
+        return view('website.approval.dev.show', compact('employee', 'oneDevs'));
+    }
+
+    public function approvalJson(Request $request)
+    {
+        $rolesToMatch = $this->currentApproverRoleKeys();
+        if (empty($rolesToMatch)) {
+            return response()->json(['data' => [], 'meta' => ['total' => 0]]);
+        }
 
         $filter  = (string) $request->query('filter', 'all');
         $search  = trim((string) $request->query('search', ''));
         $company = $request->query('company');
 
-        $query = DevelopmentApprovalStep::query()
-            ->with([
-                'oneDevelopment.employee.department',
-                'oneDevelopment.steps',
-                'oneDevelopment.idp',
-            ])
-            ->whereIn('role', $rolesToMatch)
-            ->where('status', 'pending')
-            ->where(function ($q) {
-                // Hanya ambil development yang belum final approve
-                $q->whereHas('oneDevelopment', function ($q2) {
-                    $q2->where('status', '!=', 'approved');
-                });
-            });
+        $query = $this->basePendingStepsQuery($rolesToMatch);
 
+        // filter company
         if ($company) {
-            $query->where(function ($q) use ($company) {
-                $q->whereHas('midDevelopment.employee', function ($q2) use ($company) {
-                    $q2->where('company', $company);
-                })->orWhereHas('oneDevelopment.employee', function ($q2) use ($company) {
-                    $q2->where('company', $company);
-                });
+            $query->whereHas('oneDevelopment.employee', function ($q) use ($company) {
+                $q->where('company', $company);
             });
         }
 
+        // filter posisi
         if ($filter !== 'all') {
-            $query->where(function ($q) use ($filter) {
-                $q->whereHas('midDevelopment.employee', function ($q2) use ($filter) {
-                    $q2->where('position', $filter);
-                })->orWhereHas('oneDevelopment.employee', function ($q2) use ($filter) {
-                    $q2->where('position', $filter);
-                });
+            $query->whereHas('oneDevelopment.employee', function ($q) use ($filter) {
+                $q->where('position', $filter);
             });
         }
 
+        // search nama/npk
         if ($search !== '') {
-            $query->where(function ($q) use ($search) {
-                $q->whereHas('midDevelopment.employee', function ($q2) use ($search) {
-                    $q2->where('name', 'like', "%{$search}%")
-                        ->orWhere('npk', 'like', "%{$search}%");
-                })->orWhereHas('oneDevelopment.employee', function ($q2) use ($search) {
-                    $q2->where('name', 'like', "%{$search}%")
-                        ->orWhere('npk', 'like', "%{$search}%");
-                });
+            $query->whereHas('oneDevelopment.employee', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                    ->orWhere('npk', 'like', "%{$search}%");
             });
         }
 
-        $steps = $query
-            ->orderBy('step_order')
-            ->get();
+        // ambil step pending
+        $steps = $query->orderBy('step_order', 'asc')->get();
 
+        // VALIDASI step-order: hanya step yang step sebelumnya sudah done
         $steps = $steps->filter(function ($step) {
-            $dev = $step->midDevelopment ?: $step->oneDevelopment;
-            if (!$dev) {
-                return false;
-            }
+            $dev = $step->oneDevelopment;
+            if (!$dev) return false;
 
-            $allSteps = $dev->steps;
-
-            return $allSteps->every(function ($x) use ($step) {
-                if ($x->step_order < $step->step_order && $x->status !== 'done') {
-                    return false;
-                }
+            return $dev->steps->every(function ($x) use ($step) {
+                if ($x->step_order < $step->step_order && $x->status !== 'done') return false;
                 return true;
             });
         });
 
-        // ====== GROUP BY EMPLOYEE ======
-        $grouped = $steps
-            ->groupBy(function ($step) {
-                $dev = $step->midDevelopment ?: $step->oneDevelopment;
-                return $dev?->employee_id;
-            })
-            ->filter(function ($group, $employeeId) {
-                return !is_null($employeeId);
-            })
-            ->values();
+        // GROUP BY EMPLOYEE
+        $grouped = $steps->groupBy(fn($s) => $s->oneDevelopment?->employee_id)->filter();
 
         $rows = [];
-        foreach ($grouped as $index => $group) {
-            $firstStep = $group->first();
-            $sampleDev = $firstStep->midDevelopment ?: $firstStep->oneDevelopment;
-            $emp       = $sampleDev?->employee;
+        $no = 1;
 
-            if (!$emp) {
-                continue;
-            }
+        foreach ($grouped as $employeeId => $employeeSteps) {
+            $devSample = $employeeSteps->first()->oneDevelopment;
+            $emp = $devSample?->employee;
 
-            // Kumpulkan unique Development One-Year
-            $oneDevs = $group
-                ->filter(function ($s) {
-                    return !is_null($s->development_one_id) && $s->oneDevelopment;
-                })
-                ->map(function ($s) {
-                    $dev = $s->oneDevelopment;
-                    return [
-                        'id'                  => $dev->id,
-                        'idp_id'              => $dev->idp_id,
-                        'development_program' => $dev->development_program,
-                        'evaluation_result'   => $dev->evaluation_result,
-                        'status'              => $dev->status,
-                    ];
-                })
-                ->unique('id')
-                ->values()
-                ->all();
-
-            // Status "headline" employee di-list ini boleh ambil dari salah satu dev
-            $headlineStatus = $sampleDev?->status ?? 'submitted';
+            if (!$emp) continue;
 
             $rows[] = [
-                'no'          => $index + 1,
+                'no'          => $no++,
                 'employee_id' => $emp->id,
-                'status'      => $headlineStatus,
                 'employee'    => [
                     'npk'        => $emp->npk,
                     'name'       => $emp->name,
@@ -626,15 +596,17 @@ class DevelopmentController extends Controller
                     'department' => $emp->department->name ?? null,
                     'grade'      => $emp->grade,
                 ],
-                'one_devs'    => $oneDevs,   // untuk accordion One-Year
+                // optional: jumlah item pending (buat badge)
+                'pending_count' => $employeeSteps
+                    ->map(fn($s) => $s->development_one_id)
+                    ->unique()
+                    ->count(),
             ];
         }
 
         return response()->json([
             'data' => $rows,
-            'meta' => [
-                'total' => count($rows),
-            ],
+            'meta' => ['total' => count($rows)],
         ]);
     }
 
@@ -859,5 +831,31 @@ class DevelopmentController extends Controller
             $model->status = 'approved';
             $model->save();
         }
+    }
+
+    private function currentApproverRoleKeys()
+    {
+        $user = auth()->user();
+        $me = $user->employee;
+
+        if(!$me) return [];
+
+        $role = ApprovalHelper::roleKeyFor($me);
+        return ApprovalHelper::synonymsForSearch($role);
+    }
+
+    private function basePendingStepsQuery(array $rolesToMatch)
+    {
+        return DevelopmentApprovalStep::query()
+        ->with([
+            'oneDevelopment.employee.department',
+            'oneDevelopment.idp',
+            'oneDevelopment.steps',
+        ])
+        ->whereIn('role', $rolesToMatch)
+        ->where('status', 'pending')
+        ->whereHas('oneDevelopment', function ($q) {
+            $q->where('status', '!=', 'approved');
+        });
     }
 }

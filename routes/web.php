@@ -205,9 +205,9 @@ Route::middleware(['auth', 'force.password.change'])->group(function () {
         Route::post('/ipa/{ipa?}/revise',  [IpaApprovalController::class, 'revise'])->name('ipa.revise');
 
         Route::get('/development', [DevelopmentController::class, 'approval'])->name('development.approval');
+        Route::get('/development/{id}/show', [DevelopmentController::class, 'approvalShow'])->name('development.approval.show');
         Route::post('/development/{id}/approve', [DevelopmentController::class, 'approve'])
             ->name('development.approveByEmployee');
-
         Route::post('/development/{id}/revise', [DevelopmentController::class, 'revise'])
             ->name('development.reviseByEmployee');
     });
