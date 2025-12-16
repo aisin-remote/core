@@ -1,13 +1,13 @@
 @extends('layouts.root.main')
 
-@section('title', $title ?? 'Approval Development')
-@section('breadcrumbs', $title ?? 'Approval Development')
+@section('title', $title ?? 'Approval One Review List')
+@section('breadcrumbs', $title ?? 'Approval One Review List')
 
 @section('main')
 <div id="kt_app_content_container" class="app-container container-fluid">
     <div class="card">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h3 class="card-title">Approval Development List</h3>
+            <h3 class="card-title">Approval One Review List</h3>
 
             <form method="GET" class="d-flex align-items-center">
                 <input type="text" name="search" value="{{ request('search') }}"

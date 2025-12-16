@@ -1274,7 +1274,7 @@
                         <a class="menu-link {{ request()->is('approval/development*') ? 'active' : '' }}"
                             href="{{ route('development.approval') }}">
                             <span class="menu-bullet"><span class="bullet bullet-dot"></span></span>
-                            <span class="menu-title">Development</span>
+                            <span class="menu-title">IDP One Review</span>
                         </a>
                     </div>
                 </div>
@@ -1345,7 +1345,7 @@
                     <div class="menu-item">
                         <a class="menu-link {{ request()->is('approval/development*') ? 'active' : '' }}"
                             href="{{ route('development.approval') }}">
-                            <span class="menu-title">Development</span>
+                            <span class="menu-title">IDP One Revie</span>
                         </a>
                     </div>
                 </div>
