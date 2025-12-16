@@ -171,7 +171,7 @@
                     <h3 class="card-title mb-1" style="font-size: 1.75rem; font-weight: 800;">
                         Approval One Review Show
                     </h3>
-                    <div class="text-muted">
+                    <div>
                         {{ $employee->npk ?? '-' }} • {{ $employee->name ?? '-' }} •
                         {{ $employee->position ?? '-' }} • {{ $employee->department->name ?? '-' }}
                     </div>
@@ -223,12 +223,12 @@
                                             <td class="fw-bold">{{ $row['alc'] }}</td>
                                             <td>{{ $row['category'] }}</td>
                                             <td class="fw-semibold">{{ $row['program'] ?: '-' }}</td>
-                                            <td class="text-muted">{{ $row['target'] ?: '-' }}</td>
+                                            <td>{{ $row['target'] ?: '-' }}</td>
                                             <td class="nowrap">{{ $row['due_date'] ?: '-' }}</td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="5" class="text-center text-muted py-5">
+                                            <td colspan="5" class="text-center py-5">
                                                 Tidak ada data IDP Target.
                                             </td>
                                         </tr>
@@ -267,8 +267,8 @@
                                         <tr>
                                             <td class="fw-bold">{{ $row['alc'] }}</td>
                                             <td class="fw-semibold">{{ $row['program'] ?: '-' }}</td>
-                                            <td class="text-muted">{{ $row['achievement'] ?: '-' }}</td>
-                                            <td class="text-muted">{{ $row['next_action'] ?: '-' }}</td>
+                                            <td>{{ $row['achievement'] ?: '-' }}</td>
+                                            <td>{{ $row['next_action'] ?: '-' }}</td>
                                             <td>
                                                 <span class="badge
                                                     @if(($row['status'] ?? '') === 'draft') badge-light-warning
@@ -281,11 +281,11 @@
                                                     {{ Str::ucfirst($row['status'] ?? '-') }}
                                                 </span>
                                             </td>
-                                            <td class="text-muted nowrap">{{ $row['date'] ?: '-' }}</td>
+                                            <td class="nowrap">{{ $row['date'] ?: '-' }}</td>
                                         </tr>
                                     @empty
                                         <tr>
-                                            <td colspan="6" class="text-center text-muted py-5">
+                                            <td colspan="6" class="text-center py-5">
                                                 Tidak ada data Mid-Year Development.
                                             </td>
                                         </tr>
@@ -333,13 +333,13 @@
                                                 <td class="fw-semibold">
                                                     {{ $dev->development_program ?? ($idp->development_program ?? '-') }}
                                                 </td>
-                                                <td class="text-muted">
+                                                <td>
                                                     {{ trim((string) $dev->evaluation_result) !== '' ? $dev->evaluation_result : '-' }}
                                                 </td>
                                             </tr>
                                         @empty
                                             <tr>
-                                                <td colspan="3" class="text-center text-muted py-5">
+                                                <td colspan="3" class="text-center py-5">
                                                     Tidak ada One-Year Development yang bisa kamu approve saat ini.
                                                 </td>
                                             </tr>
@@ -349,7 +349,7 @@
                             </div>
 
                             <div class="p-3 one-actions-sticky d-flex flex-wrap justify-content-between align-items-center gap-2">
-                                <span class="text-muted small">
+                                <span class="small">
                                     Total One-Year items: <b>{{ $oneDevs->count() }}</b>
                                 </span>
 
