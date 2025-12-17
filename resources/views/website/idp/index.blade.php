@@ -259,7 +259,28 @@
                                                                 'alc_id',
                                                                 $alcId,
                                                             );
+
+                                                            // status detail: revise / approved / no_approval_needed / dll
+                                                            $detailStatus = strtolower(
+                                                                trim((string) ($detail->status ?? '')),
+                                                            );
+
+                                                            // tentukan icon berdasarkan status detail (prioritas)
+                                                            // revise => !
+                                                            // approved => check
+                                                            // selain itu fallback sesuai kebutuhan
+                                                            $iconClass = null;
+
+                                                            if ($detailStatus === 'revise') {
+                                                                $iconClass = 'fa-exclamation-triangle';
+                                                            } elseif ($detailStatus === 'approved') {
+                                                                $iconClass = 'fa-check';
+                                                            } else {
+                                                                $iconClass = null;
+                                                            }
+
                                                         @endphp
+
                                                         <td class="text-center">
                                                             @if ($detail)
                                                                 @if ($detail->score === '-')
@@ -282,6 +303,7 @@
 
                                                                         $modalId = "kt_modal_warning_{$assessment->id}_{$detail->alc_id}";
                                                                     @endphp
+
                                                                     <span
                                                                         class="badge {{ $detail->badge_class }} {{ $isClickable ? '' : 'pe-none' }}"
                                                                         @if ($isClickable) data-bs-toggle="modal"
@@ -294,9 +316,15 @@
                                                                             style="cursor: default;" @endif>
                                                                         {{ $detail->score }}
 
-                                                                        @if ($detail->show_icon)
-                                                                            <i
-                                                                                class="fas {{ $detail->idp->isNotEmpty() ? 'fa-check' : 'fa-exclamation-triangle' }} ps-2"></i>
+                                                                        {{-- ✅ ICON LOGIC FINAL --}}
+                                                                        @if ($iconClass)
+                                                                            @if ($detailStatus === 'revise')
+                                                                                <i
+                                                                                    class="fas {{ $iconClass }} ps-2 text-danger"></i>
+                                                                            @else
+                                                                                <i
+                                                                                    class="fas {{ $iconClass }} ps-2"></i>
+                                                                            @endif
                                                                         @endif
                                                                     </span>
                                                                 @endif
