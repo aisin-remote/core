@@ -18,29 +18,25 @@
     @endif
 
     @php
-        use Illuminate\Support\Str;
-
         $employee = optional($assessment)->employee;
 
         $alcMap = ($alcs ?? collect())->mapWithKeys(fn($a) => [$a->id => $a->name])->toArray();
-
         $allDetails = $assessment->details ?? collect();
 
-        $strengthRows = $allDetails->filter(fn($d) => !empty(trim($d->strength ?? '')) && trim($d->strength) !== '-');
-        $weaknessRows = $allDetails->filter(fn($d) => !empty(trim($d->weakness ?? '')) && trim($d->weakness) !== '-');
+        // hanya Weakness (tanpa Strength)
+        $weaknessRows = $allDetails
+            ->filter(fn($d) => !empty(trim($d->weakness ?? '')) && trim($d->weakness) !== '-')
+            ->values();
 
         $assessmentDateText = optional($assessment->created_at)
             ? \Carbon\Carbon::parse($assessment->created_at)->timezone('Asia/Jakarta')->format('d M Y')
             : '-';
 
-        $latestIdpUpdated = optional(($assessment->idp ?? collect())->sortByDesc('updated_at')->first())->updated_at;
-        $idpCreatedAtText = $latestIdpUpdated
-            ? \Carbon\Carbon::parse($latestIdpUpdated)->timezone('Asia/Jakarta')->format('d M Y')
-            : '-';
-
         $alcTitle = function ($alcId) use ($alcMap) {
             return $alcMap[$alcId] ?? 'ALC #' . $alcId;
         };
+
+        $idpRows = ($assessment->idp ?? collect());
     @endphp
 
     <div id="kt_app_content_container" class="app-container container-fluid">
@@ -48,9 +44,15 @@
         {{-- =================== HEADER SUMMARY =================== --}}
         <div class="card mb-5">
             <div class="card-header align-items-center">
-                <h3 class="card-title mb-2" style="font-size: 2rem; font-weight: bold;">
-                    Summary {{ $employee->name ?? '-' }}
-                </h3>
+                <div class="d-flex flex-column">
+                    <h3 class="card-title mb-1" style="font-size: 2rem; font-weight: bold;">
+                        Detail Approval - {{ $employee->name ?? '-' }}
+                    </h3>
+                    <div class="text-muted small">
+                        {{ $employee->npk ?? '-' }} • {{ $employee->position ?? '-' }} • {{ $employee->company_name ?? '-' }} •
+                        Assessment Date: <b>{{ $assessmentDateText }}</b>
+                    </div>
+                </div>
 
                 <div class="d-flex align-items-start gap-3 ms-3">
                     <a href="{{ url()->previous() }}" class="btn btn-light">
@@ -69,45 +71,71 @@
                 <style>
                     .section-title {
                         font-weight: 700;
-                        font-size: 1.1rem;
+                        font-size: 1.05rem;
                         border-left: 4px solid #0d6efd;
                         padding-left: 10px;
-                        margin-top: 1.25rem;
-                        margin-bottom: 0.75rem;
+                        margin: 0;
                         display: flex;
                         align-items: center;
                         gap: 0.5rem;
                     }
 
                     table.custom-table { font-size: 0.93rem; }
-                    table.custom-table th, table.custom-table td {
-                        padding: 0.75rem 1rem;
+                    table.custom-table th,
+                    table.custom-table td {
+                        padding: 0.85rem 1rem;
                         vertical-align: top;
                     }
-                    table.custom-table thead { background-color: #f8f9fa; font-weight: 700; }
-                    table.custom-table tbody tr:hover { background-color: #f1faff; }
 
-                    .sticky-ref { position: sticky; top: 90px; }
-                    .ref-card { max-height: calc(100vh - 120px); overflow: auto; }
+                    table.custom-table thead {
+                        background-color: #f8f9fa;
+                        font-weight: 700;
+                    }
+
+                    table.custom-table tbody tr:hover {
+                        background-color: #f1faff;
+                    }
 
                     .table-sticky thead th {
-                        position: sticky; top: 0; z-index: 2; background: #f8f9fa;
+                        position: sticky;
+                        top: 0;
+                        z-index: 2;
+                        background: #f8f9fa;
                     }
 
-                    .ref-item { text-decoration: none; }
-                    .ref-item:hover { text-decoration: none; }
-
-                    .ref-list { display: grid; gap: 14px; }
-
-                    .ref-preview {
-                        display: -webkit-box;
-                        -webkit-line-clamp: 2;
-                        -webkit-box-orient: vertical;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        line-height: 1.35rem;
-                        max-height: calc(1.35rem * 2);
+                    /* Highlight Card (IDP) */
+                    .highlight-card {
+                        border: 2px solid rgba(13, 110, 253, 0.25);
+                        box-shadow: 0 10px 30px rgba(13, 110, 253, 0.08);
                     }
+
+                    .highlight-badge {
+                        background: rgba(13,110,253,0.1);
+                        color: #0d6efd;
+                        border: 1px solid rgba(13,110,253,0.2);
+                        font-weight: 700;
+                        border-radius: 999px;
+                        padding: 0.35rem 0.7rem;
+                        display: inline-flex;
+                        align-items: center;
+                        gap: .4rem;
+                        white-space: nowrap;
+                    }
+
+                    /* tampil full content */
+                    .cell-content {
+                        white-space: pre-wrap;
+                        word-break: break-word;
+                        line-height: 1.7;
+                    }
+
+                    /* column widths */
+                    .col-no { width: 70px; }
+                    .col-alc { width: 240px; }
+                    .col-due { width: 110px; white-space: nowrap; }
+                    .col-action { width: 180px; }
+
+                    .table-responsive { overflow-x: auto; }
 
                     /* SWEETALERT NO SCROLL */
                     .swal2-popup { max-height: none !important; height: auto !important; }
@@ -115,159 +143,143 @@
                     .swal2-content { overflow: visible !important; }
                 </style>
 
-                <div class="row g-6">
-
-                    {{-- ================= LEFT: MAIN APPROVAL ================= --}}
-                    <div class="col-lg-8">
-
-                        <div class="d-flex align-items-center justify-content-between mb-3">
-                            <h4 class="mb-0 fw-bold">Individual Development Program</h4>
-                            <div class="text-muted small">
-                                {{ $employee->npk ?? '-' }} • {{ $employee->position ?? '-' }} •
-                                {{ $employee->company_name ?? '-' }}
-                            </div>
+                {{-- =================== TABLE 1: WEAKNESS (ALC) =================== --}}
+                <div class="card border mb-5">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <div class="section-title" style="border-left-color:#dc3545;">
+                            <i class="fas fa-triangle-exclamation text-danger"></i>
+                            Weakness by ALC
                         </div>
 
-                        <div class="card border">
-                            <div class="card-body p-0">
-                                <div class="table-responsive">
-                                    <table class="table table-bordered table-hover custom-table mb-0 table-sticky">
-                                        <thead>
-                                            <tr>
-                                                <th>ALC</th>
-                                                <th>Category</th>
-                                                <th>Development Program</th>
-                                                <th>Development Target</th>
-                                                <th style="width: 90px;">Due Date</th>
-                                                <th class="text-center">Action</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            @forelse (($assessment->idp ?? collect()) as $idp)
-                                                <tr id="idp-row-{{ $idp->id }}">
-                                                    <td>
-                                                        {{ optional($idp->alc)->name ?? ($alcMap[$idp->alc_id] ?? 'ALC #' . $idp->alc_id) }}
-                                                    </td>
-                                                    <td>{{ $idp->category }}</td>
-                                                    <td>{{ $idp->development_program }}</td>
-                                                    <td>{!! nl2br(e($idp->development_target)) !!}</td>
-                                                    <td>{{ $idp->date ? \Carbon\Carbon::parse($idp->date)->format('d-m-Y') : '-' }}</td>
-                                                    <td>
-                                                        <div class="d-flex flex-column gap-2">
-                                                            <button
-                                                                class="btn btn-sm btn-danger w-100 d-flex align-items-center justify-content-center gap-1 btn-revise"
-                                                                data-id="{{ $idp->id }}">
-                                                                <i class="fas fa-edit"></i>
-                                                                <span>Revise</span>
-                                                            </button>
-
-                                                            <button
-                                                                class="btn btn-sm btn-success w-100 d-flex align-items-center justify-content-center gap-1 btn-approve"
-                                                                data-idp-id="{{ $idp->id }}">
-                                                                <i class="fas fa-check-circle"></i>
-                                                                <span>Approve</span>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            @empty
-                                                <tr>
-                                                    <td colspan="6" class="text-center text-muted">No data available</td>
-                                                </tr>
-                                            @endforelse
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div class="p-3 border-top d-flex justify-content-between align-items-center">
-                                    <span class="text-muted small">
-                                        Total IDP: <b>{{ ($assessment->idp ?? collect())->count() }}</b>
-                                    </span>
-                                    <a href="{{ url()->previous() }}" class="btn btn-light btn-sm">
-                                        <i class="fas fa-arrow-left"></i> Back
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+                        <span class="text-muted small">
+                            Total ALC Weakness: <b>{{ $weaknessRows->count() }}</b>
+                        </span>
                     </div>
 
-                    {{-- ================= RIGHT: REFERENCE (STICKY) ================= --}}
-                    <div class="col-lg-4">
-                        <div class="sticky-ref">
-                            <div class="card border ref-card">
-                                <div class="card-body">
-
-                                    <div class="d-flex justify-content-between align-items-start mb-3">
-                                        <div>
-                                            <div class="fw-bold" style="font-size: 1.05rem;">Reference</div>
-                                            <div class="text-muted">{{ $employee->name ?? '-' }}</div>
-                                        </div>
-                                    </div>
-
-                                    <div class="mb-3">
-                                        <div class="text-muted small">Assessment Date</div>
-                                        <div class="fw-bold">{{ $assessmentDateText }}</div>
-                                    </div>
-
-                                    <hr>
-
-                                    {{-- Strength --}}
-                                    @if ($strengthRows->isNotEmpty())
-                                        <div class="section-title" style="margin-top:0;">
-                                            <i class="bi bi-lightning-charge-fill"></i> Strength
-                                        </div>
-
-                                        <div class="ref-list">
-                                            @foreach ($strengthRows as $row)
-                                                @php
-                                                    $title = $alcTitle($row->alc_id);
-                                                    $full = trim((string) $row->strength);
-                                                    $preview = Str::limit($full, 140);
-                                                @endphp
-
-                                                <button type="button" class="ref-item btn btn-link text-start p-0 w-100"
-                                                    data-title="{{ e($title) }}" data-content="{{ e($full) }}">
-                                                    <div class="fw-bold">{{ $title }}</div>
-                                                    <div class="ref-preview text-muted">{{ $preview }}</div>
-                                                </button>
-                                            @endforeach
-                                        </div>
-
-                                        <hr>
-                                    @endif
-
-                                    {{-- Weakness --}}
-                                    @if ($weaknessRows->isNotEmpty())
-                                        <div class="section-title" style="margin-top:0;">
-                                            <i class="bi bi-lightning-charge-fill"></i> Weakness
-                                        </div>
-
-                                        <div class="ref-list">
-                                            @foreach ($weaknessRows as $row)
-                                                @php
-                                                    $title = $alcTitle($row->alc_id);
-                                                    $full = trim((string) $row->weakness);
-                                                    $preview = Str::limit($full, 140);
-                                                @endphp
-
-                                                <button type="button" class="ref-item btn btn-link text-start p-0 w-100"
-                                                    data-title="{{ e($title) }}" data-content="{{ e($full) }}">
-                                                    <div class="fw-bold">{{ $title }}</div>
-                                                    <div class="ref-preview text-muted">{{ $preview }}</div>
-                                                </button>
-                                            @endforeach
-                                        </div>
-
-                                        <hr>
-                                    @endif
-
-                                    {{-- ✅ CHART SUDAH DIPINDAH KE BAWAH --}}
-                                </div>
-                            </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover custom-table mb-0 table-sticky">
+                                <thead>
+                                    <tr>
+                                        <th class="col-no">No</th>
+                                        <th class="col-alc">ALC</th>
+                                        <th>Weakness</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($weaknessRows as $i => $row)
+                                        @php
+                                            $title = $alcTitle($row->alc_id);
+                                            $full  = trim((string) $row->weakness);
+                                        @endphp
+                                        <tr>
+                                            <td class="col-no">{{ $i + 1 }}</td>
+                                            <td class="col-alc fw-bold">{{ $title }}</td>
+                                            <td>
+                                                <div class="cell-content">{{ $full }}</div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="3" class="text-center text-muted py-4">
+                                                Tidak ada data Weakness.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
                         </div>
                     </div>
+                </div>
 
-                </div>{{-- row --}}
+                {{-- =================== TABLE 2: IDP APPROVAL (HIGHLIGHT) =================== --}}
+                <div class="card highlight-card mb-2">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="section-title">
+                                <i class="fas fa-list-check text-primary"></i>
+                                Individual Development Program (Approval)
+                            </div>
+
+                            <span class="highlight-badge">
+                                <i class="fas fa-star"></i> Highlight
+                            </span>
+                        </div>
+
+                        <span class="text-muted small">
+                            Total IDP: <b>{{ $idpRows->count() }}</b>
+                        </span>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-bordered table-hover custom-table mb-0 table-sticky">
+                                <thead>
+                                    <tr>
+                                        <th style="min-width:220px;">ALC</th>
+                                        <th style="min-width:160px;">Category</th>
+                                        <th style="min-width:240px;">Development Program</th>
+                                        <th style="min-width:340px;">Development Target</th>
+                                        <th class="col-due">Due Date</th>
+                                        <th class="text-center col-action">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @forelse ($idpRows as $idp)
+                                        <tr id="idp-row-{{ $idp->id }}">
+                                            <td>
+                                                {{ optional($idp->alc)->name ?? ($alcMap[$idp->alc_id] ?? 'ALC #' . $idp->alc_id) }}
+                                            </td>
+                                            <td>{{ $idp->category }}</td>
+                                            <td>
+                                                <div class="cell-content">{{ $idp->development_program }}</div>
+                                            </td>
+                                            <td>
+                                                <div class="cell-content">{{ $idp->development_target }}</div>
+                                            </td>
+                                            <td class="col-due">
+                                                {{ $idp->date ? \Carbon\Carbon::parse($idp->date)->format('d-m-Y') : '-' }}
+                                            </td>
+                                            <td class="col-action">
+                                                <div class="d-flex flex-column gap-2">
+                                                    <button
+                                                        class="btn btn-sm btn-danger w-100 d-flex align-items-center justify-content-center gap-1 btn-revise"
+                                                        data-id="{{ $idp->id }}">
+                                                        <i class="fas fa-edit"></i>
+                                                        <span>Revise</span>
+                                                    </button>
+
+                                                    <button
+                                                        class="btn btn-sm btn-success w-100 d-flex align-items-center justify-content-center gap-1 btn-approve"
+                                                        data-idp-id="{{ $idp->id }}">
+                                                        <i class="fas fa-check-circle"></i>
+                                                        <span>Approve</span>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    @empty
+                                        <tr>
+                                            <td colspan="6" class="text-center text-muted py-4">
+                                                No data IDP available.
+                                            </td>
+                                        </tr>
+                                    @endforelse
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="p-3 border-top d-flex justify-content-between align-items-center">
+                            <span class="text-muted small">
+                                Setelah approve/revise, row akan hilang otomatis.
+                            </span>
+                            <a href="{{ url()->previous() }}" class="btn btn-light btn-sm">
+                                <i class="fas fa-arrow-left"></i> Back
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
     </div>
@@ -278,36 +290,8 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-
             const approveUrlTemplate = @json(route('idp.approve', ':id'));
             const reviseUrl = @json(route('idp.revise'));
-
-            document.querySelectorAll('.ref-item').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const title = btn.dataset.title || 'Detail';
-                    const content = btn.dataset.content || '-';
-
-                    Swal.fire({
-                        title: title,
-                        html: `
-                            <div style="
-                                text-align:justify;
-                                line-height:1.7;
-                                font-size:15px;
-                            ">
-                                ${content}
-                            </div>
-                        `,
-                        width: '900px',
-                        padding: '2rem',
-                        confirmButtonText: 'Tutup',
-                        showCloseButton: true,
-                        allowOutsideClick: true,
-                        allowEscapeKey: true,
-                    });
-                });
-            });
-
 
             // =============================
             // APPROVE (Route: idp.approve)
@@ -329,29 +313,29 @@
                     }).then(result => {
                         if (result.isConfirmed) {
                             fetch(url, {
-                                    method: 'GET',
-                                    headers: {
-                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                                    }
-                                })
-                                .then(res => res.json())
-                                .then(data => {
-                                    Swal.fire({
-                                        title: 'Approved!',
-                                        text: data.message || 'Approved.',
-                                        icon: 'success',
-                                        timer: 1500,
-                                        showConfirmButton: false
-                                    });
+                                method: 'GET',
+                                headers: {
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                }
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                Swal.fire({
+                                    title: 'Approved!',
+                                    text: data.message || 'Approved.',
+                                    icon: 'success',
+                                    timer: 1500,
+                                    showConfirmButton: false
+                                });
 
-                                    document.getElementById(`idp-row-${id}`)?.remove();
+                                document.getElementById(`idp-row-${id}`)?.remove();
 
-                                    const remaining = document.querySelectorAll('tr[id^="idp-row-"]').length;
-                                    if (remaining === 0) {
-                                        window.location.href = @json(route('idp.approval')) + '?done=1';
-                                    }
-                                })
-                                .catch(() => Swal.fire('Error!', 'Something went wrong.', 'error'));
+                                const remaining = document.querySelectorAll('tr[id^="idp-row-"]').length;
+                                if (remaining === 0) {
+                                    window.location.href = @json(route('idp.approval')) + '?done=1';
+                                }
+                            })
+                            .catch(() => Swal.fire('Error!', 'Something went wrong.', 'error'));
                         }
                     });
                 });
@@ -382,34 +366,34 @@
                             });
 
                             fetch(reviseUrl, {
-                                    method: 'POST',
-                                    headers: {
-                                        'Content-Type': 'application/json',
-                                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
-                                    },
-                                    body: JSON.stringify({
-                                        id,
-                                        comment: revisionReason
-                                    })
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                                },
+                                body: JSON.stringify({
+                                    id,
+                                    comment: revisionReason
                                 })
-                                .then(res => res.json())
-                                .then(data => {
-                                    Swal.fire({
-                                        title: 'Revised!',
-                                        text: data.message || 'Revised.',
-                                        icon: 'success',
-                                        timer: 2000,
-                                        showConfirmButton: false
-                                    });
+                            })
+                            .then(res => res.json())
+                            .then(data => {
+                                Swal.fire({
+                                    title: 'Revised!',
+                                    text: data.message || 'Revised.',
+                                    icon: 'success',
+                                    timer: 2000,
+                                    showConfirmButton: false
+                                });
 
-                                    document.getElementById(`idp-row-${id}`)?.remove();
+                                document.getElementById(`idp-row-${id}`)?.remove();
 
-                                    const remaining = document.querySelectorAll('tr[id^="idp-row-"]').length;
-                                    if (remaining === 0) {
-                                        window.location.href = @json(route('idp.approval')) + '?done=1';
-                                    }
-                                })
-                                .catch(() => Swal.fire('Error!', 'Something went wrong.', 'error'));
+                                const remaining = document.querySelectorAll('tr[id^="idp-row-"]').length;
+                                if (remaining === 0) {
+                                    window.location.href = @json(route('idp.approval')) + '?done=1';
+                                }
+                            })
+                            .catch(() => Swal.fire('Error!', 'Something went wrong.', 'error'));
                         }
                     });
                 });
