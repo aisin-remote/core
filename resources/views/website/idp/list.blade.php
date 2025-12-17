@@ -448,7 +448,6 @@
     </div>
     <!-- Modal Detail Assessment -->
 
-
     @foreach ($grouped as $employeeId => $group)
         @php
             $firstAssessment = $group->first();

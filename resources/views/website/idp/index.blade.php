@@ -268,14 +268,30 @@
                                                                         {{ $detail->score }}
                                                                     </span>
                                                                 @else
-                                                                    <span class="badge {{ $detail->badge_class }}"
-                                                                        data-bs-toggle="modal"
-                                                                        data-bs-target="#kt_modal_warning_{{ $assessment->id }}_{{ $detail->alc_id }}"
-                                                                        data-title="Update IDP - {{ $alcTitle }}"
-                                                                        data-assessment="{{ $assessment->id }}"
-                                                                        data-alc="{{ $detail->alc_id }}"
-                                                                        style="cursor: pointer;">
+                                                                    @php
+                                                                        $scoreNum = is_numeric($detail->score)
+                                                                            ? (float) $detail->score
+                                                                            : null;
 
+                                                                        $isClickable =
+                                                                            ($scoreNum != null && $scoreNum == 0.0) ||
+                                                                            str_contains(
+                                                                                $detail->badge_class ?? '',
+                                                                                'badge-danger',
+                                                                            );
+
+                                                                        $modalId = "kt_modal_warning_{$assessment->id}_{$detail->alc_id}";
+                                                                    @endphp
+                                                                    <span
+                                                                        class="badge {{ $detail->badge_class }} {{ $isClickable ? '' : 'pe-none' }}"
+                                                                        @if ($isClickable) data-bs-toggle="modal"
+                                                                            data-bs-target="#{{ $modalId }}"
+                                                                            data-title="Update IDP - {{ $alcTitle }}"
+                                                                            data-assessment="{{ $assessment->id }}"
+                                                                            data-alc="{{ $detail->alc_id }}"
+                                                                            style="cursor: pointer;"
+                                                                        @else
+                                                                            style="cursor: default;" @endif>
                                                                         {{ $detail->score }}
 
                                                                         @if ($detail->show_icon)
@@ -328,10 +344,10 @@
                                                                 ];
                                                             @endphp
 
-                                                           @if (!$isHRDorDireksi)
+                                                            @if (!$isHRDorDireksi)
                                                                 <a href="{{ route('development.index', $assessment->employee->id) }}"
-                                                                class="btn btn-sm btn-primary"
-                                                                style="display: {{ $assessment->overall_status == 'approved' ? '' : 'none' }}">
+                                                                    class="btn btn-sm btn-primary"
+                                                                    style="display: {{ $assessment->overall_status == 'approved' ? '' : 'none' }}">
                                                                     <i class="fas fa-pencil-alt"></i>
                                                                 </a>
                                                             @endif
@@ -407,12 +423,12 @@
 
             {{-- 3. Modal Summary / Notes per employee --}}
             @foreach ($filteredEmployees as $assessment)
-               @include('website.idp.partials.modal-summary', [
-                'assessment' => $assessment,
-                'alcs' => $alcs,
-                'mid' => $mid,
-                'details' => $details,
-               ])
+                @include('website.idp.partials.modal-summary', [
+                    'assessment' => $assessment,
+                    'alcs' => $alcs,
+                    'mid' => $mid,
+                    'details' => $details,
+                ])
             @endforeach
         </div>
     </div>
