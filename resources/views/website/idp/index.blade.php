@@ -250,44 +250,89 @@
 
                                         @forelse ($filteredEmployees as $assessment)
                                             @if ($assessment->has_score)
+                                                @php
+                                                    $details = $assessment->details ?? collect();
+
+                                                    // ALC yang belum punya row detail sama sekali dianggap missing (== not created)
+                                                    $missingAlcIds = collect($alcs)
+                                                        ->keys()
+                                                        ->diff($details->pluck('alc_id'));
+
+                                                    $hasNotCreated =
+                                                        $details->contains(
+                                                            fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
+                                                                'not_created',
+                                                        ) || $missingAlcIds->isNotEmpty();
+
+                                                    // ✅ ADA draft?
+                                                    $hasDraft = $details->contains(
+                                                        fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
+                                                            'draft',
+                                                    );
+
+                                                    // ✅ TOMBOL SUBMIT hanya kalau ada draft & tidak ada not_created/missing
+                                                    $canSubmit = $hasDraft && !$hasNotCreated;
+
+                                                    // ✅ STATUS CHIP ikuti kondisi submit
+                                                    if ($canSubmit) {
+                                                        $displayStatus = 'draft';
+                                                        $displayText = 'Need Submit';
+                                                    } elseif ($hasNotCreated) {
+                                                        $displayStatus = 'not_created';
+                                                        $displayText = 'Not Created';
+                                                    } else {
+                                                        // kalau tidak ada draft dan tidak ada not_created, berarti sudah checked/approved/revise/waiting dll
+                                                        $displayStatus = $assessment->overall_status ?? 'unknown';
+                                                        $displayText =
+                                                            $assessment->overall_badge['text'] ??
+                                                            ucfirst($displayStatus);
+                                                    }
+                                                @endphp
                                                 <tr>
                                                     <td class="text-center">{{ $rowNumber++ }}</td>
                                                     <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
                                                     @foreach ($alcs as $alcId => $alcTitle)
                                                         @php
-                                                            $detail = $assessment->details->firstWhere(
-                                                                'alc_id',
-                                                                $alcId,
-                                                            );
-
-                                                            // status detail: revise / approved / no_approval_needed / dll
+                                                            $detail = $details->firstWhere('alc_id', $alcId);
                                                             $detailStatus = strtolower(
-                                                                trim((string) ($detail->status ?? '')),
+                                                                trim((string) ($detail->status ?? 'not_created')),
                                                             );
 
-                                                            // tentukan icon berdasarkan status detail (prioritas)
-                                                            // revise => !
-                                                            // approved => check
-                                                            // selain itu fallback sesuai kebutuhan
-                                                            $iconClass = null;
+                                                            $iconMap = [
+                                                                'not_created' => [
+                                                                    'icon' => 'fa-circle-plus',
+                                                                    'class' => 'text-white',
+                                                                ],
+                                                                'draft' => [
+                                                                    'icon' => 'fa-file-pen',
+                                                                    'class' => 'text-white',
+                                                                ],
+                                                                'revise' => [
+                                                                    'icon' => 'fa-triangle-exclamation',
+                                                                    'class' => 'text-white',
+                                                                ],
+                                                                'approved' => [
+                                                                    'icon' => 'fa-circle-check',
+                                                                    'class' => 'text-white',
+                                                                ],
+                                                                'checked' => [
+                                                                    'icon' => 'fa-hourglass-half',
+                                                                    'class' => 'text-white',
+                                                                ],
+                                                                'waiting' => [
+                                                                    'icon' => 'fa-hourglass-half',
+                                                                    'class' => 'text-white',
+                                                                ],
+                                                            ];
 
-                                                            if ($detailStatus === 'revise') {
-                                                                $iconClass = 'fa-exclamation-triangle';
-                                                            } elseif ($detailStatus === 'approved') {
-                                                                $iconClass = 'fa-check';
-                                                            } else {
-                                                                $iconClass = null;
-                                                            }
-
+                                                            $iconData = $iconMap[$detailStatus] ?? null;
                                                         @endphp
 
                                                         <td class="text-center">
                                                             @if ($detail)
                                                                 @if ($detail->score === '-')
                                                                     <span
-                                                                        class="badge badge-lg badge-success d-block w-100">
-                                                                        {{ $detail->score }}
-                                                                    </span>
+                                                                        class="badge badge-lg badge-success d-block w-100">{{ $detail->score }}</span>
                                                                 @else
                                                                     @php
                                                                         $scoreNum = is_numeric($detail->score)
@@ -299,6 +344,10 @@
                                                                             str_contains(
                                                                                 $detail->badge_class ?? '',
                                                                                 'badge-danger',
+                                                                            ) ||
+                                                                            str_contains(
+                                                                                $detail->badge_class ?? '',
+                                                                                'light-danger',
                                                                             );
 
                                                                         $modalId = "kt_modal_warning_{$assessment->id}_{$detail->alc_id}";
@@ -315,16 +364,10 @@
                                                                         @else
                                                                             style="cursor: default;" @endif>
                                                                         {{ $detail->score }}
-
-                                                                        {{-- ✅ ICON LOGIC FINAL --}}
-                                                                        @if ($iconClass)
-                                                                            @if ($detailStatus === 'revise')
-                                                                                <i
-                                                                                    class="fas {{ $iconClass }} ps-2 text-danger"></i>
-                                                                            @else
-                                                                                <i
-                                                                                    class="fas {{ $iconClass }} ps-2"></i>
-                                                                            @endif
+                                                                        @if ($iconData)
+                                                                            <i class="fas {{ $iconData['icon'] }} ps-2 {{ $iconData['class'] }}"
+                                                                                title="{{ ucfirst(str_replace('_', ' ', $detailStatus)) }}">
+                                                                            </i>
                                                                         @endif
                                                                     </span>
                                                                 @endif
@@ -336,7 +379,6 @@
                                                     @endforeach
 
                                                     @php
-                                                        // ikon per status
                                                         $statusIconMap = [
                                                             'approved' => 'fas fa-circle-check',
                                                             'checked' => 'fas fa-hourglass-half',
@@ -346,18 +388,30 @@
                                                             'not_created' => 'fas fa-circle-minus',
                                                             'unknown' => 'fas fa-circle-question',
                                                         ];
-                                                        $s = $assessment->overall_status;
-                                                        $icon = $statusIconMap[$s] ?? 'fa-circle-info';
+                                                        $chipIcon = $statusIconMap[$displayStatus] ?? 'fa-circle-info';
                                                     @endphp
 
                                                     <td class="text-center">
-                                                        <span class="status-chip" data-status="{{ $s }}"
-                                                            title="{{ $assessment->overall_badge['text'] }}">
-                                                            <i class="fa-solid {{ $icon }}"></i>
-                                                            <span>{{ $assessment->overall_badge['text'] }}</span>
+                                                        <span class="status-chip" data-status="{{ $displayStatus }}"
+                                                            title="{{ $displayText }}">
+                                                            <i class="fa-solid {{ $chipIcon }}"></i>
+                                                            <span>{{ $displayText }}</span>
                                                         </span>
                                                     </td>
 
+                                                    @php
+                                                        $hasNotCreated = ($assessment->details ?? collect())->contains(
+                                                            fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
+                                                                'not_created',
+                                                        );
+
+                                                        // tombol kirim muncul jika SUDAH TIDAK ADA not_created
+                                                        $canSendToBoss = !$hasNotCreated;
+
+                                                        // kalau kamu masih mau batasi hanya saat draft, aktifkan ini:
+                                                        // $canSendToBoss = !$hasNotCreated && $assessment->overall_status === 'draft';
+
+                                                    @endphp
 
                                                     <td class="text-center" style="width: 50px">
                                                         <div class="d-flex gap-2 justify-content-center">
@@ -385,10 +439,9 @@
                                                                 data-bs-target="#notes_{{ $assessment->employee->id }}">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
-                                                            @if (!$isHRDorDireksi)
+                                                            @if (!$isHRDorDireksi && $canSubmit)
                                                                 <button type="button" class="btn btn-sm btn-warning"
-                                                                    onclick="sendDataConfirmation({{ $assessment->employee->id }})"
-                                                                    style="display: {{ $assessment->overall_status == 'draft' ? '' : 'none' }}">
+                                                                    onclick="sendDataConfirmation({{ $assessment->employee->id }})">
                                                                     <i class="fas fa-paper-plane"></i>
                                                                 </button>
                                                             @endif
