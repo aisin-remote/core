@@ -303,97 +303,118 @@ class ToDoListController extends Controller
     }
 
     /**
-     * Ambil IDP pending (status 1/2/3) sesuai peran (check/approve/president).
+     * Ambil IDP pending (status 1/2/3) sesuai peran (check/approve/president)
+     * dengan aturan yang sama seperti method approval().
      */
     private function getPendingIdps(array $subCheck, array $subApprove, ?string $normalized)
     {
-        // IDP status 1 (need check)
-        $checkIdps = Employee::with([
-            'hav.details.idp' => fn($q) => $q->where('status', 1)->orderBy('created_at'),
-        ])
-            ->whereIn('id', $subCheck)
-            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 1))
-            ->get();
-
-        // IDP status 2 (need approve)
-        $approveIdpsQuery = Employee::with([
-            'hav.details.idp' => fn($q) => $q->orderBy('created_at'),
-        ])
-            ->whereIn('id', $subApprove)
-            ->whereHas('hav.details.idp', fn($q) => $q->where('status', 2));
-
-        if ($normalized === 'president') {
-            $approveIdpsQuery->where('position', '!=', 'Manager');
-        }
-
-        $approveIdps = $approveIdpsQuery
+        // =========================
+        // Tahap 1: CHECK (status=1)
+        // =========================
+        $checkIdps = Idp::with('hav.hav.employee', 'hav')
+            ->where('status', 1)
+            ->whereHas('hav.hav.employee', function ($q) use ($subCheck) {
+                $q->whereIn('employee_id', $subCheck);
+            })
             ->get()
-            ->filter(function ($employee) {
-                return $employee->hav->every(function ($hav) {
-                    $statuses = collect($hav->details)->flatMap(function ($detail) {
-                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+            ->filter(function ($idp) {
+                $havId = $idp->hav->hav_id ?? null;
+                if (!$havId) return false;
 
-                        return $idps->pluck('status');
-                    })->unique();
+                // Tidak ada status = -1 dalam 1 hav_id
+                return !Idp::whereHas('hav', function ($q) use ($havId) {
+                    $q->where('hav_id', $havId);
+                })->where('status', -1)->exists();
+            })
+            ->values();
 
-                    return $statuses->count() === 1 && $statuses->first() === 2;
-                });
+        $checkIdpIds = $checkIdps->pluck('id')->toArray();
+
+        // ===========================
+        // Tahap 2: APPROVE (status=2)
+        // ===========================
+        $approveQuery = Idp::with('hav.hav.employee', 'hav')
+            ->where('status', 2)
+            ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
+                $q->whereIn('employee_id', $subApprove);
+            })
+            ->whereNotIn('id', $checkIdpIds);
+
+        // tambahan rule: jika president, exclude employee position Manager untuk status=2
+        if ($normalized === 'president') {
+            $approveQuery->whereHas('hav.hav.employee', function ($q) {
+                $q->where('position', '!=', 'Manager');
             });
+        }
 
-        // IDP status 3 khusus president
-        $presidenApproveIdps = collect();
+        $approveIdps = $approveQuery->get()
+            ->filter(function ($idp) {
+                $havId = $idp->hav->hav_id ?? null;
+                if (!$havId) return false;
+
+                $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
+                    $q->where('hav_id', $havId);
+                })->pluck('status')->toArray();
+
+                // Minimal ada status = 2, dan tidak boleh ada status = -1
+                return in_array(2, $relatedStatuses) && !in_array(-1, $relatedStatuses);
+            })
+            ->values();
+
+        // ==========================================
+        // Tambahan khusus President (status=3)
+        // ==========================================
+        $presidentApproveIdps = collect();
 
         if ($normalized === 'president') {
-            $presidenApproveIdps = Employee::with([
-                'hav.details.idp' => fn($q) => $q->orderBy('created_at'),
-            ])
-                ->whereIn('id', $subApprove)
-                ->whereHas('hav.details.idp', fn($q) => $q->where('status', 3))
-                ->whereDoesntHave('hav.details', function ($q) {
-                    $q->whereHas('idp', fn($qq) => $qq->where('status', 2));
+            $presidentApproveIdps = Idp::with('hav.hav.employee', 'hav')
+                ->where('status', 3)
+                ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
+                    $q->whereIn('employee_id', $subApprove);
                 })
+                ->whereNotIn('id', $checkIdpIds)
                 ->get()
-                ->filter(function ($employee) {
-                    return $employee->hav->every(function ($hav) {
-                        $statuses = collect($hav->details)->flatMap(function ($detail) {
-                            $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+                ->filter(function ($idp) {
+                    $havId = $idp->hav->hav_id ?? null;
+                    if (!$havId) return false;
 
-                            return $idps->pluck('status');
-                        })->unique();
+                    $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
+                        $q->where('hav_id', $havId);
+                    })->pluck('status')->toArray();
 
-                        return $statuses->count() === 1 && $statuses->first() === 3;
-                    });
-                });
+                    // Minimal ada status = 3, dan tidak boleh ada status = -1 atau 2
+                    return in_array(3, $relatedStatuses)
+                        && !in_array(-1, $relatedStatuses)
+                        && !in_array(2, $relatedStatuses);
+                })
+                ->values();
         }
 
+        // Gabungkan semua pending
         $pendingIdps = $checkIdps->merge($approveIdps);
-
         if ($normalized === 'president') {
-            $pendingIdps = $pendingIdps->merge($presidenApproveIdps)->unique();
+            $pendingIdps = $pendingIdps->merge($presidentApproveIdps);
         }
 
+        // Mapping jadi task list (unik per employee_npk seperti code kamu)
         return $pendingIdps
-            ->flatMap(function ($employee) {
-                return $employee->hav->flatMap(function ($hav) use ($employee) {
-                    return collect($hav->details)->flatMap(function ($detail) use ($employee) {
-                        $idps = is_iterable($detail->idp) ? collect($detail->idp) : collect([$detail->idp]);
+            ->map(function ($idp) use ($normalized) {
+                $emp = $idp->hav->hav->employee ?? null;
 
-                        return $idps
-                            ->filter(fn($idp) => in_array($idp->status, [1, 2, 3]))
-                            ->map(function ($idp) use ($employee) {
-                                return [
-                                    'type'             => $idp->status === 1 ? 'need_check' : 'need_approval',
-                                    'employee_name'    => $employee->name,
-                                    'employee_npk'     => $employee->npk,
-                                    'employee_company' => $employee->company_name,
-                                    'category'         => $idp->category ?? '-',
-                                    'program'          => $idp->development_program ?? '-',
-                                    'target'           => $idp->development_target ?? '-',
-                                    'created_at'       => $idp->created_at,
-                                ];
-                            });
-                    });
-                });
+                $type = 'need_approval';
+                if ((int) $idp->status === 1) $type = 'need_check';
+                if ((int) $idp->status === 3 && $normalized === 'president') $type = 'need_president_approval';
+
+                return [
+                    'type'             => $type,
+                    'employee_name'    => $emp->name ?? '-',
+                    'employee_npk'     => $emp->npk ?? '-',
+                    'employee_company' => $emp->company_name ?? '-',
+                    'category'         => $idp->category ?? '-',
+                    'program'          => $idp->development_program ?? '-',
+                    'target'           => $idp->development_target ?? '-',
+                    'created_at'       => $idp->created_at,
+                ];
             })
             ->sortBy('created_at')
             ->unique('employee_npk')
