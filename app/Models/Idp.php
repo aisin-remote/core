@@ -63,4 +63,10 @@ class Idp extends Model
         if (!$company) return $q; // HRD: lihat semua
         return $q->whereHas('assessment.employee', fn($qq) => $qq->where('company_name', $company));
     }
+
+    public function approvalIdp()
+    {
+        return $this->hasMany(IdpApproval::class, 'idp_id');
+    }
 }
+

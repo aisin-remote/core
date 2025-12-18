@@ -738,6 +738,7 @@ class IdpController extends Controller
             ], 500);
         }
     }
+
     public function approval()
     {
         $user = auth()->user();
@@ -858,13 +859,13 @@ class IdpController extends Controller
             if ($employee) {
                 IdpApproval::updateOrCreate(
                     [
-                        'assessment_id' => $idp->assessment_id ?? null,
-                        'level'         => $currentStatus,
+                        'idp_id' => $idp->id,
+                        'level'  => $currentStatus,
                     ],
                     [
-                        'idp_id'      => $idp->id,
-                        'approve_by'  => $employee->id,
-                        'approved_at' => now(),
+                        'assessment_id' => $idp->assessment_id ?? null,
+                        'approve_by'    => $employee->id,
+                        'approved_at'   => now(),
                     ]
                 );
             }
@@ -1129,16 +1130,146 @@ class IdpController extends Controller
         }
     }
 
-    public function approvalShow($employeeId){
+    public function approvalShow($employeeId)
+    {
+        $user = auth()->user();
+        $employeeLogin = $user->employee;
 
-        $assessment = Assessment::with('details', 'idp','idp.alc', 'employee')
-        ->where('employee_id', $employeeId)
-        ->first();
+        $checkLevel   = $employeeLogin->getFirstApproval();
+        $approveLevel = $employeeLogin->getFinalApproval();
+        $normalized   = $employeeLogin->getNormalizedPosition();
 
-        $alcs = Alc::select('id','name')->get();
+        // daftar bawahan yang boleh di-check / di-approve oleh user login
+        if ($normalized === 'vpd') {
+            $subCheck   = $employeeLogin->getSubordinatesByLevel($checkLevel, ['gm'])->pluck('id')->toArray();
+            $subApprove = $employeeLogin->getSubordinatesByLevel($approveLevel, ['manager'])->pluck('id')->toArray();
+        } else {
+            $subCheck   = $employeeLogin->getSubordinatesByLevel($checkLevel)->pluck('id')->toArray();
+            $subApprove = $employeeLogin->getSubordinatesByLevel($approveLevel)->pluck('id')->toArray();
+        }
+
+        // ambil assessment milik employee yang dipilih
+        $assessment = Assessment::with([
+            'details',
+            'employee',
+            'idp',
+            'idp.alc',
+            'idp.approvalIdp',
+            'idp.hav.hav.employee',
+            'idp.hav',
+        ])
+            ->where('employee_id', $employeeId)
+            ->latest('created_at')
+            ->firstOrFail();
+
+        /**
+         * OPTIONAL: kalau employee yang dipilih bukan bawahan yang berhak diproses,
+         * langsung kosongkan list (atau abort(403) kalau kamu mau).
+         */
+        if (!in_array((int) $employeeId, array_unique(array_merge($subCheck, $subApprove)), true)) {
+            $assessment->setRelation('idp', collect());
+            $alcs = Alc::select('id', 'name')->get();
+            return view('website.approval.idp.show', compact('assessment', 'alcs'));
+        }
+
+        // =========================
+        // Tahap 1: CHECK (status=1)
+        // =========================
+        $checkIdps = $assessment->idp()
+            ->with('hav.hav.employee', 'hav')
+            ->where('status', 1)
+            ->whereHas('hav.hav.employee', function ($q) use ($subCheck) {
+                $q->whereIn('employee_id', $subCheck);
+            })
+            ->get()
+            ->filter(function ($idp) {
+                $havId = $idp->hav->hav_id ?? null;
+                if (!$havId) return false;
+
+                // Tidak ada yang status = -1 dalam 1 hav_id
+                return !Idp::whereHas('hav', function ($q) use ($havId) {
+                    $q->where('hav_id', $havId);
+                })->where('status', -1)->exists();
+            })
+            ->values();
+
+        $checkIdpIds = $checkIdps->pluck('id')->toArray();
+
+        // ===========================
+        // Tahap 2: APPROVE (status=2)
+        // ===========================
+        $approveQuery = $assessment->idp()
+            ->with('hav.hav.employee', 'hav')
+            ->where('status', 2)
+            ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
+                $q->whereIn('employee_id', $subApprove);
+            })
+            ->whereNotIn('id', $checkIdpIds);
+
+        // aturan tambahan: jika president, exclude employee position Manager
+        if ($normalized === 'president') {
+            $approveQuery->whereHas('hav.hav.employee', function ($q) {
+                $q->where('position', '!=', 'Manager');
+            });
+        }
+
+        $approveIdps = $approveQuery->get()
+            ->filter(function ($idp) {
+                $havId = $idp->hav->hav_id ?? null;
+                if (!$havId) return false;
+
+                $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
+                    $q->where('hav_id', $havId);
+                })->pluck('status')->toArray();
+
+                // minimal ada status=2, dan tidak boleh ada -1
+                return in_array(2, $relatedStatuses) && !in_array(-1, $relatedStatuses);
+            })
+            ->values();
+
+        // ==========================================
+        // Tambahan khusus President (status=3)
+        // ==========================================
+        $approvePresidentIdps = collect();
+        if ($normalized === 'president') {
+            $approvePresidentIdps = $assessment->idp()
+                ->with('hav.hav.employee', 'hav')
+                ->where('status', 3)
+                ->whereHas('hav.hav.employee', function ($q) use ($subApprove) {
+                    $q->whereIn('employee_id', $subApprove);
+                })
+                ->whereNotIn('id', $checkIdpIds)
+                ->get()
+                ->filter(function ($idp) {
+                    $havId = $idp->hav->hav_id ?? null;
+                    if (!$havId) return false;
+
+                    $relatedStatuses = Idp::whereHas('hav', function ($q) use ($havId) {
+                        $q->where('hav_id', $havId);
+                    })->pluck('status')->toArray();
+
+                    // minimal ada status=3, dan tidak boleh ada -1 atau 2
+                    return in_array(3, $relatedStatuses)
+                        && !in_array(-1, $relatedStatuses)
+                        && !in_array(2, $relatedStatuses);
+                })
+                ->values();
+        }
+
+        // Gabungkan hasil final
+        $idps = $checkIdps->merge($approveIdps);
+        if ($normalized === 'president') {
+            $idps = $idps->merge($approvePresidentIdps);
+        }
+
+        // Override relasi idp di $assessment supaya view pakai data yang sudah difilter
+        $assessment->setRelation('idp', $idps->values());
+
+        $alcs = Alc::select('id', 'name')->get();
 
         return view('website.approval.idp.show', compact('assessment', 'alcs'));
     }
+
 
     // PRIVATE FUNCTION
     private function getAssessments($user, $company, $npk, $search)

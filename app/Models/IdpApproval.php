@@ -17,6 +17,7 @@ class IdpApproval extends Model
         'approve_by',
         'level',
         'approved_at',
+        'assessment_id'
     ];
 
     protected $casts = [

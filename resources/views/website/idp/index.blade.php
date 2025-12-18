@@ -252,8 +252,6 @@
                                             @if ($assessment->has_score)
                                                 @php
                                                     $details = $assessment->details ?? collect();
-
-                                                    // ALC yang belum punya row detail sama sekali dianggap missing (== not created)
                                                     $missingAlcIds = collect($alcs)
                                                         ->keys()
                                                         ->diff($details->pluck('alc_id'));
@@ -264,16 +262,13 @@
                                                                 'not_created',
                                                         ) || $missingAlcIds->isNotEmpty();
 
-                                                    // ✅ ADA draft?
                                                     $hasDraft = $details->contains(
                                                         fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
                                                             'draft',
                                                     );
 
-                                                    // ✅ TOMBOL SUBMIT hanya kalau ada draft & tidak ada not_created/missing
                                                     $canSubmit = $hasDraft && !$hasNotCreated;
 
-                                                    // ✅ STATUS CHIP ikuti kondisi submit
                                                     if ($canSubmit) {
                                                         $displayStatus = 'draft';
                                                         $displayText = 'Need Submit';
@@ -281,7 +276,6 @@
                                                         $displayStatus = 'not_created';
                                                         $displayText = 'Not Created';
                                                     } else {
-                                                        // kalau tidak ada draft dan tidak ada not_created, berarti sudah checked/approved/revise/waiting dll
                                                         $displayStatus = $assessment->overall_status ?? 'unknown';
                                                         $displayText =
                                                             $assessment->overall_badge['text'] ??
@@ -309,7 +303,7 @@
                                                                 ],
                                                                 'revise' => [
                                                                     'icon' => 'fa-triangle-exclamation',
-                                                                    'class' => 'text-white',
+                                                                    'class' => 'text-danger',
                                                                 ],
                                                                 'approved' => [
                                                                     'icon' => 'fa-circle-check',
@@ -339,16 +333,24 @@
                                                                             ? (float) $detail->score
                                                                             : null;
 
+                                                                        $status = $detail->status;
+
+                                                                        $isDraft = $status === 'draft';
+                                                                        $isRevise = $status === 'revise';
+                                                                        $isNotCreate = $status === 'not_created';
+
+                                                                        $isFinal = in_array(
+                                                                            $status,
+                                                                            ['check', 'approved'],
+                                                                            true,
+                                                                        );
+
+                                                                        // ✅ Klikable jika belum final (check/approved)
+                                                                        // ✅ dan termasuk: draft / revise / not_created
+                                                                        // ❌ tidak cek score sama sekali
                                                                         $isClickable =
-                                                                            ($scoreNum != null && $scoreNum == 0.0) ||
-                                                                            str_contains(
-                                                                                $detail->badge_class ?? '',
-                                                                                'badge-danger',
-                                                                            ) ||
-                                                                            str_contains(
-                                                                                $detail->badge_class ?? '',
-                                                                                'light-danger',
-                                                                            );
+                                                                            !$isFinal &&
+                                                                            ($isDraft || $isRevise || $isNotCreate);
 
                                                                         $modalId = "kt_modal_warning_{$assessment->id}_{$detail->alc_id}";
                                                                     @endphp
@@ -404,13 +406,7 @@
                                                             fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
                                                                 'not_created',
                                                         );
-
-                                                        // tombol kirim muncul jika SUDAH TIDAK ADA not_created
                                                         $canSendToBoss = !$hasNotCreated;
-
-                                                        // kalau kamu masih mau batasi hanya saat draft, aktifkan ini:
-                                                        // $canSendToBoss = !$hasNotCreated && $assessment->overall_status === 'draft';
-
                                                     @endphp
 
                                                     <td class="text-center" style="width: 50px">
