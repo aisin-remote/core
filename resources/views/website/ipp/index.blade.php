@@ -225,6 +225,46 @@
             animation: itemEnter .24s ease-out both
         }
 
+        /* ===== NEW COMMENT highlight ===== */
+        .cmt-item.is-new {
+            /* pakai token yang sudah kamu punya */
+            background: linear-gradient(180deg, var(--noteNew-bgTop) 0%, #ffffff 70%);
+            border-color: var(--noteNew-border);
+            box-shadow: 0 10px 28px var(--noteNew-shadow);
+            position: relative;
+        }
+
+        /* garis aksen di kiri biar “new” kebaca */
+        .cmt-item.is-new::after {
+            content: "";
+            position: absolute;
+            left: -1px;
+            top: -1px;
+            bottom: -1px;
+            width: 5px;
+            border-radius: 12px 0 0 12px;
+            background: linear-gradient(180deg, var(--noteNew-bgBot), #60a5fa);
+        }
+
+        /* dot-nya ikut jadi “new” */
+        .cmt-item.is-new .cmt-dot {
+            background: var(--noteNew-dot);
+            box-shadow: 0 0 0 2px #e6ebf3, 0 0 0 8px var(--noteNew-shadow);
+        }
+
+        /* hover khusus */
+        .cmt-item.is-new:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 34px rgba(2, 6, 23, .14);
+            border-color: #93c5fd;
+        }
+
+        /* optional: biar "…more" makin kontras */
+        .cmt-item.is-new .cmt-body .more {
+            color: #1d4ed8;
+        }
+
+
         .cmt-item+.cmt-item {
             margin-top: .7rem
         }
@@ -237,8 +277,8 @@
 
         .cmt-dot {
             position: absolute;
-            left: -1.1rem;
-            top: 1.15rem;
+            left: -1.7rem;
+            top: 2.5rem;
             width: .72rem;
             height: .72rem;
             border-radius: 9999px;
@@ -828,10 +868,10 @@
                         <li class="cmt-item ${isNew?'is-new':''}">
                             <span class="cmt-dot ${dotCls}"></span>
                             <div class="cmt-head">
-                                <span class="cmt-name ${isNew?'text-white':''}">${who}</span>
+                                <span class="cmt-name">${who}</span>
                                 <span class="cmt-meta">• ${at}</span>
                             </div>
-                            <div class="cmt-body ${isNew?'text-white':''}" id="${itemId}">
+                            <div class="cmt-body" id="${itemId}">
                                 <span class="text">${toHtmlWithBreak(short)}</span>
                                 ${needMore?`<span class="more" data-full="${esc(raw)}">…more</span>`:``}
                             </div>
