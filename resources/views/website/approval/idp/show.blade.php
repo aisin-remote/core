@@ -61,7 +61,7 @@
 
                     @if (!empty($assessment->upload))
                         <a href="{{ asset($assessment->upload) }}" target="_blank" class="btn btn-primary">
-                            <i class="fas fa-file-pdf"></i> View PDF
+                            <i class="fas fa-file-pdf"></i> View Assessment
                         </a>
                     @endif
                 </div>
@@ -182,7 +182,7 @@
                                     @empty
                                         <tr>
                                             <td colspan="3" class="text-center text-muted py-4">
-                                                Tidak ada data Weakness.
+                                                Data belum di input oleh HRD.
                                             </td>
                                         </tr>
                                     @endforelse
