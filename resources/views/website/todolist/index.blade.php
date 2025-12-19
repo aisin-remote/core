@@ -307,6 +307,26 @@
             animation: pageFadeIn .55s cubic-bezier(.21, 1, .21, 1) forwards
         }
 
+        .task-divider {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            margin: 1rem 0 .75rem;
+            color: var(--muted);
+            font-weight: 700;
+            font-size: .8rem;
+            letter-spacing: .2px;
+            text-transform: uppercase;
+        }
+
+        .task-divider::before,
+        .task-divider::after {
+            content: "";
+            height: 1px;
+            background: var(--border);
+            flex: 1 1 auto;
+        }
+
         @keyframes pageFadeIn {
             to {
                 opacity: 1;
@@ -385,6 +405,12 @@
     @endif
 
     <div id="kt_app_content_container" class="app-container container-fluid page-enter">
+        @php
+            $role = auth()->user()->role;
+            $isHRD = $role === 'HRD';
+            $isDireksi = optional(auth()->user()->employee)->isDireksi() ?? false;
+        @endphp
+
         <div class="row gx-4 row-nowrap">
             {{-- ===================== IDP ===================== --}}
             <div class="col-12 col-xl-6 col-xxl-4">
@@ -395,9 +421,14 @@
                     </div>
 
                     <div class="panel-body panel-scroll">
-                        @php $isHRD = auth()->user()->role === 'HRD'; @endphp
+                        @php
+                            $isHRD = auth()->user()->role === 'HRD';
+                            $devDividerShown = false;
+                        @endphp
                         @forelse ($allIdpTasks as $i => $item)
                             @php
+                                $type = $item['type'] ?? null;
+
                                 $idpMap = [
                                     'unassigned' => [
                                         'tone' => 'err',
@@ -423,59 +454,74 @@
                                         'icon' => 'fa-hourglass-half',
                                         'label' => 'Need Approve',
                                     ],
+                                    'need_president_approval' => [
+                                        'tone' => 'info',
+                                        'status' => 'status-info',
+                                        'icon' => 'fa-user-tie',
+                                        'label' => 'Need President',
+                                    ],
                                     'revise' => [
                                         'tone' => 'err',
                                         'status' => 'status-err',
                                         'icon' => 'fa-rotate-left',
                                         'label' => 'Need Revise',
                                     ],
+
+                                    'development_need_approval' => [
+                                        'tone' => 'info',
+                                        'status' => 'status-info',
+                                        'icon' => 'fa-magnifying-glass',
+                                        'label' => 'IDP Review',
+                                    ],
                                 ];
-                                $cfg = $idpMap[$item['type']] ?? [
+
+                                $cfg = $idpMap[$type] ?? [
                                     'tone' => 'muted',
                                     'status' => 'status-muted',
                                     'icon' => 'fa-circle-question',
                                     'label' => 'Unknown',
                                 ];
 
-                                $href = in_array($item['type'], ['need_check', 'need_approval'])
-                                    ? route('idp.approval')
-                                    : route('idp.index', [
-                                        'company' => $item['employee_company'],
-                                        'npk' => $item['employee_npk'],
+                                if ($type === 'development_need_approval') {
+                                    $href = route('development.approval');
+                                } elseif (in_array($type, ['need_check', 'need_approval', 'need_president_approval'])) {
+                                    $href = route('idp.approval');
+                                } else {
+                                    $href = route('idp.index', [
+                                        'company' => $item['employee_company'] ?? null,
+                                        'npk' => $item['employee_npk'] ?? null,
                                     ]);
+                                }
+
+                                $linkClass = $isHRD ? 'link-plain disabled-link' : 'link-plain';
+
+                                $pendingCount = $item['pending_count'] ?? null;
                             @endphp
 
-                            @if ($isHRD)
-                                <a class="link-plain disabled-link" href="{{ $href }}">
-                                    <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
-                                        <div class="tone tone-{{ $cfg['tone'] }}"></div>
-
-                                        <div>
-                                            <h5 class="task-title mb-1">{{ $item['employee_name'] }}</h5>
-                                            <div class="task-sub">{{ $item['employee_company'] ?? '-' }}</div>
-                                        </div>
-
-                                        <span class="status-chip {{ $cfg['status'] }}">
-                                            <i class="fas {{ $cfg['icon'] }}"></i>{{ $cfg['label'] }}
-                                        </span>
-                                    </div>
-                                </a>
-                            @else
-                                <a class="link-plain" href="{{ $href }}">
-                                    <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
-                                        <div class="tone tone-{{ $cfg['tone'] }}"></div>
-
-                                        <div>
-                                            <h5 class="task-title mb-1">{{ $item['employee_name'] }}</h5>
-                                            <div class="task-sub">{{ $item['employee_company'] ?? '-' }}</div>
-                                        </div>
-
-                                        <span class="status-chip {{ $cfg['status'] }}">
-                                            <i class="fas {{ $cfg['icon'] }}"></i>{{ $cfg['label'] }}
-                                        </span>
-                                    </div>
-                                </a>
+                            @if ($type === 'development_need_approval' && !$devDividerShown)
+                                @php $devDividerShown = true; @endphp
+                                <div class="task-divider">
+                                    <span><i class="fas fa-clipboard-list me-1"></i>IDP Review</span>
+                                </div>
                             @endif
+
+                            <a class="{{ $linkClass }}" href="{{ $href }}">
+                                <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
+                                    <div class="tone tone-{{ $cfg['tone'] }}"></div>
+
+                                    <div>
+                                        <h5 class="task-title mb-1">
+                                            {{ $item['employee_name'] ?? '-' }}
+                                        </h5>
+
+                                        <div class="task-sub">{{ $item['employee_company'] ?? '-' }}</div>
+                                    </div>
+
+                                    <span class="status-chip {{ $cfg['status'] }}">
+                                        <i class="fas {{ $cfg['icon'] }}"></i>{{ $cfg['label'] }}
+                                    </span>
+                                </div>
+                            </a>
                         @empty
                             <div class="task-row">
                                 <div class="tone tone-ok"></div>

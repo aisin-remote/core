@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Helpers\ApprovalHelper;
 use App\Helpers\IppApprovalHelper;
 use App\Models\Department;
+use App\Models\DevelopmentApprovalStep;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Hav;
-use App\Models\Icp;
 use App\Models\IcpApprovalStep;
 use App\Models\Idp;
 use App\Models\IpaHeader;
@@ -17,8 +17,6 @@ use App\Models\Plant;
 use App\Models\Rtc;
 use App\Models\Section;
 use App\Models\SubSection;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class ToDoListController extends Controller
 {
@@ -35,12 +33,14 @@ class ToDoListController extends Controller
         $draftIdpCollection   = $this->getDraftIdps($subCreate);
         $reviseIdpCollection  = $this->getReviseIdps($subCreate);
         $pendingIdpCollection = $this->getPendingIdps($subCheck, $subApprove, $normalized);
+        $pendingDevCollection = $this->getPendingDevelopmentTasks($employee, $user);
 
         $allIdpTasks = $this->mergeAllIdpTasks(
             $unassignedIdps,
             $draftIdpCollection,
             $reviseIdpCollection,
-            $pendingIdpCollection
+            $pendingIdpCollection,
+            $pendingDevCollection
         );
 
         $allHavTasks = $this->getHavTasks($subCheck);
@@ -89,12 +89,14 @@ class ToDoListController extends Controller
         $draftIdps      = $this->getDraftIdps($subCreate);
         $reviseIdps     = $this->getReviseIdps($subCreate);
         $pendingIdps    = $this->getPendingIdps($subCheck, $subApprove, $normalized);
+        $pendingDevs    = $this->getPendingDevelopmentTasks($employee, $user);
 
         $allIdpTasks = $this->mergeAllIdpTasks(
             $unassignedIdps,
             $draftIdps,
             $reviseIdps,
-            $pendingIdps
+            $pendingIdps,
+            $pendingDevs
         );
 
         $allHavTasks = $this->getHavTasks($subCheck);
@@ -424,12 +426,23 @@ class ToDoListController extends Controller
     /**
      * Gabungkan semua jenis IDP tasks.
      */
-    private function mergeAllIdpTasks($unassignedIdps, $draftIdpCollection, $reviseIdpCollection, $pendingIdpCollection)
-    {
-        return $unassignedIdps
+    private function mergeAllIdpTasks(
+        $unassignedIdps,
+        $draftIdpCollection,
+        $reviseIdpCollection,
+        $pendingIdpCollection,
+        $pendingDevCollection = null
+    ) {
+        $out = $unassignedIdps
             ->merge($draftIdpCollection)
             ->merge($reviseIdpCollection)
             ->merge($pendingIdpCollection);
+
+        if ($pendingDevCollection) {
+            $out = $out->merge($pendingDevCollection);
+        }
+
+        return $out->values();
     }
 
     /**
@@ -627,7 +640,7 @@ class ToDoListController extends Controller
                 ->first();
 
             if (! $ipp) {
-                $message = "The {$year} IPP has not yet been created.";
+                $message = "IPA belum dibuat.";
 
                 $ippTasks = [
                     'activity_management' => 0,
@@ -822,4 +835,94 @@ class ToDoListController extends Controller
             ];
         }
     }
+
+    /**
+     * Ambil role-key approver untuk development approval step (toleransi data lama).
+     */
+    private function currentApproverRoleKeysForDevelopment($employee): array
+    {
+        $role = ApprovalHelper::roleKeyFor($employee);
+
+        if (! $role) return [];
+
+        $rolesToMatch = [$role];
+
+        if ($role === 'director')   $rolesToMatch[] = 'direktur';
+        if ($role === 'president')  $rolesToMatch[] = 'presiden';
+        if ($role === 'gm')         $rolesToMatch[] = 'general manager';
+        if ($role === 'vpd')        $rolesToMatch[] = 'vice president director';
+
+        return array_values(array_unique($rolesToMatch));
+    }
+
+    private function getPendingDevelopmentTasks($employee = null, $user = null)
+    {
+        $authUser = auth()->user();
+        $user     = $user ?? $authUser;
+        $employee = $employee ?? $user?->employee;
+
+        if (! $employee) {
+            return collect();
+        }
+
+        $rolesToMatch = $this->currentApproverRoleKeysForDevelopment($employee);
+        if (empty($rolesToMatch)) {
+            return collect();
+        }
+
+        $query = DevelopmentApprovalStep::with([
+            'oneDevelopment.employee.department',
+            'oneDevelopment.steps',
+        ])
+            ->whereIn('role', $rolesToMatch)
+            ->where('status', 'pending');
+
+        $company = $employee->company_name ?? null;
+        if ($company) {
+            $query->whereHas('oneDevelopment.employee', function ($q) use ($company) {
+                $q->where('company_name', $company);
+            });
+        }
+
+        $steps = $query->orderBy('step_order', 'asc')->get();
+
+        $steps = $steps->filter(function ($step) {
+            $dev = $step->oneDevelopment;
+            if (! $dev) return false;
+
+            return $dev->steps->every(function ($x) use ($step) {
+                if ($x->step_order < $step->step_order && $x->status !== 'done') return false;
+                return true;
+            });
+        });
+
+        $grouped = $steps->groupBy(fn($s) => $s->oneDevelopment?->employee_id)->filter();
+
+        $rows = [];
+        foreach ($grouped as $employeeId => $employeeSteps) {
+            $devSample = $employeeSteps->first()->oneDevelopment;
+            $emp       = $devSample?->employee;
+
+            if (! $emp) continue;
+
+            $rows[] = [
+                'type'             => 'development_need_approval',
+                'employee_id'      => $emp->id,
+                'employee_name'    => $emp->name,
+                'employee_npk'     => $emp->npk,
+                'employee_company' => $emp->company_name,
+                'position'         => $emp->position,
+                'department'       => $emp->department->name ?? null,
+                'grade'            => $emp->grade,
+
+                'pending_count' => $employeeSteps
+                    ->map(fn($s) => $s->development_one_id)
+                    ->unique()
+                    ->count(),
+            ];
+        }
+
+        return collect($rows);
+    }
 }
+ 
