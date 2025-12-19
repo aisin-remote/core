@@ -38,6 +38,7 @@
         width: 55px;
     }
 </style>
+
 <style>
     /* Status Chip */
     .status-chip {
@@ -45,6 +46,7 @@
         --fg: #312e81;
         --bd: #c7d2fe;
         --dot: #6366f1;
+
         display: inline-flex;
         align-items: center;
         gap: .5rem;
@@ -76,6 +78,7 @@
         border-radius: 50%;
         background: var(--dot);
         box-shadow: 0 0 0 4px color-mix(in srgb, var(--dot) 20%, transparent);
+        flex: 0 0 auto;
     }
 
     /* Variasi warna per status */
@@ -84,6 +87,14 @@
         --fg: #065f46;
         --bd: #a7f3d0;
         --dot: #10b981;
+    }
+
+    /* 🔥 Status khusus: Need Review (ketika overall_status approved) */
+    .status-chip[data-status="need_review"] {
+        --bg: #eef2ff;
+        --fg: #1e3a8a;
+        --bd: #bfdbfe;
+        --dot: #3b82f6;
     }
 
     .status-chip[data-status="checked"] {
@@ -124,28 +135,33 @@
 
     /* Animasi pulse utk Waiting */
     @keyframes pulseDot {
-        0% {
-            box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 30%, transparent);
-        }
-
-        70% {
-            box-shadow: 0 0 0 8px color-mix(in srgb, var(--dot) 0%, transparent);
-        }
-
-        100% {
-            box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent);
-        }
+        0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 30%, transparent); }
+        70% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--dot) 0%, transparent); }
+        100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dot) 0%, transparent); }
     }
 
     .status-chip[data-status="waiting"]::before {
         animation: pulseDot 1.25s infinite;
     }
 
-    /* Small screens: jangan terlalu lebar */
+    /* ✅ Animasi panah ke kanan utk Need Review */
+    @keyframes nudgeRight {
+        0%   { transform: translateX(0);   opacity: .85; }
+        50%  { transform: translateX(6px); opacity: 1; }
+        100% { transform: translateX(0);   opacity: .85; }
+    }
+
+    .status-chip .chip-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: .15rem;
+        animation: nudgeRight 1s infinite ease-in-out;
+    }
+
+    /* Small screens */
     @media (max-width: 768px) {
-        .status-chip {
-            max-width: 210px;
-        }
+        .status-chip { max-width: 210px; }
     }
 
     .modal-header {
@@ -155,7 +171,6 @@
         z-index: 1055;
     }
 </style>
-
 
 @section('main')
     @if (session()->has('success'))
@@ -170,20 +185,17 @@
             });
         </script>
     @endif
-    <div id="kt_app_content_container" class="app-container  container-fluid">
+
+    <div id="kt_app_content_container" class="app-container container-fluid">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h3 class="card-title">Employee List</h3>
                 <div class="d-flex align-items-center">
                     <form method="GET" action="{{ url()->current() }}" class="d-flex mb-3">
                         <input type="text" id="searchInputEmployee" name="search" class="form-control me-2"
-                            placeholder="Search..." style="width: 250px;" value="{{ request('search') }}">
-                        <button type="submit" class="btn btn-primary me-3" id="searchButton">
-                            Search
-                        </button>
+                                placeholder="Search..." style="width: 250px;" value="{{ request('search') }}">
+                        <button type="submit" class="btn btn-primary me-3" id="searchButton">Search</button>
                     </form>
-
-
                 </div>
             </div>
 
@@ -209,7 +221,9 @@
                         @foreach ($jobPositions as $index => $position)
                             <li class="nav-item" role="presentation">
                                 <a class="nav-link text-active-primary pb-4 {{ $index === 0 ? 'active' : '' }}"
-                                    data-bs-toggle="tab" data-bs-target="#{{ Str::slug($position) }}" role="tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#{{ Str::slug($position) }}"
+                                    role="tab"
                                     aria-controls="{{ Str::slug($position) }}">
                                     {{ $position }}
                                 </a>
@@ -220,8 +234,21 @@
 
                 <div class="tab-content mt-3" id="employeeTabsContent">
                     @foreach ($jobPositions as $index => $position)
-                        <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}" id="{{ Str::slug($position) }}"
-                            role="tabpanel" aria-labelledby="{{ Str::slug($position) }}-tab">
+                        @php
+                            $tabPosition = $position;
+
+                            // ✅ perbaikan: pakai === dan jangan assignment "="
+                            $filteredEmployees = ($tabPosition === 'Show All')
+                                ? $processedData
+                                : $processedData->filter(fn($assessment) => optional($assessment->employee)->position == $tabPosition);
+
+                            $rowNumber = 1;
+                        @endphp
+
+                        <div class="tab-pane fade {{ $index === 0 ? 'show active' : '' }}"
+                                id="{{ Str::slug($position) }}"
+                                role="tabpanel"
+                                aria-labelledby="{{ Str::slug($position) }}-tab">
 
                             <div class="table-responsive">
                                 <table class="table align-middle table-row-dashed fs-6 gy-5">
@@ -238,85 +265,57 @@
                                     </thead>
 
                                     <tbody>
-                                        @php
-                                            $filteredEmployees = $position = 'Show All'
-                                                ? $processedData
-                                                : $processedData->filter(
-                                                    fn($assessment) => $assessment->employee->position == $position,
-                                                );
-                                            $rowNumber = 1;
-                                        @endphp
-
-
                                         @forelse ($filteredEmployees as $assessment)
                                             @if ($assessment->has_score)
                                                 @php
                                                     $details = $assessment->details ?? collect();
-                                                    $missingAlcIds = collect($alcs)
-                                                        ->keys()
-                                                        ->diff($details->pluck('alc_id'));
+                                                    $missingAlcIds = collect($alcs)->keys()->diff($details->pluck('alc_id'));
 
                                                     $hasNotCreated =
-                                                        $details->contains(
-                                                            fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
-                                                                'not_created',
-                                                        ) || $missingAlcIds->isNotEmpty();
+                                                        $details->contains(fn($d) => strtolower(trim((string) ($d->status ?? ''))) === 'not_created')
+                                                        || $missingAlcIds->isNotEmpty();
 
-                                                    $hasDraft = $details->contains(
-                                                        fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
-                                                            'draft',
-                                                    );
+                                                    $hasDraft = $details->contains(fn($d) => strtolower(trim((string) ($d->status ?? ''))) === 'draft');
 
                                                     $canSubmit = $hasDraft && !$hasNotCreated;
 
+                                                    // default
+                                                    $displayStatus = $assessment->overall_status ?? 'unknown';
+                                                    $displayText   = $assessment->overall_badge['text'] ?? ucfirst($displayStatus);
+
+                                                    // rule submit
                                                     if ($canSubmit) {
                                                         $displayStatus = 'draft';
                                                         $displayText = 'Need Submit';
                                                     } elseif ($hasNotCreated) {
                                                         $displayStatus = 'not_created';
                                                         $displayText = 'Not Created';
-                                                    } else {
-                                                        $displayStatus = $assessment->overall_status ?? 'unknown';
-                                                        $displayText =
-                                                            $assessment->overall_badge['text'] ??
-                                                            ucfirst($displayStatus);
+                                                    }
+
+                                                    // ✅ Permintaan kamu:
+                                                    // kalau overall_status approved => tampilkan Need Review + icon panah kanan + animasi
+                                                    if (($assessment->overall_status ?? null) === 'approved') {
+                                                        $displayStatus = 'need_review';
+                                                        $displayText   = 'Need Review';
                                                     }
                                                 @endphp
+
                                                 <tr>
                                                     <td class="text-center">{{ $rowNumber++ }}</td>
                                                     <td class="text-center">{{ $assessment->employee->name ?? '-' }}</td>
+
                                                     @foreach ($alcs as $alcId => $alcTitle)
                                                         @php
                                                             $detail = $details->firstWhere('alc_id', $alcId);
-                                                            $detailStatus = strtolower(
-                                                                trim((string) ($detail->status ?? 'not_created')),
-                                                            );
+                                                            $detailStatus = strtolower(trim((string) ($detail->status ?? 'not_created')));
 
                                                             $iconMap = [
-                                                                'not_created' => [
-                                                                    'icon' => 'fa-circle-plus',
-                                                                    'class' => 'text-white',
-                                                                ],
-                                                                'draft' => [
-                                                                    'icon' => 'fa-file-pen',
-                                                                    'class' => 'text-white',
-                                                                ],
-                                                                'revise' => [
-                                                                    'icon' => 'fa-triangle-exclamation',
-                                                                    'class' => 'text-danger',
-                                                                ],
-                                                                'approved' => [
-                                                                    'icon' => 'fa-circle-check',
-                                                                    'class' => 'text-white',
-                                                                ],
-                                                                'checked' => [
-                                                                    'icon' => 'fa-hourglass-half',
-                                                                    'class' => 'text-white',
-                                                                ],
-                                                                'waiting' => [
-                                                                    'icon' => 'fa-hourglass-half',
-                                                                    'class' => 'text-white',
-                                                                ],
+                                                                'not_created' => ['icon' => 'fa-circle-plus', 'class' => 'text-white'],
+                                                                'draft'       => ['icon' => 'fa-file-pen', 'class' => 'text-white'],
+                                                                'revise'      => ['icon' => 'fa-triangle-exclamation', 'class' => 'text-danger'],
+                                                                'approved'    => ['icon' => 'fa-circle-check', 'class' => 'text-white'],
+                                                                'checked'     => ['icon' => 'fa-hourglass-half', 'class' => 'text-white'],
+                                                                'waiting'     => ['icon' => 'fa-hourglass-half', 'class' => 'text-white'],
                                                             ];
 
                                                             $iconData = $iconMap[$detailStatus] ?? null;
@@ -325,47 +324,37 @@
                                                         <td class="text-center">
                                                             @if ($detail)
                                                                 @if ($detail->score === '-')
-                                                                    <span
-                                                                        class="badge badge-lg badge-success d-block w-100">{{ $detail->score }}</span>
+                                                                    <span class="badge badge-lg badge-success d-block w-100">{{ $detail->score }}</span>
                                                                 @else
                                                                     @php
-                                                                        $scoreNum = is_numeric($detail->score)
-                                                                            ? (float) $detail->score
-                                                                            : null;
-
                                                                         $status = $detail->status;
 
                                                                         $isDraft = $status === 'draft';
                                                                         $isRevise = $status === 'revise';
                                                                         $isNotCreate = $status === 'not_created';
 
-                                                                        $isFinal = in_array(
-                                                                            $status,
-                                                                            ['check', 'approved'],
-                                                                            true,
-                                                                        );
+                                                                        $isFinal = in_array($status, ['check', 'approved'], true);
 
-                                                                        // ✅ Klikable jika belum final (check/approved)
-                                                                        // ✅ dan termasuk: draft / revise / not_created
-                                                                        // ❌ tidak cek score sama sekali
-                                                                        $isClickable =
-                                                                            !$isFinal &&
-                                                                            ($isDraft || $isRevise || $isNotCreate);
+                                                                        $isClickable = !$isFinal && ($isDraft || $isRevise || $isNotCreate);
 
                                                                         $modalId = "kt_modal_warning_{$assessment->id}_{$detail->alc_id}";
                                                                     @endphp
 
                                                                     <span
                                                                         class="badge {{ $detail->badge_class }} {{ $isClickable ? '' : 'pe-none' }}"
-                                                                        @if ($isClickable) data-bs-toggle="modal"
+                                                                        @if ($isClickable)
+                                                                            data-bs-toggle="modal"
                                                                             data-bs-target="#{{ $modalId }}"
                                                                             data-title="Update IDP - {{ $alcTitle }}"
                                                                             data-assessment="{{ $assessment->id }}"
                                                                             data-alc="{{ $detail->alc_id }}"
                                                                             style="cursor: pointer;"
                                                                         @else
-                                                                            style="cursor: default;" @endif>
+                                                                            style="cursor: default;"
+                                                                        @endif
+                                                                    >
                                                                         {{ $detail->score }}
+
                                                                         @if ($iconData)
                                                                             <i class="fas {{ $iconData['icon'] }} ps-2 {{ $iconData['class'] }}"
                                                                                 title="{{ ucfirst(str_replace('_', ' ', $detailStatus)) }}">
@@ -374,39 +363,45 @@
                                                                     </span>
                                                                 @endif
                                                             @else
-                                                                <span
-                                                                    class="badge badge-lg badge-success d-block w-100">-</span>
+                                                                <span class="badge badge-lg badge-success d-block w-100">-</span>
                                                             @endif
                                                         </td>
                                                     @endforeach
 
                                                     @php
                                                         $statusIconMap = [
-                                                            'approved' => 'fas fa-circle-check',
-                                                            'checked' => 'fas fa-hourglass-half',
-                                                            'waiting' => 'fas fa-hourglass-half',
-                                                            'draft' => 'fas fa-file-pen',
-                                                            'revise' => 'fas fa-rotate-left',
-                                                            'not_created' => 'fas fa-circle-minus',
-                                                            'unknown' => 'fas fa-circle-question',
+                                                            'approved'     => 'fas fa-circle-check',
+                                                            'checked'      => 'fas fa-hourglass-half',
+                                                            'waiting'      => 'fas fa-hourglass-half',
+                                                            'draft'        => 'fas fa-file-pen',
+                                                            'revise'       => 'fas fa-rotate-left',
+                                                            'not_created'  => 'fas fa-circle-minus',
+                                                            'unknown'      => 'fas fa-circle-question',
+                                                            // khusus need_review: icon panah
+                                                            'need_review'  => 'fas fa-arrow-right',
                                                         ];
+
                                                         $chipIcon = $statusIconMap[$displayStatus] ?? 'fa-circle-info';
                                                     @endphp
 
                                                     <td class="text-center">
-                                                        <span class="status-chip" data-status="{{ $displayStatus }}"
-                                                            title="{{ $displayText }}">
-                                                            <i class="fa-solid {{ $chipIcon }}"></i>
+                                                        <span class="status-chip" data-status="{{ $displayStatus }}" title="{{ $displayText }}">
                                                             <span>{{ $displayText }}</span>
+                                                            @if($displayStatus === 'need_review')
+                                                                <span class="chip-arrow">
+                                                                    <i class="{{ $chipIcon }}"></i>
+                                                                </span>
+                                                            @else
+                                                                <i class="fa-solid {{ $chipIcon }}"></i>
+                                                            @endif
                                                         </span>
                                                     </td>
 
                                                     @php
-                                                        $hasNotCreated = ($assessment->details ?? collect())->contains(
-                                                            fn($d) => strtolower(trim((string) ($d->status ?? ''))) ===
-                                                                'not_created',
+                                                        $hasNotCreated2 = ($assessment->details ?? collect())->contains(
+                                                            fn($d) => strtolower(trim((string) ($d->status ?? ''))) === 'not_created'
                                                         );
-                                                        $canSendToBoss = !$hasNotCreated;
+                                                        $canSendToBoss = !$hasNotCreated2;
                                                     @endphp
 
                                                     <td class="text-center" style="width: 50px">
@@ -414,30 +409,25 @@
                                                             @php
                                                                 $user = auth()->user();
                                                                 $isHRDorDireksi = $user->isHRDorDireksi();
-                                                                $exportablePositions = [
-                                                                    'Manager',
-                                                                    'GM',
-                                                                    'Act Group Manager',
-                                                                    'Direktur',
-                                                                ];
                                                             @endphp
 
                                                             @if (!$isHRDorDireksi)
                                                                 <a href="{{ route('development.index', $assessment->employee->id) }}"
                                                                     class="btn btn-sm btn-primary"
-                                                                    style="display: {{ $assessment->overall_status == 'approved' ? '' : 'none' }}">
+                                                                    style="display: {{ ($assessment->overall_status ?? null) == 'approved' ? '' : 'none' }}">
                                                                     <i class="fas fa-pencil-alt"></i>
                                                                 </a>
                                                             @endif
 
                                                             <button type="button" class="btn btn-sm btn-info"
-                                                                data-bs-toggle="modal"
-                                                                data-bs-target="#notes_{{ $assessment->employee->id }}">
+                                                                    data-bs-toggle="modal"
+                                                                    data-bs-target="#notes_{{ $assessment->employee->id }}">
                                                                 <i class="fas fa-eye"></i>
                                                             </button>
+
                                                             @if (!$isHRDorDireksi && $canSubmit)
                                                                 <button type="button" class="btn btn-sm btn-warning"
-                                                                    onclick="sendDataConfirmation({{ $assessment->employee->id }})">
+                                                                        onclick="sendDataConfirmation({{ $assessment->employee->id }})">
                                                                     <i class="fas fa-paper-plane"></i>
                                                                 </button>
                                                             @endif
@@ -455,6 +445,7 @@
                                     </tbody>
                                 </table>
                             </div>
+
                             <div class="d-flex justify-content-between">
                                 @if ($processedData->count())
                                     @if ($processedData instanceof \Illuminate\Pagination\LengthAwarePaginator)
@@ -464,9 +455,11 @@
                                     <span>No data found.</span>
                                 @endif
                             </div>
+
                         </div>
                     @endforeach
                 </div>
+
                 <div class="d-flex align-items-center gap-4 mt-5">
                     <div class="d-flex align-items-center">
                         <span class="legend-circle bg-danger"></span>
@@ -487,50 +480,41 @@
                 </div>
             </div>
 
-            {{-- 1. Modal Update IDP per employee & ALC --}}
-            @foreach ($filteredEmployees as $assessment)
+            @foreach ($processedData as $assessment)
                 @include('website.idp.partials.modal-update-idp', [
                     'assessment' => $assessment,
                     'alcs' => $alcs,
                 ])
             @endforeach
 
-            {{-- 2. Modal global Comment History (dummy) --}}
             @include('website.idp.partials.modal-notes-history')
 
-            {{-- 3. Modal Summary / Notes per employee --}}
-            @foreach ($filteredEmployees as $assessment)
+            @foreach ($processedData as $assessment)
                 @include('website.idp.partials.modal-summary', [
                     'assessment' => $assessment,
                     'alcs' => $alcs,
                     'mid' => $mid,
-                    'details' => $details,
+                    'details' => $assessment->details ?? collect(),
                 ])
             @endforeach
+
         </div>
     </div>
 @endsection
 
 @php
-    // Build map: employee_id => [ { alc_id, alc_name, score }, ... ]
     $chartData = [];
 
     foreach ($processedData as $hav) {
         $eid = optional($hav->employee)->id;
-        if (!$eid) {
-            continue;
-        }
+        if (!$eid) continue;
 
-        // Kalau 1 karyawan bisa muncul beberapa HAV, ambil satu saja yang pertama berisi detail
-        if (!empty($chartData[$eid]) && count($chartData[$eid])) {
-            continue;
-        }
+        if (!empty($chartData[$eid]) && count($chartData[$eid])) continue;
 
         $rows = [];
         foreach ($hav->details as $d) {
             $alcId = $d->alc_id;
-            $alcName = $d->alc->title ?? ($alcs[$alcId] ?? 'ALC ' . $alcId); // fallback
-            // score bisa '-', pastikan numerik
+            $alcName = $d->alc->title ?? ($alcs[$alcId] ?? 'ALC ' . $alcId);
             $score = is_numeric($d->score) ? (int) $d->score : 0;
 
             $rows[] = [
@@ -540,12 +524,11 @@
             ];
         }
 
-        // urutkan biar konsisten
         usort($rows, fn($a, $b) => $a['alc_id'] <=> $b['alc_id']);
-
         $chartData[$eid] = $rows;
     }
 @endphp
+
 
 <script>
     window.IDP_CHART_DATA = @json($chartData);

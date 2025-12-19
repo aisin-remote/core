@@ -27,200 +27,297 @@ class DevelopmentController extends Controller
 
     public function developmentJson($employee_id)
     {
-        $assessment = Assessment::with([
-            'employee',
-            'details' => function ($q) {
-                $q->where(function ($q2) {
-                    $q2->where('score', '<', 3)
-                        ->orWhere(function ($q3) {
-                            $q3->where('score', '>=', 3)
-                                ->whereNotNull('suggestion_development')
-                                ->where('suggestion_development', '!=', '');
-                        })
-                        ->orWhere(function ($q4) {
-                            $q4->where('score', '<', 3)
-                                ->whereNotNull('suggestion_development')
-                                ->where('suggestion_development', '!=', '');
-                        });
-                })->with('alc');
-            },
-        ])
-            ->where('employee_id', $employee_id)
-            ->whereHas('details', function ($q) {
-                $q->where(function ($q2) {
-                    $q2->where('score', '<', 3)
-                        ->orWhere(function ($q3) {
-                            $q3->where('score', '>=', 3)
-                                ->whereNotNull('suggestion_development')
-                                ->where('suggestion_development', '!=', '');
-                        })
-                        ->orWhere(function ($q4) {
-                            $q4->where('score', '<', 3)
-                                ->whereNotNull('suggestion_development')
-                                ->where('suggestion_development', '!=', '');
-                        });
-                });
-            })
-            ->latest('date')
-            ->firstOrFail();
+        $traceId = (string) \Illuminate\Support\Str::uuid();
 
-        $relevantAlcIds = $assessment->details->pluck('alc_id')->unique()->values();
-
-        // ambil IDP by alc
-        $idps = Idp::with('alc')
-            ->where('assessment_id', $assessment->id)
-            ->whereIn('alc_id', $relevantAlcIds)
-            ->get()
-            ->groupBy('alc_id');
-
-        /**
-         * Susun idpRows seperti yang kamu lakukan di blade sebelumnya
-         */
-        $idpRows = [];
-        $alcByIdp = [];
-
-        foreach ($assessment->details as $detail) {
-            $alcName = $detail->alc->name ?? ($detail->alc->title ?? ('ALC ' . $detail->alc_id));
-            $alcId   = $detail->alc_id;
-
-            $detailIdps = $idps[$alcId] ?? collect();
-            if ($detailIdps->isEmpty()) continue;
-
-            $latestIdp = $detailIdps->sortByDesc('updated_at')->first();
-            if (!$latestIdp) continue;
-
-            $idpRows[] = [
-                'alc_name' => $alcName,
-                'alc_id'   => $alcId,
-                'idp'      => [
-                    'id'                  => $latestIdp->id,
-                    'category'            => $latestIdp->category,
-                    'development_program' => $latestIdp->development_program,
-                    'development_target'  => $latestIdp->development_target,
-                    'date'                => $latestIdp->date,
-                ],
-            ];
-
-            foreach ($detailIdps as $idp) {
-                $alcByIdp[$idp->id] = $alcName;
-            }
-        }
-
-        // Mid history
-        $midDevs = Development::where('employee_id', $employee_id)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy('idp_id');
-
-        // One history
-        $oneDevs = DevelopmentOne::where('employee_id', $employee_id)
-            ->orderBy('created_at', 'desc')
-            ->get()
-            ->groupBy('idp_id');
-
-        // Flags lock
-        $midDrafts   = $midDevs->flatten()->where('status', 'draft');
-        $hasMidDraft = $midDrafts->isNotEmpty();
-
-        $oneDrafts   = $oneDevs->flatten()->where('status', 'draft');
-        $hasOneDraft = $oneDrafts->isNotEmpty();
-
-        $midDraftIdpIds = $midDrafts->pluck('idp_id')->values()->all();
-        $oneDraftIdpIds = $oneDrafts->pluck('idp_id')->values()->all();
-
-        /**
-         * ✅ MODIFIKASI DI SINI:
-         * One-Year boleh diisi kalau Mid status sudah submitted/checked/approved & tidak ada Mid draft.
-         */
-        $midReadyStatuses = ['submitted', 'checked', 'approved'];
-
-        $hasMidReady = $midDevs->flatten()
-            ->whereIn('status', $midReadyStatuses)
-            ->isNotEmpty();
-
-        // Mid dikunci kalau sudah ada data & tidak ada draft
-        $midLocked = $midDevs->flatten()->isNotEmpty() && !$hasMidDraft;
-
-        // One dikunci kalau sudah ada data & tidak ada draft
-        $oneLocked = $oneDevs->flatten()->isNotEmpty() && !$hasOneDraft;
-
-        // ✅ One-Year akses (rule baru)
-        $canAccessOne = $hasMidReady && !$hasMidDraft;
-
-        /**
-         * Ubah history ke format array siap render (tanpa HTML)
-         */
-        $midHistory = [];
-        foreach ($midDevs as $idpId => $list) {
-            foreach ($list as $dev) {
-                $midHistory[] = [
-                    'id'                      => $dev->id,
-                    'idp_id'                  => $dev->idp_id,
-                    'alc'                     => $alcByIdp[$dev->idp_id] ?? '-',
-                    'development_program'     => $dev->development_program,
-                    'development_achievement' => $dev->development_achievement,
-                    'next_action'             => $dev->next_action,
-                    'status'                  => $dev->status,
-                    'created_at'              => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
-                ];
-            }
-        }
-
-        $oneHistory = [];
-        foreach ($oneDevs as $idpId => $list) {
-            foreach ($list as $dev) {
-                $oneHistory[] = [
-                    'id'                  => $dev->id,
-                    'idp_id'              => $dev->idp_id,
-                    'alc'                 => $alcByIdp[$dev->idp_id] ?? '-',
-                    'development_program' => $dev->development_program,
-                    'evaluation_result'   => $dev->evaluation_result,
-                    'status'              => $dev->status,
-                    'created_at'          => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
-                ];
-            }
-        }
-
-        $title = 'IDP Development - ' . ($assessment->employee->name ?? '-');
-
-        return response()->json([
-            'status' => 'success',
-            'title'  => $title,
-            'assessment' => [
-                'id'      => $assessment->id,
-                'date'    => $assessment->date,
-                'purpose' => $assessment->purpose,
-                'lembaga' => $assessment->lembaga,
-            ],
-            'employee' => [
-                'id'         => $assessment->employee->id,
-                'name'       => $assessment->employee->name,
-                'npk'        => $assessment->employee->npk,
-                'position'   => $assessment->employee->position,
-                'department' => $assessment->employee->department_name ?? ($assessment->employee->department ?? null),
-                'grade'      => $assessment->employee->grade ?? null,
-            ],
-            'idpRows'    => $idpRows,
-            'midHistory' => $midHistory,
-            'oneHistory' => $oneHistory,
-            'flags' => [
-                'hasMidDraft'     => $hasMidDraft,
-                'hasOneDraft'     => $hasOneDraft,
-                'midLocked'       => $midLocked,
-                'oneLocked'       => $oneLocked,
-                'canAccessOne'    => $canAccessOne,
-
-                // biar tidak merusak FE lama yang baca hasMidSubmitted
-                'hasMidSubmitted' => $hasMidReady,
-
-                // opsional: key baru yang lebih jelas
-                'hasMidReady'     => $hasMidReady,
-            ],
-            'draftIds' => [
-                'midDraftIdpIds' => $midDraftIdpIds,
-                'oneDraftIdpIds' => $oneDraftIdpIds,
-            ],
+        Log::info('[developmentJson] start', [
+            'trace_id' => $traceId,
+            'employee_id' => $employee_id,
+            'user_id' => optional(auth()->user())->id,
         ]);
+
+        try {
+            // =========================
+            // 1) Ambil assessment + details relevan
+            // =========================
+            Log::info('[developmentJson] fetching assessment', [
+                'trace_id' => $traceId,
+                'employee_id' => $employee_id,
+            ]);
+
+            $assessment = Assessment::with([
+                'employee',
+                'details' => function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where('score', '<', 3)
+                            ->orWhere(function ($q3) {
+                                $q3->where('score', '>=', 3)
+                                    ->whereNotNull('suggestion_development')
+                                    ->where('suggestion_development', '!=', '');
+                            })
+                            ->orWhere(function ($q4) {
+                                $q4->where('score', '<', 3)
+                                    ->whereNotNull('suggestion_development')
+                                    ->where('suggestion_development', '!=', '');
+                            });
+                    })->with('alc');
+                },
+            ])
+                ->where('employee_id', $employee_id)
+                ->whereHas('details', function ($q) {
+                    $q->where(function ($q2) {
+                        $q2->where('score', '<', 3)
+                            ->orWhere(function ($q3) {
+                                $q3->where('score', '>=', 3)
+                                    ->whereNotNull('suggestion_development')
+                                    ->where('suggestion_development', '!=', '');
+                            })
+                            ->orWhere(function ($q4) {
+                                $q4->where('score', '<', 3)
+                                    ->whereNotNull('suggestion_development')
+                                    ->where('suggestion_development', '!=', '');
+                            });
+                    });
+                })
+                ->latest('date')
+                ->firstOrFail();
+
+            Log::info('[developmentJson] assessment found', [
+                'trace_id' => $traceId,
+                'assessment_id' => $assessment->id,
+                'details_count' => $assessment->details->count(),
+            ]);
+
+            // =========================
+            // 2) Ambil IDP sesuai ALC relevan
+            // =========================
+            $relevantAlcIds = $assessment->details->pluck('alc_id')->unique()->values();
+
+            Log::info('[developmentJson] relevant ALC collected', [
+                'trace_id' => $traceId,
+                'assessment_id' => $assessment->id,
+                'relevant_alc_ids' => $relevantAlcIds->all(),
+            ]);
+
+            $idps = Idp::with('alc')
+                ->where('assessment_id', $assessment->id)
+                ->whereIn('alc_id', $relevantAlcIds)
+                ->get()
+                ->groupBy('alc_id');
+
+            Log::info('[developmentJson] idps fetched', [
+                'trace_id' => $traceId,
+                'assessment_id' => $assessment->id,
+                'idp_count' => $idps->flatten()->count(),
+            ]);
+
+            // =========================
+            // 3) Susun idpRows + map alcByIdp
+            // =========================
+            $idpRows = [];
+            $alcByIdp = [];
+
+            foreach ($assessment->details as $detail) {
+                $alcName = $detail->alc->name ?? ($detail->alc->title ?? ('ALC ' . $detail->alc_id));
+                $alcId   = $detail->alc_id;
+
+                $detailIdps = $idps[$alcId] ?? collect();
+                if ($detailIdps->isEmpty()) {
+                    continue;
+                }
+
+                $latestIdp = $detailIdps->sortByDesc('updated_at')->first();
+                if (!$latestIdp) {
+                    continue;
+                }
+
+                $idpRows[] = [
+                    'alc_name' => $alcName,
+                    'alc_id'   => $alcId,
+                    'idp'      => [
+                        'id'                  => $latestIdp->id,
+                        'category'            => $latestIdp->category,
+                        'development_program' => $latestIdp->development_program,
+                        'development_target'  => $latestIdp->development_target,
+                        'date'                => $latestIdp->date,
+                    ],
+                ];
+
+                foreach ($detailIdps as $idp) {
+                    $alcByIdp[$idp->id] = $alcName;
+                }
+            }
+
+            Log::info('[developmentJson] idpRows built', [
+                'trace_id' => $traceId,
+                'idp_rows_count' => count($idpRows),
+                'alcByIdp_count' => count($alcByIdp),
+            ]);
+
+            // =========================
+            // 4) Mid & One history
+            // =========================
+            Log::info('[developmentJson] fetching development histories', [
+                'trace_id' => $traceId,
+                'employee_id' => $employee_id,
+            ]);
+
+            $midDevs = Development::where('employee_id', $employee_id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->groupBy('idp_id');
+
+            $oneDevs = DevelopmentOne::where('employee_id', $employee_id)
+                ->orderBy('created_at', 'desc')
+                ->get()
+                ->groupBy('idp_id');
+
+            Log::info('[developmentJson] histories fetched', [
+                'trace_id' => $traceId,
+                'mid_count' => $midDevs->flatten()->count(),
+                'one_count' => $oneDevs->flatten()->count(),
+            ]);
+
+            // =========================
+            // 5) Flags lock
+            // =========================
+            $midDrafts   = $midDevs->flatten()->where('status', 'draft');
+            $hasMidDraft = $midDrafts->isNotEmpty();
+
+            $oneDrafts   = $oneDevs->flatten()->where('status', 'draft');
+            $hasOneDraft = $oneDrafts->isNotEmpty();
+
+            $midDraftIdpIds = $midDrafts->pluck('idp_id')->values()->all();
+            $oneDraftIdpIds = $oneDrafts->pluck('idp_id')->values()->all();
+
+            $midReadyStatuses = ['submitted', 'checked', 'approved'];
+
+            $hasMidReady = $midDevs->flatten()
+                ->whereIn('status', $midReadyStatuses)
+                ->isNotEmpty();
+
+            $midLocked = $midDevs->flatten()->isNotEmpty() && !$hasMidDraft;
+            $oneLocked = $oneDevs->flatten()->isNotEmpty() && !$hasOneDraft;
+
+            $canAccessOne = $hasMidReady && !$hasMidDraft;
+
+            Log::info('[developmentJson] flags computed', [
+                'trace_id' => $traceId,
+                'hasMidDraft' => $hasMidDraft,
+                'hasOneDraft' => $hasOneDraft,
+                'hasMidReady' => $hasMidReady,
+                'midLocked' => $midLocked,
+                'oneLocked' => $oneLocked,
+                'canAccessOne' => $canAccessOne,
+            ]);
+
+            // =========================
+            // 6) Build response histories
+            // =========================
+            $midHistory = [];
+            foreach ($midDevs as $idpId => $list) {
+                foreach ($list as $dev) {
+                    $midHistory[] = [
+                        'id'                      => $dev->id,
+                        'idp_id'                  => $dev->idp_id,
+                        'alc'                     => $alcByIdp[$dev->idp_id] ?? '-',
+                        'development_program'     => $dev->development_program,
+                        'development_achievement' => $dev->development_achievement,
+                        'next_action'             => $dev->next_action,
+                        'status'                  => $dev->status,
+                        'created_at'              => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                    ];
+                }
+            }
+
+            $oneHistory = [];
+            foreach ($oneDevs as $idpId => $list) {
+                foreach ($list as $dev) {
+                    $oneHistory[] = [
+                        'id'                  => $dev->id,
+                        'idp_id'              => $dev->idp_id,
+                        'alc'                 => $alcByIdp[$dev->idp_id] ?? '-',
+                        'development_program' => $dev->development_program,
+                        'evaluation_result'   => $dev->evaluation_result,
+                        'status'              => $dev->status,
+                        'created_at'          => optional($dev->created_at)->timezone('Asia/Jakarta')->format('d-m-Y H:i'),
+                    ];
+                }
+            }
+
+            $title = 'IDP Development - ' . ($assessment->employee->name ?? '-');
+
+            Log::info('[developmentJson] success response ready', [
+                'trace_id' => $traceId,
+                'employee_id' => $employee_id,
+                'assessment_id' => $assessment->id,
+                'idpRows' => count($idpRows),
+                'midHistory' => count($midHistory),
+                'oneHistory' => count($oneHistory),
+            ]);
+
+            return response()->json([
+                'status' => 'success',
+                'title'  => $title,
+                'trace_id' => $traceId, // ✅ biar gampang cari log-nya
+                'assessment' => [
+                    'id'      => $assessment->id,
+                    'date'    => $assessment->date,
+                    'purpose' => $assessment->purpose,
+                    'lembaga' => $assessment->lembaga,
+                ],
+                'employee' => [
+                    'id'         => $assessment->employee->id,
+                    'name'       => $assessment->employee->name,
+                    'npk'        => $assessment->employee->npk,
+                    'position'   => $assessment->employee->position,
+                    'department' => $assessment->employee->department_name ?? ($assessment->employee->department ?? null),
+                    'grade'      => $assessment->employee->grade ?? null,
+                ],
+                'idpRows'    => $idpRows,
+                'midHistory' => $midHistory,
+                'oneHistory' => $oneHistory,
+                'flags' => [
+                    'hasMidDraft'     => $hasMidDraft,
+                    'hasOneDraft'     => $hasOneDraft,
+                    'midLocked'       => $midLocked,
+                    'oneLocked'       => $oneLocked,
+                    'canAccessOne'    => $canAccessOne,
+                    'hasMidSubmitted' => $hasMidReady,
+                    'hasMidReady'     => $hasMidReady,
+                ],
+                'draftIds' => [
+                    'midDraftIdpIds' => $midDraftIdpIds,
+                    'oneDraftIdpIds' => $oneDraftIdpIds,
+                ],
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            Log::warning('[developmentJson] assessment not found', [
+                'trace_id' => $traceId,
+                'employee_id' => $employee_id,
+                'exception' => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'trace_id' => $traceId,
+                'message' => 'Assessment tidak ditemukan untuk employee ini.',
+            ], 404);
+        } catch (\Throwable $e) {
+            Log::error('[developmentJson] unexpected error', [
+                'trace_id' => $traceId,
+                'employee_id' => $employee_id,
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => collect($e->getTrace())->take(12)->toArray(), // biar tidak kepanjangan
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'trace_id' => $traceId,
+                'message' => 'Terjadi kesalahan pada server. Cek log dengan trace_id.',
+            ], 500);
+        }
     }
 
 
@@ -291,7 +388,7 @@ class DevelopmentController extends Controller
             return response()->json([
                 'status'  => 'success',
                 'message' => 'Mid-Year Development berhasil disimpan.',
-                'data'    => $created, 
+                'data'    => $created,
             ]);
         } catch (\Throwable $e) {
             DB::rollBack();
@@ -853,7 +950,7 @@ class DevelopmentController extends Controller
         $user = auth()->user();
         $me = $user->employee;
 
-        if(!$me) return [];
+        if (!$me) return [];
 
         $role = ApprovalHelper::roleKeyFor($me);
         return ApprovalHelper::synonymsForSearch($role);
@@ -862,15 +959,15 @@ class DevelopmentController extends Controller
     private function basePendingStepsQuery(array $rolesToMatch)
     {
         return DevelopmentApprovalStep::query()
-        ->with([
-            'oneDevelopment.employee.department',
-            'oneDevelopment.idp',
-            'oneDevelopment.steps',
-        ])
-        ->whereIn('role', $rolesToMatch)
-        ->where('status', 'pending')
-        ->whereHas('oneDevelopment', function ($q) {
-            $q->where('status', '!=', 'approved');
-        });
+            ->with([
+                'oneDevelopment.employee.department',
+                'oneDevelopment.idp',
+                'oneDevelopment.steps',
+            ])
+            ->whereIn('role', $rolesToMatch)
+            ->where('status', 'pending')
+            ->whereHas('oneDevelopment', function ($q) {
+                $q->where('status', '!=', 'approved');
+            });
     }
 }
