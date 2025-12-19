@@ -212,7 +212,7 @@
                                     <tr>
                                         <th style="width: 200px;">ALC</th>
                                         <th style="width: 180px;">Category</th>
-                                        <th style="width: 320px;">Development Program</th>
+                                        <th style="width: 180px;">Development Program</th>
                                         <th>Development Target</th>
                                         <th style="width: 140px;" class="nowrap">Due Date</th>
                                     </tr>
@@ -255,7 +255,7 @@
                                 <thead>
                                     <tr>
                                         <th style="width: 200px;">ALC</th>
-                                        <th style="width: 320px;">Development Program</th>
+                                        <th style="width: 180px;">Development Program</th>
                                         <th>Achievement</th>
                                         <th>Next Action</th>
                                         <th style="width: 140px;">Status</th>
@@ -317,7 +317,7 @@
                                     <thead>
                                         <tr>
                                             <th style="width: 200px;">ALC</th>
-                                            <th style="width: 360px;">Development Program</th>
+                                            <th style="width: 180px;">Development Program</th>
                                             <th>Evaluation Result</th>
                                         </tr>
                                     </thead>
