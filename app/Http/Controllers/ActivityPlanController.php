@@ -335,111 +335,203 @@ class ActivityPlanController extends Controller
     public function submitAll(Request $request)
     {
         $user = $request->user();
-        $emp = $user?->employee;
+        $emp  = $user?->employee;
+
         $ippId = (int) ($request->query('ipp_id') ?: $request->input('ipp_id'));
+
         if (! $emp) {
             return response()->json(['message' => 'Employee tidak ditemukan.'], 422);
         }
 
-        $ippQuery = Ipp::with('points')->where('employee_id', $emp->id);
+        // ======================
+        // Ambil IPP
+        // ======================
+        $ippQuery = Ipp::with('points')
+            ->where('employee_id', $emp->id);
+
         if ($ippId) {
             $ippQuery->where('id', $ippId);
         } else {
             $ippQuery->where('on_year', now()->format('Y'));
         }
+
         $ipp = $ippQuery->first();
+
         if (! $ipp) {
             return response()->json(['message' => 'IPP tidak ditemukan.'], 404);
         }
 
-        $plan = ActivityPlan::with('items')->where('ipp_id', $ipp->id)->first();
+        // ======================
+        // Ambil Activity Plan
+        // ======================
+        $plan = ActivityPlan::with('items')
+            ->where('ipp_id', $ipp->id)
+            ->first();
+
         if (! $plan) {
             return response()->json(['message' => 'Activity Plan belum dibuat.'], 422);
         }
 
-        // IPP caps & total
-        $caps = ['activity_management' => 70, 'people_development' => 10, 'crp' => 10, 'special_assignment' => 10];
-        $grouped = $ipp->points->groupBy('category')->map->sum('weight');
+        $ipp->loadMissing('points');
+        $plan->loadMissing('items');
+
+        // =====================================================
+        // 1️⃣ VALIDASI KATEGORI → HARUS ADA IPP POINT
+        // =====================================================
+        $caps = [
+            'activity_management' => 70,
+            'people_development'  => 10,
+            'crp'                 => 10,
+            'special_assignment'  => 10,
+        ];
+
+        if ($ipp->points->isEmpty()) {
+            return response()->json(['message' => 'Tambahkan minimal satu IPP Point.'], 422);
+        }
+
+        $pointsByCategory = $ipp->points->groupBy('category');
+
+        $missingCategories = collect(array_keys($caps))
+            ->filter(fn($cat) => ($pointsByCategory->get($cat)?->count() ?? 0) === 0)
+            ->values();
+
+        if ($missingCategories->isNotEmpty()) {
+            return response()->json([
+                'message' => 'Kategori berikut belum memiliki IPP Point: ' . $missingCategories->implode(', ')
+            ], 422);
+        }
+
+        // =====================================================
+        // 2️⃣ VALIDASI CAP & TOTAL BOBOT
+        // =====================================================
+        $groupedWeight = $pointsByCategory->map(fn($rows) => (float) $rows->sum('weight'));
+
         foreach ($caps as $cat => $cap) {
-            if (($grouped[$cat] ?? 0) > $cap) {
+            if (($groupedWeight[$cat] ?? 0) > $cap) {
                 return response()->json(['message' => "Bobot kategori {$cat} melebihi cap {$cap}%."], 422);
             }
         }
-        if ($ipp->points->isEmpty()) {
-            return response()->json(['message' => 'Tambahkan minimal satu IPP point.'], 422);
-        }
+
         if ((int) $ipp->points->sum('weight') !== 100) {
             return response()->json(['message' => 'Total bobot IPP harus tepat 100%.'], 422);
         }
 
-        if (! $plan->items || $plan->items->isEmpty()) {
+        // =====================================================
+        // 3️⃣ VALIDASI ACTIVITY PLAN ITEM ↔ IPP POINT
+        // =====================================================
+        if ($plan->items->isEmpty()) {
             return response()->json(['message' => 'Tambahkan minimal satu Activity Plan item.'], 422);
         }
 
+        $ippPointIds  = $ipp->points->pluck('id')->values();
+        $itemPointIds = $plan->items
+            ->pluck('ipp_point_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        // item tidak boleh pakai point luar IPP
+        $foreignPointIds = $itemPointIds->diff($ippPointIds);
+        if ($foreignPointIds->isNotEmpty()) {
+            return response()->json([
+                'message' => 'Terdapat Activity Plan item yang tidak berasal dari IPP ini.'
+            ], 422);
+        }
+
+        // setiap IPP point harus punya minimal 1 item
+        $missingPointIds = $ippPointIds->diff($itemPointIds);
+        if ($missingPointIds->isNotEmpty()) {
+            $missingPoints = $ipp->points
+                ->whereIn('id', $missingPointIds)
+                ->map(fn($p) => "{$p->category} - {$p->activity}")
+                ->values();
+
+            return response()->json([
+                'message' => 'Masih ada IPP Point yang belum memiliki Activity Plan item.',
+                'detail'  => $missingPoints
+            ], 422);
+        }
+
+        // =====================================================
+        // 4️⃣ VALIDASI DETAIL ITEM (TANGGAL, PIC, SCHEDULE)
+        // =====================================================
         [$fyStart, $fyEnd] = $this->fiscalBounds((int) $ipp->on_year);
+
         foreach ($plan->items as $it) {
             if (! $it->kind_of_activity) {
                 return response()->json(['message' => 'Kind of activity wajib diisi.'], 422);
             }
+
             if (! $it->pic_employee_id) {
                 return response()->json(['message' => 'PIC wajib dipilih.'], 422);
             }
 
-            $pt = IppPoint::find($it->ipp_point_id);
-            if (! $pt || $pt->ipp_id !== $ipp->id) {
-                return response()->json(['message' => 'Terdapat item Activity Plan yang bukan berasal dari IPP ini.'], 422);
-            }
+            $pt = $ipp->points->firstWhere('id', $it->ipp_point_id);
 
             $pStart = Carbon::parse($pt->start_date)->startOfDay();
-            $pDue = Carbon::parse($pt->due_date)->endOfDay();
+            $pDue   = Carbon::parse($pt->due_date)->endOfDay();
 
-            // validasi tanggal item (gunakan cached_* sebagai sumber)
             $iStart = Carbon::parse($it->cached_start_date ?? $pt->start_date)->startOfDay();
-            $iDue = Carbon::parse($it->cached_due_date ?? $pt->due_date)->endOfDay();
+            $iDue   = Carbon::parse($it->cached_due_date ?? $pt->due_date)->endOfDay();
+
             if ($iDue->lt($iStart)) {
                 return response()->json(['message' => 'Ada item dengan Due < Start.'], 422);
             }
+
             if ($iStart->lt($fyStart) || $iDue->gt($fyEnd)) {
                 return response()->json(['message' => 'Ada item di luar periode fiscal IPP.'], 422);
             }
+
             if ($iStart->lt($pStart) || $iDue->gt($pDue)) {
                 return response()->json(['message' => 'Ada item memiliki tanggal di luar rentang IPP Point.'], 422);
             }
 
-            // months ⊆ rentang point (lebih ketat)
-            $allowedPoint = $this->monthIndicesInRange($pStart, $pDue, (int) $ipp->on_year);
-            $sel = $this->maskToMonthIndices((int) $it->schedule_mask);
-            foreach ($sel as $idx) {
-                if (! in_array($idx, $allowedPoint, true)) {
-                    return response()->json(['message' => 'Ada item dengan schedule di luar rentang Start–Due IPP Point.'], 422);
+            $allowedPointMonths = $this->monthIndicesInRange($pStart, $pDue, (int) $ipp->on_year);
+            $selectedMonths     = $this->maskToMonthIndices((int) $it->schedule_mask);
+
+            foreach ($selectedMonths as $idx) {
+                if (! in_array($idx, $allowedPointMonths, true)) {
+                    return response()->json([
+                        'message' => 'Ada item dengan schedule di luar rentang Start–Due IPP Point.'
+                    ], 422);
                 }
             }
         }
 
+        // =====================================================
+        // 5️⃣ SUBMIT (TRANSACTION)
+        // =====================================================
         try {
             DB::transaction(function () use ($ipp, $plan) {
                 IppPoint::where('ipp_id', $ipp->id)->update(['status' => 'submitted']);
+
                 $ipp->update([
-                    'status' => 'submitted',
-                    'submitted_at' => now()
-                ]);
-                ActivityPlanItem::where('activity_plan_id', $plan->id)->update(['status' => 'submitted']);
-                $plan->update([
-                    'status' => 'submitted',
-                    'submitted_at' => now()
+                    'status'       => 'submitted',
+                    'submitted_at' => now(),
                 ]);
 
-                // Seed Step IPP (first submitted)
-                if (!$ipp->steps()->exists()) {
+                ActivityPlanItem::where('activity_plan_id', $plan->id)
+                    ->update(['status' => 'submitted']);
+
+                $plan->update([
+                    'status'       => 'submitted',
+                    'submitted_at' => now(),
+                ]);
+
+                if (! $ipp->steps()->exists()) {
                     $this->seedStepForIpp($ipp);
                 }
             });
 
-            return response()->json(['message' => 'IPP + Activity Plan berhasil disubmit.']);
+            return response()->json([
+                'message' => 'IPP + Activity Plan berhasil disubmit.'
+            ]);
         } catch (\Throwable $e) {
             report($e);
 
-            return response()->json(['message' => 'Gagal submit gabungan.'], 500);
+            return response()->json([
+                'message' => 'Gagal submit gabungan.'
+            ], 500);
         }
     }
 

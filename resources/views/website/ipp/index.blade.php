@@ -421,7 +421,6 @@
 
 @section('main')
     <div class="container-xxl py-3 px-6">
-
         {{-- Header --}}
         <div class="page-head mb-3">
             <h3 class="page-title">
@@ -572,6 +571,32 @@
                 backdrop: 'static',
                 keyboard: false
             });
+
+            const pointModalEl = document.getElementById('pointModal');
+
+            pointModalEl?.addEventListener('shown.bs.modal', () => {
+                const el =
+                    document.querySelector('#pointModal textarea#pmActivity') ||
+                    document.querySelector('#pointModal #pmActivity') ||
+                    document.querySelector('#pointModal textarea') ||
+                    document.querySelector(
+                        '#pointModal input:not([type="hidden"]), #pointModal textarea, #pointModal select');
+
+                if (!el) return;
+
+                try {
+                    el.focus({
+                        preventScroll: true
+                    });
+                } catch (e) {
+                    el.focus();
+                }
+                if (typeof el.setSelectionRange === 'function') {
+                    const len = (el.value || '').length;
+                    el.setSelectionRange(len, len);
+                }
+            });
+
             let autoRowId = 0,
                 LOCKED = false;
 
@@ -1310,37 +1335,133 @@
             $(document).on('click', '#btnSubmitAll', async function() {
                 // ===== Submit gabungan: IPP + Activity Plan =====
                 if (LOCKED) {
-                    toast('IPP sudah submitted. Tidak bisa submit ulang.', 'danger');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Tidak bisa submit',
+                        text: 'IPP sudah submitted. Tidak bisa submit ulang.',
+                        confirmButtonText: 'OK'
+                    });
                     return;
                 }
+
                 if (!window.__currentIppId) {
-                    toast('IPP & Activity Plan belum terinisialisasi.', 'danger');
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'IPP belum siap',
+                        text: 'IPP & Activity Plan belum terinisialisasi.',
+                        confirmButtonText: 'OK'
+                    });
                     return;
                 }
-                if (!confirm('Submit IPP + Activity Plan sekarang?')) return;
+
+                // konfirmasi dengan SweetAlert
+                const result = await Swal.fire({
+                    icon: 'question',
+                    title: 'Submit IPP + Activity Plan?',
+                    html: `
+            <div class="text-start">
+                <div class="mb-2">Anda akan mengirim <b>IPP</b> beserta <b>Activity Plan</b> untuk proses approval.</div>
+                <div class="small text-muted">Pastikan seluruh kategori sudah memiliki point, dan setiap point sudah memiliki Activity Plan item.</div>
+            </div>
+        `,
+                    showCancelButton: true,
+                    confirmButtonText: '<i class="bi bi-send-check me-1"></i> Ya, Submit',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true,
+                    focusCancel: true,
+                    allowOutsideClick: () => !Swal.isLoading(),
+                    allowEscapeKey: () => !Swal.isLoading(),
+                });
+
+                if (!result.isConfirmed) return;
 
                 const $btn = $(this).prop('disabled', true);
-                try {
-                    const url = new URL(@json(route('activity-plan.submitAll')), window.location.origin);
-                    url.searchParams.set('ipp_id', String(window.__currentIppId));
-                    const res = await fetch(url.toString(), {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': "{{ csrf_token() }}",
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    });
-                    const json = await res.json();
-                    if (!res.ok) throw new Error(json?.message || 'Submit gagal.');
-                    toast(json?.message || 'Berhasil submit.');
 
-                    location.reload();
-                } catch (err) {
-                    toast(esc(err?.message || 'Submit gagal.'), 'danger');
-                } finally {
-                    $btn.prop('disabled', false);
-                }
+                // submit dengan loading di swal
+                await Swal.fire({
+                    title: 'Memproses...',
+                    html: 'Sedang submit IPP + Activity Plan. Mohon tunggu.',
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    didOpen: async () => {
+                        Swal.showLoading();
+
+                        try {
+                            const url = new URL(@json(route('activity-plan.submitAll')), window.location
+                                .origin);
+                            url.searchParams.set('ipp_id', String(window.__currentIppId));
+
+                            const res = await fetch(url.toString(), {
+                                method: 'POST',
+                                headers: {
+                                    'X-CSRF-TOKEN': "{{ csrf_token() }}",
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                    'Accept': 'application/json'
+                                }
+                            });
+
+                            const json = await res.json().catch(() => ({}));
+
+                            if (!res.ok) {
+                                // kalau backend kirim detail array (misal missing points), tampilkan rapih
+                                let detailHtml = '';
+                                if (json?.detail) {
+                                    if (Array.isArray(json.detail)) {
+                                        detailHtml = `
+                                <div class="text-start mt-2">
+                                    <div class="fw-semibold mb-1">Detail:</div>
+                                    <ul class="mb-0">
+                                        ${json.detail.map(x => `<li>${esc(x)}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            `;
+                                    } else if (typeof json.detail === 'object') {
+                                        // kalau object, tampilkan json ringkas
+                                        detailHtml = `
+                                <pre class="text-start mt-2 p-2 bg-light rounded" style="max-height:200px;overflow:auto;">
+${esc(JSON.stringify(json.detail, null, 2))}
+                                </pre>
+                            `;
+                                    }
+                                }
+
+                                throw new Error((json?.message || 'Submit gagal.') + (
+                                    detailHtml ? '\n__DETAIL_HTML__' : ''));
+                            }
+
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Berhasil!',
+                                text: json?.message ||
+                                    'IPP + Activity Plan berhasil disubmit.',
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                location.reload();
+                            });
+
+                        } catch (err) {
+                            // handle custom marker untuk detail html
+                            const rawMsg = (err?.message || 'Submit gagal.');
+                            const hasDetail = rawMsg.includes('\n__DETAIL_HTML__');
+                            const msg = hasDetail ? rawMsg.replace('\n__DETAIL_HTML__', '') :
+                                rawMsg;
+
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Submit gagal',
+                                html: hasDetail ?
+                                    `<div class="text-start">${esc(msg).replace(/\n/g, '<br>')}</div>` // pesan utama
+                                    :
+                                    `<div class="text-start">${esc(msg).replace(/\n/g, '<br>')}</div>`,
+                                confirmButtonText: 'OK'
+                            });
+                        } finally {
+                            $btn.prop('disabled', false);
+                        }
+                    }
+                });
             });
+
 
             /* ===== Toast kecil ===== */
             function toast(msg, type = 'success') {
