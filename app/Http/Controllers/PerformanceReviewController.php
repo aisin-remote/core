@@ -58,7 +58,7 @@ class PerformanceReviewController extends Controller
             abort(403, 'Employee not found for current user');
         }
 
-        $year = now()->year;
+        $year = now()->year + 1;
         $ipas = IpaHeader::where('employee_id', $meId)
             ->where('on_year', $year)
             ->first();

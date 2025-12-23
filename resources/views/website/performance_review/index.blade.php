@@ -240,7 +240,8 @@
         (() => {
             const LIST_URL = "{{ url('/reviews/init') }}";
             const API_BASE = "{{ url('/reviews') }}";
-            const IPA = @json($ipa); // bisa null
+            const IPA = @json($ipa);
+            
 
             let currentPage = 1,
                 lastPage = 1;
@@ -450,20 +451,28 @@
             });
 
             // Submit
+            // Submit
             $('#reviewForm').on('submit', function(e) {
                 e.preventDefault();
+
                 const id = $('#reviewId').val();
-                const ipa_id = IPA.id;
+                const ipa_id = IPA?.id ?? null;
+
+                // kalau CREATE wajib butuh IPA, pakai guard ini:
+                if (!id && !ipa_id) {
+                    toastr.error('IPA Header belum tersedia. Tidak bisa membuat review.');
+                    return;
+                }
 
                 const b1_items = $('.b1-item').map(function() {
                     const v = $(this).val();
                     return v === '' ? null : Number(v);
-                }).get().filter(v => v !== null);
+                }).get(); // jangan difilter dulu, biar index/aspek tetap konsisten
 
                 const b2_items = $('.b2-item').map(function() {
                     const v = $(this).val();
                     return v === '' ? null : Number(v);
-                }).get().filter(v => v !== null);
+                }).get();
 
                 const yearVal = Number($('#year_input').val());
                 const per = $('#period_input').val();
@@ -476,10 +485,10 @@
                     data = {
                         year: yearVal,
                         period: per,
-                        grand_total_pct: $('#a_grand_total_ipa_hidden').val() ?
-                            Number($('#a_grand_total_ipa_hidden').val()) : null,
-                        b1_items: b1_items,
-                        b2_items: b2_items,
+                        grand_total_pct: $('#a_grand_total_ipa_hidden').val() ? Number($(
+                            '#a_grand_total_ipa_hidden').val()) : null,
+                        b1_items,
+                        b2_items,
                         b1_pdca_values: $('#b1_pdca_values').val() ? Number($('#b1_pdca_values').val()) :
                             null,
                         b2_people_mgmt: $('#b2_people_mgmt').val() ? Number($('#b2_people_mgmt').val()) :
@@ -490,14 +499,14 @@
                     method = 'POST';
                     data = {
                         year: yearVal,
-                        ipa_header_id: ipa_id,
+                        ipa_header_id: ipa_id, // aman karena sudah di-guard
                         period: {}
                     };
                     data.period[per] = {
-                        a_grand_total_ipa: $('#a_grand_total_ipa_hidden').val() ?
-                            Number($('#a_grand_total_ipa_hidden').val()) : null,
-                        b1_items: b1_items,
-                        b2_items: b2_items,
+                        a_grand_total_ipa: $('#a_grand_total_ipa_hidden').val() ? Number($(
+                            '#a_grand_total_ipa_hidden').val()) : null,
+                        b1_items,
+                        b2_items,
                         b1_pdca_values: $('#b1_pdca_values').val() ? Number($('#b1_pdca_values').val()) :
                             null,
                         b2_people_mgmt: $('#b2_people_mgmt').val() ? Number($('#b2_people_mgmt').val()) :
