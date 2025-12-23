@@ -349,6 +349,9 @@ class RenderIpaSheet
                 $drw->setHeight(120);
                 $drw->setOffsetX(8);
                 $drw->setOffsetY(0);
+
+                $drw->setCoordinates($anchorCell);
+                $drw->setEditAs(Drawing::EDIT_AS_ONECELL);
                 $drw->setWorksheet($sheet);
             };
 
