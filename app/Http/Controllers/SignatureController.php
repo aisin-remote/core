@@ -15,7 +15,6 @@ class SignatureController extends Controller
 {
     public function store(Request $request, Employee $employee)
     {
-        // File wajib ada (baik upload langsung atau hasil canvas.toBlob)
         $request->validate([
             'signature' => [
                 'required',
@@ -23,6 +22,11 @@ class SignatureController extends Controller
                 'mimes:png,jpg,jpeg,webp',
                 'max:2048',
             ],
+            'from_draw'            => ['nullable', 'boolean'],
+            'processed_on_client'  => ['nullable', 'boolean'],
+            'fuzz'                 => ['nullable', 'numeric'],
+            'force_black'          => ['nullable', 'boolean'],
+            'ink_strength'         => ['nullable', 'numeric'],
         ]);
 
         // Nama file {slug-nama}-signature-{npk}.png
@@ -30,10 +34,12 @@ class SignatureController extends Controller
         $relativePath = "signatures/{$fileName}";
 
         // Parameter proses
-        $fromDraw     = (bool) $request->boolean('from_draw', false); // <<— NEW
-        $fuzz         = max(0.0, min((float) $request->input('fuzz', 0.18), 0.40));
-        $forceBlack   = (bool) $request->boolean('force_black', false);
-        $inkStrength  = max(0.0, min((float) $request->input('ink_strength', 0.75), 1.0));
+        $fromDraw          = (bool) $request->boolean('from_draw', false);
+        $processedOnClient = (bool) $request->boolean('processed_on_client', false);
+
+        $fuzz        = max(0.0, min((float) $request->input('fuzz', 0.18), 0.40));
+        $forceBlack  = (bool) $request->boolean('force_black', false);
+        $inkStrength = max(0.0, min((float) $request->input('ink_strength', 0.75), 1.0));
 
         // Context log
         $actorId  = optional($request->user())->id;
@@ -55,12 +61,16 @@ class SignatureController extends Controller
                 });
             }
 
-            // 2) Proses: jika hasil gambar canvas (sudah transparan), lewati remove-background
-            if (!$fromDraw) {
+            /**
+             * 2) Proses remove background:
+             * - Kalau dari DRAW => skip (karena draw sudah transparan)
+             * - Kalau dari UPLOAD tapi sudah diproses di client (previewCanvas) => skip juga
+             */
+            if (!$fromDraw && !$processedOnClient) {
                 $img = $this->removeBackgroundAdaptiveGD($img, $fuzz);
             }
 
-            // 3) (Opsional) tegaskan tinta → hitam
+            // 3) (Opsional) force tinta → hitam
             if ($forceBlack) {
                 $img = $this->forceInkToBlackGD($img, $inkStrength);
             }
@@ -95,32 +105,35 @@ class SignatureController extends Controller
             // Log sukses
             $contentChanged = $oldHash ? ($oldHash !== $newHash) : true;
             $pathChanged    = ($oldPath !== $relativePath);
+
             Log::info('signature.store.success', [
-                'employee_id'     => $employee->id,
-                'employee_name'   => $employee->name,
-                'employee_npk'    => $employee->npk,
-                'actor_id'        => $actorId,
-                'ip'              => $clientIp,
-                'source'          => $fromDraw ? 'draw' : 'upload', // <<— NEW
-                'fuzz'            => $fuzz,
-                'ink_forced'      => $forceBlack,
-                'ink_strength'    => $inkStrength,
-                'old_path'        => $oldPath,
-                'new_path'        => $relativePath,
-                'old_hash'        => $oldHash,
-                'new_hash'        => $newHash,
-                'content_changed' => $contentChanged,
-                'path_changed'    => $pathChanged,
+                'employee_id'          => $employee->id,
+                'employee_name'        => $employee->name,
+                'employee_npk'         => $employee->npk,
+                'actor_id'             => $actorId,
+                'ip'                   => $clientIp,
+                'source'               => $fromDraw ? 'draw' : 'upload',
+                'processed_on_client'  => $processedOnClient,
+                'fuzz'                 => $fuzz,
+                'ink_forced'           => $forceBlack,
+                'ink_strength'         => $inkStrength,
+                'old_path'             => $oldPath,
+                'new_path'             => $relativePath,
+                'old_hash'             => $oldHash,
+                'new_hash'             => $newHash,
+                'content_changed'      => $contentChanged,
+                'path_changed'         => $pathChanged,
             ]);
 
             return response()->json([
-                'message'      => 'Signature saved',
-                'url'          => asset('storage/' . $relativePath),
-                'source'       => $fromDraw ? 'draw' : 'upload',
-                'fuzz'         => $fuzz,
-                'changed'      => $contentChanged,
-                'ink_forced'   => $forceBlack,
-                'ink_strength' => $inkStrength,
+                'message'             => 'Signature saved',
+                'url'                 => asset('storage/' . $relativePath),
+                'source'              => $fromDraw ? 'draw' : 'upload',
+                'processed_on_client' => $processedOnClient,
+                'fuzz'                => $fuzz,
+                'changed'             => $contentChanged,
+                'ink_forced'          => $forceBlack,
+                'ink_strength'        => $inkStrength,
             ]);
         } catch (Throwable $e) {
             if (DB::transactionLevel() > 0) DB::rollBack();
@@ -161,14 +174,14 @@ class SignatureController extends Controller
             }
 
             Log::info('signature.destroy.success', [
-                'employee_id'  => $employee->id,
+                'employee_id'   => $employee->id,
                 'employee_name' => $employee->name,
-                'employee_npk' => $employee->npk,
-                'actor_id'     => $actorId,
-                'ip'           => $clientIp,
-                'old_path'     => $oldPath,
-                'old_hash'     => $oldHash,
-                'file_deleted' => $fileDeleted,
+                'employee_npk'  => $employee->npk,
+                'actor_id'      => $actorId,
+                'ip'            => $clientIp,
+                'old_path'      => $oldPath,
+                'old_hash'      => $oldHash,
+                'file_deleted'  => $fileDeleted,
             ]);
 
             return response()->json(['message' => 'Signature deleted']);
@@ -197,7 +210,6 @@ class SignatureController extends Controller
         return "{$nameSlug}-signature-{$npk}.png";
     }
 
-    // === Adaptive BG removal (tetap seperti versi terakhir) ===
     private function removeBackgroundAdaptiveGD(\Intervention\Image\Image $image, float $fuzz = 0.18): \Intervention\Image\Image
     {
         $src = $image->getCore();
@@ -248,7 +260,6 @@ class SignatureController extends Controller
         return Image::make($dst);
     }
 
-    // === Force tinta → hitam, jaga anti-alias ===
     private function forceInkToBlackGD(\Intervention\Image\Image $image, float $strength = 0.75): \Intervention\Image\Image
     {
         $src = $image->getCore();
@@ -261,7 +272,7 @@ class SignatureController extends Controller
             for ($x = 0; $x < $w; $x++) {
                 $rgba  = imagecolorsforindex($src, imagecolorat($src, $x, $y));
                 $alpha = $rgba['alpha'];
-                if ($alpha >= 126) continue; // skip transparan
+                if ($alpha >= 126) continue;
 
                 $g = (0.299 * $rgba['red'] + 0.587 * $rgba['green'] + 0.114 * $rgba['blue']) / 255.0;
                 $g2 = pow($g, $gamma) * $darkF;

@@ -160,7 +160,6 @@
                                                         <div class="text-danger">{{ $message }}</div>
                                                     @enderror
                                                 </div>
-
                                                 <div class="col-6 mb-8">
                                                     <label class="form-label fw-bold fs-6">Gender</label>
                                                     <input type="text" name="gender"
@@ -715,14 +714,14 @@
                                         @endphp
 
                                         <div id="signature-view" class="signature-wrap">
-                                            @if ($signatureUrl)
-                                                <img id="employee-signature-preview" src="{{ $signatureUrl }}"
-                                                    alt="Signature" class="img-thumbnail" style="max-height: 180px" />
-                                            @else
-                                                <span id="signature-empty-state" class="badge badge-lg badge-warning">
-                                                    Please add employee signature here immediately.
-                                                </span>
-                                            @endif
+                                            <img id="employee-signature-preview" src="{{ $signatureUrl ?? '' }}"
+                                                alt="Signature" class="img-thumbnail {{ $signatureUrl ? '' : 'd-none' }}"
+                                                style="max-height: 180px" />
+
+                                            <span id="signature-empty-state"
+                                                class="badge badge-lg badge-warning {{ $signatureUrl ? 'd-none' : '' }}">
+                                                Please add employee signature here immediately.
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
