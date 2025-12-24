@@ -51,7 +51,7 @@
                     <select id="period" class="form-select" style="width:140px">
                         <option value="">All Periods</option>
                         <option value="mid">Mid Year</option>
-                        <option value="one" selected>One Year</option>
+                        <option value="one">One Year</option>
                     </select>
                     <button id="btnFilter" class="btn btn-primary">
                         <i class="fas fa-filter me-1"></i> Filter
@@ -241,7 +241,7 @@
             const LIST_URL = "{{ url('/reviews/init') }}";
             const API_BASE = "{{ url('/reviews') }}";
             const IPA = @json($ipa);
-            
+
 
             let currentPage = 1,
                 lastPage = 1;
@@ -263,6 +263,35 @@
                 p.set('per_page', 10);
                 return p.toString();
             }
+
+            function getParam(name, fallback = '') {
+                const u = new URL(window.location.href);
+                return u.searchParams.get(name) ?? fallback;
+            }
+
+            function syncFilterFromUrl() {
+                const yearNow = String(new Date().getFullYear());
+                const year = getParam('year', yearNow);
+                const period = getParam('period', '');
+                $('#year').val(year);
+                $('#period').val(period);
+            }
+
+            function pushFilterToUrl() {
+                const u = new URL(window.location.href);
+                const year = $('#year').val();
+                const period = $('#period').val();
+
+                if (year) u.searchParams.set('year', year);
+                else u.searchParams.delete('year');
+
+                if (period) u.searchParams.set('period', period);
+                else u.searchParams.delete('period');
+
+                u.searchParams.delete('page');
+                window.history.replaceState({}, '', u.toString());
+            }
+
 
             function badgeGrade(g) {
                 const map = {
@@ -338,6 +367,19 @@
             }
 
             // ===== util avg & bindings =====
+            $('#prevPage').on('click', () => {
+                if (currentPage > 1) {
+                    currentPage--;
+                    loadReviews();
+                }
+            });
+            $('#nextPage').on('click', () => {
+                if (currentPage < lastPage) {
+                    currentPage++;
+                    loadReviews();
+                }
+            });
+
             function avgFromInputs($els) {
                 const vals = [];
                 $els.each(function() {
@@ -392,9 +434,10 @@
             const modal = new bootstrap.Modal(document.getElementById('reviewModal'));
 
             function openCreate() {
+                const nextYear = new Date().getFullYear() + 1;
                 $('#modalTitle').text('New Review');
                 $('#reviewId').val('');
-                $('#year_input').val($('#year').val());
+                $('#year_input').val(nextYear);
                 $('#period_input').val($('#period').val() || 'one');
                 setAGrand(IPA?.grand_total ?? '');
                 resetAspectInputs();
@@ -416,6 +459,7 @@
             $('#btnCreate').on('click', openCreate);
             $('#btnFilter').on('click', () => {
                 currentPage = 1;
+                pushFilterToUrl();
                 loadReviews();
             });
 
@@ -543,6 +587,7 @@
             });
 
             // init
+            syncFilterFromUrl();
             loadReviews();
         })();
     </script>

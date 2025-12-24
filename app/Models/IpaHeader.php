@@ -62,13 +62,20 @@ class IpaHeader extends Model
     {
         return $this->belongsTo(Employee::class, 'created_by');
     }
+
     public function checkedBy()
     {
         return $this->belongsTo(Employee::class, 'checked_by');
     }
+
     public function approvedBy()
     {
         return $this->belongsTo(Employee::class, 'approved_by');
+    }
+
+    public function performanceReview()
+    {
+        return $this->hasOne(PerformanceReview::class);
     }
 
     // ==== Helpers ====
