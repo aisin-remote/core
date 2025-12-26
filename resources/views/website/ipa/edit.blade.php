@@ -13,9 +13,9 @@
 @endphp
 
 @push('custom-css')
-    {{-- Bootstrap Icons untuk ikon ringan --}}
+    {{-- Bootstrap Icons --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" />
-    {{-- Toastr (toast) --}}
+    {{-- Toastr --}}
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
 
     <style>
@@ -34,7 +34,6 @@
             --over: #ef4444;
         }
 
-        /* ====== Layout & Header ====== */
         body {
             background: var(--bg-soft);
         }
@@ -104,7 +103,6 @@
             padding: .55rem 1.05rem
         }
 
-        /* ====== Accordion / Category ====== */
         .accordion.ipa .accordion-item {
             border: 1px solid #e5e7eb;
             border-radius: 14px;
@@ -129,7 +127,6 @@
             box-shadow: inset 0 -1px 0 #e5e7eb
         }
 
-        /* Warna strip kiri per kategori (mudah dikenali semua umur) */
         .accordion-item[data-cat="activity_management"] {
             border-left: 6px solid #2563eb
         }
@@ -146,7 +143,6 @@
             border-left: 6px solid #8b5cf6
         }
 
-        /* ====== CAP badge ====== */
         .cap-badge {
             display: inline-flex;
             align-items: center;
@@ -197,7 +193,6 @@
             background: var(--over)
         }
 
-        /* ====== Tables ====== */
         .table.ipp-table {
             border-color: #e5e7eb;
             font-size: 1rem
@@ -230,7 +225,7 @@
             font-style: italic
         }
 
-        /* Status strip di kiri baris (tanpa mengubah kolom) */
+        /* Status strip */
         tr[data-status="draft"] {
             box-shadow: inset 4px 0 0 #facc15
         }
@@ -247,7 +242,6 @@
             box-shadow: inset 4px 0 0 #34d399
         }
 
-        /* Buttons kecil */
         .btn-mini {
             padding: .5rem .7rem;
             border-radius: 10px;
@@ -260,25 +254,16 @@
             border: 1px solid #e5e7eb
         }
 
-        .btn-edit .bi {
-            margin-right: .25rem
-        }
-
         .btn-del {
             background: #fff1f2;
             color: #991b1b;
             border: 1px solid #fecaca
         }
 
-        .btn-del .bi {
-            margin-right: .25rem
-        }
-
         .btn-del:hover {
             filter: brightness(.98)
         }
 
-        /* Helper/Legend */
         .legend {
             display: flex;
             flex-wrap: wrap;
@@ -321,7 +306,6 @@
             background: #34d399
         }
 
-        /* Toast fallback */
         .badge-success {
             background-color: #22c55e;
             color: #fff
@@ -347,7 +331,7 @@
             color: #fff
         }
 
-        /* Utility */
+        /* IMPORTANT: hidden untuk sembunyikan tombol submit saat locked */
         .hidden {
             display: none !important
         }
@@ -362,7 +346,6 @@
     <div class="container-xxl py-3 px-6" id="ipa-edit" data-ipa-id="{{ $ipa->id }}"
         data-url-data="{{ route('ipa.data', $ipa->id) }}" data-url-update="{{ route('ipa.update', $ipa->id) }}"
         data-url-recalc="{{ route('ipa.recalc', $ipa->id) }}">
-
         {{-- Header --}}
         <div class="page-head mb-3">
             <h3 class="page-title">
@@ -379,7 +362,7 @@
             </div>
         </div>
 
-        {{-- Legend Status & Info singkat --}}
+        {{-- Legend --}}
         <div class="legend mb-3">
             <span class="pill"><span class="dot d-draft"></span> Draft</span>
             <span class="pill"><span class="dot d-submitted"></span> Submitted</span>
@@ -390,7 +373,7 @@
             <span class="pill"><span class="dot" style="background:var(--over)"></span> Melebihi CAP</span>
         </div>
 
-        {{-- ====== ACCORDION PER KATEGORI ====== --}}
+        {{-- Accordion --}}
         <div class="accordion ipa" id="accordionIPA">
             @foreach ($categories as $cat)
                 <div class="accordion-item" data-cat="{{ $cat['key'] }}" data-cap="{{ $cat['cap'] }}">
@@ -438,7 +421,7 @@
             @endforeach
         </div>
 
-        {{-- Totals --}}
+        {{-- Submit bottom --}}
         <div class="mt-3 d-flex flex-wrap gap-3 justify-content-end">
             <div class="d-flex align-items-end">
                 <button class="btn btn-primary" id="btn-save-bottom" title="Kirim sebagai Submitted">
@@ -448,10 +431,8 @@
         </div>
     </div>
 
-    {{-- ===== Modal Detail (IPP & Custom) ===== --}}
+    {{-- Modal --}}
     @include('website.ipa.modal.point')
-
-    {{-- ===== Modal Tambah Activity (Custom) ===== --}}
     @include('website.ipa.modal.achievement')
 @endsection
 
@@ -468,23 +449,24 @@
             const URL_UPDATE = $root.data('url-update');
             const URL_RECALC = $root.data('url-recalc');
 
-            let HEADER_STATUS = 'draft';
+            let HEADER_STATUS = ''; // akan di-set dari data load
             const MSG_SUBMITTED_LOCK = 'IPA sudah submitted. Perubahan tidak diperbolehkan.';
 
             // ===================== Toast =====================
             function toast(msg, type = 'success') {
                 const id = 'toast-' + Date.now();
                 const $t = $(`
-                                <div class="toast align-items-center badge-${type} border-0" id="${id}"
-                                    role="status" aria-live="polite" aria-atomic="true"
-                                    style="position:fixed;top:1rem;right:1rem;z-index:1080;">
-                                <div class="d-flex">
-                                    <div class="toast-body">${esc(msg)}</div>
-                                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
-                                </div>
-                                </div>
-                            `);
+                <div class="toast align-items-center badge-${type} border-0" id="${id}"
+                    role="status" aria-live="polite" aria-atomic="true"
+                    style="position:fixed;top:1rem;right:1rem;z-index:1080;">
+                    <div class="d-flex">
+                        <div class="toast-body">${esc(msg)}</div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Tutup"></button>
+                    </div>
+                </div>
+            `);
                 $('body').append($t);
+
                 const t = new bootstrap.Toast($t[0], {
                     delay: 2200
                 });
@@ -500,6 +482,7 @@
                 '"': '&quot;',
                 "'": '&#39;'
             } [m]));
+
             const fmt = (n) => Number(n || 0).toLocaleString(undefined, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 2
@@ -523,22 +506,54 @@
                 if (!payload) return msgs;
                 if (payload.errors && typeof payload.errors === 'object') {
                     Object.values(payload.errors).forEach(arr => {
-                        if (Array.isArray(arr)) arr.forEach(m => msgs.push(String(m)))
+                        if (Array.isArray(arr)) arr.forEach(m => msgs.push(String(m)));
                     });
                 }
                 if (payload.message && typeof payload.message === 'string') msgs.unshift(payload.message);
                 return msgs.filter(Boolean);
             }
 
-            // Lock rule: setelah SUBMITTED (atau lebih tinggi) kunci semua perubahan
+            /**
+             * Derive status keseluruhan:
+             * - Jika headerStatus ada → pakai header
+             * - Jika headerStatus kosong → derive dari achievements (priority)
+             */
+            function deriveOverallStatus(headerStatus, achievements) {
+                const hs = String(headerStatus || '').toLowerCase().trim();
+                if (hs) return hs;
+
+                const list = (Array.isArray(achievements) ? achievements : [])
+                    .map(a => String(a?.status || '').toLowerCase().trim())
+                    .filter(Boolean);
+
+                // PRIORITY
+                if (list.includes('approved')) return 'approved';
+                if (list.includes('checked')) return 'checked';
+                if (list.includes('submitted')) return 'submitted';
+
+                if (list.includes('revise') || list.includes('revised') || list.includes('revision')) return 'revise';
+                if (list.includes('draft')) return 'draft';
+
+                return ''; // no status at all
+            }
+
+            /**
+             * RULE sesuai request:
+             * - hide submit kalau status = submitted/checked/approved
+             * - kecuali status kosong / revise => tampil
+             */
             function isLockedAfterSubmit() {
-                const s = String(HEADER_STATUS || '').toLowerCase();
+                const s = String(HEADER_STATUS || '').toLowerCase().trim();
+
+                if (!s) return false; // belum ada status
+                if (['revise', 'revised', 'revision'].includes(s)) return false;
+
                 return ['submitted', 'checked', 'approved'].includes(s);
             }
 
             const $tbody = (cat) => $(`.js-tbl-ipp[data-cat="${cat}"] .js-tbody-ipp`);
 
-            // ===================== Variabel lainnya (as existing) =====================
+            // ===================== State =====================
             let PERMS = {
                 can_add: true,
                 can_edit: true,
@@ -564,8 +579,8 @@
                     const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(p.id));
                     sum += nloc(ex?.weight ?? p.weight ?? 0);
                 });
-                ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat).forEach(c => sum += nloc(c.weight ??
-                    0));
+                ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat)
+                    .forEach(c => sum += nloc(c.weight ?? 0));
                 return sum;
             }
 
@@ -618,12 +633,11 @@
                 return {
                     exceed: newSum > cap + 1e-8,
                     newSum,
-                    cap,
-                    cat
+                    cap
                 };
             }
 
-            // ===================== UI render (ringkas, sama seperti versi kamu) =====================
+            // ===================== UI render =====================
             function statusBadgeHtml(achOrStatus) {
                 const status = (achOrStatus && typeof achOrStatus === 'object') ? (achOrStatus.status || null) : (
                     achOrStatus || null);
@@ -652,6 +666,12 @@
                         bd: '#a7f3d0',
                         fg: '#065f46',
                         txt: 'Approved'
+                    },
+                    revise: {
+                        bg: '#fff7ed',
+                        bd: '#fed7aa',
+                        fg: '#9a3412',
+                        txt: 'Revise'
                     }
                 };
                 const s = map[String(status).toLowerCase()] || {
@@ -678,14 +698,14 @@
                 const total = (weight / 100) * score;
                 const st = (ex?.status || '').toString().toLowerCase();
                 return `<tr data-source="ipp" data-ipp-id="${p.id}" data-cat="${esc(p.category||'')}" data-status="${esc(st)}">
-            <td>${esc(p.activity||'-')}</td>
-            <td><div class="fw-semibold">${esc(p.target_one||'(tanpa judul)')}</div></td>
-            <td>${fmt(weight)}%</td>
-            <td>${fmt(score)}</td>
-            <td>${fmt(total)}</td>
-            <td>${statusBadgeHtml(ex)}</td>
-            <td>${actionButtonsHtml()}</td>
-        </tr>`;
+                <td>${esc(p.activity||'-')}</td>
+                <td><div class="fw-semibold">${esc(p.target_one||'(tanpa judul)')}</div></td>
+                <td>${fmt(weight)}%</td>
+                <td>${fmt(score)}</td>
+                <td>${fmt(total)}</td>
+                <td>${statusBadgeHtml(ex)}</td>
+                <td>${actionButtonsHtml()}</td>
+            </tr>`;
             }
 
             function rowCustomHtml(a) {
@@ -695,24 +715,26 @@
                 const total = (weight / 100) * score;
                 const st = (a?.status || '').toString().toLowerCase();
                 return `<tr data-source="custom" data-ach-key="${esc(key)}" data-cat="${esc(a.category||'')}" data-status="${esc(st)}">
-            <td>${esc(a.title||'(tanpa judul)')}</td>
-            <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
-            <td>${fmt(weight)}%</td>
-            <td>${fmt(score)}</td>
-            <td>${fmt(total)}</td>
-            <td>${statusBadgeHtml(a)}</td>
-            <td>${actionButtonsHtml()}</td>
-        </tr>`;
+                <td>${esc(a.title||'(tanpa judul)')}</td>
+                <td><div class="fw-semibold">${esc(a.one_year_target||'')}</div></td>
+                <td>${fmt(weight)}%</td>
+                <td>${fmt(score)}</td>
+                <td>${fmt(total)}</td>
+                <td>${statusBadgeHtml(a)}</td>
+                <td>${actionButtonsHtml()}</td>
+            </tr>`;
             }
 
             function renderByCat(cat) {
                 const $tb = $tbody(cat);
                 const ippRows = IPP_POINTS.filter(p => (p.category || '') === cat);
                 const custRows = ACHS.filter(x => !x.ipp_point_id && (x.category || '') === cat);
+
                 let html = '';
                 if (ippRows.length) html += ippRows.map(rowIPPHtml).join('');
                 if (custRows.length) html += custRows.map(rowCustomHtml).join('');
                 if (!html) html = '<tr class="empty-row"><td colspan="7">Belum ada item.</td></tr>';
+
                 $tb.html(html);
             }
 
@@ -723,12 +745,16 @@
                     const sum = totalWeightByCat(cat);
                     const $badge = $(`.cap-badge[data-cat="${cat}"]`);
                     if (!$badge.length) return;
+
                     $badge.removeClass('cap-warn cap-ok cap-over');
+
                     const EPS = 0.0001;
                     let cls = 'cap-warn';
                     if (sum > cap + EPS) cls = 'cap-over';
                     else if (Math.abs(sum - cap) <= EPS) cls = 'cap-ok';
+
                     $badge.addClass(cls);
+
                     if ($badge.find('.dot').length === 0) $badge.prepend('<span class="dot"></span>');
                     $badge.contents().filter(function() {
                         return this.nodeType === 3;
@@ -736,7 +762,7 @@
                     $badge.append(document.createTextNode(' ' + fmt(sum) + '% / ' + fmt(cap) + '%'));
                 });
             }
-            // totals & bars (optional)
+
             function recalcTotals() {
                 let total = 0,
                     sumR = 0;
@@ -749,8 +775,10 @@
                     total += (nloc(c.weight ?? 0) / 100) * nloc(c.self_score ?? 0);
                     sumR += nloc(c.self_score ?? 0);
                 });
+
                 $('#total-achievement,#total-grand').text(fmt(total));
                 $('#total-grand-score').text(fmt(sumR));
+
                 const scale = v => Math.max(0, Math.min(100, (v / 10) * 100));
                 $('#bar-ach,#bar-grand').css('width', scale(total) + '%');
                 $('#bar-gscore').css('width', Math.max(0, Math.min(100, (sumR / 10) * 100)) + '%');
@@ -765,16 +793,19 @@
                 updateSubmitButtons();
             }
 
-            // ===================== Permissions & submit hint =====================
+            // ===================== Submit conditions =====================
             function areAllPointsDraftStrict() {
                 if (!Array.isArray(ACHS)) return false;
+
                 const everyIPPHasDraft = IPP_POINTS.every(p => {
                     const ex = ACHS.find(a => Number(a.ipp_point_id) === Number(p.id));
                     return !!ex && String(ex.status || '').toLowerCase() === 'draft';
                 });
                 if (!everyIPPHasDraft) return false;
-                const allCustomDraft = ACHS.filter(a => !a.ipp_point_id).every(a => String(a.status || '')
-                    .toLowerCase() === 'draft');
+
+                const allCustomDraft = ACHS.filter(a => !a.ipp_point_id)
+                    .every(a => String(a.status || '').toLowerCase() === 'draft');
+
                 return allCustomDraft;
             }
 
@@ -791,14 +822,26 @@
 
             function updateSubmitButtons() {
                 const $btns = $('#btn-save, #btn-save-bottom');
-                // Tombol tetap terlihat, tapi jika sudah submitted, berikan title dan blok saat klik
-                $btns.prop('disabled', false).removeClass('hidden');
+                if (!$btns.length) return;
+
+                // 🔒 hide saat lock
+                if (isLockedAfterSubmit()) {
+                    $btns.addClass('hidden')
+                        .prop('disabled', true)
+                        .attr('title', MSG_SUBMITTED_LOCK);
+                    return;
+                }
+
+                // ✅ tampil saat tidak lock
+                $btns.removeClass('hidden')
+                    .prop('disabled', false);
+
                 const hints = [];
                 if (!areAllPointsDraftStrict()) hints.push('Semua poin sebaiknya berstatus Draft.');
                 if (!allCategoriesAtCap()) hints.push('Seluruh kategori sebaiknya pas sesuai CAP.');
                 if (Math.abs(totalWeightAllCats() - 100) > 1e-8) hints.push(
                     'Total seluruh kategori sebaiknya tepat 100%.');
-                if (isLockedAfterSubmit()) hints.unshift('IPA sudah submitted (terkunci).');
+
                 if (hints.length) $btns.attr('title', hints.join(' '));
                 else $btns.removeAttr('title');
             }
@@ -806,13 +849,16 @@
             // ===================== LOAD =====================
             function initLoad() {
                 $('.js-tbody-ipp').html('<tr class="empty-row"><td colspan="7">Memuat...</td></tr>');
+
                 $.getJSON(URL_DATA).done(function(res) {
                     if (!res || !res.ok) {
                         toast('Gagal memuat data.', 'danger');
                         return;
                     }
+
                     const d = res.data || {};
-                    HEADER_STATUS = String(d.header?.status || 'draft');
+
+                    // points
                     IPP_POINTS = Array.isArray(d.ipp_points) ? d.ipp_points.map(p => ({
                         id: p.id,
                         activity: p.activity || p.title,
@@ -821,6 +867,8 @@
                         weight: nloc(p.weight || 0),
                         category: p.category
                     })) : [];
+
+                    // achievements
                     ACHS = Array.isArray(d.achievements) ? d.achievements.map(x => ({
                         id: x.id || null,
                         ipp_point_id: x.ipp_point_id || null,
@@ -830,8 +878,19 @@
                         one_year_achievement: x.one_year_achievement || x.description || '',
                         weight: nloc(x.weight ?? 0),
                         self_score: nloc(x.self_score || 0),
-                        status: x.status || null
+                        status: x.status || null,
+                        __key: x.__key || (x.id ? String(x.id) : ('tmp-' + Math.random().toString(
+                            16).slice(2)))
                     })) : [];
+
+                    // ✅ status final (header atau derive dari achievements)
+                    const headerRaw = d.header?.status ?? null;
+                    HEADER_STATUS = deriveOverallStatus(headerRaw, ACHS);
+
+                    // debug
+                    console.log('HEADER_STATUS(final)=', HEADER_STATUS);
+                    console.log('sample achievement statuses=', ACHS.slice(0, 5).map(a => a.status));
+
                     renderAll();
                 }).fail(function() {
                     toast('Error server saat memuat.', 'danger');
@@ -854,14 +913,16 @@
             bindEnterToSave('#modal-ipp-detail', '#ippd-btn-save');
             bindEnterToSave('#modal-add-activity', '#add-btn-save');
 
-            // ===================== DETAIL (open) — guard submitted =====================
+            // ===================== DETAIL (open) =====================
             $(document).on('click', '.js-row-detail', function() {
                 if (isLockedAfterSubmit()) {
                     toast(MSG_SUBMITTED_LOCK, 'warning');
                     return;
                 }
+
                 const $tr = $(this).closest('tr');
                 const source = ($tr.data('source') || '').toString();
+
                 $('#ippd-source').val(source);
                 $('#ippd-ach-key').val('');
                 $('#ippd-id').val('');
@@ -873,6 +934,7 @@
                         toast('Data tidak ditemukan.', 'danger');
                         return;
                     }
+
                     const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(id)) || null;
 
                     $('#ippd-id').val(id);
@@ -899,305 +961,20 @@
                     $('#ippd-score').val(nloc(a.self_score || 0));
                     $('#ippd-achv').val(a.one_year_achievement || '');
                 }
+
                 mdlDetail.show();
             });
 
-            // ===================== DETAIL (save) — tetap jaga CAP, tapi blok jika submitted =====================
-            $('#ippd-btn-save').on('click', function() {
-                if (isLockedAfterSubmit()) {
-                    toast(MSG_SUBMITTED_LOCK, 'warning');
-                    return;
-                }
-                const source = ($('#ippd-source').val() || '').toString();
-
-                if (source === 'ipp') {
-                    const id = Number($('#ippd-id').val());
-                    const p = IPP_POINTS.find(x => Number(x.id) === Number(id));
-                    if (!p) {
-                        toast('Data tidak ditemukan.', 'danger');
-                        return;
-                    }
-
-                    const category = p.category || '';
-                    const W = nloc($('#ippd-weight').val());
-                    const R = nloc($('#ippd-score').val());
-                    const target = ($('#ippd-target').val() || '').trim();
-                    const ach = ($('#ippd-achv').val() || '').trim();
-
-                    const pred = wouldExceedCapOnEditIPP(p, W);
-                    if (pred.exceed) {
-                        toast(`${categoryTitle(category)} melebihi CAP: ${fmt(pred.newSum)}% / ${fmt(pred.cap)}%`,
-                            'danger');
-                        return;
-                    }
-
-                    const payload = {
-                        achievements: [{
-                            id: (ACHS.find(x => Number(x.ipp_point_id) === id)?.id) || null,
-                            ipp_point_id: id,
-                            category,
-                            title: p.activity || p.title || '',
-                            one_year_target: target,
-                            weight: W,
-                            self_score: R,
-                            one_year_achievement: ach,
-                            status: 'draft'
-                        }]
-                    };
-
-                    $.ajax({
-                        url: URL_UPDATE,
-                        method: 'PUT',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        data: payload,
-                        dataType: 'json'
-                    }).done(function(res) {
-                        if (res && res.ok) {
-                            toast('Tersimpan.', 'success');
-                            initLoad();
-                            mdlDetail.hide();
-                        } else {
-                            const msgs = extractBackendErrors(res);
-                            if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
-                            else toast('Gagal menyimpan.', 'warning');
-                        }
-                    }).fail(xhr => {
-                        const msgs = extractBackendErrors(xhr.responseJSON || {});
-                        if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'danger'));
-                        else toast('Error server.', 'danger');
-                    });
-
-                } else {
-                    const key = ($('#ippd-ach-key').val() || '').toString();
-                    const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
-                        key)));
-                    if (!a) {
-                        toast('Custom activity tidak ditemukan.', 'danger');
-                        return;
-                    }
-
-                    const title = ($('#ippd-activity').val() || '').trim();
-                    const target = ($('#ippd-target').val() || '').trim();
-                    const W = nloc($('#ippd-weight').val());
-                    const R = nloc($('#ippd-score').val());
-                    const ach = ($('#ippd-achv').val() || '').trim();
-
-                    if (!title) {
-                        toast('Activity wajib diisi.', 'warning');
-                        return;
-                    }
-                    if (!target) {
-                        toast('One Year Target wajib diisi.', 'warning');
-                        return;
-                    }
-
-                    const pred = wouldExceedCapOnEditCustom(a, W);
-                    if (pred.exceed) {
-                        toast(`${categoryTitle(a.category)} melebihi CAP: ${fmt(pred.newSum)}% / ${fmt(pred.cap)}%`,
-                            'danger');
-                        return;
-                    }
-
-                    const payload = {
-                        achievements: [{
-                            id: a.id || null,
-                            category: a.category,
-                            title,
-                            one_year_target: target,
-                            weight: W,
-                            self_score: R,
-                            one_year_achievement: ach,
-                            status: 'draft'
-                        }]
-                    };
-
-                    $.ajax({
-                        url: URL_UPDATE,
-                        method: 'PUT',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        data: payload,
-                        dataType: 'json'
-                    }).done(function(res) {
-                        if (res && res.ok) {
-                            toast('Custom activity diperbarui.', 'success');
-                            initLoad();
-                            mdlDetail.hide();
-                        } else {
-                            const msgs = extractBackendErrors(res);
-                            if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
-                            else toast('Gagal menyimpan.', 'warning');
-                        }
-                    }).fail(xhr => {
-                        const msgs = extractBackendErrors(xhr.responseJSON || {});
-                        if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'danger'));
-                        else toast('Error server.', 'danger');
-                    });
-                }
-            });
-
-            // ===================== DELETE — selalu cek submitted lalu blok =====================
-            $(document).on('click', '.js-row-delete', function() {
-                if (isLockedAfterSubmit()) {
-                    toast(MSG_SUBMITTED_LOCK, 'warning');
-                    return;
-                }
-                const $tr = $(this).closest('tr');
-                const source = ($tr.data('source') || '').toString();
-                if (!confirm('Hapus item ini?')) return;
-
-                if (source === 'ipp') {
-                    const ippId = Number($tr.data('ipp-id'));
-                    const ex = ACHS.find(x => Number(x.ipp_point_id) === Number(ippId));
-                    if (!ex || !ex.id) {
-                        toast('Tidak ada data IPA terkait untuk dihapus.', 'warning');
-                        return;
-                    }
-
-                    $.ajax({
-                        url: URL_UPDATE,
-                        method: 'PUT',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        data: {
-                            delete_achievements: [ex.id]
-                        },
-                        dataType: 'json'
-                    }).done(res => {
-                        if (res && res.ok) {
-                            toast('Override IPA dihapus.', 'success');
-                            initLoad();
-                        } else toast(res?.message || 'Gagal menghapus.', 'warning');
-                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
-
-                } else {
-                    const key = ($tr.data('ach-key') || '').toString();
-                    const a = ACHS.find(x => (!x.ipp_point_id) && (x.__key === key || (x.id && String(x.id) ===
-                        key)));
-                    if (!a || !a.id) {
-                        toast('Custom activity tidak ditemukan/ belum tersimpan.', 'warning');
-                        return;
-                    }
-
-                    $.ajax({
-                        url: URL_UPDATE,
-                        method: 'PUT',
-                        headers: {
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        },
-                        data: {
-                            delete_achievements: [a.id]
-                        },
-                        dataType: 'json'
-                    }).done(res => {
-                        if (res && res.ok) {
-                            toast('Custom activity dihapus.', 'success');
-                            initLoad();
-                        } else toast(res?.message || 'Gagal menghapus.', 'warning');
-                    }).fail(xhr => toast(xhr.responseJSON?.message || 'Error server.', 'danger'));
-                }
-            });
-
-            // ===================== ADD (open) — guard submitted =====================
-            $('#btn-add-activity').on('click', function() {
-                if (isLockedAfterSubmit()) {
-                    toast(MSG_SUBMITTED_LOCK, 'warning');
-                    return;
-                }
-                $('#add-cat').val('');
-                $('#add-activity').val('');
-                $('#add-target').val('');
-                $('#add-weight').val('0');
-                $('#add-score').val('0');
-                $('#add-achv').val('');
-                mdlAdd.show();
-            });
-
-            // ===================== ADD (save) — guard submitted + CAP =====================
-            $('#add-btn-save').on('click', function() {
-                if (isLockedAfterSubmit()) {
-                    toast(MSG_SUBMITTED_LOCK, 'warning');
-                    return;
-                }
-                const cat = ($('#add-cat').val() || '').toString();
-                const tit = ($('#add-activity').val() || '').trim();
-                const tgt = ($('#add-target').val() || '').trim();
-                const W = nloc($('#add-weight').val());
-                const R = nloc($('#add-score').val());
-                const ach = ($('#add-achv').val() || '').trim();
-
-                if (!cat) {
-                    toast('Kategori wajib dipilih.', 'warning');
-                    return;
-                }
-                if (!tit) {
-                    toast('Activity wajib diisi.', 'warning');
-                    return;
-                }
-                if (!tgt) {
-                    toast('One Year Target wajib diisi.', 'warning');
-                    return;
-                }
-
-                const pred = wouldExceedCapOnAdd(cat, W);
-                if (pred.exceed) {
-                    toast(`${categoryTitle(cat)} melebihi CAP: ${fmt(pred.newSum)}% / ${fmt(pred.cap)}%`,
-                        'danger');
-                    return;
-                }
-
-                const payload = {
-                    achievements: [{
-                        id: null,
-                        category: cat,
-                        title: tit,
-                        one_year_target: tgt,
-                        weight: W,
-                        self_score: R,
-                        one_year_achievement: ach,
-                        status: 'draft'
-                    }]
-                };
-
-                $.ajax({
-                    url: URL_UPDATE,
-                    method: 'PUT',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    data: payload,
-                    dataType: 'json'
-                }).done(function(res) {
-                    if (res && res.ok) {
-                        toast('Custom activity ditambahkan.', 'success');
-                        initLoad();
-                        mdlAdd.hide();
-                    } else {
-                        const msgs = extractBackendErrors(res);
-                        if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
-                        else toast('Gagal menambahkan.', 'warning');
-                    }
-                }).fail(xhr => {
-                    const msgs = extractBackendErrors(xhr.responseJSON || {});
-                    if (msgs.length) msgs.forEach((m, i) => toast(m, i ? 'dark' : 'danger'));
-                    else toast('Error server.', 'danger');
-                });
-            });
-
-            // ===================== SUBMIT — blok jika sudah submitted =====================
+            // ===================== SUBMIT =====================
             function submitAll() {
                 if (isLockedAfterSubmit()) {
                     toast(MSG_SUBMITTED_LOCK, 'warning');
                     return;
                 }
 
-                // Validasi 100% & tiap kategori = CAP
                 const EPS = 1e-8;
                 const issues = [];
+
                 $('.accordion-item[data-cat][data-cap]').each(function() {
                     const cat = String($(this).data('cat'));
                     const cap = nloc($(this).data('cap'));
@@ -1205,9 +982,11 @@
                     if (Math.abs(sum - cap) > EPS) issues.push(
                         `${categoryTitle(cat)} harus ${fmt(cap)}% (sekarang ${fmt(sum)}%)`);
                 });
+
                 const grand = totalWeightAllCats();
                 if (Math.abs(grand - 100) > EPS) issues.unshift(
                     `Total seluruh kategori harus 100% (sekarang ${fmt(grand)}%)`);
+
                 if (issues.length) {
                     issues.forEach((m, i) => toast(m, i ? 'dark' : 'warning'));
                     return;
@@ -1224,6 +1003,7 @@
                     self_score: nloc(a.self_score ?? 0),
                     status: 'submitted'
                 }));
+
                 const payload = {
                     header: {
                         id: IPA_ID,
@@ -1255,39 +1035,10 @@
                     else toast(xhr.statusText || 'Error server.', 'danger');
                 });
             }
+
             $('#btn-save, #btn-save-bottom').off('click').on('click', submitAll);
 
-            // ===================== Recalc =====================
-            $('#btn-recalc').on('click', function() {
-                if (isLockedAfterSubmit()) {
-                    toast(MSG_SUBMITTED_LOCK, 'warning');
-                    return;
-                }
-                $.post({
-                    url: URL_RECALC,
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                    },
-                    dataType: 'json'
-                }).done(function(res) {
-                    if (res && res.ok && res.totals) {
-                        $('#total-achievement,#total-grand').text(fmt(res.totals.achievement_total));
-                        $('#total-grand-score').text(fmt(res.totals.grand_score || 0));
-                        updateCapBadges();
-                        toast('Recalc selesai.');
-                    }
-                });
-            });
-
-            // buka semua accordion
-            $('#accordionIPA .accordion-collapse').each(function() {
-                this.removeAttribute('data-bs-parent');
-                this.classList.add('show');
-                const btn = $(this).prev('.accordion-header').find('.accordion-button');
-                btn.removeClass('collapsed').attr('aria-expanded', 'true');
-            });
-
-            // init
+            // ===================== init =====================
             initLoad();
         })();
     </script>
