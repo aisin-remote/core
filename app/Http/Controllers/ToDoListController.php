@@ -9,6 +9,7 @@ use App\Models\DevelopmentApprovalStep;
 use App\Models\Division;
 use App\Models\Employee;
 use App\Models\Hav;
+use App\Models\Icp;
 use App\Models\IcpApprovalStep;
 use App\Models\Idp;
 use App\Models\IpaHeader;
@@ -464,27 +465,20 @@ class ToDoListController extends Controller
      */
     private function getIcpTasks()
     {
-        $me   = auth()->user()->employee;
-        $role = ApprovalHelper::roleKeyFor($me);
+        $me      = auth()->user()->employee;
+        $role    = ApprovalHelper::roleKeyFor($me);
         $company = $me->company_name;
 
-        // role utama
+        // =========================
+        // A) Tasks approval (yang sudah ada)
+        // =========================
         $rolesToMatch = [$role];
 
-        // toleransi data lama
-        if ($role === 'director') {
-            $rolesToMatch[] = 'direktur';
-        }
+        if ($role === 'director')  $rolesToMatch[] = 'direktur';
+        if ($role === 'president') $rolesToMatch[] = 'presiden';
+        if ($role === 'gm')        $rolesToMatch[] = 'general manager';
 
-        if ($role === 'president') {
-            $rolesToMatch[] = 'presiden';
-        }
-
-        if ($role === 'gm') {
-            $rolesToMatch[] = 'general manager';
-        }
-
-        $steps = IcpApprovalStep::with(['icp.employee', 'icp.steps'])
+        $pendingSteps = IcpApprovalStep::with(['icp.employee', 'icp.steps'])
             ->whereIn('role', $rolesToMatch)
             ->where('status', 'pending')
             ->whereHas('icp', function ($q) {
@@ -502,9 +496,55 @@ class ToDoListController extends Controller
             })
             ->values();
 
-        return $steps;
-    }
+        // =========================
+        // B) Tasks revise (ICP status = 0) -> ditampilkan ke atasan yang punya scope create
+        // =========================
+        $createLevel = (int) $me->getCreateAuth();
 
+        $reviseTasks = collect();
+
+        if ($createLevel > 0) {
+            // ambil subordinate ids sesuai rule kamu (bisa create ICP untuk siapa saja)
+            $subordinateIds = $me->getSubordinatesByLevel($createLevel)->pluck('id');
+
+            if ($subordinateIds->isNotEmpty()) {
+                // Ambil ICP revise milik bawahan tsb (ambil yang latest kalau employee punya banyak ICP)
+                // NOTE: kalau yang kamu maksud "ICP terakhir" saja, kita ambil latest per employee via PHP.
+                $reviseIcps = Icp::with('employee')
+                    ->where('status', Icp::STATUS_REVISE) // = 0
+                    ->whereIn('employee_id', $subordinateIds)
+                    ->whereHas('employee', fn($q) => $q->where('company_name', $company))
+                    ->orderByDesc('updated_at')
+                    ->get();
+
+                // Kalau ada kemungkinan 1 employee punya banyak ICP revise, ambil 1 yang paling baru per employee
+                $reviseIcps = $reviseIcps
+                    ->groupBy('employee_id')
+                    ->map(fn($g) => $g->first())
+                    ->values();
+
+                $reviseTasks = $reviseIcps->map(function ($icp) {
+                    return (object) [
+                        'task_type' => 'icp_revise',
+                        'icp'       => $icp,
+                        'employee'  => $icp->employee,
+                        'label'     => 'ICP Need Revision',
+                        // supaya bisa kamu sorting paling atas
+                        'step_order' => 0,
+                    ];
+                });
+            }
+        }
+
+
+        // =========================
+        // C) Gabungkan + sorting
+        // =========================
+        return $reviseTasks
+            ->concat($pendingSteps)
+            ->sortBy(fn($x) => $x->step_order ?? 9999)
+            ->values();
+    }
 
     /**
      * RTC tasks (status 0/1 sesuai scope).

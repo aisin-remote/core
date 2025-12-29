@@ -628,44 +628,66 @@
                     <div class="panel-body panel-scroll">
                         @forelse ($allIcpTasks as $i => $item)
                             @php
-                                // sekarang status diambil dari ICP (relasi di IcpApprovalStep)
-                                $raw = (int) $item->icp->getRawOriginal('status');
+                                $isReviseTask = isset($item->task_type) && $item->task_type === 'icp_revise';
 
-                                $cfg =
-                                    $raw === 1
-                                        ? [
-                                            'tone' => 'warn',
-                                            'status' => 'status-warn',
-                                            'icon' => 'fa-clipboard-check',
-                                            'label' => 'Need Check',
-                                        ]
-                                        : ($raw === 2
-                                            ? [
-                                                'tone' => 'warn',
-                                                'status' => 'status-warn',
-                                                'icon' => 'fa-exclamation-circle',
-                                                'label' => 'Need Approve',
-                                            ]
-                                            : [
-                                                'tone' => 'muted',
-                                                'status' => 'status-muted',
-                                                'icon' => 'fa-circle-question',
-                                                'label' => 'Unknown',
-                                            ]);
-                            @endphp
+                                $icp = $isReviseTask ? $item->icp ?? null : $item->icp ?? null;
 
-                            @php
-                                $employee = $item->icp->employee;
+                                $employee = $icp?->employee;
+
+                                $raw = $icp ? (int) $icp->getRawOriginal('status') : null;
+
+                                if ($isReviseTask || $raw === 0) {
+                                    $cfg = [
+                                        'tone' => 'err',
+                                        'status' => 'status-err',
+                                        'icon' => 'fa-rotate-left',
+                                        'label' => 'Need Revise',
+                                    ];
+                                    $href = $icp ? route('icp.edit', $icp->id) : '#';
+                                } elseif ($raw === 1) {
+                                    $cfg = [
+                                        'tone' => 'warn',
+                                        'status' => 'status-warn',
+                                        'icon' => 'fa-clipboard-check',
+                                        'label' => 'Need Check',
+                                    ];
+                                    $href = route('icp.approval');
+                                } elseif ($raw === 2) {
+                                    $cfg = [
+                                        'tone' => 'warn',
+                                        'status' => 'status-warn',
+                                        'icon' => 'fa-exclamation-circle',
+                                        'label' => 'Need Approve',
+                                    ];
+                                    $href = route('icp.approval');
+                                } else {
+                                    $cfg = [
+                                        'tone' => 'muted',
+                                        'status' => 'status-muted',
+                                        'icon' => 'fa-circle-question',
+                                        'label' => 'Unknown',
+                                    ];
+                                    $href = route('icp.approval');
+                                }
+
+                                $disabled = !$icp || !$employee;
                             @endphp
 
                             @if ($isHRD)
-                                <a class="link-plain disabled-link" href="{{ route('icp.approval') }}">
+                                {{-- HRD: tetap "disabled-link" seperti sebelumnya --}}
+                                <a class="link-plain disabled-link {{ $disabled ? 'disabled-link' : '' }}"
+                                    href="{{ $href }}">
                                     <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
                                         <div class="tone tone-{{ $cfg['tone'] }}"></div>
 
                                         <div>
-                                            <h5 class="task-title mb-1">{{ $employee->name }}</h5>
-                                            <div class="task-sub">{{ $employee->company_name ?? '-' }}</div>
+                                            <h5 class="task-title mb-1">{{ $employee->name ?? '-' }}</h5>
+                                            <div class="task-sub">
+                                                {{ $employee->company_name ?? '-' }}
+                                                @if ($isReviseTask)
+                                                    <span class="ms-2 text-muted">• Edit ICP</span>
+                                                @endif
+                                            </div>
                                         </div>
 
                                         <span class="status-chip {{ $cfg['status'] }}">
@@ -674,13 +696,16 @@
                                     </div>
                                 </a>
                             @else
-                                <a class="link-plain" href="{{ route('icp.approval') }}">
+                                {{-- Non-HRD: normal link --}}
+                                <a class="link-plain {{ $disabled ? 'disabled-link' : '' }}" href="{{ $href }}">
                                     <div class="task-row hover-shadow stagger" style="--d: {{ $i * 60 }}ms">
                                         <div class="tone tone-{{ $cfg['tone'] }}"></div>
 
                                         <div>
-                                            <h5 class="task-title mb-1">{{ $employee->name }}</h5>
-                                            <div class="task-sub">{{ $employee->company_name ?? '-' }}</div>
+                                            <h5 class="task-title mb-1">{{ $employee->name ?? '-' }}</h5>
+                                            <div class="task-sub">
+                                                {{ $employee->company_name ?? '-' }}
+                                            </div>
                                         </div>
 
                                         <span class="status-chip {{ $cfg['status'] }}">
@@ -703,7 +728,6 @@
                     </div>
                 </div>
             </div>
-
 
             {{-- ===================== RTC ===================== --}}
             <div class="col-12 col-xl-6 col-xxl-4">
